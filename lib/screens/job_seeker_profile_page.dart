@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // kDebugMode
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -19,6 +20,9 @@ class UserFields {
   static const phoneVerified = 'PhoneVerified';
   static const isProfileComplete = 'IsProfileComplete';
 }
+
+// DEV shortcut: set to false before release
+const bool kDevSkipOtp = true;
 
 final _e164 = RegExp(r'^\+[1-9]\d{7,14}$');
 const _countries = <String>[
@@ -136,7 +140,7 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('CV uploaded')));
-    } catch (e) {
+    } catch (_) {
       setState(() => _progress = null);
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -190,11 +194,47 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Photo uploaded')));
-    } catch (e) {
+    } catch (_) {
       setState(() => _progress = null);
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Photo upload failed')));
+    }
+  }
+
+  // DEV shortcut: instantly mark phone verified and save it to Firestore.
+  Future<void> _devInstantVerifyPhone() async {
+    if (!kDebugMode || !kDevSkipOtp) return;
+    final phone = _phone.text.trim();
+    if (!_e164.hasMatch(phone)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid phone format (+E.164)')),
+      );
+      return;
+    }
+    try {
+      final uid = FirebaseAuth.instance.currentUser!.uid;
+      await FirebaseFirestore.instance
+          .collection(kUsersCollection)
+          .doc(uid)
+          .set({
+        UserFields.phone: phone,
+        UserFields.phoneVerified: true,
+      }, SetOptions(merge: true));
+
+      if (!mounted) return;
+      setState(() {
+        _serverPhone = phone;
+        _phoneVerified = true;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Phone marked as verified (DEV)')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to mark verified: $e')),
+      );
     }
   }
 
@@ -522,8 +562,23 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                     suffixIcon: TextButton(
                       onPressed: (_saving || _progress != null)
                           ? null
-                          : () =>
-                              Navigator.pushNamed(context, '/otp-verification'),
+                          : () {
+                              if (kDebugMode && kDevSkipOtp) {
+                                _devInstantVerifyPhone(); // DEV shortcut
+                              } else {
+                                Navigator.pushNamed(
+                                  context,
+                                  '/otp-verification',
+                                  arguments: {
+                                    'email': FirebaseAuth
+                                        .instance.currentUser!.email,
+                                    'userId':
+                                        FirebaseAuth.instance.currentUser!.uid,
+                                    'userType': 'JobSeeker',
+                                  },
+                                );
+                              }
+                            },
                       child: Text(_phoneVerified ? 'Verified' : 'Verify'),
                     ),
                   ),

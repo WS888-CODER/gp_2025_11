@@ -10,62 +10,135 @@ import fs from "fs";
 admin.initializeApp();
 
 export const extractCVKeywords = onObjectFinalized(
-  {bucket: "jadeer-b4953.firebasestorage.app"},
+  {memory: "1GiB", timeoutSeconds: 120},
   async (event) => {
     const file = event.data;
-    if (!file || !file.name) return;
-    if (!file.name.startsWith("cv/")) return;
-
-    const uid = file.name.split("/")[1];
-    if (!uid) return;
-
-    const bucket = admin.storage().bucket(file.bucket);
-    const tempFilePath = path.join(os.tmpdir(), path.basename(file.name));
-    await bucket.file(file.name).download({destination: tempFilePath});
-
-    let text = "";
-
-    if (file.contentType?.includes("pdf")) {
-      const pdfBuf = fs.readFileSync(tempFilePath);
-      const data = await pdfParse(pdfBuf);
-      text = data.text || "";
-    } else if (
-      file.contentType?.includes("word") || file.name.endsWith(".docx")
-    ) {
-      text = await new Promise<string>((resolve, reject) => {
-        textract.fromFileWithPath(
-          tempFilePath,
-          (error: Error | null, body: string | undefined) => {
-            if (error) reject(error);
-            else resolve(body || "");
-          }
-        );
-      });
+    if (!file || !file.name) {
+      console.log("No file data in event.");
+      return;
     }
 
-    fs.unlinkSync(tempFilePath);
+    const objectName = file.name; // e.g., cv/UID/filename.pdf
+    const contentType = file.contentType || "";
+    const size = Number(file.size || 0);
 
-    const tokenizer = new natural.WordTokenizer();
-    const words = tokenizer.tokenize(text || "");
-    const freqMap: Record<string, number> = {};
+    console.log("Incoming object:", {objectName, contentType, size});
 
-    words.forEach((w) => {
-      const word = w.toLowerCase();
-      if (word.length < 3) return;
-      if (!/^[a-z]+$/.test(word)) return;
-      freqMap[word] = (freqMap[word] || 0) + 1;
-    });
+    // Only process files under cv/
+    if (!objectName.startsWith("cv/")) {
+      console.log("Skip (not in cv/):", objectName);
+      return;
+    }
 
-    const sorted = Object.entries(freqMap)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 15)
-      .map(([word]) => word);
+    // Expect path: cv/{uid}/...
+    const parts = objectName.split("/");
+    const uid = parts.length >= 2 ? parts[1] : "";
+    if (!uid) {
+      console.error("Cannot resolve uid from path:", objectName);
+      return;
+    }
 
-    await admin.firestore().collection("Users").doc(uid).set(
-      {CVKeywords: sorted},
-      {merge: true}
-    );
+    const bucket = admin.storage().bucket(file.bucket);
+    const tmp = path.join(os.tmpdir(), path.basename(objectName));
+    await bucket.file(objectName).download({destination: tmp});
+    console.log("Downloaded to tmp:", tmp);
 
-    console.log(`Keywords saved for user ${uid}:`, sorted);
+    let text = "";
+    let parseSource = "unknown";
+    let errorMsg: string|null = null;
+
+    try {
+      const lowerName = objectName.toLowerCase();
+
+      if (contentType.includes("pdf") || lowerName.endsWith(".pdf")) {
+        const buf = fs.readFileSync(tmp);
+        const data = await pdfParse(buf);
+        text = (data.text || "").trim();
+        parseSource = "pdf-parse";
+      } else if (
+        contentType.includes("word") ||
+        contentType.includes("officedocument.wordprocessingml") ||
+        lowerName.endsWith(".docx")
+      ) {
+        text = await new Promise<string>((resolve, reject) => {
+          textract.fromFileWithPath(
+            tmp,
+            (err: unknown, body: string|undefined) => {
+              if (err) {
+                reject(err);
+                return;
+              }
+              resolve((body || "").trim());
+            }
+          );
+        });
+        parseSource = "textract-docx";
+      } else {
+        // Fallback: generic textract attempt
+        text = await new Promise<string>((resolve, reject) => {
+          textract.fromFileWithPath(
+            tmp,
+            (err: unknown, body: string|undefined) => {
+              if (err) {
+                reject(err);
+                return;
+              }
+              resolve((body || "").trim());
+            }
+          );
+        });
+        parseSource = "textract-generic";
+      }
+
+      console.log("Text length:", text.length);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      errorMsg = msg;
+      console.error("Parsing failed:", msg);
+    } finally {
+      try {
+        fs.unlinkSync(tmp);
+      } catch (cleanupErr) {
+        const msg =
+          cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr);
+        console.warn("Tmp cleanup warning:", msg);
+      }
+    }
+
+    // Build keywords even if text is empty (we still write LastCVProcess)
+    let keywords: string[] = [];
+    if (!errorMsg && text.length > 0) {
+      const tokenizer = new natural.WordTokenizer();
+      const words = tokenizer.tokenize(text);
+      const freq: Record<string, number> = {};
+      for (const w of words) {
+        const word = w.toLowerCase();
+        // keep simple alpha tokens (english) to reduce noise
+        if (word.length < 3 || !/^[a-z]+$/.test(word)) continue;
+        freq[word] = (freq[word] || 0) + 1;
+      }
+      keywords = Object.entries(freq)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 15)
+        .map(([w]) => w);
+    }
+
+    const docRef = admin.firestore().collection("Users").doc(uid);
+    const payload = {
+      LastCVProcess: {
+        at: admin.firestore.FieldValue.serverTimestamp(),
+        objectName,
+        contentType: contentType || null,
+        size,
+        parseSource,
+        textChars: text.length,
+        ok: !errorMsg,
+        error: errorMsg || null,
+      },
+      CVKeywords: keywords,
+    };
+
+    await docRef.set(payload, {merge: true});
+    console.log("Wrote CVKeywords and LastCVProcess for", uid, keywords);
   }
 );

@@ -31,7 +31,7 @@ class Jadeer extends StatelessWidget {
       title: 'Jadeer',
       theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
-      home: JobSeekerHome(),
+      home: StartScreen(),
       routes: {
         '/start': (context) => StartScreen(),
         '/login': (context) => LoginScreen(),
