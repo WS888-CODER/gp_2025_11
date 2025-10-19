@@ -6,6 +6,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 const kUsersCollection = 'Users';
 
@@ -52,9 +53,23 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
   final _form = GlobalKey<FormState>();
   final _phone = TextEditingController();
   String? _cvUrl, _photoUrl, _nationality;
+  String? _serverPhone;
   DateTime? _dob;
   bool _saving = false;
   bool _phoneVerified = false;
+  double? _progress; // 0..1 while uploading
+
+  @override
+  void initState() {
+    super.initState();
+    _phone.addListener(() {
+      final t = _phone.text.trim();
+      if (_serverPhone == null) return;
+      if (t != _serverPhone && _phoneVerified) {
+        setState(() => _phoneVerified = false);
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -62,8 +77,22 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
     super.dispose();
   }
 
-  Future<String> _upload(String pathPrefix, File file,
-      {required List<String> exts, int maxBytes = 5 * 1024 * 1024}) async {
+  bool _isAdult(DateTime dob) {
+    final now = DateTime.now();
+    int years = now.year - dob.year;
+    if (now.month < dob.month ||
+        (now.month == dob.month && now.day < dob.day)) {
+      years--;
+    }
+    return years >= 18;
+  }
+
+  Future<String> _uploadWithProgress({
+    required String pathPrefix,
+    required File file,
+    required List<String> exts,
+    required int maxBytes,
+  }) async {
     final len = await file.length();
     if (len > maxBytes) {
       throw Exception('File too large');
@@ -76,8 +105,18 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
     final name = file.path.split('/').last;
     final ref = FirebaseStorage.instance
         .ref('$pathPrefix/$uid/${DateTime.now().millisecondsSinceEpoch}_$name');
-    final snap = await ref.putFile(file);
-    return await snap.ref.getDownloadURL();
+
+    setState(() => _progress = 0);
+    final task = ref.putFile(file);
+    task.snapshotEvents.listen((snap) {
+      if (snap.totalBytes > 0) {
+        setState(() => _progress = snap.bytesTransferred / snap.totalBytes);
+      }
+    });
+    final snap = await task;
+    final url = await snap.ref.getDownloadURL();
+    setState(() => _progress = null);
+    return url;
   }
 
   Future<void> _pickCV() async {
@@ -87,37 +126,76 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
     );
     if (res == null || res.files.single.path == null) return;
     try {
-      final url = await _upload('cv', File(res.files.single.path!),
-          exts: ['pdf', 'docx'], maxBytes: 10 * 1024 * 1024);
+      final url = await _uploadWithProgress(
+        pathPrefix: 'cv',
+        file: File(res.files.single.path!),
+        exts: ['pdf', 'docx'],
+        maxBytes: 10 * 1024 * 1024,
+      );
       setState(() => _cvUrl = url);
+      if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('CV uploaded')));
     } catch (e) {
+      setState(() => _progress = null);
+      if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('CV upload failed')));
+          .showSnackBar(const SnackBar(content: Text('CV upload failed')));
+    }
+  }
+
+  Future<void> _openCV(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Cannot open CV')));
     }
   }
 
   Future<void> _pickPhoto() async {
-    final img = await ImagePicker()
-        .pickImage(source: ImageSource.gallery, imageQuality: 92);
+    final src = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera),
+              title: const Text('Camera'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Gallery'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (src == null) return;
+
+    final img = await ImagePicker().pickImage(source: src, imageQuality: 92);
     if (img == null) return;
     try {
-      final url = await _upload('photos', File(img.path),
-          exts: ['jpg', 'jpeg', 'png'], maxBytes: 5 * 1024 * 1024);
+      final url = await _uploadWithProgress(
+        pathPrefix: 'photos',
+        file: File(img.path),
+        exts: ['jpg', 'jpeg', 'png'],
+        maxBytes: 5 * 1024 * 1024,
+      );
       setState(() => _photoUrl = url);
+      if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Photo uploaded')));
     } catch (e) {
+      setState(() => _progress = null);
+      if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Photo upload failed')));
+          .showSnackBar(const SnackBar(content: Text('Photo upload failed')));
     }
-  }
-
-  bool _isAdult(DateTime d) {
-    final now = DateTime.now();
-    final min = DateTime(d.year + 18, d.month, d.day);
-    return !min.isAfter(now);
   }
 
   Future<void> _save(Map<String, dynamic> current) async {
@@ -147,35 +225,49 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
           .showSnackBar(const SnackBar(content: Text('Verify phone')));
       return;
     }
+    if (_progress != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please wait for uploads to finish')),
+      );
+      return;
+    }
 
     final uid = FirebaseAuth.instance.currentUser!.uid;
-    final data = {
-      UserFields.cvUrl: _cvUrl ?? current[UserFields.cvUrl],
-      UserFields.photoUrl: _photoUrl ?? current[UserFields.photoUrl],
+    final data = <String, dynamic>{
+      UserFields.cvUrl: (_cvUrl == '')
+          ? FieldValue.delete()
+          : (_cvUrl ?? current[UserFields.cvUrl]),
+      UserFields.photoUrl: (_photoUrl == '')
+          ? FieldValue.delete()
+          : (_photoUrl ?? current[UserFields.photoUrl]),
       UserFields.dob: Timestamp.fromDate(_dob!),
       UserFields.nationality: _nationality,
       UserFields.phone: _phone.text.trim(),
       UserFields.phoneVerified: true,
     };
 
-    final complete = (data[UserFields.cvUrl] ?? '').toString().isNotEmpty &&
-        (data[UserFields.photoUrl] ?? '').toString().isNotEmpty &&
-        data[UserFields.dob] != null &&
-        (data[UserFields.nationality] ?? '').toString().isNotEmpty &&
-        (data[UserFields.phone] ?? '').toString().isNotEmpty;
+    final cvOk = (data[UserFields.cvUrl] ?? '').toString().isNotEmpty;
+    final photoOk = (data[UserFields.photoUrl] ?? '').toString().isNotEmpty;
+    final dobOk = data[UserFields.dob] != null;
+    final natOk = (data[UserFields.nationality] ?? '').toString().isNotEmpty;
+    final phoneOk = (data[UserFields.phone] ?? '').toString().isNotEmpty;
+    final complete = cvOk && photoOk && dobOk && natOk && phoneOk;
 
     setState(() => _saving = true);
     try {
       await FirebaseFirestore.instance
           .collection(kUsersCollection)
           .doc(uid)
-          .set({...data, UserFields.isProfileComplete: complete},
-              SetOptions(merge: true));
+          .set(
+        {...data, UserFields.isProfileComplete: complete},
+        SetOptions(merge: true),
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Saved')));
       Navigator.pop(context);
     } catch (_) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Save failed')));
     } finally {
@@ -198,24 +290,92 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-              body: Center(child: CircularProgressIndicator()));
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
         final data = snap.data?.data() ?? {};
-        _phoneVerified = data[UserFields.phoneVerified] == true;
+        final serverPhoneVal = (data[UserFields.phone] ?? '').toString();
+        _serverPhone ??= serverPhoneVal;
+        _phoneVerified =
+            _phoneVerified || (data[UserFields.phoneVerified] == true);
 
         final dobCurrent = data[UserFields.dob] is Timestamp
             ? (data[UserFields.dob] as Timestamp).toDate()
             : null;
+
         final dobText = (_dob ?? dobCurrent) == null
             ? 'Select date'
             : DateFormat('yyyy/MM/dd').format(_dob ?? dobCurrent!);
 
+        if (_phone.text.isEmpty && serverPhoneVal.isNotEmpty) {
+          _phone.text = serverPhoneVal;
+        }
+
+        final hasCV =
+            (_cvUrl ?? data[UserFields.cvUrl])?.toString().isNotEmpty == true;
+        final hasPhoto =
+            (_photoUrl ?? data[UserFields.photoUrl])?.toString().isNotEmpty ==
+                true;
+        final profileComplete = (data[UserFields.isProfileComplete] == true) ||
+            (hasCV &&
+                hasPhoto &&
+                ((_dob ?? dobCurrent) != null) &&
+                ((_nationality ?? data[UserFields.nationality])
+                        ?.toString()
+                        .isNotEmpty ==
+                    true) &&
+                (_phone.text.trim().isNotEmpty) &&
+                _phoneVerified);
+
         return Scaffold(
-          appBar: AppBar(title: const Text('Profile')),
+          appBar: AppBar(
+            title: const Text('Profile'),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.only(right: 12, top: 12, bottom: 12),
+                child: Tooltip(
+                  message: profileComplete
+                      ? 'Profile complete'
+                      : 'Profile incomplete',
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: profileComplete
+                          ? Colors.green.withOpacity(.15)
+                          : Colors.orange.withOpacity(.15),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          profileComplete
+                              ? Icons.check_circle
+                              : Icons.error_outline,
+                          size: 16,
+                          color: profileComplete ? Colors.green : Colors.orange,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          profileComplete ? 'Complete' : 'Incomplete',
+                          style: TextStyle(
+                            color:
+                                profileComplete ? Colors.green : Colors.orange,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
           bottomNavigationBar: SafeArea(
             minimum: const EdgeInsets.all(12),
             child: FilledButton(
-              onPressed: _saving ? null : () => _save(data),
+              onPressed:
+                  (_saving || _progress != null) ? null : () => _save(data),
               child: _saving
                   ? const SizedBox(
                       width: 18,
@@ -226,45 +386,87 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
           ),
           body: Form(
             key: _form,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                if (_progress != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: LinearProgressIndicator(value: _progress),
+                  ),
                 Row(
                   children: [
-                    CircleAvatar(
-                      radius: 32,
-                      backgroundImage:
-                          (_photoUrl ?? data[UserFields.photoUrl]) != null &&
-                                  (_photoUrl ?? data[UserFields.photoUrl])
-                                      .toString()
-                                      .isNotEmpty
-                              ? NetworkImage(
-                                  (_photoUrl ?? data[UserFields.photoUrl])
-                                      .toString())
-                              : null,
-                      child:
-                          ((_photoUrl ?? data[UserFields.photoUrl]) == null ||
-                                  (_photoUrl ?? data[UserFields.photoUrl])
-                                      .toString()
-                                      .isEmpty)
-                              ? const Icon(Icons.person)
-                              : null,
+                    Hero(
+                      tag: 'profileAvatar',
+                      child: CircleAvatar(
+                        radius: 32,
+                        backgroundImage:
+                            (_photoUrl ?? data[UserFields.photoUrl]) != null &&
+                                    (_photoUrl ?? data[UserFields.photoUrl])
+                                        .toString()
+                                        .isNotEmpty
+                                ? NetworkImage(
+                                    (_photoUrl ?? data[UserFields.photoUrl])
+                                        .toString())
+                                : null,
+                        child:
+                            ((_photoUrl ?? data[UserFields.photoUrl]) == null ||
+                                    (_photoUrl ?? data[UserFields.photoUrl])
+                                        .toString()
+                                        .isEmpty)
+                                ? const Icon(Icons.person)
+                                : null,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     FilledButton.tonal(
-                        onPressed: _pickPhoto,
-                        child: const Text('Upload Photo')),
+                      onPressed:
+                          (_saving || _progress != null) ? null : _pickPhoto,
+                      child: const Text('Upload Photo'),
+                    ),
+                    const SizedBox(width: 8),
+                    if (hasPhoto)
+                      TextButton(
+                        onPressed: (_saving || _progress != null)
+                            ? null
+                            : () => setState(() => _photoUrl = ''),
+                        child: const Text('Remove'),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 12),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Curriculum Vitae'),
+                  title: const Text('CV File'),
                   subtitle: Text(
-                      (_cvUrl ?? data[UserFields.cvUrl])?.toString() ??
-                          'No file'),
-                  trailing: FilledButton.tonal(
-                      onPressed: _pickCV, child: const Text('Upload CV')),
+                    (_cvUrl ?? data[UserFields.cvUrl])?.toString() ?? 'No file',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  trailing: Wrap(
+                    spacing: 8,
+                    children: [
+                      FilledButton.tonal(
+                        onPressed:
+                            (_saving || _progress != null) ? null : _pickCV,
+                        child: const Text('Upload CV'),
+                      ),
+                      if (hasCV)
+                        TextButton(
+                          onPressed: () => _openCV(
+                              (_cvUrl ?? data[UserFields.cvUrl]).toString()),
+                          child: const Text('Open'),
+                        ),
+                      if (hasCV)
+                        TextButton(
+                          onPressed: (_saving || _progress != null)
+                              ? null
+                              : () => setState(() => _cvUrl = ''),
+                          child: const Text('Remove'),
+                        ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 12),
                 ListTile(
@@ -272,21 +474,24 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                   title: const Text('Date of Birth'),
                   subtitle: Text(dobText),
                   trailing: FilledButton.tonal(
-                    onPressed: () async {
-                      final now = DateTime.now();
-                      final initial = _dob ??
-                          dobCurrent ??
-                          DateTime(now.year - 20, now.month, now.day);
-                      final first = DateTime(now.year - 80, 1, 1);
-                      final last = DateTime(now.year - 18, now.month, now.day);
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: initial,
-                        firstDate: first,
-                        lastDate: last,
-                      );
-                      if (picked != null) setState(() => _dob = picked);
-                    },
+                    onPressed: (_saving || _progress != null)
+                        ? null
+                        : () async {
+                            final now = DateTime.now();
+                            final initial = _dob ??
+                                dobCurrent ??
+                                DateTime(now.year - 20, now.month, now.day);
+                            final first = DateTime(now.year - 80, 1, 1);
+                            final last =
+                                DateTime(now.year - 18, now.month, now.day);
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: initial,
+                              firstDate: first,
+                              lastDate: last,
+                            );
+                            if (picked != null) setState(() => _dob = picked);
+                          },
                     child: const Text('Pick'),
                   ),
                 ),
@@ -299,7 +504,9 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                   items: _countries
                       .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                       .toList(),
-                  onChanged: (v) => setState(() => _nationality = v),
+                  onChanged: (_saving || _progress != null)
+                      ? null
+                      : (v) => setState(() => _nationality = v),
                   decoration: const InputDecoration(
                       labelText: 'Nationality', border: OutlineInputBorder()),
                   validator: (v) =>
@@ -307,17 +514,16 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
-                  controller: _phone
-                    ..text = _phone.text.isNotEmpty
-                        ? _phone.text
-                        : (data[UserFields.phone] ?? ''),
+                  controller: _phone,
                   keyboardType: TextInputType.phone,
                   decoration: InputDecoration(
                     labelText: 'Phone (+E.164)',
                     border: const OutlineInputBorder(),
                     suffixIcon: TextButton(
-                      onPressed: () =>
-                          Navigator.pushNamed(context, '/otp-verification'),
+                      onPressed: (_saving || _progress != null)
+                          ? null
+                          : () =>
+                              Navigator.pushNamed(context, '/otp-verification'),
                       child: Text(_phoneVerified ? 'Verified' : 'Verify'),
                     ),
                   ),

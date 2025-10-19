@@ -238,9 +238,14 @@ class _ProfileButton extends StatelessWidget {
   const _ProfileButton({required this.userId});
   final String userId;
 
-  Stream<Map<String, String>> _userMiniStream() {
+  Stream<Map<String, dynamic>> _userMiniStream() {
     if (userId.isEmpty) {
-      return Stream.value({'name': 'User', 'email': '', 'photo': ''});
+      return Stream.value({
+        'name': 'User',
+        'email': '',
+        'photo': '',
+        'complete': false,
+      });
     }
     return FirebaseFirestore.instance
         .collection('Users')
@@ -248,13 +253,11 @@ class _ProfileButton extends StatelessWidget {
         .snapshots()
         .map((snap) {
       final d = snap.data() ?? {};
-      final name = (d['Name'] ?? '').toString().trim();
-      final email = (d['Email'] ?? '').toString().trim();
-      final photo = (d['PhotoURL'] ?? '').toString().trim();
       return {
-        'name': name,
-        'email': email,
-        'photo': photo,
+        'name': (d['Name'] ?? '').toString().trim(),
+        'email': (d['Email'] ?? '').toString().trim(),
+        'photo': (d['PhotoURL'] ?? '').toString().trim(),
+        'complete': d['IsProfileComplete'] == true,
       };
     });
   }
@@ -262,44 +265,63 @@ class _ProfileButton extends StatelessWidget {
   String _initials(String nameOrEmail) {
     final s = nameOrEmail.trim();
     if (s.isEmpty) return 'U';
-    // إذا فيه اسمين خذي أول حرفين
     final parts = s.split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    // لو إيميل
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
     final base = s.contains('@') ? s.split('@').first : s;
     return base.isNotEmpty ? base[0].toUpperCase() : 'U';
   }
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<Map<String, String>>(
+    return StreamBuilder<Map<String, dynamic>>(
       stream: _userMiniStream(),
       builder: (context, snap) {
-        final name = (snap.data?['name'] ?? '').trim();
-        final email = (snap.data?['email'] ?? '').trim();
-        final photo = (snap.data?['photo'] ?? '').trim();
+        final name = (snap.data?['name'] ?? '').toString();
+        final email = (snap.data?['email'] ?? '').toString();
+        final photo = (snap.data?['photo'] ?? '').toString();
+        final complete = (snap.data?['complete'] == true);
         final placeholder = _initials(name.isNotEmpty ? name : email);
 
-        final avatar = CircleAvatar(
-          radius: 18,
-          backgroundImage: photo.isNotEmpty ? NetworkImage(photo) : null,
-          child: photo.isEmpty
-              ? Text(
-                  placeholder,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w700, color: Colors.white),
-                )
-              : null,
-          backgroundColor: Theme.of(context).colorScheme.secondary,
+        final avatar = Hero(
+          tag: 'profileAvatar',
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundImage: photo.isNotEmpty ? NetworkImage(photo) : null,
+                child: photo.isEmpty
+                    ? Text(
+                        placeholder,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      )
+                    : null,
+                backgroundColor: Theme.of(context).colorScheme.secondary,
+              ),
+              Positioned(
+                right: -1,
+                bottom: -1,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: complete ? Colors.green : Colors.orange,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                ),
+              ),
+            ],
+          ),
         );
 
         return Tooltip(
-          message: 'Profile',
+          message: complete ? 'Profile complete' : 'Profile incomplete',
           child: InkWell(
-            customBorder:
-                const CircleBorder(eccentricity: 0.0, side: BorderSide.none),
+            customBorder: const CircleBorder(),
             onTap: () {
               Navigator.push(
                 context,
