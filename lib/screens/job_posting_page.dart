@@ -28,6 +28,10 @@ class _JobPostingPageState extends State<JobPostingPage> {
   bool _isEdit = false;
   String? _jobId; // لو تعديل راح نستعمله
 
+  // AI Credits tracking
+  int _aiCreditsRemaining = 2;
+  bool _loadingCredits = true;
+
   @override
   void initState() {
     super.initState();
@@ -71,7 +75,72 @@ class _JobPostingPageState extends State<JobPostingPage> {
 
         setState(() {});
       }
+
+      // Fetch AI credits for create mode
+      if (!_isEdit) {
+        await _fetchAICredits();
+      }
     });
+  }
+
+  Future<void> _fetchAICredits() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      setState(() => _loadingCredits = false);
+      return;
+    }
+
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(currentUser.uid)
+          .get();
+
+      if (!userDoc.exists) {
+        setState(() => _loadingCredits = false);
+        return;
+      }
+
+      final userData = userDoc.data() as Map<String, dynamic>;
+      final aiUsage = userData['AiUsage'] as Map<String, dynamic>?;
+
+      // Check if we need to reset daily usage
+      final lastReset = aiUsage?['LastReset'] as Timestamp?;
+      final now = DateTime.now();
+      bool needsReset = false;
+
+      if (lastReset != null) {
+        final lastResetDate = lastReset.toDate();
+        needsReset = lastResetDate.year != now.year ||
+                     lastResetDate.month != now.month ||
+                     lastResetDate.day != now.day;
+      } else {
+        needsReset = true;
+      }
+
+      int jobPostingCount;
+
+      if (needsReset) {
+        // Reset JobPosting count for the new day
+        await FirebaseFirestore.instance
+            .collection('Users')
+            .doc(currentUser.uid)
+            .update({
+          'AiUsage.LastReset': FieldValue.serverTimestamp(),
+          'AiUsage.JobPosting': 2,
+        });
+        jobPostingCount = 2;
+      } else {
+        jobPostingCount = (aiUsage?['JobPosting'] ?? 2) as int;
+      }
+
+      setState(() {
+        _aiCreditsRemaining = jobPostingCount;
+        _loadingCredits = false;
+      });
+    } catch (e) {
+      setState(() => _loadingCredits = false);
+    }
   }
 
   Future<void> _verifyUserAccess() async {
@@ -403,6 +472,11 @@ class _JobPostingPageState extends State<JobPostingPage> {
           'AiUsage.JobPosting': jobPostingCount - 1,
         });
 
+        // Update local credits state
+        setState(() {
+          _aiCreditsRemaining = jobPostingCount - 1;
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('AI job description generated! (${jobPostingCount - 1} uses remaining)'),
@@ -552,10 +626,36 @@ class _JobPostingPageState extends State<JobPostingPage> {
 
             // AI Generate Button (only show in create mode)
             if (!_isEdit) ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (_loadingCredits)
+                    const Padding(
+                      padding: EdgeInsets.only(right: 12),
+                      child: Text(
+                        'Loading credits...',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: Text(
+                        '$_aiCreditsRemaining credits remaining (resets daily)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[700],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton.icon(
-                  onPressed: _generateJobPost,
+                  onPressed: _aiCreditsRemaining > 0 ? _generateJobPost : null,
                   icon: const Icon(Icons.auto_awesome, size: 18),
                   label: const Text(
                     'Generate with AI',
@@ -563,7 +663,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                   ),
                   style: TextButton.styleFrom(
                     foregroundColor: Colors.white,
-                    backgroundColor: const Color(0xFF49469F),
+                    backgroundColor: _aiCreditsRemaining > 0 ? const Color(0xFF49469F) : Colors.grey,
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
