@@ -144,10 +144,18 @@ class _JobPostingPageState extends State<JobPostingPage> {
   }
 
   Future<void> _selectStartDate() async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day); // Strip time
+
+    // Use existing date if it's today or future, otherwise use today
+    final DateTime initialDate = (_startDate != null && !_startDate!.isBefore(today))
+        ? _startDate!
+        : today;
+
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _startDate ?? DateTime.now(),
-      firstDate: DateTime.now(),
+      initialDate: initialDate,
+      firstDate: today,
       lastDate: DateTime(2100),
     );
     if (picked != null) {
@@ -156,10 +164,23 @@ class _JobPostingPageState extends State<JobPostingPage> {
   }
 
   Future<void> _selectEndDate() async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day); // Strip time
+
+    // First allowed date is the later of start date or today
+    final DateTime firstAllowedDate = _startDate != null && !_startDate!.isBefore(today)
+        ? _startDate!
+        : today;
+
+    // Initial date should be valid (between firstAllowedDate and lastDate)
+    final DateTime initialDate = (_endDate != null && !_endDate!.isBefore(firstAllowedDate))
+        ? _endDate!
+        : firstAllowedDate;
+
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _endDate ?? (_startDate ?? DateTime.now()),
-      firstDate: _startDate ?? DateTime.now(),
+      initialDate: initialDate,
+      firstDate: firstAllowedDate,
       lastDate: DateTime(2100),
     );
     if (picked != null) {
@@ -403,13 +424,6 @@ class _JobPostingPageState extends State<JobPostingPage> {
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_requirements.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please add at least one requirement')),
-      );
-      return;
-    }
-
     // Get current user ID
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) {
@@ -420,30 +434,42 @@ class _JobPostingPageState extends State<JobPostingPage> {
     }
 
     final userId = currentUser.uid;
-    final keywords = _extractKeywords();
-
-    final data = <String, dynamic>{
-      'JobTitle': _jobTitleController.text.trim(),
-      'JobDescription': _jobDescriptionController.text.trim(),
-      'Position': _positionController.text.trim(),
-      'Specialty': _specialityController.text.trim(),
-      'Requirements': _requirements,
-      'StartDate': _startDate,
-      'EndDate': _endDate,
-      'JobKeywords': keywords,
-      'UserID': userId,
-    };
 
     try {
       final jobs = FirebaseFirestore.instance.collection('Jobs');
 
       if (_isEdit && _jobId != null && _jobId!.isNotEmpty) {
-        // UPDATE - keep existing JobID and UserID
-        await jobs.doc(_jobId).update(data);
+        // EDIT MODE - Only update StartDate and EndDate
+        await jobs.doc(_jobId).update({
+          'StartDate': _startDate,
+          'EndDate': _endDate,
+        });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Job updated successfully')),
+          const SnackBar(content: Text('Job dates updated successfully')),
         );
       } else {
+        // CREATE MODE - Validate requirements first
+        if (_requirements.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please add at least one requirement')),
+          );
+          return;
+        }
+
+        final keywords = _extractKeywords();
+
+        final data = <String, dynamic>{
+          'JobTitle': _jobTitleController.text.trim(),
+          'JobDescription': _jobDescriptionController.text.trim(),
+          'Position': _positionController.text.trim(),
+          'Specialty': _specialityController.text.trim(),
+          'Requirements': _requirements,
+          'StartDate': _startDate,
+          'EndDate': _endDate,
+          'JobKeywords': keywords,
+          'UserID': userId,
+        };
+
         // CREATE - generate new JobID and use it as document ID
         final newJobDoc = jobs.doc(); // Generate document ID
         final jobId = newJobDoc.id;
@@ -485,6 +511,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
             // Job Title
             TextFormField(
               controller: _jobTitleController,
+              enabled: !_isEdit,
               decoration: InputDecoration(
                 labelText: 'Job Title *',
                 border: OutlineInputBorder(
@@ -498,6 +525,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
             // Position
             TextFormField(
               controller: _positionController,
+              enabled: !_isEdit,
               decoration: InputDecoration(
                 labelText: 'Position *',
                 border: OutlineInputBorder(
@@ -511,6 +539,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
             // Speciality
             TextFormField(
               controller: _specialityController,
+              enabled: !_isEdit,
               decoration: InputDecoration(
                 labelText: 'Speciality *',
                 border: OutlineInputBorder(
@@ -521,31 +550,34 @@ class _JobPostingPageState extends State<JobPostingPage> {
             ),
             const SizedBox(height: 16),
 
-            // AI Generate Button
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: _generateJobPost,
-                icon: const Icon(Icons.auto_awesome, size: 18),
-                label: const Text(
-                  'Generate with AI',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                ),
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  backgroundColor: const Color(0xFF49469F),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+            // AI Generate Button (only show in create mode)
+            if (!_isEdit) ...[
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: _generateJobPost,
+                  icon: const Icon(Icons.auto_awesome, size: 18),
+                  label: const Text(
+                    'Generate with AI',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor: const Color(0xFF49469F),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
+              const SizedBox(height: 12),
+            ],
 
             // Job Description
             TextFormField(
               controller: _jobDescriptionController,
+              enabled: !_isEdit,
               decoration: InputDecoration(
                 labelText: 'Job Description *',
                 border: OutlineInputBorder(
@@ -560,66 +592,106 @@ class _JobPostingPageState extends State<JobPostingPage> {
             ),
             const SizedBox(height: 16),
 
-            // Requirements
-            Card(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Requirements *',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _requirementController,
-                            decoration: InputDecoration(
-                              hintText: 'Enter requirement',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            onSubmitted: (_) => _addRequirement(),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        ElevatedButton(
-                          onPressed: _addRequirement,
-                          child: const Text('Add'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    if (_requirements.isEmpty)
-                      const Text('No requirements added yet', style: TextStyle(color: Colors.grey))
-                    else
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _requirements.length,
-                        itemBuilder: (context, index) {
-                          return Card(
-                            child: ListTile(
-                              title: Text(_requirements[index]),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red),
-                                onPressed: () => _removeRequirement(index),
-                              ),
-                            ),
-                          );
-                        },
+            // Requirements (only show in create mode, display read-only in edit mode)
+            if (!_isEdit)
+              Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Requirements *',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
-                  ],
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _requirementController,
+                              decoration: InputDecoration(
+                                hintText: 'Enter requirement',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              onSubmitted: (_) => _addRequirement(),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: _addRequirement,
+                            child: const Text('Add'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      if (_requirements.isEmpty)
+                        const Text('No requirements added yet', style: TextStyle(color: Colors.grey))
+                      else
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _requirements.length,
+                          itemBuilder: (context, index) {
+                            return Card(
+                              child: ListTile(
+                                title: Text(_requirements[index]),
+                                trailing: IconButton(
+                                  icon: const Icon(Icons.delete, color: Colors.red),
+                                  onPressed: () => _removeRequirement(index),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              // Read-only requirements display in edit mode
+              Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Requirements',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 12),
+                      if (_requirements.isEmpty)
+                        const Text('No requirements', style: TextStyle(color: Colors.grey))
+                      else
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _requirements.length,
+                          itemBuilder: (context, index) {
+                            return Card(
+                              color: Colors.grey[100],
+                              child: ListTile(
+                                title: Text(
+                                  _requirements[index],
+                                  style: const TextStyle(color: Colors.black87),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                    ],
+                  ),
                 ),
               ),
-            ),
             const SizedBox(height: 16),
 
             // Start Date
