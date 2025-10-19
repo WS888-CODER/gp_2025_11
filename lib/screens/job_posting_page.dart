@@ -165,6 +165,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
       final userData = userDoc.data() as Map<String, dynamic>;
       final userType = userData['UserType'] ?? '';
       final accountStatus = userData['AccountStatus'] ?? '';
+      final isProfileComplete = userData['IsProfileComplete'] ?? false;
 
       // Check if user is a Company
       if (userType != 'Company') {
@@ -181,6 +182,12 @@ class _JobPostingPageState extends State<JobPostingPage> {
         } else {
           _showErrorAndGoBack('Your company account is not verified. Please contact support.');
         }
+        return;
+      }
+
+      // Check if profile is complete
+      if (!isProfileComplete) {
+        _showErrorAndGoBack('Please complete your company profile before creating or editing job postings.');
         return;
       }
     } catch (e) {

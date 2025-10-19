@@ -30,6 +30,62 @@ class _CompanyHomeState extends State<CompanyHome> {
     return fromArgs.isNotEmpty ? fromArgs : (widget.companyId ?? '');
   }
 
+  /// Check if profile is complete before allowing job operations
+  Future<bool> _checkProfileComplete() async {
+    final companyId = _effectiveCompanyId;
+    if (companyId.isEmpty) return false;
+
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(companyId)
+          .get();
+
+      if (!userDoc.exists) return false;
+
+      final userData = userDoc.data() as Map<String, dynamic>;
+      final isProfileComplete = userData['IsProfileComplete'] ?? false;
+
+      if (!isProfileComplete) {
+        if (!mounted) return false;
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Profile Incomplete'),
+            content: const Text(
+              'Please complete your company profile before creating or editing job postings.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      if (!mounted) return false;
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Error'),
+          content: Text('Failed to verify profile: $e'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return false;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -93,9 +149,12 @@ class _CompanyHomeState extends State<CompanyHome> {
             Padding(
               padding: const EdgeInsets.only(right: 20.0, top: 8),
               child: OutlinedButton(
-                onPressed: () {
-                  // وضع إنشاء جديد
-                  Navigator.pushNamed(context, '/job-posting');
+                onPressed: () async {
+                  // Check profile completion first
+                  final canProceed = await _checkProfileComplete();
+                  if (canProceed && mounted) {
+                    Navigator.pushNamed(context, '/job-posting');
+                  }
                 },
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: _brand),
@@ -199,7 +258,11 @@ class _CompanyHomeState extends State<CompanyHome> {
 
                       // Edit => يفتح صفحة job_posting ببيانات الوظيفة للتحرير
                       OutlinedButton(
-                        onPressed: () {
+                        onPressed: () async {
+                          // Check profile completion first
+                          final canProceed = await _checkProfileComplete();
+                          if (!canProceed || !mounted) return;
+
                           final desc = data['JobDescription'] ??
                               data['Description'] ??
                               '';
