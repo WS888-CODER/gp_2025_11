@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-
+import 'package:gp_2025_11/screens/company_profile_page.dart';
+import 'package:gp_2025_11/screens/job_seeker_profile_page.dart';
 import 'firebase_options.dart';
 import 'config/theme.dart';
-
 import 'screens/start_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/signup_screen.dart';
@@ -11,8 +11,6 @@ import 'screens/otp_verification_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/admin_dashboard.dart';
 import 'screens/job_posting_page.dart';
-
-// شاشاتك
 import 'screens/jobseeker_home.dart';
 import 'screens/company_home.dart';
 
@@ -42,8 +40,8 @@ class Jadeer extends StatelessWidget {
         '/admin-dashboard': (context) => AdminDashboard(),
         '/job-posting': (context) => const JobPostingPage(),
         '/forgot-password': (context) => ForgotPasswordScreen(),
-
-        // ✅ نمرّر المعرفات بشكل نظيف للشاشات
+        '/profile/jobseeker': (context) => const JobSeekerProfileLite(),
+        '/profile/company': (context) => const CompanyProfileLite(),
         '/jobseeker-home': (context) {
           final args = ModalRoute.of(context)!.settings.arguments
               as Map<String, dynamic>?;
