@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gp_2025_11/screens/all_jobs.dart';
+import 'package:gp_2025_11/screens/job_seeker_profile_page.dart';
 
 class JobSeekerHome extends StatefulWidget {
   const JobSeekerHome({super.key, this.userId});
@@ -129,6 +130,12 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
       appBar: AppBar(
         backgroundColor: _brand,
         elevation: 0,
+        // ⬇️ زر البروفايل فوق يسار
+        leadingWidth: 56,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 8),
+          child: _ProfileButton(userId: userId),
+        ),
         title: _WelcomeTitle(userId: userId),
         actions: [
           IconButton(
@@ -220,6 +227,91 @@ class _WelcomeTitle extends StatelessWidget {
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ProfileButton extends StatelessWidget {
+  const _ProfileButton({required this.userId});
+  final String userId;
+
+  Stream<Map<String, String>> _userMiniStream() {
+    if (userId.isEmpty) {
+      return Stream.value({'name': 'User', 'email': '', 'photo': ''});
+    }
+    return FirebaseFirestore.instance
+        .collection('Users')
+        .doc(userId)
+        .snapshots()
+        .map((snap) {
+      final d = snap.data() ?? {};
+      final name = (d['Name'] ?? '').toString().trim();
+      final email = (d['Email'] ?? '').toString().trim();
+      final photo = (d['PhotoURL'] ?? '').toString().trim();
+      return {
+        'name': name,
+        'email': email,
+        'photo': photo,
+      };
+    });
+  }
+
+  String _initials(String nameOrEmail) {
+    final s = nameOrEmail.trim();
+    if (s.isEmpty) return 'U';
+    // إذا فيه اسمين خذي أول حرفين
+    final parts = s.split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    // لو إيميل
+    final base = s.contains('@') ? s.split('@').first : s;
+    return base.isNotEmpty ? base[0].toUpperCase() : 'U';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<Map<String, String>>(
+      stream: _userMiniStream(),
+      builder: (context, snap) {
+        final name = (snap.data?['name'] ?? '').trim();
+        final email = (snap.data?['email'] ?? '').trim();
+        final photo = (snap.data?['photo'] ?? '').trim();
+        final placeholder = _initials(name.isNotEmpty ? name : email);
+
+        final avatar = CircleAvatar(
+          radius: 18,
+          backgroundImage: photo.isNotEmpty ? NetworkImage(photo) : null,
+          child: photo.isEmpty
+              ? Text(
+                  placeholder,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700, color: Colors.white),
+                )
+              : null,
+          backgroundColor: Theme.of(context).colorScheme.secondary,
+        );
+
+        return Tooltip(
+          message: 'Profile',
+          child: InkWell(
+            customBorder:
+                const CircleBorder(eccentricity: 0.0, side: BorderSide.none),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const JobSeekerProfile(),
+                ),
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: avatar,
+            ),
           ),
         );
       },
@@ -398,7 +490,7 @@ class _JobsPreviewState extends State<_JobsPreview> {
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              // In preview we skip "save" button to keep it compact
+                              // compact preview (no save button)
                             ],
                           ),
                           const SizedBox(height: 10),

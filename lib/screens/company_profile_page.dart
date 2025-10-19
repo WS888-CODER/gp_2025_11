@@ -21,14 +21,14 @@ final _email =
     RegExp(r"^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$", caseSensitive: false);
 final _e164 = RegExp(r'^\+[1-9]\d{7,14}$');
 
-class CompanyProfileLite extends StatefulWidget {
-  const CompanyProfileLite({super.key});
+class CompanyProfile extends StatefulWidget {
+  const CompanyProfile({super.key});
 
   @override
-  State<CompanyProfileLite> createState() => _CompanyProfileLiteState();
+  State<CompanyProfile> createState() => _CompanyProfileState();
 }
 
-class _CompanyProfileLiteState extends State<CompanyProfileLite> {
+class _CompanyProfileState extends State<CompanyProfile> {
   final _form = GlobalKey<FormState>();
   final _name = TextEditingController();
   final _desc = TextEditingController();

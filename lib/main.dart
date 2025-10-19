@@ -40,8 +40,8 @@ class Jadeer extends StatelessWidget {
         '/admin-dashboard': (context) => AdminDashboard(),
         '/job-posting': (context) => const JobPostingPage(),
         '/forgot-password': (context) => ForgotPasswordScreen(),
-        '/profile/jobseeker': (context) => const JobSeekerProfileLite(),
-        '/profile/company': (context) => const CompanyProfileLite(),
+        '/profile/jobseeker': (context) => const JobSeekerProfile(),
+        '/profile/company': (context) => const CompanyProfile(),
         '/jobseeker-home': (context) {
           final args = ModalRoute.of(context)!.settings.arguments
               as Map<String, dynamic>?;

@@ -41,14 +41,14 @@ const _countries = <String>[
   'Philippines',
 ];
 
-class JobSeekerProfileLite extends StatefulWidget {
-  const JobSeekerProfileLite({super.key});
+class JobSeekerProfile extends StatefulWidget {
+  const JobSeekerProfile({super.key});
 
   @override
-  State<JobSeekerProfileLite> createState() => _JobSeekerProfileLiteState();
+  State<JobSeekerProfile> createState() => _JobSeekerProfileState();
 }
 
-class _JobSeekerProfileLiteState extends State<JobSeekerProfileLite> {
+class _JobSeekerProfileState extends State<JobSeekerProfile> {
   final _form = GlobalKey<FormState>();
   final _phone = TextEditingController();
   String? _cvUrl, _photoUrl, _nationality;
