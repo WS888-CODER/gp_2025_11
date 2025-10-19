@@ -22,16 +22,18 @@ class JobFields {
   static const requirements = 'Requirements';
   static const specialty = 'Specialty';
   static const userId = 'UserID';
-  static const company = 'Company';
-  static const applyUrl = 'ApplyURL';
+  static const company =
+      'Company'; // not in schema but kept for backward-safety
+  static const applyUrl = 'ApplyURL'; // optional
 }
 
 class UserDocFields {
   static const userType = 'UserType';
   static const isProfileComplete = 'IsProfileComplete';
   static const cvUrl = 'CVURL';
-  static const major = 'Major';
   static const name = 'Name';
+  static const companyName = 'CompanyName';
+  static const cvKeywords = 'CVKeywords';
 }
 
 /* ========================== MODEL ========================== */
@@ -122,12 +124,12 @@ class JobsPage extends StatefulWidget {
 
 class _JobsPageState extends State<JobsPage> {
   String _search = '';
-  String _selectedMajor = 'All';
+  String _selectedSpecialty = 'All';
   SortOrder _sort = SortOrder.newestFirst;
   bool _forYou = false;
 
   late Set<String> _saved;
-  List<String> _majors = ['All'];
+  List<String> _specialties = ['All'];
   List<Job> _allJobs = [];
 
   final Map<String, String> _companyNames = {};
@@ -146,7 +148,7 @@ class _JobsPageState extends State<JobsPage> {
     _saved = {...widget.profile.savedJobIds};
 
     _jobsSub = _jobsStream().listen((jobs) {
-      _updateMajorsFrom(jobs);
+      _updateSpecialtiesFrom(jobs);
       _ensureCompanyNames(jobs.map((j) => j.userId).toSet());
       if (!mounted) return;
       setState(() {
@@ -165,7 +167,10 @@ class _JobsPageState extends State<JobsPage> {
         final type = (d[UserDocFields.userType] ?? 'JobSeeker').toString();
         final complete = d[UserDocFields.isProfileComplete] == true;
         final cv = (d[UserDocFields.cvUrl] ?? '').toString();
-        final mj = (d[UserDocFields.major] ?? '').toString();
+        final cvKeys = (d[UserDocFields.cvKeywords] is List)
+            ? List<String>.from(
+                (d[UserDocFields.cvKeywords] as List).map((e) => e.toString()))
+            : <String>[];
 
         if (!mounted) return;
         setState(() {
@@ -173,7 +178,7 @@ class _JobsPageState extends State<JobsPage> {
           _isProfileComplete = complete;
           _liveProfile = UserProfile(
             cvUrl: cv.isEmpty ? null : cv,
-            major: mj.isEmpty ? null : mj,
+            cvKeywords: cvKeys.toSet(),
             hasMinimumInfo: complete,
             savedJobIds: _saved,
           );
@@ -199,12 +204,27 @@ class _JobsPageState extends State<JobsPage> {
   String _fmtDate(DateTime d) =>
       '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
 
-  bool _matchesMajor(Job j, String major) {
-    final m = major.toLowerCase().trim();
+  bool _matchesSpecialty(Job j, String specialty) {
+    final m = specialty.toLowerCase().trim();
     final spec = j.specialty.toLowerCase().trim();
     final inSpec = spec.contains(m);
     final inTags = j.keywords.any((k) => k.toLowerCase().trim().contains(m));
     return inSpec || inTags;
+  }
+
+  bool _matchesCvKeywords(Job j, Set<String> userCvKeywords) {
+    if (userCvKeywords.isEmpty) return true;
+    final jobBag = {
+      j.specialty.toLowerCase().trim(),
+      ...j.keywords.map((k) => k.toLowerCase().trim()),
+    };
+    for (final kw in userCvKeywords) {
+      if (kw.toLowerCase().trim().isEmpty) continue;
+      if (jobBag.any((token) => token.contains(kw.toLowerCase().trim()))) {
+        return true;
+      }
+    }
+    return false;
   }
 
   List<Job> _applyFilters(List<Job> jobs) {
@@ -221,18 +241,15 @@ class _JobsPageState extends State<JobsPage> {
       );
     }
 
-    if (_selectedMajor != 'All') {
-      res = res.where((j) => _matchesMajor(j, _selectedMajor));
+    if (_selectedSpecialty != 'All') {
+      res = res.where((j) => _matchesSpecialty(j, _selectedSpecialty));
     }
 
     if (_forYou) {
       if (_profile.cvUrl == null) {
         res = const <Job>[];
       } else {
-        final userMajor = _profile.major;
-        if (userMajor != null && userMajor.isNotEmpty) {
-          res = res.where((j) => _matchesMajor(j, userMajor));
-        }
+        res = res.where((j) => _matchesCvKeywords(j, _profile.cvKeywords));
       }
     }
 
@@ -321,7 +338,7 @@ class _JobsPageState extends State<JobsPage> {
     }
   }
 
-  void _updateMajorsFrom(List<Job> jobs) {
+  void _updateSpecialtiesFrom(List<Job> jobs) {
     final set = <String>{'All'};
     for (final j in jobs) {
       final s = j.specialty.trim();
@@ -329,12 +346,12 @@ class _JobsPageState extends State<JobsPage> {
     }
     final next = set.toList();
 
-    if (!listEquals(next, _majors)) {
+    if (!listEquals(next, _specialties)) {
       if (!mounted) return;
       setState(() {
-        _majors = next;
-        if (!_majors.contains(_selectedMajor)) {
-          _selectedMajor = 'All';
+        _specialties = next;
+        if (!_specialties.contains(_selectedSpecialty)) {
+          _selectedSpecialty = 'All';
         }
       });
     }
@@ -357,10 +374,15 @@ class _JobsPageState extends State<JobsPage> {
 
       for (final doc in qs.docs) {
         final data = doc.data();
-        final name = (data[UserDocFields.name] ?? '').toString().trim();
-        if (name.isNotEmpty) {
-          _companyNames[doc.id] = name;
-        }
+        final companyName =
+            (data[UserDocFields.companyName] ?? '').toString().trim();
+        final personalName = (data[UserDocFields.name] ?? '').toString().trim();
+
+        final display = companyName.isNotEmpty
+            ? companyName
+            : (personalName.isNotEmpty ? personalName : 'Company');
+
+        _companyNames[doc.id] = display;
       }
       for (final id in chunk) {
         _companyNames.putIfAbsent(id, () => 'Company');
@@ -405,12 +427,12 @@ class _JobsPageState extends State<JobsPage> {
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 DropdownButton<String>(
-                  value: _selectedMajor,
-                  items: _majors
+                  value: _selectedSpecialty,
+                  items: _specialties
                       .map((m) => DropdownMenuItem(value: m, child: Text(m)))
                       .toList(),
                   onChanged: (val) =>
-                      setState(() => _selectedMajor = val ?? 'All'),
+                      setState(() => _selectedSpecialty = val ?? 'All'),
                 ),
                 DropdownButton<SortOrder>(
                   value: _sort,
@@ -623,13 +645,13 @@ class _JobsPageState extends State<JobsPage> {
 
 class UserProfile {
   final String? cvUrl;
-  final String? major;
+  final Set<String> cvKeywords;
   final bool hasMinimumInfo;
   final Set<String> savedJobIds;
 
   const UserProfile({
     this.cvUrl,
-    this.major,
+    this.cvKeywords = const {},
     this.hasMinimumInfo = false,
     this.savedJobIds = const {},
   });

@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
-// صفحات البنات: الموديل + التفاصيل + قائمة الوظائف + UserProfile
-import 'package:gp_2025_11/screens/all_jobs.dart'
-    show JobsPage, Job, JobDetailsPage, UserProfile;
+import 'package:gp_2025_11/screens/all_jobs.dart';
 
 class JobSeekerHome extends StatefulWidget {
   const JobSeekerHome({super.key, this.userId});
-  final String? userId; // ممكن يجي من routes
+  final String? userId;
 
   @override
   State<JobSeekerHome> createState() => _JobSeekerHomeState();
@@ -19,17 +16,8 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
   int _tab = 1;
   final _homeScroll = ScrollController();
 
-  // بروفايل بسيط للتنقل إلى JobsPage (عرض فقط)
-  final _profile = UserProfile(
-    cvUrl: null,
-    major: 'computer science',
-    hasMinimumInfo: true,
-    savedJobIds: {},
-  );
-
   static const _brand = Color(0xFF4A5FBC);
 
-  /// نجيب الـ userId: args → currentUser → widget.userId
   String get _effectiveUserId {
     final args =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
@@ -50,7 +38,7 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
 
   @override
   Widget build(BuildContext context) {
-    // اخفاء أي MaterialBanner سابق
+    // hide any previous MaterialBanner
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
@@ -61,8 +49,8 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
       controller: _homeScroll,
       padding: const EdgeInsets.all(16),
       children: [
-        Row(
-          children: const [
+        const Row(
+          children: [
             Icon(Icons.work_outline, size: 36, color: _brand),
             SizedBox(width: 10),
             Expanded(
@@ -117,7 +105,7 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => JobsPage(profile: _profile),
+                    builder: (_) => const JobsPage(),
                   ),
                 );
               },
@@ -127,6 +115,7 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
         ),
         const SizedBox(height: 8),
 
+        // Preview section now styled like All Jobs cards
         const _JobsPreview(limit: 2),
 
         const SizedBox(height: 16),
@@ -140,7 +129,7 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
       appBar: AppBar(
         backgroundColor: _brand,
         elevation: 0,
-        title: _WelcomeTitle(userId: userId), // ✅ اسم دينامك من Users/{uid}
+        title: _WelcomeTitle(userId: userId),
         actions: [
           IconButton(
             tooltip: 'Notifications',
@@ -207,16 +196,11 @@ class _WelcomeTitle extends StatelessWidget {
         .snapshots()
         .map((snap) {
       final data = snap.data() ?? {};
-      final first = (data['FirstName'] ?? data['firstName'] ?? '').toString();
-      final last = (data['LastName'] ?? data['lastName'] ?? '').toString();
-      final full = (data['FullName'] ?? data['fullName'] ?? '').toString();
-
-      final name = (full.isNotEmpty
-              ? full
-              : [first, last].where((s) => s.trim().isNotEmpty).join(' '))
-          .trim();
-
-      if (name.isNotEmpty) return name;
+      // New schema: CompanyName / Name / Email
+      final companyName = (data['CompanyName'] ?? '').toString();
+      final name = (data['Name'] ?? '').toString();
+      if (companyName.trim().isNotEmpty) return companyName.trim();
+      if (name.trim().isNotEmpty) return name.trim();
 
       final email = (data['Email'] ?? data['email'] ?? '').toString();
       if (email.contains('@')) return email.split('@').first;
@@ -284,9 +268,34 @@ class _BigTile extends StatelessWidget {
   }
 }
 
-class _JobsPreview extends StatelessWidget {
+class _JobsPreview extends StatefulWidget {
   final int limit;
   const _JobsPreview({this.limit = 2});
+
+  @override
+  State<_JobsPreview> createState() => _JobsPreviewState();
+}
+
+class _JobsPreviewState extends State<_JobsPreview> {
+  final Map<String, String> _companyCache = {};
+
+  Future<String> _companyName(String userId) async {
+    if (userId.isEmpty) return 'Company';
+    if (_companyCache.containsKey(userId)) return _companyCache[userId]!;
+    final doc =
+        await FirebaseFirestore.instance.collection('Users').doc(userId).get();
+    final data = doc.data() ?? {};
+    final companyName = (data['CompanyName'] ?? '').toString().trim();
+    final name = (data['Name'] ?? '').toString().trim();
+    final display = companyName.isNotEmpty
+        ? companyName
+        : (name.isNotEmpty ? name : 'Company');
+    _companyCache[userId] = display;
+    return display;
+  }
+
+  String _fmtDate(DateTime d) =>
+      '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
 
   @override
   Widget build(BuildContext context) {
@@ -294,7 +303,7 @@ class _JobsPreview extends StatelessWidget {
       stream: FirebaseFirestore.instance
           .collection('Jobs')
           .orderBy('StartDate', descending: true)
-          .limit(limit)
+          .limit(widget.limit)
           .snapshots(),
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
@@ -321,45 +330,142 @@ class _JobsPreview extends StatelessWidget {
           );
         }
 
-        return Column(
-          children: docs.map((d) {
-            final data = d.data();
-            final title = (data['JobTitle'] ?? '').toString();
-            final position = (data['Position'] ?? '').toString();
-            final specialty = (data['Specialty'] ?? '').toString();
+        final jobs = docs.map((d) => Job.fromDoc(d)).toList();
 
-            return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+        return Column(
+          children: jobs.map((j) {
+            return FutureBuilder<String>(
+              future: _companyName(j.userId),
+              builder: (context, companySnap) {
+                final companyName = companySnap.data ?? 'Company';
+                final hasKeywords = j.keywords.isNotEmpty;
+                final canApply =
+                    j.applyUrl != null && j.applyUrl!.trim().isNotEmpty;
+
+                return Card(
+                  elevation: 0.5,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                ],
-              ),
-              child: ListTile(
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-                title: Text(title,
-                    style: const TextStyle(fontWeight: FontWeight.w700)),
-                subtitle: Text(
-                  [position, specialty].where((e) => e.isNotEmpty).join(' • '),
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  final job = Job.fromDoc(d);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => JobDetailsPage(job: job),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => JobDetailsPage(
+                            job: j,
+                            companyName: companyName,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      j.title,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      companyName,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Posted: ${_fmtDate(j.postedAt)}',
+                                      style:
+                                          Theme.of(context).textTheme.bodySmall,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              // In preview we skip "save" button to keep it compact
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          if (hasKeywords)
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: -8,
+                              children: j.keywords.take(3).map((k) {
+                                return Chip(
+                                  label: Text(k),
+                                  visualDensity: VisualDensity.compact,
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                );
+                              }).toList(),
+                            ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              if (j.specialty.isNotEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                        .withOpacity(.08),
+                                  ),
+                                  child: Text(
+                                    j.specialty,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              const Spacer(),
+                              FilledButton(
+                                onPressed: canApply
+                                    ? () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => JobDetailsPage(
+                                              job: j,
+                                              companyName: companyName,
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    : null,
+                                child: const Text('Apply'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             );
           }).toList(),
         );
