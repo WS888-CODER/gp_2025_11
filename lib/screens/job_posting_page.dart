@@ -578,13 +578,39 @@ class _JobPostingPageState extends State<JobPostingPage> {
   String _fmtDate(DateTime d) =>
       '${d.day}/${d.month}/${d.year}';
 
+  Future<bool> _onWillPop() async {
+    // Show confirmation dialog
+    final shouldPop = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Abandon Changes?'),
+        content: const Text(
+          'Are you sure you want to go back? Any unsaved changes will be lost.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Leave'),
+          ),
+        ],
+      ),
+    );
+    return shouldPop ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEdit ? 'Edit Job' : 'Create Job Posting'),
-      ),
-      body: Form(
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(_isEdit ? 'Edit Job' : 'Create Job Posting'),
+        ),
+        body: Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(16.0),
@@ -859,6 +885,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
