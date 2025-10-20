@@ -1,13 +1,11 @@
 import { onObjectFinalized } from "firebase-functions/v2/storage";
-import * as admin from "firebase-admin";
-import pdfParse from "pdf-parse";
-import textract from "textract";
+import admin from "firebase-admin";
 import path from "path";
 import os from "os";
 import fs from "fs";
 
-// ✅ احمي التهيئة (لا تهيئين مرّتين)
-if (!admin.apps.length) {
+// احمِ التهيئة على ESM
+if (!admin.apps || admin.apps.length === 0) {
   admin.initializeApp();
 }
 
@@ -120,6 +118,20 @@ export const extractCVKeywords = onObjectFinalized(
     let errorMsg: string | null = null;
 
     try {
+      // ✅ dynamic import لتفادي مشاكل ESM/CJS عند تحميل الموديول
+      // pdf-parse
+      // @ts-ignore
+      const pdfParseModule = await import("pdf-parse");
+      const pdfParse: (buf: Buffer | Uint8Array) => Promise<{ text: string }> =
+        // @ts-ignore
+        (pdfParseModule as any).default ?? (pdfParseModule as any);
+
+      // textract
+      // @ts-ignore
+      const textractModule = await import("textract");
+      // @ts-ignore
+      const textract = (textractModule as any).default ?? (textractModule as any);
+
       const lowerName = objectName.toLowerCase();
 
       if (contentType.includes("pdf") || lowerName.endsWith(".pdf")) {

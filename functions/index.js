@@ -427,5 +427,3 @@ import * as cvFns from "./jadeer-cv/lib/index.js";
 
 // صدّري وظائفك من مشروع TypeScript بعد البناء
 export const extractCVKeywords = cvFns.extractCVKeywords; // غيّري الاسم لو عندك export مختلف
-// ---- merge: TS functions (keep teammate code above unchanged) ----
-import * as cvFns from "./jadeer-cv/lib/index.js";
