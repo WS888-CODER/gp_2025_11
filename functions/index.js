@@ -4,6 +4,7 @@ import * as functions from "firebase-functions";
 import admin from "firebase-admin";
 import nodemailer from "nodemailer";
 
+
 // ============================================
 // 🔧 Initialize Services
 // ============================================
@@ -420,3 +421,11 @@ export const resetUserPassword = functions.https.onCall(async (data, context) =>
     );
   }
 });
+
+// ---- merge: TS functions (keep teammate code above unchanged) ----
+import * as cvFns from "./jadeer-cv/lib/index.js";
+
+// صدّري وظائفك من مشروع TypeScript بعد البناء
+export const extractCVKeywords = cvFns.extractCVKeywords; // غيّري الاسم لو عندك export مختلف
+// ---- merge: TS functions (keep teammate code above unchanged) ----
+import * as cvFns from "./jadeer-cv/lib/index.js";
