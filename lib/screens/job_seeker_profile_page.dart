@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'; // kDebugMode
+import 'package:flutter/services.dart'; // <-- NEW for input formatters
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -17,14 +18,15 @@ class UserFields {
   static const dob = 'DoB';
   static const nationality = 'Nationality';
   static const phone = 'Phone';
-  static const phoneVerified = 'PhoneVerified';
+  static const phoneVerified =
+      'PhoneVerified'; // لم نعد نستخدمه، لكن نتركه للتوافق
   static const isProfileComplete = 'IsProfileComplete';
 }
 
-// DEV shortcut: set to false before release
-const bool kDevSkipOtp = true;
+// صيغة الهاتف المحلية: يبدأ بـ 5 وطوله 9 أرقام (سعودي)
+final _localSaPhone = RegExp(r'^5\d{8}$');
+const _saPrefix = '+966';
 
-final _e164 = RegExp(r'^\+[1-9]\d{7,14}$');
 const _countries = <String>[
   'Saudi Arabia',
   'United Arab Emirates',
@@ -57,23 +59,9 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
   final _form = GlobalKey<FormState>();
   final _phone = TextEditingController();
   String? _cvUrl, _photoUrl, _nationality;
-  String? _serverPhone;
   DateTime? _dob;
   bool _saving = false;
-  bool _phoneVerified = false;
   double? _progress; // 0..1 while uploading
-
-  @override
-  void initState() {
-    super.initState();
-    _phone.addListener(() {
-      final t = _phone.text.trim();
-      if (_serverPhone == null) return;
-      if (t != _serverPhone && _phoneVerified) {
-        setState(() => _phoneVerified = false);
-      }
-    });
-  }
 
   @override
   void dispose() {
@@ -89,6 +77,14 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
       years--;
     }
     return years >= 18;
+  }
+
+  // Helpers to convert phone formats
+  String _toE164(String local) => '$_saPrefix${local.trim()}'; // +9665XXXXXXXX
+  String _toLocal(String e164) {
+    final t = e164.trim();
+    if (t.startsWith(_saPrefix)) return t.substring(_saPrefix.length);
+    return t;
   }
 
   Future<String> _uploadWithProgress({
@@ -149,12 +145,19 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
   }
 
   Future<void> _openCV(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Cannot open CV')));
+    try {
+      final encoded = Uri.encodeFull(url);
+      final uri = Uri.parse(encoded);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        throw 'Cannot open';
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cannot open CV file')),
+      );
     }
   }
 
@@ -202,69 +205,7 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
     }
   }
 
-  // DEV shortcut: instantly mark phone verified and save it to Firestore.
-  Future<void> _devInstantVerifyPhone() async {
-    if (!kDebugMode || !kDevSkipOtp) return;
-    final phone = _phone.text.trim();
-    if (!_e164.hasMatch(phone)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid phone format (+E.164)')),
-      );
-      return;
-    }
-    try {
-      final uid = FirebaseAuth.instance.currentUser!.uid;
-      await FirebaseFirestore.instance
-          .collection(kUsersCollection)
-          .doc(uid)
-          .set({
-        UserFields.phone: phone,
-        UserFields.phoneVerified: true,
-      }, SetOptions(merge: true));
-
-      if (!mounted) return;
-      setState(() {
-        _serverPhone = phone;
-        _phoneVerified = true;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Phone marked as verified (DEV)')),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to mark verified: $e')),
-      );
-    }
-  }
-
   Future<void> _save(Map<String, dynamic> current) async {
-    if (!_form.currentState!.validate()) return;
-    if (_dob == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Select date of birth')));
-      return;
-    }
-    if (!_isAdult(_dob!)) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Must be at least 18')));
-      return;
-    }
-    if (_nationality == null || _nationality!.isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Select nationality')));
-      return;
-    }
-    if (!_e164.hasMatch(_phone.text.trim())) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Invalid phone format')));
-      return;
-    }
-    if (!_phoneVerified) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Verify phone')));
-      return;
-    }
     if (_progress != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please wait for uploads to finish')),
@@ -272,36 +213,95 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
       return;
     }
 
-    final uid = FirebaseAuth.instance.currentUser!.uid;
-    final data = <String, dynamic>{
-      UserFields.cvUrl: (_cvUrl == '')
-          ? FieldValue.delete()
-          : (_cvUrl ?? current[UserFields.cvUrl]),
-      UserFields.photoUrl: (_photoUrl == '')
-          ? FieldValue.delete()
-          : (_photoUrl ?? current[UserFields.photoUrl]),
-      UserFields.dob: Timestamp.fromDate(_dob!),
-      UserFields.nationality: _nationality,
-      UserFields.phone: _phone.text.trim(),
-      UserFields.phoneVerified: true,
-    };
+    // المسترجع من السيرفر
+    final dobCurrent = current[UserFields.dob] is Timestamp
+        ? (current[UserFields.dob] as Timestamp).toDate()
+        : null;
+    final serverPhoneE164 = (current[UserFields.phone] ?? '').toString();
+    final hasServerNat =
+        (current[UserFields.nationality] ?? '').toString().isNotEmpty;
 
-    final cvOk = (data[UserFields.cvUrl] ?? '').toString().isNotEmpty;
-    final photoOk = (data[UserFields.photoUrl] ?? '').toString().isNotEmpty;
-    final dobOk = data[UserFields.dob] != null;
-    final natOk = (data[UserFields.nationality] ?? '').toString().isNotEmpty;
-    final phoneOk = (data[UserFields.phone] ?? '').toString().isNotEmpty;
+    // نحدد فقط الحقول التي تغيّرت
+    final updates = <String, dynamic>{};
+
+    // CV & Photo (دعم الإزالة أو الإضافة فقط إذا تغيّر)
+    if (_cvUrl == '') {
+      updates[UserFields.cvUrl] = FieldValue.delete();
+    } else if (_cvUrl != null && _cvUrl != current[UserFields.cvUrl]) {
+      updates[UserFields.cvUrl] = _cvUrl;
+    }
+
+    if (_photoUrl == '') {
+      updates[UserFields.photoUrl] = FieldValue.delete();
+    } else if (_photoUrl != null && _photoUrl != current[UserFields.photoUrl]) {
+      updates[UserFields.photoUrl] = _photoUrl;
+    }
+
+    // DOB: نحفظ فقط إذا اخترتي تاريخًا جديدًا يختلف عن الحالي
+    if (_dob != null && _dob != dobCurrent) {
+      if (!_isAdult(_dob!)) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Must be at least 18')));
+        return;
+      }
+      updates[UserFields.dob] = Timestamp.fromDate(_dob!);
+    }
+
+    // Nationality: نحفظ فقط إذا تغيّرت
+    if (_nationality != null &&
+        _nationality != current[UserFields.nationality]) {
+      if (_nationality!.isEmpty) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Select nationality')));
+        return;
+      }
+      updates[UserFields.nationality] = _nationality;
+    }
+
+    // Phone: إذا كتبتي شيئًا في الحقل، نتحقق منه ونحفظه إن تغيّر
+    final local = _phone.text.trim(); // 5XXXXXXXX
+    if (local.isNotEmpty) {
+      if (!_localSaPhone.hasMatch(local)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Invalid phone format')));
+        return;
+      }
+      final e164 = _toE164(local); // +9665XXXXXXXX
+      if (e164 != serverPhoneE164) {
+        updates[UserFields.phone] = e164;
+      }
+    }
+
+    if (updates.isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('No changes to save')));
+      return;
+    }
+
+    // نحدّث IsProfileComplete بناءً على (القيم القديمة + التغييرات)
+    final merged = {...current, ...updates};
+
+    final cvOk = (merged[UserFields.cvUrl] ?? '').toString().isNotEmpty;
+    final photoOk = (merged[UserFields.photoUrl] ?? '').toString().isNotEmpty;
+    final dobOk = merged[UserFields.dob] != null;
+    final natOk = (merged[UserFields.nationality] ?? '').toString().isNotEmpty;
+    final phoneMerged = (merged[UserFields.phone] ?? '').toString();
+    final phoneLocal =
+        phoneMerged.startsWith(_saPrefix) ? _toLocal(phoneMerged) : phoneMerged;
+    final phoneOk = _localSaPhone.hasMatch(phoneLocal);
+
     final complete = cvOk && photoOk && dobOk && natOk && phoneOk;
+    updates[UserFields.isProfileComplete] = complete;
 
+    // تنفيذ الحفظ
+    final uid = FirebaseAuth.instance.currentUser!.uid;
     setState(() => _saving = true);
     try {
       await FirebaseFirestore.instance
           .collection(kUsersCollection)
           .doc(uid)
-          .set(
-        {...data, UserFields.isProfileComplete: complete},
-        SetOptions(merge: true),
-      );
+          .set(updates, SetOptions(merge: true));
+
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Saved')));
@@ -334,10 +334,14 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
           );
         }
         final data = snap.data?.data() ?? {};
-        final serverPhoneVal = (data[UserFields.phone] ?? '').toString();
-        _serverPhone ??= serverPhoneVal;
-        _phoneVerified =
-            _phoneVerified || (data[UserFields.phoneVerified] == true);
+
+        // مليء الحقل من القيمة المخزنة إن وُجدت
+        final serverPhoneE164 = (data[UserFields.phone] ?? '').toString();
+        if (_phone.text.isEmpty && serverPhoneE164.isNotEmpty) {
+          final local = _toLocal(serverPhoneE164);
+          // نتأكد أنه يبدو محلياً (يتجاهل أي بادئات أخرى غير +966)
+          _phone.text = local.startsWith('5') ? local : '';
+        }
 
         final dobCurrent = data[UserFields.dob] is Timestamp
             ? (data[UserFields.dob] as Timestamp).toDate()
@@ -347,15 +351,15 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
             ? 'Select date'
             : DateFormat('yyyy/MM/dd').format(_dob ?? dobCurrent!);
 
-        if (_phone.text.isEmpty && serverPhoneVal.isNotEmpty) {
-          _phone.text = serverPhoneVal;
-        }
-
         final hasCV =
             (_cvUrl ?? data[UserFields.cvUrl])?.toString().isNotEmpty == true;
         final hasPhoto =
             (_photoUrl ?? data[UserFields.photoUrl])?.toString().isNotEmpty ==
                 true;
+
+        final phoneLocal = _phone.text.trim();
+        final phoneValid = _localSaPhone.hasMatch(phoneLocal);
+
         final profileComplete = (data[UserFields.isProfileComplete] == true) ||
             (hasCV &&
                 hasPhoto &&
@@ -364,9 +368,10 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                         ?.toString()
                         .isNotEmpty ==
                     true) &&
-                (_phone.text.trim().isNotEmpty) &&
-                _phoneVerified);
-
+                phoneValid);
+        final hasServerPhone = serverPhoneE164.isNotEmpty;
+        final hasServerNat =
+            (data[UserFields.nationality] ?? '').toString().isNotEmpty;
         return Scaffold(
           appBar: AppBar(
             title: const Text('Profile'),
@@ -549,43 +554,32 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                       : (v) => setState(() => _nationality = v),
                   decoration: const InputDecoration(
                       labelText: 'Nationality', border: OutlineInputBorder()),
-                  validator: (v) =>
-                      (v == null || v.isEmpty) ? 'Select nationality' : null,
+                  validator: (v) {
+                    if (hasServerNat) return null;
+                    return (v == null || v.isEmpty)
+                        ? 'Select nationality'
+                        : null;
+                  },
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _phone,
                   keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(
-                    labelText: 'Phone (+E.164)',
-                    border: const OutlineInputBorder(),
-                    suffixIcon: TextButton(
-                      onPressed: (_saving || _progress != null)
-                          ? null
-                          : () {
-                              if (kDebugMode && kDevSkipOtp) {
-                                _devInstantVerifyPhone(); // DEV shortcut
-                              } else {
-                                Navigator.pushNamed(
-                                  context,
-                                  '/otp-verification',
-                                  arguments: {
-                                    'email': FirebaseAuth
-                                        .instance.currentUser!.email,
-                                    'userId':
-                                        FirebaseAuth.instance.currentUser!.uid,
-                                    'userType': 'JobSeeker',
-                                  },
-                                );
-                              }
-                            },
-                      child: Text(_phoneVerified ? 'Verified' : 'Verify'),
-                    ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(9), // 5XXXXXXXX (9 digits)
+                  ],
+                  decoration: const InputDecoration(
+                    labelText: 'Phone',
+                    hintText: '5XXXXXXXX',
+                    prefixText: '+966 ',
+                    border: OutlineInputBorder(),
                   ),
                   validator: (v) {
                     final t = v?.trim() ?? '';
-                    if (t.isEmpty) return 'Enter phone';
-                    if (!_e164.hasMatch(t)) return 'Invalid phone';
+                    if (t.isEmpty) return hasServerPhone ? null : 'Enter phone';
+                    if (!_localSaPhone.hasMatch(t))
+                      return 'Must start with 5 and be 9 digits';
                     return null;
                   },
                 ),
