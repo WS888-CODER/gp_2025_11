@@ -32,6 +32,9 @@ class _JobPostingPageState extends State<JobPostingPage> {
   int _aiCreditsRemaining = 2;
   bool _loadingCredits = true;
 
+  // Track if user attempted to submit
+  bool _submitted = false;
+
   @override
   void initState() {
     super.initState();
@@ -557,7 +560,17 @@ class _JobPostingPageState extends State<JobPostingPage> {
   }
 
   Future<void> _submitForm() async {
+    setState(() => _submitted = true);
+
     if (!_formKey.currentState!.validate()) return;
+
+    // Check required fields
+    if (_startDate == null || _endDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select start and end dates')),
+      );
+      return;
+    }
 
     // Get current user ID
     final currentUser = FirebaseAuth.instance.currentUser;
@@ -631,6 +644,31 @@ class _JobPostingPageState extends State<JobPostingPage> {
 
   String _fmtDate(DateTime d) =>
       '${d.day}/${d.month}/${d.year}';
+
+  Widget _buildLabel(String text, bool isInvalid, {bool isBold = false}) {
+    if (!_submitted || !isInvalid) {
+      return Text(
+        text,
+        style: isBold ? const TextStyle(fontSize: 16, fontWeight: FontWeight.bold) : null,
+      );
+    }
+    return RichText(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          color: Colors.black87,
+          fontSize: 16,
+          fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+        ),
+        children: const [
+          TextSpan(
+            text: ' *',
+            style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
 
   Future<bool> _onWillPop() async {
     // Show confirmation dialog
@@ -716,23 +754,23 @@ class _JobPostingPageState extends State<JobPostingPage> {
               child: TextFormField(
                 controller: _jobTitleController,
                 enabled: !_isEdit,
-                decoration: const InputDecoration(
-                  labelText: 'Job Title',
+                decoration: InputDecoration(
+                  label: _buildLabel('Job Title', _jobTitleController.text.isEmpty),
                   filled: true,
                   fillColor: Colors.transparent,
-                  border: OutlineInputBorder(
+                  border: const OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(12)),
                     borderSide: BorderSide.none,
                   ),
-                  errorBorder: OutlineInputBorder(
+                  errorBorder: const OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(12)),
                     borderSide: BorderSide.none,
                   ),
-                  focusedErrorBorder: OutlineInputBorder(
+                  focusedErrorBorder: const OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(12)),
                     borderSide: BorderSide.none,
                   ),
-                  errorStyle: TextStyle(height: 0, fontSize: 0),
+                  errorStyle: const TextStyle(height: 0, fontSize: 0),
                   errorMaxLines: 1,
                 ),
                 validator: (v) => (v == null || v.isEmpty) ? '' : null,
@@ -756,23 +794,23 @@ class _JobPostingPageState extends State<JobPostingPage> {
               child: TextFormField(
                 controller: _positionController,
                 enabled: !_isEdit,
-                decoration: const InputDecoration(
-                  labelText: 'Position',
+                decoration: InputDecoration(
+                  label: _buildLabel('Position', _positionController.text.isEmpty),
                   filled: true,
                   fillColor: Colors.transparent,
-                  border: OutlineInputBorder(
+                  border: const OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(12)),
                     borderSide: BorderSide.none,
                   ),
-                  errorBorder: OutlineInputBorder(
+                  errorBorder: const OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(12)),
                     borderSide: BorderSide.none,
                   ),
-                  focusedErrorBorder: OutlineInputBorder(
+                  focusedErrorBorder: const OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(12)),
                     borderSide: BorderSide.none,
                   ),
-                  errorStyle: TextStyle(height: 0, fontSize: 0),
+                  errorStyle: const TextStyle(height: 0, fontSize: 0),
                   errorMaxLines: 1,
                 ),
                 validator: (v) => (v == null || v.isEmpty) ? '' : null,
@@ -796,23 +834,23 @@ class _JobPostingPageState extends State<JobPostingPage> {
               child: TextFormField(
                 controller: _specialityController,
                 enabled: !_isEdit,
-                decoration: const InputDecoration(
-                  labelText: 'Speciality',
+                decoration: InputDecoration(
+                  label: _buildLabel('Speciality', _specialityController.text.isEmpty),
                   filled: true,
                   fillColor: Colors.transparent,
-                  border: OutlineInputBorder(
+                  border: const OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(12)),
                     borderSide: BorderSide.none,
                   ),
-                  errorBorder: OutlineInputBorder(
+                  errorBorder: const OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(12)),
                     borderSide: BorderSide.none,
                   ),
-                  focusedErrorBorder: OutlineInputBorder(
+                  focusedErrorBorder: const OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(12)),
                     borderSide: BorderSide.none,
                   ),
-                  errorStyle: TextStyle(height: 0, fontSize: 0),
+                  errorStyle: const TextStyle(height: 0, fontSize: 0),
                   errorMaxLines: 1,
                 ),
                 validator: (v) => (v == null || v.isEmpty) ? '' : null,
@@ -920,23 +958,23 @@ class _JobPostingPageState extends State<JobPostingPage> {
               child: TextFormField(
                 controller: _jobDescriptionController,
                 enabled: !_isEdit,
-                decoration: const InputDecoration(
-                  labelText: 'Job Description',
+                decoration: InputDecoration(
+                  label: _buildLabel('Job Description', _jobDescriptionController.text.isEmpty),
                   filled: true,
                   fillColor: Colors.transparent,
-                  border: OutlineInputBorder(
+                  border: const OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(12)),
                     borderSide: BorderSide.none,
                   ),
-                  errorBorder: OutlineInputBorder(
+                  errorBorder: const OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(12)),
                     borderSide: BorderSide.none,
                   ),
-                  focusedErrorBorder: OutlineInputBorder(
+                  focusedErrorBorder: const OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(12)),
                     borderSide: BorderSide.none,
                   ),
-                  errorStyle: TextStyle(height: 0, fontSize: 0),
+                  errorStyle: const TextStyle(height: 0, fontSize: 0),
                   errorMaxLines: 1,
                   alignLabelWithHint: true,
                 ),
@@ -959,10 +997,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Requirements',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
+                      _buildLabel('Requirements', _requirements.isEmpty, isBold: true),
                       const SizedBox(height: 8),
                       Row(
                         children: [
@@ -1088,7 +1123,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                 onTap: _selectStartDate,
                 child: InputDecorator(
                   decoration: InputDecoration(
-                    labelText: 'Start Date',
+                    label: _buildLabel('Start Date', _startDate == null),
                     filled: true,
                     fillColor: Colors.transparent,
                     border: OutlineInputBorder(
@@ -1125,7 +1160,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                 onTap: _selectEndDate,
                 child: InputDecorator(
                   decoration: InputDecoration(
-                    labelText: 'End Date',
+                    label: _buildLabel('End Date', _endDate == null),
                     filled: true,
                     fillColor: Colors.transparent,
                     border: OutlineInputBorder(
