@@ -277,7 +277,9 @@ class _ProfileButton extends StatelessWidget {
     final parts = s.split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
     if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
     final base = s.contains('@') ? s.split('@').first : s;
-    return base.isNotEmpty ? base.substring(0, base.length > 1 ? 2 : 1).toUpperCase() : 'U';
+    return base.isNotEmpty
+        ? base.substring(0, base.length > 1 ? 2 : 1).toUpperCase()
+        : 'U';
   }
 
   @override
@@ -401,21 +403,33 @@ class _JobsPreview extends StatefulWidget {
 }
 
 class _JobsPreviewState extends State<_JobsPreview> {
-  final Map<String, String> _companyCache = {};
+  final Map<String, CompanyInfo> _companyCache = {};
 
-  Future<String> _companyName(String userId) async {
-    if (userId.isEmpty) return 'Company';
+  Future<CompanyInfo> _companyInfo(String userId) async {
+    if (userId.isEmpty) return const CompanyInfo();
     if (_companyCache.containsKey(userId)) return _companyCache[userId]!;
+
     final doc =
         await FirebaseFirestore.instance.collection('Users').doc(userId).get();
     final data = doc.data() ?? {};
-    final companyName = (data['CompanyName'] ?? '').toString().trim();
-    final name = (data['Name'] ?? '').toString().trim();
-    final display = companyName.isNotEmpty
-        ? companyName
-        : (name.isNotEmpty ? name : 'Company');
-    _companyCache[userId] = display;
-    return display;
+
+    final rawCompany = (data['CompanyName'] ?? '').toString().trim();
+    final rawName = (data['Name'] ?? '').toString().trim();
+    final display = rawCompany.isNotEmpty
+        ? rawCompany
+        : (rawName.isNotEmpty ? rawName : 'Company');
+
+    final info = CompanyInfo(
+      name: display,
+      logoUrl: (data['PhotoURL'] ?? '').toString().trim(),
+      location: (data['Location'] ?? '').toString().trim(),
+      description: (data['Description'] ?? '').toString().trim(),
+      contactEmail: (data['ContactEmail'] ?? '').toString().trim(),
+      phone: (data['Phone'] ?? '').toString().trim(),
+    );
+
+    _companyCache[userId] = info;
+    return info;
   }
 
   String _fmtDate(DateTime d) =>
@@ -458,10 +472,10 @@ class _JobsPreviewState extends State<_JobsPreview> {
 
         return Column(
           children: jobs.map((j) {
-            return FutureBuilder<String>(
-              future: _companyName(j.userId),
+            return FutureBuilder<CompanyInfo>(
+              future: _companyInfo(j.userId),
               builder: (context, companySnap) {
-                final companyName = companySnap.data ?? 'Company';
+                final info = companySnap.data ?? const CompanyInfo();
                 final hasKeywords = j.keywords.isNotEmpty;
                 final canApply =
                     j.applyUrl != null && j.applyUrl!.trim().isNotEmpty;
@@ -470,8 +484,7 @@ class _JobsPreviewState extends State<_JobsPreview> {
                   elevation: 0.5,
                   margin: const EdgeInsets.only(bottom: 12),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+                      borderRadius: BorderRadius.circular(16)),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(16),
                     onTap: () {
@@ -480,7 +493,7 @@ class _JobsPreviewState extends State<_JobsPreview> {
                         MaterialPageRoute(
                           builder: (_) => JobDetailsPage(
                             job: j,
-                            companyName: companyName,
+                            company: info,
                           ),
                         ),
                       );
@@ -507,7 +520,7 @@ class _JobsPreviewState extends State<_JobsPreview> {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      companyName,
+                                      info.name,
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodyMedium,
@@ -515,9 +528,8 @@ class _JobsPreviewState extends State<_JobsPreview> {
                                     const SizedBox(height: 2),
                                     Text(
                                       'Posted: ${_fmtDate(j.postedAt)}',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall,
+                                      style:
+                                          Theme.of(context).textTheme.bodySmall,
                                     ),
                                   ],
                                 ),
@@ -545,9 +557,7 @@ class _JobsPreviewState extends State<_JobsPreview> {
                               if (j.specialty.isNotEmpty)
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
+                                      horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(8),
                                     color: Theme.of(context)
@@ -559,9 +569,8 @@ class _JobsPreviewState extends State<_JobsPreview> {
                                     j.specialty,
                                     style: TextStyle(
                                       fontSize: 12,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .primary,
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -575,7 +584,7 @@ class _JobsPreviewState extends State<_JobsPreview> {
                                           MaterialPageRoute(
                                             builder: (_) => JobDetailsPage(
                                               job: j,
-                                              companyName: companyName,
+                                              company: info,
                                             ),
                                           ),
                                         );
