@@ -173,16 +173,6 @@ export const extractCVKeywords = onObjectFinalized(
 
     const docRef = admin.firestore().collection("Users").doc(uid);
     const payload = {
-      LastCVProcess: {
-        at: admin.firestore.FieldValue.serverTimestamp(),
-        objectName,
-        contentType: contentType || null,
-        size,
-        parseSource,
-        textChars: text.length,
-        ok: !errorMsg,
-        error: errorMsg || null,
-      },
       CVKeywords: keywords,
     };
 

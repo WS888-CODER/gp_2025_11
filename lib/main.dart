@@ -1,14 +1,9 @@
-// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'package:gp_2025_11/config/app_settings_notifier.dart';
-
-// ⬇️ الاستيراد الصحيح للمكتبات القياسية
-import 'package:flutter_localizations/flutter_localizations.dart'; 
-// ⬇️ استبدال استيراد app_localizations.dart بمسار محلي قسري
-import 'package:gp_2025_11/l10n/app_localizations.dart'; 
-
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:gp_2025_11/l10n/app_localizations.dart';
 import 'package:gp_2025_11/screens/company_profile_page.dart';
 import 'package:gp_2025_11/screens/job_seeker_profile_page.dart';
 import 'firebase_options.dart';
@@ -49,7 +44,7 @@ class Jadeer extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: settings.themeMode,
-      
+
       // تفويضات الترجمة: تتضمن تفويض الترجمة المُخصص
       localizationsDelegates: const [
         AppLocalizations.delegate, // ⬅️ التفويض الذي يترجم النصوص الثابتة
@@ -57,10 +52,10 @@ class Jadeer extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      
-      locale: settings.locale, 
-      supportedLocales: AppLocalizations.supportedLocales, 
-      
+
+      locale: settings.locale,
+      supportedLocales: AppLocalizations.supportedLocales,
+
       debugShowCheckedModeBanner: false,
       home: StartScreen(),
       routes: {
@@ -84,7 +79,8 @@ class Jadeer extends StatelessWidget {
           return CompanyHome(companyId: args?['companyId']);
         },
         '/settings': (context) {
-          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+          final args = ModalRoute.of(context)!.settings.arguments
+              as Map<String, dynamic>;
           return SettingsScreen(
             userType: args['userType'],
             userId: args['userId'],
