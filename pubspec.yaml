@@ -10,21 +10,14 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  
-  # ⬇️ إضافة متطلبات التدويل (Localization) التي كانت مفقودة
-  flutter_localizations: # <--- NEW SDK DEPENDENCY
-    sdk: flutter
-  
+  flutter_localizations:
+    sdk: flutter 
   cupertino_icons: ^1.0.8
-  
-  # Firebase - متوافق مع Java 17
   firebase_core: ^3.15.0
   firebase_auth: ^5.7.0
   cloud_firestore: ^5.6.0
   firebase_storage: ^12.4.0
   cloud_functions: ^5.1.4
-  
-  # باقي المكتبات
   image_picker: ^1.1.2
   provider: ^6.1.2
   intl: ^0.20.2
@@ -42,7 +35,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  # ⬇️ لتفعيل إنشاء ملفات التدويل
   generate: true
   assets:
     - assets/images/
