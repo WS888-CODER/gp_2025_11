@@ -283,24 +283,24 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
     }
 
     // ========== 2) ضعي التغييرات في updates ==========
-    // CV
-    if (_cvUrl == '') {
-      updates[UserFields.cvUrl] = FieldValue.delete();
-      updates[UserFields.cvPath] = FieldValue.delete();
-    } else if (newCvUrl != null) {
+    // CV - check new uploads first, then deletions
+    if (newCvUrl != null) {
       updates[UserFields.cvUrl] = newCvUrl;
       if (newCvPath != null) updates[UserFields.cvPath] = newCvPath;
       _cvUrl = newCvUrl;
+    } else if (_cvUrl == '') {
+      updates[UserFields.cvUrl] = FieldValue.delete();
+      updates[UserFields.cvPath] = FieldValue.delete();
     }
 
-    // Photo
-    if (_photoUrl == '') {
-      updates[UserFields.photoUrl] = FieldValue.delete();
-      updates[UserFields.photoPath] = FieldValue.delete();
-    } else if (newPhotoUrl != null) {
+    // Photo - check new uploads first, then deletions
+    if (newPhotoUrl != null) {
       updates[UserFields.photoUrl] = newPhotoUrl;
       if (newPhotoPath != null) updates[UserFields.photoPath] = newPhotoPath;
       _photoUrl = newPhotoUrl;
+    } else if (_photoUrl == '') {
+      updates[UserFields.photoUrl] = FieldValue.delete();
+      updates[UserFields.photoPath] = FieldValue.delete();
     }
 
     // DOB
@@ -434,15 +434,17 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
             ? 'Select date'
             : DateFormat('yyyy/MM/dd').format(_dob ?? dobCurrent!);
 
-        final hasCV = _cvUrl == ''
-            ? false
-            : (_pendingCvFile != null ||
+        final hasCV = _pendingCvFile != null ||
+            (_cvUrl != '' &&
                 ((_cvUrl ?? data[UserFields.cvUrl])?.toString().isNotEmpty ??
                     false));
 
-        final hasPhoto =
-            (_photoUrl ?? data[UserFields.photoUrl])?.toString().isNotEmpty ==
-                true;
+        final hasPhoto = _pendingPhotoFile != null ||
+            (_photoUrl != '' &&
+                ((_photoUrl ?? data[UserFields.photoUrl])
+                        ?.toString()
+                        .isNotEmpty ==
+                    true));
 
         final phoneLocal = _phone.text.trim();
         final phoneValid = _localSaPhone.hasMatch(phoneLocal);
@@ -578,15 +580,14 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('CV File'),
                   subtitle: Text(
-                    _cvUrl == ''
-                        ? 'No file'
-                        : (_pendingCvFile != null ||
+                    _pendingCvFile != null ||
+                            (_cvUrl != '' &&
                                 (data[UserFields.cvUrl]
                                         ?.toString()
                                         .isNotEmpty ??
                                     false))
-                            ? 'File selected'
-                            : 'No file',
+                        ? 'File selected'
+                        : 'No file',
                     style: const TextStyle(color: Colors.black54),
                   ),
                   trailing: Wrap(

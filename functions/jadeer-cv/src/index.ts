@@ -117,7 +117,6 @@ export const extractCVKeywords = onObjectFinalized(
     console.log("Downloaded to tmp:", tmp);
 
     let text = "";
-    let parseSource = "unknown";
     let errorMsg: string | null = null;
 
     try {
@@ -129,7 +128,6 @@ export const extractCVKeywords = onObjectFinalized(
         const result = await parser.getText();
         text = (result.text || "").trim();
         await parser.destroy();
-        parseSource = "pdf-parse";
       } else if (
         contentType.includes("word") ||
         contentType.includes("officedocument.wordprocessingml") ||
@@ -141,7 +139,6 @@ export const extractCVKeywords = onObjectFinalized(
             resolve((body || "").trim());
           });
         });
-        parseSource = "textract-docx";
       } else {
         text = await new Promise<string>((resolve, reject) => {
           textract.fromFileWithPath(tmp, (err: unknown, body?: string) => {
@@ -149,7 +146,6 @@ export const extractCVKeywords = onObjectFinalized(
             resolve((body || "").trim());
           });
         });
-        parseSource = "textract-generic";
       }
 
       console.log("Text length:", text.length);
