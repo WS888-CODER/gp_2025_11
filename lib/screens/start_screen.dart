@@ -180,8 +180,10 @@ class _StartScreenState extends State<StartScreen>
                         Opacity(
                           opacity: _textFadeAnimation.value,
                           child: Transform.translate(
-                            offset:
-                                Offset((1 - _textFadeAnimation.value) * 50, 0),
+                            offset: Offset(
+                                (1 - _textFadeAnimation.value) * 50 -
+                                    35, // تعديل هنا: أضفنا -35 لتقريب النص أكثر
+                                0),
                             child: Image.asset(
                               'assets/images/adeer_text.png',
                               width: 180,
@@ -198,7 +200,7 @@ class _StartScreenState extends State<StartScreen>
                       child: Padding(
                         padding: EdgeInsets.only(top: 20),
                         child: Text(
-                          'منصة التوظيف الذكية',
+                          'Where Talent Meets Opportunity',
                           style: TextStyle(
                             fontSize: 18,
                             color: Color(0xFF4A5FBC),
