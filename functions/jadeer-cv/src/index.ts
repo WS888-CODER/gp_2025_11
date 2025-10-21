@@ -3,6 +3,10 @@ import admin from "firebase-admin";
 import path from "path";
 import os from "os";
 import fs from "fs";
+// @ts-ignore - ESM import issue
+import { PDFParse } from "pdf-parse";
+// @ts-ignore - CJS module
+import textract from "textract";
 
 // احمِ التهيئة على ESM
 if (!admin.apps || admin.apps.length === 0) {
@@ -76,8 +80,7 @@ function extractEnglishKeywords(text: string, limit = 20): string[] {
 
 export const extractCVKeywords = onObjectFinalized(
   {
-    bucket: "jadeer-b4953.firebasestorage.app",
-    region: "us-central1", // طابقيها مع موقع الـ Storage لو مختلف
+    region: "us-central1",
     memory: "1GiB",
     timeoutSeconds: 120,
   },
@@ -118,26 +121,14 @@ export const extractCVKeywords = onObjectFinalized(
     let errorMsg: string | null = null;
 
     try {
-      // ✅ dynamic import لتفادي مشاكل ESM/CJS عند تحميل الموديول
-      // pdf-parse
-      // @ts-ignore
-      const pdfParseModule = await import("pdf-parse");
-      const pdfParse: (buf: Buffer | Uint8Array) => Promise<{ text: string }> =
-        // @ts-ignore
-        (pdfParseModule as any).default ?? (pdfParseModule as any);
-
-      // textract
-      // @ts-ignore
-      const textractModule = await import("textract");
-      // @ts-ignore
-      const textract = (textractModule as any).default ?? (textractModule as any);
-
       const lowerName = objectName.toLowerCase();
 
       if (contentType.includes("pdf") || lowerName.endsWith(".pdf")) {
         const buf = fs.readFileSync(tmp);
-        const data = await pdfParse(buf);
-        text = (data.text || "").trim();
+        const parser = new PDFParse({ data: buf });
+        const result = await parser.getText();
+        text = (result.text || "").trim();
+        await parser.destroy();
         parseSource = "pdf-parse";
       } else if (
         contentType.includes("word") ||
