@@ -183,38 +183,6 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
     } catch (_) {/* ignore */}
   }
 
-  Future<String> _uploadWithProgress({
-    required String pathPrefix,
-    required File file,
-    required List<String> exts,
-    required int maxBytes,
-  }) async {
-    final len = await file.length();
-    if (len > maxBytes) {
-      throw Exception('File too large');
-    }
-    final ext = file.path.split('.').last.toLowerCase();
-    if (!exts.contains(ext)) {
-      throw Exception('Unsupported file type');
-    }
-    final uid = FirebaseAuth.instance.currentUser!.uid;
-    final name = file.path.split('/').last;
-    final ref = FirebaseStorage.instance
-        .ref('$pathPrefix/$uid/${DateTime.now().millisecondsSinceEpoch}_$name');
-
-    setState(() => _progress = 0);
-    final task = ref.putFile(file);
-    task.snapshotEvents.listen((snap) {
-      if (snap.totalBytes > 0) {
-        setState(() => _progress = snap.bytesTransferred / snap.totalBytes);
-      }
-    });
-    final snap = await task;
-    final url = await snap.ref.getDownloadURL();
-    setState(() => _progress = null);
-    return url;
-  }
-
   Future<void> _pickCV() async {
     final res = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -270,28 +238,28 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
       return;
     }
 
-    // المسترجع من السيرفر
+    // قيم حالية من السيرفر
     final dobCurrent = current[UserFields.dob] is Timestamp
         ? (current[UserFields.dob] as Timestamp).toDate()
         : null;
 
-    // تحقّق الجنسية إذا بتغيّرينها
+    // تحقّق الجنسية (لو تم تغييرها)
     if (_nationality != null && _nationality!.isEmpty) {
       _showSnackError('Select nationality');
       return;
     }
 
-    // تحقّق الهاتف (إن كتبتيه محلي)
-    final local = _phone.text.trim(); // 5XXXXXXXX أو أرضي 01x...
+    // تحقّق الهاتف المحلي (5XXXXXXXX)
+    final local = _phone.text.trim();
     if (local.isNotEmpty && !_localSaPhone.hasMatch(local)) {
-      _showSnackError('Enter a valid Saudi mobile or landline number');
+      _showSnackError('Enter a valid Saudi mobile number');
       return;
     }
 
-    // حضري التغييرات
+    // حضّري التحديثات
     final updates = <String, dynamic>{};
 
-    // ========== 1) ارفعي الملفات المعلقة (Photo & CV) ==========
+    // ========== 1) ارفعي الملفات المعلّقة ==========
     String? newPhotoUrl, newPhotoPath;
     String? newCvUrl, newCvPath;
 
@@ -314,17 +282,18 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
       return;
     }
 
-    // ========== 2) ضعِ التغييرات في updates ==========
-    // CV & Photo (دعم الإزالة/الإضافة فقط إذا تغيّر)
+    // ========== 2) ضعي التغييرات في updates ==========
+    // CV
     if (_cvUrl == '') {
       updates[UserFields.cvUrl] = FieldValue.delete();
       updates[UserFields.cvPath] = FieldValue.delete();
     } else if (newCvUrl != null) {
       updates[UserFields.cvUrl] = newCvUrl;
       if (newCvPath != null) updates[UserFields.cvPath] = newCvPath;
-      _cvUrl = newCvUrl; // حدّثي الحالة المحلية
+      _cvUrl = newCvUrl;
     }
 
+    // Photo
     if (_photoUrl == '') {
       updates[UserFields.photoUrl] = FieldValue.delete();
       updates[UserFields.photoPath] = FieldValue.delete();
@@ -345,6 +314,14 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
       updates[UserFields.nationality] = _nationality;
     }
 
+    // Phone (حفظ بصيغة E.164 +9665XXXXXXXX إذا تغيّر)
+    if (local.isNotEmpty && _localSaPhone.hasMatch(local)) {
+      final e164 = '$_saPrefix$local';
+      if (e164 != (current[UserFields.phone] ?? '')) {
+        updates[UserFields.phone] = e164;
+      }
+    }
+
     if (updates.isEmpty) {
       _showSnackError('No changes to save');
       return;
@@ -352,6 +329,7 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
 
     // ========== 3) احسبي IsProfileComplete بعد الدمج ==========
     final merged = {...current, ...updates};
+
     final cvOk = (merged[UserFields.cvUrl] ?? '').toString().isNotEmpty;
     final photoOk = (merged[UserFields.photoUrl] ?? '').toString().isNotEmpty;
     final dobOk = merged[UserFields.dob] != null;
@@ -360,8 +338,7 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
     final phoneMerged = (merged[UserFields.phone] ?? '').toString();
     final phoneLocal =
         phoneMerged.startsWith(_saPrefix) ? _toLocal(phoneMerged) : phoneMerged;
-    final phoneOk =
-        phoneLocal.isEmpty ? false : _localSaPhone.hasMatch(phoneLocal);
+    final phoneOk = phoneLocal.isNotEmpty && _localSaPhone.hasMatch(phoneLocal);
 
     final complete = cvOk && photoOk && dobOk && natOk && phoneOk;
     updates[UserFields.isProfileComplete] = complete;
@@ -375,7 +352,7 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
           .doc(uid)
           .set(updates, SetOptions(merge: true));
 
-      // ========== 5) بعد نجاح الحفظ: احذفي الملفات القديمة إن تغيّرت ==========
+      // ========== 5) تنظيف الملفات القديمة إن تغيّرت ==========
       // Photo
       if (newPhotoUrl != null) {
         final oldPhotoPath = (current[UserFields.photoPath] ?? '').toString();

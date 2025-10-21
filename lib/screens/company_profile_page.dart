@@ -22,7 +22,6 @@ final _email =
     RegExp(r"^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$", caseSensitive: false);
 final _localSaPhone = RegExp(r'^(5\d{8}|01[1-7]\d{6,7})$');
 const _saPrefix = '+966';
-String _toE164(String local) => _saPrefix + local.trim();
 String _toLocal(String e164) {
   final t = e164.trim();
   return t.startsWith(_saPrefix) ? t.substring(_saPrefix.length) : t;
@@ -167,7 +166,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
       return;
     }
 
-    // تحقّق حقول الإدخال
+    // تحقّق الحقول
     if (!_form.currentState!.validate()) return;
 
     final email = _emailCtrl.text.trim();
@@ -176,25 +175,43 @@ class _CompanyProfileState extends State<CompanyProfile> {
       return;
     }
 
-    // الجوال/الهاتف: نقبل جوال يبدأ بـ 5 أو أرضي يبدأ بـ 01x
+    // ===== الهاتف: تحقّق + تحويل إلى E.164 للمحمول والأرضي =====
     final phoneLocal = _phone.text.trim();
-    String phoneToStore = '';
+
+    String normalizePhoneToE164(String local) {
+      final s = local.trim();
+      // موبايل: 5XXXXXXXX
+      if (RegExp(r'^5\d{8}$').hasMatch(s)) return '+966$s';
+      // أرضي: 01XXXXXXXX أو 01XXXXXXX (رياض/جدة/دمام ...)
+      if (RegExp(r'^(01[1-7]\d{6,7})$').hasMatch(s)) {
+        // نحذف الصفر ونخزن +9661XXXXXXXX
+        return '+966${s.substring(1)}';
+      }
+      return '';
+    }
+
+    String oldPhoneE164 = (current[UserFields.phone] ?? '').toString();
+    String? newPhoneE164; // قد تبقى null إن المستخدم ما غيّر شيء
+
     if (phoneLocal.isNotEmpty) {
       if (!_localSaPhone.hasMatch(phoneLocal)) {
         _showSnackError('Enter a valid Saudi mobile or landline number');
         return;
       }
-      // لو جوال يبدأ بـ 5 نخزن بصيغة E164 +9665xxxxxxxx
-      phoneToStore =
-          phoneLocal.startsWith('5') ? _toE164(phoneLocal) : phoneLocal;
+      final candidate = normalizePhoneToE164(phoneLocal);
+      if (candidate.isEmpty) {
+        _showSnackError('Phone format not recognized');
+        return;
+      }
+      if (candidate != oldPhoneE164) newPhoneE164 = candidate;
     }
+    // إن كانت الخانة فاضية: لا نكتب '' ولا نحذف إلا لو وفّرنا زر "Remove"
 
     setState(() => _saving = true);
     try {
-      // ========= 1) فحص/رفع اللوجو الجديد إن وُجد =========
-      // ========= 1) فحص/رفع اللوجو الجديد إن وُجد =========
+      // ========= 1) رفع اللوجو الجديد إن وُجد =========
       String? newLogoUrl;
-      String? newLogoPath; // سنخزّن fullPath لنستخدمه لاحقًا بالحذف
+      String? newLogoPath;
 
       if (_pendingLogoFile != null) {
         final err = _validateImageFile(_pendingLogoFile!);
@@ -205,10 +222,9 @@ class _CompanyProfileState extends State<CompanyProfile> {
         }
 
         setState(() => _progress = 0);
-        final res =
-            await _uploadLogoWithProgress(_pendingLogoFile!); // 👈 ترجع Map
-        newLogoUrl = res['url']; // 👈 صح
-        newLogoPath = res['path']; // 👈 صح
+        final res = await _uploadLogoWithProgress(_pendingLogoFile!);
+        newLogoUrl = res['url'];
+        newLogoPath = res['path'];
         _pendingLogoFile = null;
         if (mounted) setState(() => _progress = null);
       }
@@ -223,31 +239,41 @@ class _CompanyProfileState extends State<CompanyProfile> {
         UserFields.description: desc,
         UserFields.location: loc,
         UserFields.contactEmail: email,
-        UserFields.phone: phoneToStore,
         UserFields.isProfileComplete: complete,
       };
 
-      // شعار الشركة: ثلاث حالات
+      // الهاتف (أضفه فقط إذا تغيّر)
+      if (newPhoneE164 != null) {
+        updates[UserFields.phone] = newPhoneE164;
+      }
+
+      // شعار الشركة
       if (newLogoUrl != null) {
         updates[UserFields.photoUrl] = newLogoUrl;
-        if (newLogoPath != null) {
-          updates[UserFields.photoPath] = newLogoPath;
-        }
+        if (newLogoPath != null) updates[UserFields.photoPath] = newLogoPath;
         _logoUrl = newLogoUrl;
       } else if (_logoUrl == '') {
+        // حالة إزالة الشعار
         updates[UserFields.photoUrl] = FieldValue.delete();
         updates[UserFields.photoPath] = FieldValue.delete();
       }
 
-// ========= 3) حفظ في Firestore =========
+      // لا تحفظ لو ما فيه أي تغيير فعلي
+      if (updates.isEmpty) {
+        _showSnackError('No changes to save');
+        setState(() => _saving = false);
+        return;
+      }
+
+      // ========= 3) حفظ في Firestore =========
       final uid = FirebaseAuth.instance.currentUser!.uid;
       await FirebaseFirestore.instance
           .collection(kUsersCollection)
           .doc(uid)
           .set(updates, SetOptions(merge: true));
 
-// ========= 4) حذف القديم من التخزين بعد نجاح الحفظ =========
-// لو رفعنا جديد: احذف القديم إن وُجد
+      // ========= 4) حذف القديم من التخزين بعد نجاح الحفظ =========
+      // لو رفعنا جديد: احذف القديم إن وُجد
       if (newLogoUrl != null) {
         final oldPath = (current[UserFields.photoPath] ?? '').toString();
         if (oldPath.isNotEmpty) {
@@ -258,7 +284,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
         }
       }
 
-// لو المستخدم اختار Remove: احذفي القديم
+      // لو المستخدم اختار Remove: احذف القديم
       if (_logoUrl == '' &&
           (current[UserFields.photoPath]?.toString().isNotEmpty ?? false)) {
         await _deleteStorageFile(current[UserFields.photoPath]?.toString());
