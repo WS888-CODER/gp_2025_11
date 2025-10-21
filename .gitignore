@@ -32,6 +32,10 @@ local.properties
 **/ios/Flutter/Flutter.framework
 **/ios/Flutter/Flutter.podspec
 
+# Firebase configuration files (contain API keys)
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+
 # --------------------------
 # Node.js / Express backend
 # --------------------------

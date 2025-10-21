@@ -94,7 +94,8 @@ class _StartScreenState extends State<StartScreen>
     });
     _sloganController.forward();
 
-    await Future.delayed(Duration(milliseconds: 1200));
+    await Future.delayed(
+        Duration(milliseconds: 4500)); // زيادة المدة من 1200 إلى 2500
     _navigateToLogin();
   }
 
@@ -126,93 +127,110 @@ class _StartScreenState extends State<StartScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFFAFAFA),
-      body: AnimatedBuilder(
-        animation: Listenable.merge([
-          _jController,
-          _textController,
-          _sloganController,
-          _transitionController
-        ]),
-        builder: (context, child) {
-          return Opacity(
-            opacity: 1.0 - _transitionController.value,
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Transform.translate(
-                        offset: Offset(_jSlideAnimation.value, 0),
-                        child: Transform.scale(
-                          scale: _jScaleAnimation.value,
-                          child: Opacity(
-                            opacity: _jFadeAnimation.value,
-                            child: SizedBox(
-                              width: 100,
-                              height: 140,
-                              child: Stack(
-                                children: [
-                                  if (_showOutline)
-                                    Image.asset(
-                                      'assets/images/j_outline.png',
-                                      fit: BoxFit.contain,
-                                    ),
-                                  if (_showFilled)
-                                    AnimatedOpacity(
-                                      opacity: _showFilled ? 1.0 : 0.0,
-                                      duration: Duration(milliseconds: 600),
-                                      child: Image.asset(
-                                        'assets/images/j_filled.png',
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF8785C9), // بنفسجي فاتح
+              Color(0xFFFAFAFA), // أبيض (وسط الشاشة)
+              Color(0xFFFAFAFA), // أبيض
+              Color(0xFF4A5FBC), // بنفسجي غامق
+              Color(0xFFFF7B7B), // برتقالي/وردي
+            ],
+            stops: [0.0, 0.3, 0.7, 0.85, 1.0],
+          ),
+        ),
+        child: AnimatedBuilder(
+          animation: Listenable.merge([
+            _jController,
+            _textController,
+            _sloganController,
+            _transitionController
+          ]),
+          builder: (context, child) {
+            return Opacity(
+              opacity: 1.0 - _transitionController.value,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Transform.translate(
+                          offset: Offset(_jSlideAnimation.value, 0),
+                          child: Transform.scale(
+                            scale: _jScaleAnimation.value,
+                            child: Opacity(
+                              opacity: _jFadeAnimation.value,
+                              child: SizedBox(
+                                width: 100,
+                                height: 140,
+                                child: Stack(
+                                  children: [
+                                    if (_showOutline)
+                                      Image.asset(
+                                        'assets/images/j_outline.png',
                                         fit: BoxFit.contain,
                                       ),
-                                    ),
-                                ],
+                                    if (_showFilled)
+                                      AnimatedOpacity(
+                                        opacity: _showFilled ? 1.0 : 0.0,
+                                        duration: Duration(milliseconds: 600),
+                                        child: Image.asset(
+                                          'assets/images/j_filled.png',
+                                          fit: BoxFit.contain,
+                                        ),
+                                      ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                      if (_showText)
-                        Opacity(
-                          opacity: _textFadeAnimation.value,
-                          child: Transform.translate(
-                            offset:
-                                Offset((1 - _textFadeAnimation.value) * 50, 0),
-                            child: Image.asset(
-                              'assets/images/adeer_text.png',
-                              width: 180,
-                              height: 80,
-                              fit: BoxFit.contain,
+                        if (_showText)
+                          Opacity(
+                            opacity: _textFadeAnimation.value,
+                            child: Transform.translate(
+                              offset: Offset(
+                                  (1 - _textFadeAnimation.value) * 50 -
+                                      35, // تعديل هنا: أضفنا -35 لتقريب النص أكثر
+                                  0),
+                              child: Image.asset(
+                                'assets/images/adeer_text.png',
+                                width: 180,
+                                height: 80,
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    if (_showSlogan)
+                      Opacity(
+                        opacity: _sloganFadeAnimation.value,
+                        child: Padding(
+                          padding: EdgeInsets.only(top: 20),
+                          child: Text(
+                            'منصة التوظيف الذكية',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Color(0xFF4A5FBC),
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: 1,
                             ),
                           ),
                         ),
-                    ],
-                  ),
-                  if (_showSlogan)
-                    Opacity(
-                      opacity: _sloganFadeAnimation.value,
-                      child: Padding(
-                        padding: EdgeInsets.only(top: 20),
-                        child: Text(
-                          'منصة التوظيف الذكية',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Color(0xFF4A5FBC),
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: 1,
-                          ),
-                        ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
