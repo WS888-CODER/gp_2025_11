@@ -1,0 +1,20 @@
+{
+    "@@locale": "en",
+    "settingsTitle": "Settings",
+    "generalSettingsSection": "General Settings",
+    "languageOption": "Language",
+    "themeOption": "Theme",
+    "notificationsOption": "Notifications",
+    "manageAlertsSubtitle": "Manage your alerts and pushes",
+    "accountSecuritySection": "Account & Security",
+    "changePasswordOption": "Change Password",
+    "resetPasswordSubtitle": "Reset your password",
+    "accountVerificationStatus": "Account Verification Status",
+    "viewOnlyText": "View Only",
+    "myAccountDetailsSection": "My Account Details",
+    "fullNameLabel": "Full Name",
+    "companyNameLabel": "Company Name",
+    "registeredEmailLabel": "Registered Email",
+    "contactPhoneLabel": "Contact Phone",
+    "logoutOption": "Logout"
+}

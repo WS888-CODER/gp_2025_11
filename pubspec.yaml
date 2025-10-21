@@ -1,6 +1,6 @@
 name: gp_2025_11
 description: A new Flutter project.
-publish_to: none
+publish_to: 'none' # Prevent accidental publishing to pub.dev
 
 version: 1.0.0+1
 
@@ -10,6 +10,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  
+  # ⬇️ إضافة متطلبات التدويل (Localization) التي كانت مفقودة
+  flutter_localizations: # <--- NEW SDK DEPENDENCY
+    sdk: flutter
+  
   cupertino_icons: ^1.0.8
   
   # Firebase - متوافق مع Java 17
@@ -22,7 +27,7 @@ dependencies:
   # باقي المكتبات
   image_picker: ^1.1.2
   provider: ^6.1.2
-  intl: ^0.19.0
+  intl: ^0.20.2
   flutter_local_notifications: ^18.0.1
   url_launcher: ^6.3.1
   shared_preferences: ^2.3.2
@@ -33,9 +38,11 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0
+  flutter_lints: ^3.0.0
 
 flutter:
   uses-material-design: true
+  # ⬇️ لتفعيل إنشاء ملفات التدويل
+  generate: true
   assets:
     - assets/images/

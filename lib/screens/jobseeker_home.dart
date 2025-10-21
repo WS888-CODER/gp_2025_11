@@ -1,3 +1,4 @@
+// lib/screens/jobseeker_home.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -145,12 +146,20 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
               const SnackBar(content: Text('Notifications – قريبًا')),
             ),
           ),
+          // ⬇️ ربط زر الإعدادات بصفحة الإعدادات
           IconButton(
             tooltip: 'Settings',
             icon: const Icon(Icons.settings_outlined, color: Colors.white),
-            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Settings – قريبًا')),
-            ),
+            onPressed: () {
+              final uid = FirebaseAuth.instance.currentUser?.uid;
+              if (uid != null) {
+                Navigator.pushNamed(
+                  context,
+                  '/settings',
+                  arguments: {'userType': 'JobSeeker', 'userId': uid},
+                );
+              }
+            },
           ),
         ],
       ),
@@ -268,7 +277,7 @@ class _ProfileButton extends StatelessWidget {
     final parts = s.split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
     if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
     final base = s.contains('@') ? s.split('@').first : s;
-    return base.isNotEmpty ? base[0].toUpperCase() : 'U';
+    return base.isNotEmpty ? base.substring(0, base.length > 1 ? 2 : 1).toUpperCase() : 'U';
   }
 
   @override
@@ -296,10 +305,11 @@ class _ProfileButton extends StatelessWidget {
                         style: const TextStyle(
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
+                          fontSize: 16,
                         ),
                       )
                     : null,
-                backgroundColor: Theme.of(context).colorScheme.secondary,
+                backgroundColor: const Color(0xFFFF7B7B),
               ),
               Positioned(
                 right: -1,
@@ -505,14 +515,14 @@ class _JobsPreviewState extends State<_JobsPreview> {
                                     const SizedBox(height: 2),
                                     Text(
                                       'Posted: ${_fmtDate(j.postedAt)}',
-                                      style:
-                                          Theme.of(context).textTheme.bodySmall,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall,
                                     ),
                                   ],
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              // compact preview (no save button)
                             ],
                           ),
                           const SizedBox(height: 10),
@@ -549,8 +559,9 @@ class _JobsPreviewState extends State<_JobsPreview> {
                                     j.specialty,
                                     style: TextStyle(
                                       fontSize: 12,
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),

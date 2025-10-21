@@ -1,11 +1,14 @@
 // lib/screens/company_home.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:gp_2025_11/screens/company_profile_page.dart';
+import 'dart:async';
 
 class CompanyHome extends StatefulWidget {
   const CompanyHome({
     super.key,
-    this.companyId,            // يوصلك من صفحة اللوق إن
+    this.companyId,
     this.fallbackCompanyName = 'Company',
   });
 
@@ -127,8 +130,12 @@ class _CompanyHomeState extends State<CompanyHome> {
       docs.sort((a, b) {
         final sa = a.data()['StartDate'];
         final sb = b.data()['StartDate'];
-        final da = sa is Timestamp ? sa.toDate() : DateTime.fromMillisecondsSinceEpoch(0);
-        final db = sb is Timestamp ? sb.toDate() : DateTime.fromMillisecondsSinceEpoch(0);
+        final da = sa is Timestamp
+            ? sa.toDate()
+            : DateTime.fromMillisecondsSinceEpoch(0);
+        final db = sb is Timestamp
+            ? sb.toDate()
+            : DateTime.fromMillisecondsSinceEpoch(0);
         return db.compareTo(da);
       });
       return docs;
@@ -319,6 +326,12 @@ class _CompanyHomeState extends State<CompanyHome> {
         backgroundColor: _brand,
         elevation: 0,
         centerTitle: true,
+        // ⬇️ زر الملف الشخصي للشركة
+        leadingWidth: 56,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 8),
+          child: _ProfileButton(userId: companyId),
+        ),
         // العنوان ديناميكي: Welcome, {CompanyName}!
         title: StreamBuilder<String>(
           stream: _companyNameStream(companyId),
@@ -341,12 +354,20 @@ class _CompanyHomeState extends State<CompanyHome> {
               const SnackBar(content: Text('Notifications – قريبًا')),
             ),
           ),
+          // ⬇️ ربط زر الإعدادات بصفحة الإعدادات
           IconButton(
             tooltip: 'Settings',
             icon: const Icon(Icons.settings_outlined, color: Colors.white),
-            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Settings – قريبًا')),
-            ),
+            onPressed: () {
+              final uid = FirebaseAuth.instance.currentUser?.uid;
+              if (uid != null) {
+                Navigator.pushNamed(
+                  context,
+                  '/settings',
+                  arguments: {'userType': 'Company', 'userId': uid},
+                );
+              }
+            },
           ),
         ],
       ),
@@ -389,6 +410,110 @@ class _SectionTitle extends StatelessWidget {
           Spacer(),
         ],
       ),
+    );
+  }
+}
+
+// ⬇️ زر الملف الشخصي الموحد (يعرض الأحرف الأولى بلون أحمر إذا لم تكن هناك صورة)
+class _ProfileButton extends StatelessWidget {
+  const _ProfileButton({required this.userId});
+  final String userId;
+
+  Stream<Map<String, dynamic>> _userMiniStream() {
+    if (userId.isEmpty) {
+      return Stream.value({
+        'name': 'Company',
+        'photo': null,
+        'complete': false,
+      });
+    }
+    return FirebaseFirestore.instance
+        .collection('Users')
+        .doc(userId)
+        .snapshots()
+        .map((snap) {
+      final d = snap.data() ?? {};
+      return {
+        'name': (d['CompanyName'] ?? '').toString().trim(),
+        'photo': (d['PhotoURL'] ?? '').toString().trim(),
+        'complete': d['IsProfileComplete'] == true,
+      };
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<Map<String, dynamic>>(
+      stream: _userMiniStream(),
+      builder: (context, snap) {
+        final photo = (snap.data?['photo'] ?? '').toString();
+        final complete = (snap.data?['complete'] == true);
+        final name = (snap.data?['name'] ?? '').toString();
+
+        String initials = '';
+        if (name.isNotEmpty) {
+          final parts = name.split(' ').where((s) => s.isNotEmpty).toList();
+          if (parts.length >= 2) {
+            initials = parts[0][0] + parts[1][0];
+          } else if (parts.isNotEmpty) {
+            initials = name.substring(0, 1);
+          }
+          initials = initials.toUpperCase();
+        }
+
+        final avatar = Hero(
+          tag: 'profileAvatar',
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundImage: photo.isNotEmpty ? NetworkImage(photo) : null,
+                child: photo.isEmpty && initials.isNotEmpty
+                    ? Text(
+                        initials,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      )
+                    : null,
+                // لون الخلفية الأحمر الموحد
+                backgroundColor: const Color(0xFFFF7B7B),
+                foregroundColor: Colors.white,
+              ),
+              Positioned(
+                right: -1,
+                bottom: -1,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: complete ? Colors.green : Colors.orange,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+
+        return Tooltip(
+          message: complete ? 'Profile complete' : 'Profile incomplete',
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: () {
+              Navigator.pushNamed(context, '/profile/company');
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: avatar,
+            ),
+          ),
+        );
+      },
     );
   }
 }
