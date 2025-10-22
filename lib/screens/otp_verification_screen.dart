@@ -1,4 +1,3 @@
-// lib/screens/otp_verification_screen.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -15,6 +14,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   final _otpController = TextEditingController();
   bool _isLoading = false;
   bool _isResending = false;
+  String? _otpError; // لحفظ رسالة الخطأ
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseFunctions _functions =
       FirebaseFunctions.instanceFor(region: 'us-central1');
@@ -55,12 +55,19 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Error'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: const [
+            Icon(Icons.error_outline, color: Colors.red, size: 28),
+            SizedBox(width: 10),
+            Text('Error', style: TextStyle(color: Colors.red)),
+          ],
+        ),
         content: Text(message),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('OK'),
+            child: const Text('OK', style: TextStyle(color: Color(0xFF4A5FBC))),
           ),
         ],
       ),
@@ -70,29 +77,25 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   void _showSuccessSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  void _showSuccessDialog(String message, VoidCallback onOk) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: Text('Success'),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              onOk();
-            },
-            child: Text('OK'),
+        content: Text(
+          message,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Colors.white,
           ),
-        ],
+          textAlign: TextAlign.center,
+        ),
+        backgroundColor: Color(0xFFFF9800), // لون برتقالي
+        behavior: SnackBarBehavior.fixed,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(16),
+            topRight: Radius.circular(16),
+          ),
+        ),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        duration: Duration(seconds: 3),
       ),
     );
   }
@@ -104,19 +107,21 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
 
   Future<void> _resendOTP(String email, String userType) async {
     if (_resendCountdown > 0) {
-      _showErrorDialog(
-          'The current OTP is still valid. Please wait $_resendCountdown seconds.');
+      setState(() {
+        _otpError =
+            'The current OTP is still valid. Please wait $_resendCountdown seconds.';
+      });
       return;
     }
 
     setState(() {
       _isResending = true;
+      _otpError = null; // مسح أي خطأ سابق
     });
 
     try {
       String newOtp = _generateOTP();
 
-      // Determine which function to call based on userType
       String functionName =
           userType == 'Admin' ? 'sendAdminOtp' : 'sendSignupOtp';
       final callable = _functions.httpsCallable(functionName);
@@ -139,12 +144,18 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
           'Used': false,
         });
 
-        _showSuccessSnackBar('✅ A new verification code has been sent.');
+        _showSuccessSnackBar('A new verification code has been sent.');
         _startResendTimer();
         _otpController.clear();
+      } else {
+        setState(() {
+          _otpError = 'Failed to send new OTP. Please try again.';
+        });
       }
     } catch (e) {
-      _showErrorDialog('Failed to send new OTP: ${e.toString()}');
+      setState(() {
+        _otpError = 'Failed to send new OTP: ${e.toString()}';
+      });
     } finally {
       setState(() {
         _isResending = false;
@@ -155,7 +166,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   Future<void> _sendCompanyEmails(
       String email, String companyName, String name) async {
     try {
-      // 1. Send document request to company
       final docRequestCallable =
           _functions.httpsCallable('sendCompanyDocumentRequest');
       await docRequestCallable.call({
@@ -163,7 +173,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
         'companyName': companyName,
       });
 
-      // 2. Notify admin about new company
       final adminNotifyCallable =
           _functions.httpsCallable('notifyAdminNewCompany');
       await adminNotifyCallable.call({
@@ -172,21 +181,31 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
         'name': name,
       });
 
-      print('✅ Company emails sent successfully');
+      print('Company emails sent successfully');
     } catch (e) {
       print('⚠️ Error sending company emails: $e');
-      // Don't block the flow if emails fail
     }
   }
 
   Future<void> _verifyOTP(String email, String userId, String userType) async {
+    // مسح أي خطأ سابق
+    setState(() {
+      _otpError = null;
+    });
+
+    // التحقق من أن الحقل غير فارغ
     if (_otpController.text.isEmpty) {
-      _showErrorDialog('Please enter the verification code.');
+      setState(() {
+        _otpError = 'Please enter the verification code.';
+      });
       return;
     }
 
+    // التحقق من أن الكود 6 أرقام
     if (_otpController.text.length != 6) {
-      _showErrorDialog('The verification code must be 6 digits.');
+      setState(() {
+        _otpError = 'The verification code must be 6 digits.';
+      });
       return;
     }
 
@@ -199,8 +218,8 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
           await _firestore.collection('AdminOTPs').doc(email).get();
 
       if (!otpDoc.exists) {
-        _showErrorDialog('Verification code not found. Please try again.');
         setState(() {
+          _otpError = 'Verification code not found. Please try again.';
           _isLoading = false;
         });
         return;
@@ -212,75 +231,68 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       bool used = otpData['Used'] ?? false;
 
       if (used) {
-        _showErrorDialog('This code has already been used. Request a new one.');
         setState(() {
+          _otpError = 'This code has already been used. Request a new one.';
           _isLoading = false;
         });
         return;
       }
 
       if (DateTime.now().isAfter(expiresAt.toDate())) {
-        _showErrorDialog(
-            'The code has expired. Please click "Resend Code" to get a new one.');
-        await _firestore.collection('AdminOTPs').doc(email).delete();
         setState(() {
+          _otpError = 'The code has expired. Please click "Resend Code".';
           _isLoading = false;
         });
+        await _firestore.collection('AdminOTPs').doc(email).delete();
         return;
       }
 
       if (_otpController.text.trim() == savedOTP) {
-        // Mark OTP as used
         await _firestore.collection('AdminOTPs').doc(email).update({
           'Used': true,
         });
 
-        // Update IsEmailVerified
         await _firestore.collection('Users').doc(userId).update({
           'IsEmailVerified': true,
           'lastLoginTime': FieldValue.serverTimestamp(),
         });
 
-        // Handle different user types
         if (userType == 'Admin') {
-          _showSuccessSnackBar('✅ Verification successful!');
+          _showSuccessSnackBar('Verification successful!');
           await Future.delayed(Duration(milliseconds: 500));
           Navigator.pushReplacementNamed(context, '/admin-dashboard');
         } else if (userType == 'Company') {
-          // Get company details for emails
           DocumentSnapshot userDoc =
               await _firestore.collection('Users').doc(userId).get();
           Map<String, dynamic> userData =
               userDoc.data() as Map<String, dynamic>;
-          String companyName = userData['CompanyName'] ?? '';
-          String name = userData['Name'] ?? '';
 
-          // Send emails to company and admin
-          await _sendCompanyEmails(email, companyName, name);
-
-          setState(() {
-            _isLoading = false;
-          });
-
-          _showSuccessDialog(
-            'Your email has been verified successfully!\n\nPlease check your email for instructions on submitting company verification documents.\n\nYour account is currently pending approval.',
-            () {
-              Navigator.pushReplacementNamed(context, '/login');
-            },
+          await _sendCompanyEmails(
+            email,
+            userData['CompanyName'] ?? 'N/A',
+            userData['Name'] ?? 'N/A',
           );
+
+          _showSuccessSnackBar(
+              'Your email has been verified successfully! Please check your email for instructions on submitting company verification documents.');
+          await Future.delayed(Duration(seconds: 3));
+          Navigator.pushReplacementNamed(context, '/login');
         } else if (userType == 'JobSeeker') {
-          _showSuccessSnackBar('✅ Verification successful!');
+          _showSuccessSnackBar('Verification successful!');
           await Future.delayed(Duration(milliseconds: 500));
           Navigator.pushReplacementNamed(context, '/jobseeker-home');
         }
 
-        // Delete OTP document
         await _firestore.collection('AdminOTPs').doc(email).delete();
       } else {
-        _showErrorDialog('Incorrect verification code. Please try again.');
+        setState(() {
+          _otpError = 'Incorrect verification code. Please try again.';
+        });
       }
     } catch (e) {
-      _showErrorDialog('An error occurred: ${e.toString()}');
+      setState(() {
+        _otpError = 'An error occurred: ${e.toString()}';
+      });
     } finally {
       if (mounted) {
         setState(() {
@@ -305,205 +317,227 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     final String userType = args['userType'] ?? 'Admin';
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Color(0xFF4A5FBC)),
-          onPressed: () async {
-            await FirebaseAuth.instance.signOut();
-            await _firestore.collection('AdminOTPs').doc(email).delete();
-
-            // Delete user document if verification not completed
-            await _firestore.collection('Users').doc(userId).delete();
-
-            Navigator.pushReplacementNamed(context, '/login');
-          },
-        ),
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Logo
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.asset(
-                  'assets/images/logo.jpg',
-                  height: 120,
-                  width: 120,
-                  fit: BoxFit.contain,
-                ),
+      body: SizedBox.expand(
+        child: Stack(
+          children: [
+            // خلفية office.png
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/office.png',
+                fit: BoxFit.cover,
               ),
-              SizedBox(height: 30),
+            ),
 
-              Text(
-                'Verify Your Email',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF4A5FBC),
-                ),
+            // لوجو j_filled في أعلى اليمين
+            Positioned(
+              top: 50,
+              right: 30,
+              child: Image.asset(
+                'assets/images/j_filled.png',
+                width: 60,
+                height: 80,
+                fit: BoxFit.contain,
               ),
-              SizedBox(height: 16),
-              Text(
-                'A 6-digit verification code has been sent to your email.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 40),
+            ),
 
-              // OTP Input Field
-              Container(
+            // المربع البنفسجي في منتصف الشاشة
+            Center(
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.85,
+                padding: EdgeInsets.all(40),
                 decoration: BoxDecoration(
-                  border: Border.all(
-                    color: Color(0xFF4A5FBC),
-                    width: 2,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
+                  color: const Color(0xFF4A5FBC).withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(30),
                 ),
-                child: TextField(
-                  controller: _otpController,
-                  keyboardType: TextInputType.number,
-                  textAlign: TextAlign.center,
-                  maxLength: 6,
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 12,
-                    color: Color(0xFF4A5FBC),
-                  ),
-                  decoration: InputDecoration(
-                    hintText: '000000',
-                    hintStyle: TextStyle(
-                      color: Colors.grey[300],
-                      letterSpacing: 12,
-                    ),
-                    border: InputBorder.none,
-                    counterText: '',
-                    contentPadding: EdgeInsets.symmetric(vertical: 20),
-                  ),
-                ),
-              ),
-              SizedBox(height: 16),
-              if (_resendCountdown > 0)
-                Text(
-                  'You can resend the code in: ${_formatTime(_resendCountdown)}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              SizedBox(height: 24),
-
-              // Verify Button
-              Container(
-                width: double.infinity,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: Color(0xFF4A5FBC),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0xFF4A5FBC).withOpacity(0.3),
-                      blurRadius: 10,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: TextButton(
-                  onPressed: _isLoading
-                      ? null
-                      : () => _verifyOTP(email, userId, userType),
-                  style: TextButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: _isLoading
-                      ? SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : Text(
-                          'Verify',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                ),
-              ),
-              SizedBox(height: 16),
-
-              // Resend Button
-              TextButton.icon(
-                onPressed: (_isResending || _resendCountdown > 0)
-                    ? null
-                    : () => _resendOTP(email, userType),
-                icon: _isResending
-                    ? SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Color(0xFF4A5FBC),
-                        ),
-                      )
-                    : Icon(
-                        Icons.refresh,
-                        color: _resendCountdown > 0
-                            ? Colors.grey
-                            : Color(0xFF4A5FBC),
-                      ),
-                label: Text(
-                  'Resend Code',
-                  style: TextStyle(
-                    color:
-                        _resendCountdown > 0 ? Colors.grey : Color(0xFF4A5FBC),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              SizedBox(height: 24),
-
-              // Info Box
-              Container(
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue[200]!),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'The verification code is valid for 2 minutes only.',
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment:
+                        CrossAxisAlignment.center, // تغيير من start إلى center
+                    children: [
+                      // العنوان الرئيسي
+                      const Text(
+                        'Enter Verification Code',
                         style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.blue[700],
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
+                        textAlign: TextAlign.center, // إضافة textAlign
                       ),
-                    ),
-                  ],
+
+                      const SizedBox(height: 16),
+
+                      // النص التوضيحي
+                      Text(
+                        'A 6-digit verification code has been sent to your email.',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.white.withOpacity(0.8),
+                        ),
+                        textAlign: TextAlign.center, // إضافة textAlign
+                      ),
+
+                      const SizedBox(height: 40),
+
+                      // OTP Input Field
+                      TextFormField(
+                        controller: _otpController,
+                        keyboardType: TextInputType.number,
+                        textAlign: TextAlign.center,
+                        maxLength: 6,
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 12,
+                          color: Colors.white,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: '000000',
+                          hintStyle: TextStyle(
+                            color: Colors.white.withOpacity(0.3),
+                            letterSpacing: 12,
+                          ),
+                          enabledBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(
+                                color: _otpError != null
+                                    ? Colors.red
+                                    : Colors.white.withOpacity(0.5)),
+                          ),
+                          focusedBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(
+                                color: _otpError != null
+                                    ? Colors.red
+                                    : Colors.white),
+                          ),
+                          errorBorder: const UnderlineInputBorder(
+                            borderSide: BorderSide(color: Colors.red),
+                          ),
+                          focusedErrorBorder: const UnderlineInputBorder(
+                            borderSide: BorderSide(color: Colors.red),
+                          ),
+                          counterText: '',
+                          contentPadding: EdgeInsets.symmetric(vertical: 20),
+                        ),
+                        onChanged: (value) {
+                          // مسح الخطأ عند بداية الكتابة
+                          if (_otpError != null) {
+                            setState(() {
+                              _otpError = null;
+                            });
+                          }
+                        },
+                      ),
+
+                      // رسالة الخطأ
+                      if (_otpError != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            _otpError!,
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 12,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+
+                      const SizedBox(height: 16),
+
+                      // مؤقت إعادة الإرسال
+                      if (_resendCountdown > 0)
+                        Center(
+                          child: Text(
+                            'You can resend the code in: ${_formatTime(_resendCountdown)}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.white.withOpacity(0.7),
+                            ),
+                          ),
+                        ),
+
+                      const SizedBox(height: 40),
+
+                      // الأزرار - Resend Code والسهم
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // زر Resend Code (بدون إطار)
+                          TextButton.icon(
+                            onPressed: (_isResending || _resendCountdown > 0)
+                                ? null
+                                : () => _resendOTP(email, userType),
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            icon: _isResending
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Icon(
+                                    Icons.refresh,
+                                    size: 20,
+                                    color: _resendCountdown > 0
+                                        ? Colors.white.withOpacity(0.4)
+                                        : Colors.white,
+                                  ),
+                            label: Text(
+                              'Resend Code',
+                              style: TextStyle(
+                                color: _resendCountdown > 0
+                                    ? Colors.white.withOpacity(0.4)
+                                    : Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+
+                          // زر Verify (السهم)
+                          Container(
+                            width: 45,
+                            height: 45,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: IconButton(
+                              padding: EdgeInsets.zero,
+                              onPressed: _isLoading
+                                  ? null
+                                  : () => _verifyOTP(email, userId, userType),
+                              icon: _isLoading
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.arrow_forward,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
