@@ -215,7 +215,7 @@ class _StartScreenState extends State<StartScreen>
                         child: Padding(
                           padding: EdgeInsets.only(top: 20),
                           child: Text(
-                            'منصة التوظيف الذكية',
+                            'Where Talent Meets Opportunity',
                             style: TextStyle(
                               fontSize: 18,
                               color: Color(0xFF4A5FBC),
