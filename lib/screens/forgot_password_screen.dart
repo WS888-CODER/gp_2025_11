@@ -27,9 +27,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   int _resendTimer = 120;
   Timer? _timer;
 
-  // المراحل: 1 = إدخال إيميل، 2 = إدخال OTP، 3 = إدخال كلمة سر جديدة
   int _currentStep = 1;
   String _userEmail = '';
+
+  String? _emailError;
+  String? _otpError;
+  String? _passwordError;
 
   @override
   void dispose() {
@@ -106,9 +109,22 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
   }
 
-  // المرحلة 1: إرسال OTP
   Future<void> _handleSendOTP() async {
-    if (!_formKey.currentState!.validate()) {
+    setState(() {
+      _emailError = null;
+    });
+
+    if (_emailController.text.isEmpty) {
+      setState(() {
+        _emailError = 'Please enter your email.';
+      });
+      return;
+    }
+
+    if (!_isValidEmail(_emailController.text)) {
+      setState(() {
+        _emailError = 'Please enter a valid email address.';
+      });
       return;
     }
 
@@ -119,7 +135,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     try {
       String email = _emailController.text.trim().toLowerCase();
 
-      // التحقق من وجود الإيميل
       QuerySnapshot userSnapshot = await _firestore
           .collection('Users')
           .where('Email', isEqualTo: email)
@@ -127,30 +142,33 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           .get();
 
       if (userSnapshot.docs.isEmpty) {
-        _showErrorDialog('Email not found');
         setState(() {
+          _emailError = 'Email not found. Please check and try again.';
           _isLoading = false;
         });
         return;
       }
 
-      // إرسال OTP
       String otp = _generateOTP();
       bool otpSent = await _sendOTPEmail(email, otp);
 
       if (otpSent) {
-        _showSuccessSnackBar('✅ Verification code sent to your email');
+        _showSuccessSnackBar('Verification code sent to your email');
         _startResendTimer();
 
         setState(() {
           _userEmail = email;
-          _currentStep = 2; // الانتقال لمرحلة إدخال OTP
+          _currentStep = 2;
         });
       } else {
-        _showErrorDialog('Failed to send verification code. Please try again.');
+        setState(() {
+          _emailError = 'Failed to send verification code. Please try again.';
+        });
       }
     } catch (e) {
-      _showErrorDialog('Unexpected error: ${e.toString()}');
+      setState(() {
+        _emailError = 'An error occurred: ${e.toString()}';
+      });
     } finally {
       setState(() {
         _isLoading = false;
@@ -158,10 +176,22 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
   }
 
-  // المرحلة 2: التحقق من OTP
   Future<void> _handleVerifyOTP() async {
+    setState(() {
+      _otpError = null;
+    });
+
     if (_otpController.text.trim().isEmpty) {
-      _showErrorDialog('Please enter the verification code');
+      setState(() {
+        _otpError = 'Please enter the verification code.';
+      });
+      return;
+    }
+
+    if (_otpController.text.length != 6) {
+      setState(() {
+        _otpError = 'The verification code must be 6 digits.';
+      });
       return;
     }
 
@@ -176,8 +206,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           .get();
 
       if (!otpDoc.exists) {
-        _showErrorDialog('Verification code not found. Please try again.');
         setState(() {
+          _otpError = 'Verification code not found. Please try again.';
           _isLoading = false;
         });
         return;
@@ -189,27 +219,26 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       bool used = otpData['Used'] ?? false;
 
       if (used) {
-        _showErrorDialog('This code has already been used.');
         setState(() {
+          _otpError = 'This code has already been used. Request a new one.';
           _isLoading = false;
         });
         return;
       }
 
       if (DateTime.now().isAfter(expiresAt.toDate())) {
-        _showErrorDialog('The code has expired. Please request a new one.');
+        setState(() {
+          _otpError = 'The code has expired. Please click "Resend Code".';
+          _isLoading = false;
+        });
         await _firestore
             .collection('PasswordResetOTPs')
             .doc(_userEmail)
             .delete();
-        setState(() {
-          _isLoading = false;
-        });
         return;
       }
 
       if (_otpController.text.trim() == savedOTP) {
-        // تحديد OTP كـ Used
         await _firestore
             .collection('PasswordResetOTPs')
             .doc(_userEmail)
@@ -217,16 +246,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           'Used': true,
         });
 
-        _showSuccessSnackBar('✅ Code verified successfully!');
+        _showSuccessSnackBar('Code verified successfully!');
 
         setState(() {
-          _currentStep = 3; // الانتقال لمرحلة إدخال كلمة السر
+          _currentStep = 3;
         });
       } else {
-        _showErrorDialog('Invalid code. Please try again.');
+        setState(() {
+          _otpError = 'Incorrect verification code. Please try again.';
+        });
       }
     } catch (e) {
-      _showErrorDialog('Error: ${e.toString()}');
+      setState(() {
+        _otpError = 'An error occurred: ${e.toString()}';
+      });
     } finally {
       setState(() {
         _isLoading = false;
@@ -234,22 +267,31 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
   }
 
-  // المرحلة 3: تغيير كلمة السر
   Future<void> _handleResetPassword() async {
+    setState(() {
+      _passwordError = null;
+    });
+
     if (_newPasswordController.text.trim().isEmpty ||
         _confirmPasswordController.text.trim().isEmpty) {
-      _showErrorDialog('Please fill all password fields');
+      setState(() {
+        _passwordError = 'Please fill all password fields.';
+      });
       return;
     }
 
     if (_newPasswordController.text != _confirmPasswordController.text) {
-      _showErrorDialog('Passwords do not match');
+      setState(() {
+        _passwordError = 'Passwords do not match.';
+      });
       return;
     }
 
     if (!_isStrongPassword(_newPasswordController.text)) {
-      _showErrorDialog(
-          'Password must be at least 8 characters with uppercase, lowercase, number, and special character');
+      setState(() {
+        _passwordError =
+            'Password must be at least 8 characters with uppercase, lowercase, number, and special character.';
+      });
       return;
     }
 
@@ -258,7 +300,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     });
 
     try {
-      // استدعاء Cloud Function لتغيير الباسورد
       final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
       final callable = functions.httpsCallable('resetUserPassword');
 
@@ -268,7 +309,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       });
 
       if (result.data != null && result.data['success'] == true) {
-        // حذف OTP بعد النجاح
         await _firestore
             .collection('PasswordResetOTPs')
             .doc(_userEmail)
@@ -278,11 +318,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           'Password reset successfully!\n\nYou can now login with your new password.',
         );
       } else {
-        _showErrorDialog('Failed to reset password. Please try again.');
+        setState(() {
+          _passwordError = 'Failed to reset password. Please try again.';
+        });
       }
     } catch (e) {
       print('❌ Error: $e');
-      _showErrorDialog('Error: ${e.toString()}');
+      setState(() {
+        _passwordError = 'An error occurred: ${e.toString()}';
+      });
     } finally {
       setState(() {
         _isLoading = false;
@@ -316,10 +360,25 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   void _showSuccessSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        content: Text(
+          message,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Colors.white,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        backgroundColor: Color(0xFFFF9800),
+        behavior: SnackBarBehavior.fixed,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(16),
+            topRight: Radius.circular(16),
+          ),
+        ),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        duration: Duration(seconds: 3),
       ),
     );
   }
@@ -342,7 +401,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           TextButton(
             onPressed: () {
               Navigator.of(ctx).pop();
-              Navigator.of(context).pop(); // العودة لصفحة Login
+              Navigator.of(context).pop();
             },
             child: Text('OK', style: TextStyle(color: Color(0xFF4A5FBC))),
           ),
@@ -351,366 +410,506 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 
+  String _formatTime(int seconds) {
+    int minutes = seconds ~/ 60;
+    int remainingSeconds = seconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Color(0xFF4A5FBC)),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: 32),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                SizedBox(height: 40),
-                Icon(
-                  _currentStep == 1
-                      ? Icons.lock_reset
-                      : _currentStep == 2
-                          ? Icons.security
-                          : Icons.vpn_key,
-                  size: 100,
-                  color: Color(0xFF4A5FBC),
-                ),
-                SizedBox(height: 30),
-                Text(
-                  _currentStep == 1
-                      ? 'Forgot Password?'
-                      : _currentStep == 2
-                          ? 'Enter Verification Code'
-                          : 'Create New Password',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF4A5FBC),
-                  ),
-                ),
-                SizedBox(height: 10),
-                Text(
-                  _currentStep == 1
-                      ? 'Enter your email address and we\'ll send you a verification code.'
-                      : _currentStep == 2
-                          ? 'We sent a 6-digit code to\n$_userEmail'
-                          : 'Enter your new password twice to confirm.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                SizedBox(height: 40),
-
-                // ========== المرحلة 1: إدخال الإيميل ==========
-                if (_currentStep == 1) ...[
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Email',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFFFF7B7B),
-                        ),
-                      ),
-                      SizedBox(height: 8),
-                      Container(
-                        decoration: BoxDecoration(
-                          border:
-                              Border.all(color: Color(0xFF4A5FBC), width: 2),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: TextFormField(
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          decoration: InputDecoration(
-                            hintText: 'Enter your email',
-                            hintStyle: TextStyle(color: Colors.grey[400]),
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 16,
-                            ),
-                            prefixIcon: Icon(
-                              Icons.email_outlined,
-                              color: Color(0xFF4A5FBC),
-                            ),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter your email';
-                            }
-                            if (!_isValidEmail(value)) {
-                              return 'Please enter a valid email';
-                            }
-                            return null;
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 40),
-                  _isLoading
-                      ? Center(child: CircularProgressIndicator())
-                      : ElevatedButton(
-                          onPressed: _handleSendOTP,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xFF4A5FBC),
-                            minimumSize: Size(double.infinity, 56),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: Text(
-                            'Send Code',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                ],
-
-                // ========== المرحلة 2: إدخال OTP ==========
-                if (_currentStep == 2) ...[
-                  Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Color(0xFF4A5FBC), width: 2),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: TextField(
-                      controller: _otpController,
-                      keyboardType: TextInputType.number,
-                      maxLength: 6,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 8,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: '000000',
-                        hintStyle: TextStyle(color: Colors.grey[400]),
-                        border: InputBorder.none,
-                        counterText: '',
-                        contentPadding: EdgeInsets.symmetric(vertical: 16),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 30),
-                  if (!_canResend)
-                    Text(
-                      'Resend code in $_resendTimer seconds',
-                      style: TextStyle(color: Colors.grey[600]),
-                    ),
-                  if (_canResend)
-                    GestureDetector(
-                      onTap: () async {
-                        String otp = _generateOTP();
-                        bool otpSent = await _sendOTPEmail(_userEmail, otp);
-                        if (otpSent) {
-                          _showSuccessSnackBar('✅ New code sent!');
-                          _startResendTimer();
-                          _otpController.clear();
-                        } else {
-                          _showErrorDialog(
-                              'Failed to resend code. Please try again.');
-                        }
-                      },
-                      child: Text(
-                        'Didn\'t receive code? Resend',
-                        style: TextStyle(
-                          color: Color(0xFF4A5FBC),
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  SizedBox(height: 40),
-                  _isLoading
-                      ? Center(child: CircularProgressIndicator())
-                      : ElevatedButton(
-                          onPressed: _handleVerifyOTP,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xFF4A5FBC),
-                            minimumSize: Size(double.infinity, 56),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: Text(
-                            'Verify Code',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                ],
-
-                // ========== المرحلة 3: إدخال كلمة السر الجديدة ==========
-                if (_currentStep == 3) ...[
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'New Password',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFFFF7B7B),
-                        ),
-                      ),
-                      SizedBox(height: 8),
-                      Container(
-                        decoration: BoxDecoration(
-                          border:
-                              Border.all(color: Color(0xFF4A5FBC), width: 2),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: TextField(
-                          controller: _newPasswordController,
-                          obscureText: _obscureNewPassword,
-                          decoration: InputDecoration(
-                            hintText: 'Enter new password',
-                            hintStyle: TextStyle(color: Colors.grey[400]),
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 16,
-                            ),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscureNewPassword
-                                    ? Icons.visibility_off
-                                    : Icons.visibility,
-                                color: Color(0xFF4A5FBC),
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscureNewPassword = !_obscureNewPassword;
-                                });
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 12),
-                      Text(
-                        'Must include: uppercase, lowercase, number, special character',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 24),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Confirm Password',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFFFF7B7B),
-                        ),
-                      ),
-                      SizedBox(height: 8),
-                      Container(
-                        decoration: BoxDecoration(
-                          border:
-                              Border.all(color: Color(0xFF4A5FBC), width: 2),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: TextField(
-                          controller: _confirmPasswordController,
-                          obscureText: _obscureConfirmPassword,
-                          decoration: InputDecoration(
-                            hintText: 'Re-enter new password',
-                            hintStyle: TextStyle(color: Colors.grey[400]),
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 16,
-                            ),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscureConfirmPassword
-                                    ? Icons.visibility_off
-                                    : Icons.visibility,
-                                color: Color(0xFF4A5FBC),
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscureConfirmPassword =
-                                      !_obscureConfirmPassword;
-                                });
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 40),
-                  _isLoading
-                      ? Center(child: CircularProgressIndicator())
-                      : ElevatedButton(
-                          onPressed: _handleResetPassword,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xFF4A5FBC),
-                            minimumSize: Size(double.infinity, 56),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: Text(
-                            'Reset Password',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                ],
-
-                SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Remember your password? ',
-                      style: TextStyle(color: Colors.grey[600]),
-                    ),
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Text(
-                        'Login',
-                        style: TextStyle(
-                          color: Color(0xFF4A5FBC),
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 40),
-              ],
+      body: SizedBox.expand(
+        child: Stack(
+          children: [
+            // خلفية office.png
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/office.png',
+                fit: BoxFit.cover,
+              ),
             ),
-          ),
+
+            // لوجو j_filled في أعلى اليمين
+            Positioned(
+              top: 50,
+              right: 30,
+              child: Image.asset(
+                'assets/images/j_filled.png',
+                width: 60,
+                height: 80,
+                fit: BoxFit.contain,
+              ),
+            ),
+
+            // المربع البنفسجي في منتصف الشاشة
+            Center(
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.85,
+                padding: EdgeInsets.all(40),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF4A5FBC).withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: SingleChildScrollView(
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // العنوان الرئيسي
+                        Text(
+                          _currentStep == 1
+                              ? 'Forgot Password?'
+                              : _currentStep == 2
+                                  ? 'Enter Verification Code'
+                                  : 'Create New Password',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // النص التوضيحي
+                        Text(
+                          _currentStep == 1
+                              ? 'Enter your email address and we\'ll send you a verification code.'
+                              : _currentStep == 2
+                                  ? 'A 6-digit verification code has been sent to your email.'
+                                  : 'Enter your new password twice to confirm.',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.white.withOpacity(0.8),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+
+                        const SizedBox(height: 40),
+
+                        // ========== المرحلة 1: إدخال الإيميل ==========
+                        if (_currentStep == 1) ...[
+                          TextFormField(
+                            controller: _emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.white,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: 'Enter your email',
+                              hintStyle: TextStyle(
+                                color: Colors.white.withOpacity(0.5),
+                              ),
+                              prefixIcon: Icon(
+                                Icons.email_outlined,
+                                color: Colors.white,
+                              ),
+                              enabledBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: _emailError != null
+                                      ? Colors.red
+                                      : Colors.white.withOpacity(0.5),
+                                ),
+                              ),
+                              focusedBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: _emailError != null
+                                      ? Colors.red
+                                      : Colors.white,
+                                ),
+                              ),
+                              errorBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.red),
+                              ),
+                              focusedErrorBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.red),
+                              ),
+                            ),
+                            onChanged: (value) {
+                              if (_emailError != null) {
+                                setState(() {
+                                  _emailError = null;
+                                });
+                              }
+                            },
+                          ),
+                          if (_emailError != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                _emailError!,
+                                style: const TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 12,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          SizedBox(height: 40),
+                          Container(
+                            width: 45,
+                            height: 45,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: IconButton(
+                              padding: EdgeInsets.zero,
+                              onPressed: _isLoading ? null : _handleSendOTP,
+                              icon: _isLoading
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.arrow_forward,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                            ),
+                          ),
+                        ],
+
+                        // ========== المرحلة 2: إدخال OTP ==========
+                        if (_currentStep == 2) ...[
+                          TextFormField(
+                            controller: _otpController,
+                            keyboardType: TextInputType.number,
+                            textAlign: TextAlign.center,
+                            maxLength: 6,
+                            style: const TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 12,
+                              color: Colors.white,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: '000000',
+                              hintStyle: TextStyle(
+                                color: Colors.white.withOpacity(0.3),
+                                letterSpacing: 12,
+                              ),
+                              enabledBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: _otpError != null
+                                      ? Colors.red
+                                      : Colors.white.withOpacity(0.5),
+                                ),
+                              ),
+                              focusedBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: _otpError != null
+                                      ? Colors.red
+                                      : Colors.white,
+                                ),
+                              ),
+                              errorBorder: const UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.red),
+                              ),
+                              focusedErrorBorder: const UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.red),
+                              ),
+                              counterText: '',
+                              contentPadding:
+                                  EdgeInsets.symmetric(vertical: 20),
+                            ),
+                            onChanged: (value) {
+                              if (_otpError != null) {
+                                setState(() {
+                                  _otpError = null;
+                                });
+                              }
+                            },
+                          ),
+                          if (_otpError != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                _otpError!,
+                                style: const TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 12,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          const SizedBox(height: 16),
+                          if (!_canResend)
+                            Center(
+                              child: Text(
+                                'You can resend the code in: ${_formatTime(_resendTimer)}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white.withOpacity(0.7),
+                                ),
+                              ),
+                            ),
+                          const SizedBox(height: 40),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              TextButton.icon(
+                                onPressed: !_canResend
+                                    ? null
+                                    : () async {
+                                        String otp = _generateOTP();
+                                        bool otpSent = await _sendOTPEmail(
+                                            _userEmail, otp);
+                                        if (otpSent) {
+                                          _showSuccessSnackBar(
+                                              'A new verification code has been sent.');
+                                          _startResendTimer();
+                                          _otpController.clear();
+                                        } else {
+                                          setState(() {
+                                            _otpError =
+                                                'Failed to resend code. Please try again.';
+                                          });
+                                        }
+                                      },
+                                style: TextButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                  minimumSize: Size.zero,
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                icon: Icon(
+                                  Icons.refresh,
+                                  size: 20,
+                                  color: !_canResend
+                                      ? Colors.white.withOpacity(0.4)
+                                      : Colors.white,
+                                ),
+                                label: Text(
+                                  'Resend Code',
+                                  style: TextStyle(
+                                    color: !_canResend
+                                        ? Colors.white.withOpacity(0.4)
+                                        : Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                width: 45,
+                                height: 45,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border:
+                                      Border.all(color: Colors.white, width: 2),
+                                ),
+                                child: IconButton(
+                                  padding: EdgeInsets.zero,
+                                  onPressed:
+                                      _isLoading ? null : _handleVerifyOTP,
+                                  icon: _isLoading
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Icon(
+                                          Icons.arrow_forward,
+                                          color: Colors.white,
+                                          size: 20,
+                                        ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+
+                        // ========== المرحلة 3: إدخال كلمة السر الجديدة ==========
+                        if (_currentStep == 3) ...[
+                          TextFormField(
+                            controller: _newPasswordController,
+                            obscureText: _obscureNewPassword,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.white,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: 'Enter new password',
+                              hintStyle: TextStyle(
+                                color: Colors.white.withOpacity(0.5),
+                              ),
+                              prefixIcon: Icon(
+                                Icons.lock_outline,
+                                color: Colors.white,
+                              ),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscureNewPassword
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                  color: Colors.white,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _obscureNewPassword = !_obscureNewPassword;
+                                  });
+                                },
+                              ),
+                              enabledBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: _passwordError != null
+                                      ? Colors.red
+                                      : Colors.white.withOpacity(0.5),
+                                ),
+                              ),
+                              focusedBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: _passwordError != null
+                                      ? Colors.red
+                                      : Colors.white,
+                                ),
+                              ),
+                              errorBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.red),
+                              ),
+                              focusedErrorBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.red),
+                              ),
+                            ),
+                            onChanged: (value) {
+                              if (_passwordError != null) {
+                                setState(() {
+                                  _passwordError = null;
+                                });
+                              }
+                            },
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Must include: uppercase, lowercase, number, special character',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.white.withOpacity(0.7),
+                              fontStyle: FontStyle.italic,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: 24),
+                          TextFormField(
+                            controller: _confirmPasswordController,
+                            obscureText: _obscureConfirmPassword,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.white,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: 'Re-enter new password',
+                              hintStyle: TextStyle(
+                                color: Colors.white.withOpacity(0.5),
+                              ),
+                              prefixIcon: Icon(
+                                Icons.lock_outline,
+                                color: Colors.white,
+                              ),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscureConfirmPassword
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                  color: Colors.white,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _obscureConfirmPassword =
+                                        !_obscureConfirmPassword;
+                                  });
+                                },
+                              ),
+                              enabledBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: _passwordError != null
+                                      ? Colors.red
+                                      : Colors.white.withOpacity(0.5),
+                                ),
+                              ),
+                              focusedBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: _passwordError != null
+                                      ? Colors.red
+                                      : Colors.white,
+                                ),
+                              ),
+                              errorBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.red),
+                              ),
+                              focusedErrorBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.red),
+                              ),
+                            ),
+                            onChanged: (value) {
+                              if (_passwordError != null) {
+                                setState(() {
+                                  _passwordError = null;
+                                });
+                              }
+                            },
+                          ),
+                          if (_passwordError != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                _passwordError!,
+                                style: const TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 12,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          SizedBox(height: 40),
+                          Container(
+                            width: 45,
+                            height: 45,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: IconButton(
+                              padding: EdgeInsets.zero,
+                              onPressed:
+                                  _isLoading ? null : _handleResetPassword,
+                              icon: _isLoading
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.check,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
