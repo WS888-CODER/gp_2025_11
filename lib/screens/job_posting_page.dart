@@ -339,18 +339,48 @@ class _JobPostingPageState extends State<JobPostingPage> {
 
     // Common filler words to exclude
     final stopWords = {
-      'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
-      'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'be', 'been',
-      'this', 'that', 'these', 'those', 'will', 'can', 'could', 'should',
-      'would', 'may', 'must', 'have', 'has', 'had', 'do', 'does', 'did',
-      'if', 'you', 'we', 'our', 'your', 'their', 'them', 'they', 'he', 'she',
-      'it', 'us', 'not', 'no', 'yes', 'all', 'some', 'any', 'many', 'much',
-      'few', 'more', 'most', 'less', 'about', 'into', 'than', 'over', 'under',
-      'between', 'through', 'during', 'when', 'where', 'why', 'how', 'what',
-      'which', 'who', 'whom', 'whose', 'just', 'only', 'also', 'too', 'very',
-      'quite', 'get', 'got', 'make', 'made', 'such', 'each', 'other', 'both',
-      'either', 'neither', 'whether', 'while', 'until', 'since', 'after',
-      'before', 'above', 'below', 'out', 'up', 'down', 'off', 'here', 'there',
+      // Common English stop words
+      'the', 'a', 'an', 'and', 'or', 'but', 'if', 'then', 'else', 'when', 'while',
+      'for', 'of', 'at', 'by', 'with', 'about', 'against', 'between', 'into',
+      'through', 'during', 'before', 'after', 'above', 'below', 'to', 'from',
+      'up', 'down', 'in', 'out', 'on', 'off', 'over', 'under', 'again', 'further',
+      'once', 'here', 'there', 'all', 'any', 'both', 'each', 'few', 'more', 'most',
+      'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so',
+      'than', 'too', 'very', 'can', 'will', 'just', 'should', 'now', 'this',
+      'that', 'these', 'those', 'is', 'am', 'are', 'was', 'were', 'be', 'been',
+      'being', 'have', 'has', 'had', 'having', 'do', 'does', 'did', 'doing', 'as',
+      'because', 'until', 'out', 'over', 'under', 'therefore', 'where', 'why',
+      'how', 'whose', 'whom', 'which', 'what', 'who', 'he', 'him', 'his', 'she',
+      'her', 'they', 'them', 'their', 'theirs', 'you', 'your', 'yours', 'me',
+      'my', 'mine', 'we', 'our', 'ours', 'us', 'it', 'its', 'itself', 'yourself',
+      'yourselves', 'themselves', 'ourselves',
+
+      // Frequent resume/job filler verbs
+      'responsible', 'assisted', 'worked', 'helped', 'handled', 'provided',
+      'created', 'made', 'developed', 'used', 'utilized', 'performed', 'conducted',
+      'ensured', 'participated', 'involved', 'supported', 'completed', 'contributed',
+      'experience', 'project', 'projects', 'team', 'teams', 'member', 'members',
+
+      // Symbols and punctuation
+      '.', ',', ';', ':', '-', '_', '–', '—', '!', '?', '(', ')', '[', ']', '{',
+      '}', '\'', '"', '/', '\\', '|', '@', '#', '\$', '%', '^', '&', '*', '+', '=',
+      '<', '>', '`', '~',
+
+      // Common technical noise
+      'http', 'https', 'www', 'com', 'net', 'org', 'email', 'address', 'linkedin',
+      'github', 'portfolio', 'resume', 'cv', 'document', 'pdf', 'file',
+
+      // Numbers
+      '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+
+      // Time and date words
+      'year', 'years', 'month', 'months', 'day', 'days', 'date', 'time',
+
+      // Job listing boilerplate
+      'apply', 'applicant', 'candidate', 'requirement', 'requirements',
+      'qualification', 'qualifications', 'responsibilities', 'description',
+      'skills', 'skill', 'position', 'role', 'roles', 'opportunity', 'vacancy',
+      'employment', 'full-time', 'part-time', 'internship', 'intern', 'job', 'jobs'
     };
 
     // Extract from title
