@@ -266,6 +266,8 @@ class _SignupScreenState extends State<SignupScreen> {
         'CVKeywords': null,
         'ContactEmail': null,
         'IsEmailVerified': false,
+        'PhotoPath': null,
+        'CVPath': null,
         'Date': FieldValue.serverTimestamp(),
         'AiUsage': {
           'LastReset': FieldValue.serverTimestamp(),
@@ -379,6 +381,7 @@ class _SignupScreenState extends State<SignupScreen> {
         'Description': null,
         'AccountStatus': 'Pending',
         'IsEmailVerified': false,
+        'PhotoPath': null,
         'Date': FieldValue.serverTimestamp(),
         'AiUsage': {
           'LastReset': FieldValue.serverTimestamp(),
