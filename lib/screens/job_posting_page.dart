@@ -322,6 +322,12 @@ class _JobPostingPageState extends State<JobPostingPage> {
   }
 
   void _addRequirement() {
+    if (_requirements.length >= 15) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Maximum 15 requirements allowed')),
+      );
+      return;
+    }
     if (_requirementController.text.trim().isNotEmpty) {
       setState(() {
         _requirements.add(_requirementController.text.trim());
@@ -686,7 +692,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
       text: TextSpan(
         text: text,
         style: TextStyle(
-          color: Colors.black87,
+          color: Colors.red,
           fontSize: 16,
           fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
         ),
@@ -784,6 +790,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
               child: TextFormField(
                 controller: _jobTitleController,
                 enabled: !_isEdit,
+                maxLength: 100,
                 decoration: InputDecoration(
                   label: _buildLabel('Job Title', _jobTitleController.text.isEmpty),
                   filled: true,
@@ -802,6 +809,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                   ),
                   errorStyle: const TextStyle(height: 0, fontSize: 0),
                   errorMaxLines: 1,
+                  counterText: '',
                 ),
                 validator: (v) => (v == null || v.isEmpty) ? '' : null,
               ),
@@ -824,6 +832,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
               child: TextFormField(
                 controller: _positionController,
                 enabled: !_isEdit,
+                maxLength: 100,
                 decoration: InputDecoration(
                   label: _buildLabel('Position', _positionController.text.isEmpty),
                   filled: true,
@@ -842,6 +851,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                   ),
                   errorStyle: const TextStyle(height: 0, fontSize: 0),
                   errorMaxLines: 1,
+                  counterText: '',
                 ),
                 validator: (v) => (v == null || v.isEmpty) ? '' : null,
               ),
@@ -864,6 +874,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
               child: TextFormField(
                 controller: _specialityController,
                 enabled: !_isEdit,
+                maxLength: 100,
                 decoration: InputDecoration(
                   label: _buildLabel('Speciality', _specialityController.text.isEmpty),
                   filled: true,
@@ -882,6 +893,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                   ),
                   errorStyle: const TextStyle(height: 0, fontSize: 0),
                   errorMaxLines: 1,
+                  counterText: '',
                 ),
                 validator: (v) => (v == null || v.isEmpty) ? '' : null,
               ),
@@ -988,6 +1000,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
               child: TextFormField(
                 controller: _jobDescriptionController,
                 enabled: !_isEdit,
+                maxLength: 2000,
                 decoration: InputDecoration(
                   label: _buildLabel('Job Description', _jobDescriptionController.text.isEmpty),
                   filled: true,
@@ -1007,11 +1020,15 @@ class _JobPostingPageState extends State<JobPostingPage> {
                   errorStyle: const TextStyle(height: 0, fontSize: 0),
                   errorMaxLines: 1,
                   alignLabelWithHint: true,
+                  counterText: '',
+                  helperText: '${_jobDescriptionController.text.length}/2000',
+                  helperStyle: const TextStyle(fontSize: 12),
                 ),
                 minLines: 6,
                 maxLines: null,
                 keyboardType: TextInputType.multiline,
                 validator: (v) => (v == null || v.isEmpty) ? '' : null,
+                onChanged: (value) => setState(() {}),
               ),
             ),
             const SizedBox(height: 16),
@@ -1027,7 +1044,20 @@ class _JobPostingPageState extends State<JobPostingPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildLabel('Requirements', _requirements.isEmpty, isBold: true),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildLabel('Requirements', _requirements.isEmpty, isBold: true),
+                          Text(
+                            '${_requirements.length}/15',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: _requirements.length >= 15 ? Colors.red : Colors.grey[700],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 8),
                       Row(
                         children: [
@@ -1046,6 +1076,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                               ),
                               child: TextField(
                                 controller: _requirementController,
+                                maxLength: 200,
                                 decoration: InputDecoration(
                                   hintText: 'Enter requirement',
                                   filled: true,
@@ -1054,6 +1085,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                                     borderRadius: BorderRadius.circular(12),
                                     borderSide: BorderSide.none,
                                   ),
+                                  counterText: '',
                                 ),
                                 onSubmitted: (_) => _addRequirement(),
                               ),
@@ -1061,7 +1093,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                           ),
                           const SizedBox(width: 8),
                           ElevatedButton(
-                            onPressed: _addRequirement,
+                            onPressed: _requirements.length >= 15 ? null : _addRequirement,
                             style: ElevatedButton.styleFrom(
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(30),
