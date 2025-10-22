@@ -11,6 +11,7 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   int _selectedTab = 0;
+  int _currentStep = 0; // للتنقل بين القسمين
   final _formKey = GlobalKey<FormState>();
 
   // Controllers
@@ -18,16 +19,16 @@ class _SignupScreenState extends State<SignupScreen> {
   final _companyFullNameController = TextEditingController();
   final _companyEmailController = TextEditingController();
   final _companyPasswordController = TextEditingController();
-  final _companyConfirmPasswordController = TextEditingController(); // ✅ جديد
+  final _companyConfirmPasswordController = TextEditingController();
 
   final _seekerNameController = TextEditingController();
   final _seekerEmailController = TextEditingController();
   final _seekerPasswordController = TextEditingController();
-  final _seekerConfirmPasswordController = TextEditingController(); // ✅ جديد
+  final _seekerConfirmPasswordController = TextEditingController();
 
   bool _isLoading = false;
   bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true; // ✅ جديد
+  bool _obscureConfirmPassword = true;
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -38,12 +39,12 @@ class _SignupScreenState extends State<SignupScreen> {
     _companyFullNameController.dispose();
     _companyEmailController.dispose();
     _companyPasswordController.dispose();
-    _companyConfirmPasswordController.dispose(); // ✅ جديد
+    _companyConfirmPasswordController.dispose();
 
     _seekerNameController.dispose();
     _seekerEmailController.dispose();
     _seekerPasswordController.dispose();
-    _seekerConfirmPasswordController.dispose(); // ✅ جديد
+    _seekerConfirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -75,7 +76,6 @@ class _SignupScreenState extends State<SignupScreen> {
     return (100000 + random.nextInt(900000)).toString();
   }
 
-  // ✅ Email validation with proper regex
   bool _isValidEmail(String email) {
     final emailRegex = RegExp(
       r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
@@ -83,7 +83,6 @@ class _SignupScreenState extends State<SignupScreen> {
     return emailRegex.hasMatch(email.trim());
   }
 
-  // ✅ Full name validation
   bool _isValidFullName(String name) {
     String trimmedName = name.trim();
     final nameRegex = RegExp(r'^[a-zA-Z\s]+$');
@@ -100,7 +99,6 @@ class _SignupScreenState extends State<SignupScreen> {
     return true;
   }
 
-  // ✅ Strong password validation
   bool _isStrongPassword(String password) {
     if (password.length < 8) return false;
     if (!password.contains(RegExp(r'[A-Z]'))) return false;
@@ -123,16 +121,12 @@ class _SignupScreenState extends State<SignupScreen> {
     return 'Password must include: ${missing.join(', ')}';
   }
 
-  // ✅ فحص مزدوج - Firestore + حماية إضافية
   Future<bool> _isEmailUnique(String email) async {
     try {
-      String trimmedEmail = email.trim().toLowerCase();
+      String trimmedEmail = email.trim().toLowerCase(); // تحويل لـ lowercase
 
       print('🔵 Checking email: $trimmedEmail');
 
-      // 1️⃣ فحص في Firestore بطريقتين مختلفتين
-
-      // الطريقة الأولى: where clause
       final querySnapshot1 = await _firestore
           .collection('Users')
           .where('Email', isEqualTo: trimmedEmail)
@@ -140,7 +134,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
       print('🔵 Method 1 (where): ${querySnapshot1.docs.length} docs');
 
-      // الطريقة الثانية: get all and filter
       final allUsers = await _firestore.collection('Users').get();
       final matchingDocs = allUsers.docs.where((doc) {
         final data = doc.data();
@@ -173,15 +166,15 @@ class _SignupScreenState extends State<SignupScreen> {
       final callable = functions.httpsCallable('sendSignupOtp');
 
       final result = await callable.call({
-        'email': email.trim(),
+        'email': email.trim().toLowerCase(), // تحويل لـ lowercase
         'otp': otp.trim(),
         'userType': userType,
       });
 
       if (result.data != null && result.data['success'] == true) {
-        await _firestore.collection('AdminOTPs').doc(email).set({
+        await _firestore.collection('AdminOTPs').doc(email.toLowerCase()).set({
           'OTP': otp,
-          'Email': email,
+          'Email': email.toLowerCase(),
           'UserType': userType,
           'CreatedAt': FieldValue.serverTimestamp(),
           'ExpiresAt': Timestamp.fromDate(
@@ -198,27 +191,58 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
+  // Validation للقسم الأول قبل الانتقال للقسم الثاني
+  bool _validateFirstStep() {
+    if (_selectedTab == 0) {
+      // Company
+      if (_companyNameController.text.trim().isEmpty) {
+        _showErrorDialog('Please enter company name');
+        return false;
+      }
+      if (!_isValidFullName(_companyFullNameController.text.trim())) {
+        _showErrorDialog(
+            'Full name must have at least 2 words with letters only');
+        return false;
+      }
+      if (!_isValidEmail(_companyEmailController.text.trim())) {
+        _showErrorDialog('Please enter a valid email address');
+        return false;
+      }
+    } else {
+      // Job Seeker
+      if (!_isValidFullName(_seekerNameController.text.trim())) {
+        _showErrorDialog('Name must have at least 2 words with letters only');
+        return false;
+      }
+      if (!_isValidEmail(_seekerEmailController.text.trim())) {
+        _showErrorDialog('Please enter a valid email address');
+        return false;
+      }
+    }
+    return true;
+  }
+
   Future<void> _handleJobSeekerSignup() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
     try {
-      // Validate email format
-      if (!_isValidEmail(_seekerEmailController.text.trim())) {
+      // تحويل الإيميل لـ lowercase
+      final email = _seekerEmailController.text.trim().toLowerCase();
+
+      if (!_isValidEmail(email)) {
         _showErrorDialog('Please enter a valid email address');
         setState(() => _isLoading = false);
         return;
       }
 
-      // Validate full name
       if (!_isValidFullName(_seekerNameController.text.trim())) {
         _showErrorDialog('Name must have at least 2 words with letters only');
         setState(() => _isLoading = false);
         return;
       }
 
-      // Validate password strength
       if (!_isStrongPassword(_seekerPasswordController.text)) {
         _showErrorDialog(
             _getPasswordRequirements(_seekerPasswordController.text));
@@ -226,7 +250,6 @@ class _SignupScreenState extends State<SignupScreen> {
         return;
       }
 
-      // ✅ التحقق من تطابق كلمات السر
       if (_seekerPasswordController.text !=
           _seekerConfirmPasswordController.text) {
         _showErrorDialog('Passwords do not match');
@@ -234,80 +257,66 @@ class _SignupScreenState extends State<SignupScreen> {
         return;
       }
 
-      // Check email uniqueness
-      bool isUnique = await _isEmailUnique(_seekerEmailController.text.trim());
+      final isUnique = await _isEmailUnique(email);
       if (!isUnique) {
         _showErrorDialog('This email is already registered');
         setState(() => _isLoading = false);
         return;
       }
 
-      // Create user
-      UserCredential userCredential =
-          await _auth.createUserWithEmailAndPassword(
-        email: _seekerEmailController.text.trim(),
-        password: _seekerPasswordController.text.trim(),
+      final userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: _seekerPasswordController.text,
       );
 
-      String userId = userCredential.user!.uid;
+      await userCredential.user!.sendEmailVerification();
 
-      await _firestore.collection('Users').doc(userId).set({
-        'UserID': userId,
+      await _firestore.collection('Users').doc(userCredential.user!.uid).set({
         'UserType': 'JobSeeker',
-        'Email':
-            _seekerEmailController.text.trim().toLowerCase(), // ✅ lowercase
-        'Name': _seekerNameController.text.trim(),
-        'DoB': null,
-        'Nationality': null,
-        'Phone': null,
-        'PhotoURL': null,
-        'CVURL': null,
-        'IsProfileComplete': false,
-        'CVKeywords': null,
-        'ContactEmail': null,
+        'FullName': _seekerNameController.text.trim(),
+        'Email': email,
         'IsEmailVerified': false,
-        'PhotoPath': null,
-        'CVPath': null,
-        'Date': FieldValue.serverTimestamp(),
-        'AiUsage': {
-          'LastReset': FieldValue.serverTimestamp(),
-          'CvEnhancement': 2,
-          'MockInterview': 2,
-        },
+        'CreatedAt': FieldValue.serverTimestamp(),
       });
 
-      String otp = _generateOTP();
-      bool otpSent = await _sendOTPEmail(
-        _seekerEmailController.text.trim(),
-        otp,
-        'JobSeeker',
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green, size: 28),
+              SizedBox(width: 10),
+              Text('Success', style: TextStyle(color: Colors.green)),
+            ],
+          ),
+          content: Text(
+              'Account created! Please check your email to verify your account before logging in.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                Navigator.pushReplacementNamed(context, '/login');
+              },
+              child: Text('OK', style: TextStyle(color: Color(0xFF4A5FBC))),
+            ),
+          ],
+        ),
       );
-
-      if (otpSent) {
-        Navigator.pushReplacementNamed(
-          context,
-          '/otp-verification',
-          arguments: {
-            'email': _seekerEmailController.text.trim(),
-            'userId': userId,
-            'userType': 'JobSeeker',
-          },
-        );
-      } else {
-        await userCredential.user!.delete();
-        await _firestore.collection('Users').doc(userId).delete();
-        _showErrorDialog('Failed to send verification code');
-      }
     } on FirebaseAuthException catch (e) {
-      String errorMessage = 'An error occurred';
+      String message = 'An error occurred during signup';
       if (e.code == 'email-already-in-use') {
-        errorMessage = 'This email is already registered';
+        message = 'This email is already registered';
       } else if (e.code == 'weak-password') {
-        errorMessage = 'Password is too weak';
+        message = 'Password is too weak';
+      } else if (e.code == 'invalid-email') {
+        message = 'Invalid email format';
       }
-      _showErrorDialog(errorMessage);
+      _showErrorDialog(message);
     } catch (e) {
-      _showErrorDialog('Unexpected error: ${e.toString()}');
+      _showErrorDialog('Unexpected error: $e');
     } finally {
       setState(() => _isLoading = false);
     }
@@ -319,21 +328,28 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Validate email format
-      if (!_isValidEmail(_companyEmailController.text.trim())) {
+      // تحويل الإيميل لـ lowercase
+      final email = _companyEmailController.text.trim().toLowerCase();
+
+      if (_companyNameController.text.trim().isEmpty) {
+        _showErrorDialog('Please enter company name');
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      if (!_isValidFullName(_companyFullNameController.text.trim())) {
+        _showErrorDialog(
+            'Full name must have at least 2 words with letters only');
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      if (!_isValidEmail(email)) {
         _showErrorDialog('Please enter a valid email address');
         setState(() => _isLoading = false);
         return;
       }
 
-      // Validate full name
-      if (!_isValidFullName(_companyFullNameController.text.trim())) {
-        _showErrorDialog('Name must have at least 2 words with letters only');
-        setState(() => _isLoading = false);
-        return;
-      }
-
-      // Validate password strength
       if (!_isStrongPassword(_companyPasswordController.text)) {
         _showErrorDialog(
             _getPasswordRequirements(_companyPasswordController.text));
@@ -341,7 +357,6 @@ class _SignupScreenState extends State<SignupScreen> {
         return;
       }
 
-      // ✅ التحقق من تطابق كلمات السر
       if (_companyPasswordController.text !=
           _companyConfirmPasswordController.text) {
         _showErrorDialog('Passwords do not match');
@@ -349,92 +364,68 @@ class _SignupScreenState extends State<SignupScreen> {
         return;
       }
 
-      // Check email uniqueness
-      bool isUnique = await _isEmailUnique(_companyEmailController.text.trim());
+      final isUnique = await _isEmailUnique(email);
       if (!isUnique) {
         _showErrorDialog('This email is already registered');
         setState(() => _isLoading = false);
         return;
       }
 
-      // Create user
-      UserCredential userCredential =
-          await _auth.createUserWithEmailAndPassword(
-        email: _companyEmailController.text.trim(),
-        password: _companyPasswordController.text.trim(),
+      final userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: _companyPasswordController.text,
       );
 
-      String userId = userCredential.user!.uid;
+      await userCredential.user!.sendEmailVerification();
 
-      await _firestore.collection('Users').doc(userId).set({
-        'UserID': userId,
+      await _firestore.collection('Users').doc(userCredential.user!.uid).set({
         'UserType': 'Company',
-        'Email':
-            _companyEmailController.text.trim().toLowerCase(), // ✅ lowercase
-        'Name': _companyFullNameController.text.trim(),
         'CompanyName': _companyNameController.text.trim(),
-        'Phone': null,
-        'PhotoURL': null,
-        'IsProfileComplete': false,
-        'ContactEmail': null,
-        'Location': null,
-        'Description': null,
-        'AccountStatus': 'Pending',
+        'FullName': _companyFullNameController.text.trim(),
+        'Email': email,
         'IsEmailVerified': false,
-        'PhotoPath': null,
-        'Date': FieldValue.serverTimestamp(),
-        'AiUsage': {
-          'LastReset': FieldValue.serverTimestamp(),
-          'JobPosting': 2,
-        },
+        'AccountStatus': 'Pending',
+        'CreatedAt': FieldValue.serverTimestamp(),
       });
 
-      String otp = _generateOTP();
-      bool otpSent = await _sendOTPEmail(
-        _companyEmailController.text.trim(),
-        otp,
-        'Company',
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green, size: 28),
+              SizedBox(width: 10),
+              Text('Success', style: TextStyle(color: Colors.green)),
+            ],
+          ),
+          content: Text(
+              'Account created! Please check your email to verify your account. Admin will review your request.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                Navigator.pushReplacementNamed(context, '/login');
+              },
+              child: Text('OK', style: TextStyle(color: Color(0xFF4A5FBC))),
+            ),
+          ],
+        ),
       );
-
-      if (otpSent) {
-        // ✅ إشعار الأدمن بالشركة الجديدة
-        try {
-          final functions =
-              FirebaseFunctions.instanceFor(region: 'us-central1');
-          final notifyAdmin = functions.httpsCallable('notifyAdminNewCompany');
-          await notifyAdmin.call({
-            'companyName': _companyNameController.text.trim(),
-            'companyEmail': _companyEmailController.text.trim(),
-          });
-          print('✅ Admin notified successfully');
-        } catch (e) {
-          print('⚠️ Failed to notify admin: $e');
-        }
-
-        Navigator.pushReplacementNamed(
-          context,
-          '/otp-verification',
-          arguments: {
-            'email': _companyEmailController.text.trim(),
-            'userId': userId,
-            'userType': 'Company',
-          },
-        );
-      } else {
-        await userCredential.user!.delete();
-        await _firestore.collection('Users').doc(userId).delete();
-        _showErrorDialog('Failed to send verification code');
-      }
     } on FirebaseAuthException catch (e) {
-      String errorMessage = 'An error occurred';
+      String message = 'An error occurred during signup';
       if (e.code == 'email-already-in-use') {
-        errorMessage = 'This email is already registered';
+        message = 'This email is already registered';
       } else if (e.code == 'weak-password') {
-        errorMessage = 'Password is too weak';
+        message = 'Password is too weak';
+      } else if (e.code == 'invalid-email') {
+        message = 'Invalid email format';
       }
-      _showErrorDialog(errorMessage);
+      _showErrorDialog(message);
     } catch (e) {
-      _showErrorDialog('Unexpected error: ${e.toString()}');
+      _showErrorDialog('Unexpected error: $e');
     } finally {
       setState(() => _isLoading = false);
     }
@@ -442,96 +433,142 @@ class _SignupScreenState extends State<SignupScreen> {
 
   Widget _buildCompanyForm() {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildTextField(
-          label: 'Company Name',
-          controller: _companyNameController,
-          hint: 'Enter company name',
-          validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-        ),
-        SizedBox(height: 24),
-        _buildTextField(
-          label: 'Full Name',
-          controller: _companyFullNameController,
-          hint: 'Enter your full name (First Last)',
-          validator: (v) {
-            if (v == null || v.isEmpty) return 'Required';
-            if (!_isValidFullName(v)) return 'At least 2 words (letters only)';
-            return null;
-          },
-        ),
-        SizedBox(height: 24),
-        _buildTextField(
-          label: 'Email',
-          controller: _companyEmailController,
-          hint: 'Enter your email',
-          keyboardType: TextInputType.emailAddress,
-          validator: (v) {
-            if (v == null || v.isEmpty) return 'Required';
-            if (!_isValidEmail(v)) return 'Invalid email address';
-            return null;
-          },
-        ),
-        SizedBox(height: 24),
-        _buildPasswordField(_companyPasswordController),
-        SizedBox(height: 24), // ✅ جديد
-        _buildConfirmPasswordField(
-          // ✅ جديد
-          _companyPasswordController,
-          _companyConfirmPasswordController,
-        ),
+        if (_currentStep == 0) ...[
+          // القسم الأول: Company Name, Full Name, Email
+          _buildTextField('Company Name', _companyNameController, false),
+          SizedBox(height: 24),
+          _buildTextField('Full Name', _companyFullNameController, false),
+          SizedBox(height: 24),
+          _buildTextField('Email', _companyEmailController, false,
+              keyboardType: TextInputType.emailAddress),
+        ] else ...[
+          // القسم الثاني: Password, Confirm Password
+          _buildPasswordField(_companyPasswordController),
+          SizedBox(height: 24),
+          _buildConfirmPasswordField(
+              _companyPasswordController, _companyConfirmPasswordController),
+        ],
         SizedBox(height: 40),
-        _buildSignUpButton(_handleCompanySignup),
+
+        // النقاط
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildDot(0),
+            SizedBox(width: 8),
+            _buildDot(1),
+          ],
+        ),
+
+        SizedBox(height: 40),
+
+        // الزر
+        _buildNavigationButton(),
       ],
     );
   }
 
   Widget _buildJobSeekerForm() {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildTextField(
-          label: 'Full Name',
-          controller: _seekerNameController,
-          hint: 'Enter your full name (First Last)',
-          validator: (v) {
-            if (v == null || v.isEmpty) return 'Required';
-            if (!_isValidFullName(v)) return 'At least 2 words (letters only)';
-            return null;
-          },
-        ),
-        SizedBox(height: 24),
-        _buildTextField(
-          label: 'Email',
-          controller: _seekerEmailController,
-          hint: 'Enter your email',
-          keyboardType: TextInputType.emailAddress,
-          validator: (v) {
-            if (v == null || v.isEmpty) return 'Required';
-            if (!_isValidEmail(v)) return 'Invalid email address';
-            return null;
-          },
-        ),
-        SizedBox(height: 24),
-        _buildPasswordField(_seekerPasswordController),
-        SizedBox(height: 24), // ✅ جديد
-        _buildConfirmPasswordField(
-          // ✅ جديد
-          _seekerPasswordController,
-          _seekerConfirmPasswordController,
-        ),
+        if (_currentStep == 0) ...[
+          // القسم الأول: Full Name, Email
+          _buildTextField('Full Name', _seekerNameController, false),
+          SizedBox(height: 24),
+          _buildTextField('Email', _seekerEmailController, false,
+              keyboardType: TextInputType.emailAddress),
+        ] else ...[
+          // القسم الثاني: Password, Confirm Password
+          _buildPasswordField(_seekerPasswordController),
+          SizedBox(height: 24),
+          _buildConfirmPasswordField(
+              _seekerPasswordController, _seekerConfirmPasswordController),
+        ],
         SizedBox(height: 40),
-        _buildSignUpButton(_handleJobSeekerSignup),
+
+        // النقاط
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildDot(0),
+            SizedBox(width: 8),
+            _buildDot(1),
+          ],
+        ),
+
+        SizedBox(height: 40),
+
+        // الزر
+        _buildNavigationButton(),
       ],
     );
   }
 
-  Widget _buildTextField({
-    required String label,
-    required TextEditingController controller,
-    required String hint,
-    String? Function(String?)? validator,
-    TextInputType? keyboardType,
-  }) {
+  Widget _buildDot(int index) {
+    return Container(
+      width: 10,
+      height: 10,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: _currentStep == index ? Color(0xFF4A5FBC) : Colors.grey[300],
+      ),
+    );
+  }
+
+  Widget _buildNavigationButton() {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Container(
+        width: 45,
+        height: 45,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 2),
+        ),
+        child: IconButton(
+          padding: EdgeInsets.zero,
+          onPressed: _isLoading
+              ? null
+              : () {
+                  if (_currentStep == 0) {
+                    // التحقق من القسم الأول
+                    if (_validateFirstStep()) {
+                      setState(() => _currentStep = 1);
+                    }
+                  } else {
+                    // Submit
+                    if (_selectedTab == 0) {
+                      _handleCompanySignup();
+                    } else {
+                      _handleJobSeekerSignup();
+                    }
+                  }
+                },
+          icon: _isLoading
+              ? SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : Icon(
+                  Icons.arrow_forward,
+                  color: Colors.white,
+                  size: 20,
+                ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField(
+      String label, TextEditingController controller, bool obscure,
+      {TextInputType keyboardType = TextInputType.text}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -540,26 +577,31 @@ class _SignupScreenState extends State<SignupScreen> {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Color(0xFFFF7B7B),
+            color: Colors.white,
           ),
         ),
         SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: Color(0xFF4A5FBC), width: 2),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: TextFormField(
-            controller: controller,
-            keyboardType: keyboardType,
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: TextStyle(color: Colors.grey[400]),
-              border: InputBorder.none,
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        TextFormField(
+          controller: controller,
+          obscureText: obscure,
+          keyboardType: keyboardType,
+          style: TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'Enter your $label',
+            hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.white.withOpacity(0.5)),
             ),
-            validator: validator,
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.white),
+            ),
+            errorBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.red),
+            ),
+            focusedErrorBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.red),
+            ),
+            errorStyle: TextStyle(color: Colors.red),
           ),
         ),
       ],
@@ -575,53 +617,44 @@ class _SignupScreenState extends State<SignupScreen> {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Color(0xFFFF7B7B),
+            color: Colors.white,
           ),
         ),
         SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: Color(0xFF4A5FBC), width: 2),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: TextFormField(
-            controller: controller,
-            obscureText: _obscurePassword,
-            decoration: InputDecoration(
-              hintText: 'Enter your password',
-              hintStyle: TextStyle(color: Colors.grey[400]),
-              border: InputBorder.none,
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                  color: Color(0xFF4A5FBC),
-                ),
-                onPressed: () =>
-                    setState(() => _obscurePassword = !_obscurePassword),
-              ),
+        TextFormField(
+          controller: controller,
+          obscureText: _obscurePassword,
+          style: TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'Enter your password',
+            hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.white.withOpacity(0.5)),
             ),
-            validator: (v) {
-              if (v == null || v.isEmpty) return 'Required';
-              if (v.length < 8) return 'At least 8 characters';
-              return null;
-            },
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.white),
+            ),
+            errorBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.red),
+            ),
+            focusedErrorBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.red),
+            ),
+            errorStyle: TextStyle(color: Colors.red),
+            suffixIcon: IconButton(
+              icon: Icon(
+                _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                color: Colors.white,
+              ),
+              onPressed: () =>
+                  setState(() => _obscurePassword = !_obscurePassword),
+            ),
           ),
-        ),
-        SizedBox(height: 12),
-        Text(
-          'Must include: uppercase, lowercase, number, special character',
-          style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-              fontStyle: FontStyle.italic),
         ),
       ],
     );
   }
 
-  // ✅ دالة جديدة لبناء Confirm Password Field
   Widget _buildConfirmPasswordField(TextEditingController passwordController,
       TextEditingController confirmPasswordController) {
     return Column(
@@ -632,183 +665,227 @@ class _SignupScreenState extends State<SignupScreen> {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Color(0xFFFF7B7B),
+            color: Colors.white,
           ),
         ),
         SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: Color(0xFF4A5FBC), width: 2),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: TextFormField(
-            controller: confirmPasswordController,
-            obscureText: _obscureConfirmPassword,
-            decoration: InputDecoration(
-              hintText: 'Re-enter your password',
-              hintStyle: TextStyle(color: Colors.grey[400]),
-              border: InputBorder.none,
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscureConfirmPassword
-                      ? Icons.visibility_off
-                      : Icons.visibility,
-                  color: Color(0xFF4A5FBC),
-                ),
-                onPressed: () => setState(
-                    () => _obscureConfirmPassword = !_obscureConfirmPassword),
-              ),
+        TextFormField(
+          controller: confirmPasswordController,
+          obscureText: _obscureConfirmPassword,
+          style: TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'Re-enter your password',
+            hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.white.withOpacity(0.5)),
             ),
-            validator: (v) {
-              if (v == null || v.isEmpty) return 'Required';
-              if (v != passwordController.text) return 'Passwords do not match';
-              return null;
-            },
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.white),
+            ),
+            errorBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.red),
+            ),
+            focusedErrorBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.red),
+            ),
+            errorStyle: TextStyle(color: Colors.red),
+            suffixIcon: IconButton(
+              icon: Icon(
+                _obscureConfirmPassword
+                    ? Icons.visibility_off
+                    : Icons.visibility,
+                color: Colors.white,
+              ),
+              onPressed: () => setState(
+                  () => _obscureConfirmPassword = !_obscureConfirmPassword),
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildSignUpButton(VoidCallback onPressed) {
-    return _isLoading
-        ? Center(child: CircularProgressIndicator())
-        : ElevatedButton(
-            onPressed: onPressed,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF4A5FBC),
-              minimumSize: Size(double.infinity, 56),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
-            ),
-            child: Text(
-              'Sign Up',
-              style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white),
-            ),
-          );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Color(0xFF4A5FBC)),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: 32),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                SizedBox(height: 20),
-                Image.asset('assets/images/logo.jpg', height: 120, width: 120),
-                SizedBox(height: 30),
-                Text(
-                  'Create Account',
-                  style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF4A5FBC)),
-                ),
-                SizedBox(height: 30),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => _selectedTab = 0),
-                          child: Container(
-                            padding: EdgeInsets.symmetric(vertical: 16),
-                            decoration: BoxDecoration(
-                              color: _selectedTab == 0
-                                  ? Color(0xFF4A5FBC)
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Text(
-                              'Company',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: _selectedTab == 0
-                                    ? Colors.white
-                                    : Colors.grey,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => _selectedTab = 1),
-                          child: Container(
-                            padding: EdgeInsets.symmetric(vertical: 16),
-                            decoration: BoxDecoration(
-                              color: _selectedTab == 1
-                                  ? Color(0xFF4A5FBC)
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Text(
-                              'Job Seeker',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: _selectedTab == 1
-                                    ? Colors.white
-                                    : Colors.grey,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 40),
-                _selectedTab == 0 ? _buildCompanyForm() : _buildJobSeekerForm(),
-                SizedBox(height: 30),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text('Already have an account? ',
-                        style: TextStyle(color: Colors.grey[600])),
-                    GestureDetector(
-                      onTap: () =>
-                          Navigator.pushReplacementNamed(context, '/login'),
-                      child: Text(
-                        'Login',
-                        style: TextStyle(
-                            color: Color(0xFF4A5FBC),
-                            fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 40),
-              ],
+      body: SizedBox.expand(
+        child: Stack(
+          children: [
+            // خلفية office.png
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/office.png',
+                fit: BoxFit.cover,
+              ),
             ),
-          ),
+
+            // الموجة البنفسجية
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: MediaQuery.of(context).size.height * 0.75,
+              child: CustomPaint(
+                painter: WavePainter(),
+              ),
+            ),
+
+            // لوجو j_filled في أعلى اليمين
+            Positioned(
+              top: 50,
+              right: 30,
+              child: Image.asset(
+                'assets/images/j_filled.png',
+                width: 60,
+                height: 80,
+                fit: BoxFit.contain,
+              ),
+            ),
+
+            // المحتوى
+            SafeArea(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 40),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 200),
+
+                        // Tabs
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(25),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () => setState(() {
+                                    _selectedTab = 0;
+                                    _currentStep = 0;
+                                  }),
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: _selectedTab == 0
+                                          ? Colors.white
+                                          : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(25),
+                                    ),
+                                    child: Text(
+                                      'Company',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: _selectedTab == 0
+                                            ? Color(0xFF4A5FBC)
+                                            : Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () => setState(() {
+                                    _selectedTab = 1;
+                                    _currentStep = 0;
+                                  }),
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: _selectedTab == 1
+                                          ? Colors.white
+                                          : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(25),
+                                    ),
+                                    child: Text(
+                                      'Job Seeker',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: _selectedTab == 1
+                                            ? Color(0xFF4A5FBC)
+                                            : Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 40),
+
+                        _selectedTab == 0
+                            ? _buildCompanyForm()
+                            : _buildJobSeekerForm(),
+
+                        const SizedBox(height: 40),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // زر الرجوع
+            if (_currentStep == 1)
+              Positioned(
+                top: 50,
+                left: 30,
+                child: IconButton(
+                  icon: Icon(Icons.arrow_back, color: Colors.white, size: 28),
+                  onPressed: () => setState(() => _currentStep = 0),
+                ),
+              ),
+          ],
         ),
       ),
     );
   }
+}
+
+// رسم الموجة البنفسجية
+class WavePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFF4A5FBC).withOpacity(0.7)
+      ..style = PaintingStyle.fill;
+
+    final path = Path();
+
+    path.moveTo(0, size.height);
+    path.lineTo(0, size.height * 0.3);
+
+    path.quadraticBezierTo(
+      size.width * 0.25,
+      size.height * 0.15,
+      size.width * 0.5,
+      size.height * 0.2,
+    );
+
+    path.quadraticBezierTo(
+      size.width * 0.75,
+      size.height * 0.25,
+      size.width,
+      size.height * 0.15,
+    );
+
+    path.lineTo(size.width, size.height);
+    path.close();
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

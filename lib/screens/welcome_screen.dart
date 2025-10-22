@@ -13,7 +13,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   List<AnimationController> _controllers = [];
   List<Animation<double>> _animations = [];
   List<Offset> _positions = [];
-  List<int> _lastZones = []; // نحفظ آخر منطقة لكل أيقونة
+  List<int> _lastZones = [];
   final Random _random = Random();
   final double _minDistance = 0.15;
 
@@ -67,12 +67,11 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     return true;
   }
 
-  // دالة تختار منطقة جديدة مختلفة عن المنطقة السابقة
   int _getNewDifferentZone(int lastZone) {
     int newZone;
     do {
       newZone = _random.nextInt(6);
-    } while (newZone == lastZone); // نتأكد إنها مختلفة عن السابقة
+    } while (newZone == lastZone);
     return newZone;
   }
 
@@ -80,27 +79,27 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     double x, y;
 
     switch (zone) {
-      case 0: // فوق يسار
+      case 0:
         x = _random.nextDouble() * 0.25;
         y = _random.nextDouble() * 0.2;
         break;
-      case 1: // فوق وسط
+      case 1:
         x = 0.35 + _random.nextDouble() * 0.3;
         y = _random.nextDouble() * 0.15;
         break;
-      case 2: // فوق يمين
+      case 2:
         x = 0.75 + _random.nextDouble() * 0.2;
         y = _random.nextDouble() * 0.2;
         break;
-      case 3: // تحت يسار
+      case 3:
         x = _random.nextDouble() * 0.25;
         y = 0.8 + _random.nextDouble() * 0.15;
         break;
-      case 4: // تحت وسط
+      case 4:
         x = 0.35 + _random.nextDouble() * 0.3;
         y = 0.85 + _random.nextDouble() * 0.1;
         break;
-      case 5: // تحت يمين
+      case 5:
         x = 0.75 + _random.nextDouble() * 0.2;
         y = 0.8 + _random.nextDouble() * 0.15;
         break;
@@ -117,9 +116,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     int attempts = 0;
     int maxAttempts = 50;
 
-    // نختار منطقة جديدة مختلفة تماماً عن المنطقة السابقة
     int newZone = _getNewDifferentZone(_lastZones[index]);
-    _lastZones[index] = newZone; // نحدث آخر منطقة
+    _lastZones[index] = newZone;
 
     do {
       position = _getRandomPositionInZone(newZone);
@@ -139,7 +137,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
             _controllers[index].reverse().then((_) {
               if (mounted) {
                 setState(() {
-                  // الموقع الجديد راح يكون في منطقة مختلفة تماماً
                   _positions[index] = _getRandomPositionWithoutOverlap(index);
                 });
                 Future.delayed(Duration(milliseconds: 500), () {
@@ -169,9 +166,16 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
-      backgroundColor: Color(0xFFF6F5FB),
       body: Stack(
         children: [
+          // خلفية office.png
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/office.png',
+              fit: BoxFit.cover,
+            ),
+          ),
+          // الأيقونات المتحركة
           ...List.generate(10, (index) {
             return AnimatedBuilder(
               animation: _animations[index],
@@ -195,141 +199,102 @@ class _WelcomeScreenState extends State<WelcomeScreen>
               },
             );
           }),
-          SafeArea(
-            child: Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24),
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 32, vertical: 50),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(32),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 20,
-                        offset: Offset(0, 10),
+          // لوجو j_filled في أعلى اليمين
+          Positioned(
+            top: 50,
+            right: 30,
+            child: Image.asset(
+              'assets/images/j_filled.png',
+              width: 60,
+              height: 80,
+              fit: BoxFit.contain,
+            ),
+          ),
+          // المحتوى الرئيسي
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 100,
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 40),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // زر Log In البنفسجي
+                  Container(
+                    width: double.infinity,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF4A5FBC), Color(0xFF6B7FDB)],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
                       ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Image.asset(
-                            'assets/images/j_filled.png',
-                            width: 70,
-                            height: 100,
-                            fit: BoxFit.contain,
-                          ),
-                          SizedBox(width: 8),
-                          Image.asset(
-                            'assets/images/adeer_text.png',
-                            width: 150,
-                            height: 70,
-                            fit: BoxFit.contain,
-                          ),
-                        ],
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0xFF4A5FBC).withOpacity(0.3),
+                          blurRadius: 12,
+                          offset: Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => LoginScreen()),
+                        );
+                      },
+                      style: TextButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28),
+                        ),
                       ),
-                      SizedBox(height: 40),
-                      Text(
-                        'Welcome',
+                      child: Text(
+                        'Log In',
                         style: TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF4A5FBC),
-                          letterSpacing: 1.2,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
                         ),
                       ),
-                      SizedBox(height: 50),
-                      Container(
-                        width: double.infinity,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Color(0xFFFF7B7B), Color(0xFFFF9A6B)],
-                            begin: Alignment.centerLeft,
-                            end: Alignment.centerRight,
-                          ),
-                          borderRadius: BorderRadius.circular(28),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Color(0xFFFF7B7B).withOpacity(0.3),
-                              blurRadius: 12,
-                              offset: Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: TextButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => SignupScreen()),
-                            );
-                          },
-                          style: TextButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(28),
-                            ),
-                          ),
-                          child: Text(
-                            'Create Account',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
+                    ),
+                  ),
+                  SizedBox(height: 20),
+                  // جملة Sign Up
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    children: [
+                      Text(
+                        "Don't have an account? ",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[400], // رمادي أفتح
                         ),
                       ),
-                      SizedBox(height: 20),
-                      Container(
-                        width: double.infinity,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Color(0xFFFF7B7B), Color(0xFFFF9A6B)],
-                            begin: Alignment.centerLeft,
-                            end: Alignment.centerRight,
-                          ),
-                          borderRadius: BorderRadius.circular(28),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Color(0xFFFF7B7B).withOpacity(0.3),
-                              blurRadius: 12,
-                              offset: Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: TextButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => LoginScreen()),
-                            );
-                          },
-                          style: TextButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(28),
-                            ),
-                          ),
-                          child: Text(
-                            'Log In',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => SignupScreen()),
+                          );
+                        },
+                        child: Text(
+                          'Sign Up',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFFFF7B7B), // البرتقالي
+                            fontWeight: FontWeight.w600,
+                            // شلت الـ underline
                           ),
                         ),
                       ),
                     ],
                   ),
-                ),
+                ],
               ),
             ),
           ),
