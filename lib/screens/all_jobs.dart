@@ -588,40 +588,44 @@ class _JobsPageState extends State<JobsPage> {
                               ),
                               const SizedBox(height: 8),
 
-                              // Title + position + posted date
+                              // Title + position + posted date  (REPLACED)
                               Text(
                                 j.title,
                                 style: const TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.w700),
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              const SizedBox(height: 2),
-                              Text(j.position,
-                                  style:
-                                      Theme.of(context).textTheme.bodyMedium),
-                              const SizedBox(height: 2),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  const Icon(Icons.work_outline, size: 16),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      j.position.isEmpty
+                                          ? 'Position'
+                                          : j.position,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
                               Text(
                                 'Posted: ${_fmtDate(j.postedAt)}',
                                 style: Theme.of(context).textTheme.bodySmall,
                               ),
                               const SizedBox(height: 8),
-
-                              // Keywords
-                              if (j.keywords.isNotEmpty)
-                                Wrap(
-                                  spacing: 6,
-                                  runSpacing: -8,
-                                  children: j.keywords.take(3).map((k) {
-                                    return Chip(
-                                      label: Text(k),
-                                      visualDensity: VisualDensity.compact,
-                                      materialTapTargetSize:
-                                          MaterialTapTargetSize.shrinkWrap,
-                                    );
-                                  }).toList(),
-                                ),
-
-                              if (j.keywords.isNotEmpty)
-                                const SizedBox(height: 8),
 
                               // Specialty + Apply
                               Row(
@@ -700,20 +704,108 @@ class UserProfile {
 
 /* ========================== DETAILS PAGE ========================== */
 
-class JobDetailsPage extends StatelessWidget {
+class JobDetailsPage extends StatefulWidget {
   final Job job;
   final CompanyInfo? company;
   const JobDetailsPage({super.key, required this.job, this.company});
+
+  @override
+  State<JobDetailsPage> createState() => _JobDetailsPageState();
+}
+
+// ===== Helpers داخل JobDetailsPage =====
+Widget _infoRow(
+  BuildContext ctx, {
+  required IconData icon,
+  required String label,
+  required String value,
+}) {
+  if (value.trim().isEmpty) return const SizedBox.shrink();
+
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: Colors.grey[700]),
+        const SizedBox(width: 8),
+        Expanded(
+          child: RichText(
+            text: TextSpan(
+              style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
+                    fontSize: 13.5,
+                    color: Colors.grey[900],
+                    height: 1.3,
+                  ),
+              children: [
+                TextSpan(
+                  text: '$label: ',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                TextSpan(text: value),
+              ],
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _ExpandableText extends StatefulWidget {
+  final String text;
+  final int maxLines;
+  const _ExpandableText(this.text, {this.maxLines = 2});
+  @override
+  State<_ExpandableText> createState() => _ExpandableTextState();
+}
+
+class _ExpandableTextState extends State<_ExpandableText> {
+  bool _expanded = false;
+  @override
+  Widget build(BuildContext context) {
+    if (widget.text.trim().isEmpty)
+      return const Text('No description provided.');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          widget.text,
+          maxLines: _expanded ? null : widget.maxLines,
+          overflow: _expanded ? TextOverflow.visible : TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 6),
+        TextButton(
+          style: TextButton.styleFrom(
+            padding: EdgeInsets.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            minimumSize: const Size(40, 28),
+          ),
+          onPressed: () => setState(() => _expanded = !_expanded),
+          child: Text(_expanded ? 'Show less' : 'Show more'),
+        ),
+      ],
+    );
+  }
+}
+
+class _JobDetailsPageState extends State<JobDetailsPage> {
+  bool _companyExpanded = false;
 
   String _fmtDate(DateTime d) =>
       '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
 
   @override
   Widget build(BuildContext context) {
+    final job = widget.job;
+    final company = widget.company;
     final canApply = job.applyUrl != null && job.applyUrl!.trim().isNotEmpty;
 
     return Scaffold(
-      appBar: AppBar(title: Text(job.title)),
+      appBar: AppBar(title: const Text('Job Details')),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.all(12),
         child: FilledButton(
@@ -731,7 +823,7 @@ class JobDetailsPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Company details card
+          // Company details card (with truncated/expandable description)
           Card(
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -763,9 +855,39 @@ class JobDetailsPage extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text(company!.location),
                         ],
+                        // Truncated / expandable description
                         if ((company?.description ?? '').isNotEmpty) ...[
                           const SizedBox(height: 6),
-                          Text(company!.description),
+                          AnimatedCrossFade(
+                            firstChild: Text(
+                              company!.description,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            secondChild: Text(company!.description),
+                            crossFadeState: _companyExpanded
+                                ? CrossFadeState.showSecond
+                                : CrossFadeState.showFirst,
+                            duration: const Duration(milliseconds: 200),
+                          ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TextButton(
+                                style: TextButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                  minimumSize: const Size(40, 24),
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                onPressed: () => setState(
+                                    () => _companyExpanded = !_companyExpanded),
+                                child: Text(_companyExpanded
+                                    ? 'Show less'
+                                    : 'Show more'),
+                              ),
+                            ],
+                          ),
                         ],
                         const SizedBox(height: 8),
                         Wrap(
@@ -794,7 +916,7 @@ class JobDetailsPage extends StatelessWidget {
                               InkWell(
                                 onTap: () {
                                   final uri =
-                                      Uri(scheme: 'tel', path: company!.phone);
+                                      Uri(scheme: 'tel', path: company.phone);
                                   launchUrl(uri,
                                       mode: LaunchMode.externalApplication);
                                 },
@@ -819,30 +941,7 @@ class JobDetailsPage extends StatelessWidget {
 
           const SizedBox(height: 12),
 
-          // Meta card: position + dates
-          Card(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(job.position),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Posted: ${_fmtDate(job.postedAt)}'
-                    '${job.endDate != null ? ' • Ends: ${_fmtDate(job.endDate!)}' : ''}',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 12),
-
-          // Title + specialty + keywords
+// ===== Job Summary (Clear & Explicit) =====
           Card(
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -852,23 +951,51 @@ class JobDetailsPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    job.title,
+                    job.title.isEmpty ? 'Untitled Job' : job.title,
                     style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.w800),
-                  ),
-                  if (job.specialty.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Chip(label: Text(job.specialty)),
-                  ],
-                  if (job.keywords.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 6,
-                      children: job.keywords
-                          .map((e) => Chip(label: Text(e)))
-                          .toList(),
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
                     ),
-                  ],
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+
+                  const SizedBox(height: 12),
+                  const Divider(height: 1),
+
+                  const SizedBox(height: 12),
+
+                  _infoRow(
+                    context,
+                    icon: Icons.local_offer_outlined,
+                    label: 'Specialty',
+                    value: job.specialty.isEmpty ? '—' : job.specialty,
+                  ),
+
+                  // Position
+                  _infoRow(
+                    context,
+                    icon: Icons.work_outline,
+                    label: 'Position',
+                    value: job.position.isEmpty ? '—' : job.position,
+                  ),
+
+                  // Posted (بسطر مستقل)
+                  _infoRow(
+                    context,
+                    icon: Icons.calendar_today,
+                    label: 'Posted',
+                    value: _fmtDate(job.postedAt),
+                  ),
+
+                  // Ends (بسطر مستقل وواضح)
+                  if (job.endDate != null)
+                    _infoRow(
+                      context,
+                      icon: Icons.event_available,
+                      label: 'Ends',
+                      value: _fmtDate(job.endDate!),
+                    ),
                 ],
               ),
             ),
@@ -876,7 +1003,7 @@ class JobDetailsPage extends StatelessWidget {
 
           const SizedBox(height: 12),
 
-          // Description
+// ===== Description (Expandable) =====
           Card(
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -888,9 +1015,12 @@ class JobDetailsPage extends StatelessWidget {
                   const Text('Job Description',
                       style: TextStyle(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 8),
-                  Text(job.description.isEmpty
-                      ? 'No description provided.'
-                      : job.description),
+                  _ExpandableText(
+                    job.description.isEmpty
+                        ? 'No description provided.'
+                        : job.description,
+                    maxLines: 3, // سويها 2 أو 3 حسب مزاجك
+                  ),
                 ],
               ),
             ),
@@ -898,40 +1028,39 @@ class JobDetailsPage extends StatelessWidget {
 
           const SizedBox(height: 12),
 
-          // Requirements
-          Card(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Requirements',
-                      style: TextStyle(fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 8),
-                  if (job.requirements.isEmpty)
-                    const Text('No requirements listed.')
-                  else
+// ===== Requirements (Bullet list) =====
+          if (job.requirements.isNotEmpty)
+            Card(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Requirements',
+                        style: TextStyle(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 8),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: job.requirements.map((r) {
                         return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          padding: const EdgeInsets.symmetric(vertical: 6),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('• '),
+                              const Icon(Icons.check_circle_outline, size: 18),
+                              const SizedBox(width: 8),
                               Expanded(child: Text(r)),
                             ],
                           ),
                         );
                       }).toList(),
                     ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
         ],
       ),
     );

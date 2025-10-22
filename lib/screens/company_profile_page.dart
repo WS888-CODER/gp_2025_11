@@ -37,28 +37,6 @@ String _toLocal(String e164) {
   return rest;
 }
 
-// === Location (standardized) ===
-const _allowedLocations = <String>[
-  'Riyadh',
-  'Jeddah',
-  'Dammam',
-  'Khobar',
-  'Makkah',
-  'Madinah',
-  'Qassim',
-  'Tabuk',
-  'Abha',
-  'Jazan'
-];
-
-String? _matchAllowed(String raw) {
-  final t = raw.trim().toLowerCase();
-  for (final loc in _allowedLocations) {
-    if (loc.toLowerCase() == t) return loc; // أعِد النسخة القياسية
-  }
-  return null;
-}
-
 class CompanyProfile extends StatefulWidget {
   const CompanyProfile({super.key});
 
@@ -83,8 +61,12 @@ class _CompanyProfileState extends State<CompanyProfile> {
   final _emailFocus = FocusNode();
   final _phoneFocus = FocusNode();
   bool _filledFromServer = false;
-  String? _selectedLoc;
-
+  final _locCtrl = TextEditingController();
+  final _locKey = GlobalKey<FormFieldState>();
+  final _locFocus = FocusNode();
+  final _locAllowed =
+      RegExp(r"^[A-Za-z\u0600-\u06FF][A-Za-z\u0600-\u06FF\s\.'-]{1,39}$");
+  String _cleanLoc(String raw) => raw.trim().replaceAll(RegExp(r'\s+'), ' ');
   // 1) تحقق صارم: الحجم + الامتداد + ترويسة الملف (PNG/JPG فقط)
   String? _validateImageFile(File f) {
     final len = f.lengthSync();
@@ -162,6 +144,9 @@ class _CompanyProfileState extends State<CompanyProfile> {
     _descFocus.dispose();
     _emailFocus.dispose();
     _phoneFocus.dispose();
+    _locCtrl.dispose();
+    _locFocus.dispose();
+
     super.dispose();
   }
 
@@ -319,7 +304,6 @@ class _CompanyProfileState extends State<CompanyProfile> {
     setState(() => _saving = true);
     try {
       // ========= 1) رفع اللوجو =========
-      // ========= 1) رفع اللوجو =========
       String? newLogoUrl;
       String? newLogoPath;
       if (_pendingLogoFile != null) {
@@ -339,7 +323,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
 
       // ========= 2) بناء التحديثات (بدون فرض إيميل) =========
       final desc = _desc.text.trim();
-      final loc = (_selectedLoc ?? '').trim();
+      final loc = _cleanLoc(_locCtrl.text);
 
       // “مكتمل” = وصف + موقع + (إيميل صحيح أو رقم صحيح)
       final complete = desc.length >= 100 &&
@@ -461,9 +445,10 @@ class _CompanyProfileState extends State<CompanyProfile> {
                     final p = (data[UserFields.phone] ?? '').toString();
                     return p.isEmpty ? '' : _toLocal(p);
                   })();
-
             final serverLoc = (data[UserFields.location] ?? '').toString();
-            _selectedLoc = _matchAllowed(serverLoc);
+            _locCtrl.text =
+                _locCtrl.text.isNotEmpty ? _locCtrl.text : serverLoc;
+
             _filledFromServer = true;
             setState(() {});
           });
@@ -482,7 +467,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
         final profileComplete = (data[UserFields.isProfileComplete] == true) ||
             (_desc.text.trim().length >= 100 &&
                 hasLogo &&
-                (_selectedLoc ?? '').trim().isNotEmpty &&
+                _cleanLoc(_locCtrl.text).isNotEmpty &&
                 (hasEmailValidNow || hasPhoneValidNow));
 
         return Scaffold(
@@ -617,19 +602,35 @@ class _CompanyProfileState extends State<CompanyProfile> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  value: _selectedLoc,
-                  decoration: const InputDecoration(
-                    labelText: 'Location',
-                    border: OutlineInputBorder(),
+                Focus(
+                  focusNode: _locFocus,
+                  onFocusChange: (hasFocus) {
+                    if (!hasFocus) _locKey.currentState?.validate();
+                  },
+                  child: TextFormField(
+                    key: _locKey,
+                    controller: _locCtrl,
+                    textCapitalization: TextCapitalization.words,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r"[A-Za-z\u0600-\u06FF\s\.'-]"),
+                      ),
+                      LengthLimitingTextInputFormatter(40),
+                    ],
+                    decoration: const InputDecoration(
+                      labelText: 'Location',
+                      hintText: 'e.g., Riyadh / جدة / Al Khobar',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (v) {
+                      final t = _cleanLoc(v ?? '');
+                      if (t.isEmpty) return 'Enter location';
+                      if (!_locAllowed.hasMatch(t)) {
+                        return '2–40 letters only (Arabic/English), no numbers';
+                      }
+                      return null;
+                    },
                   ),
-                  items: _allowedLocations
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                      .toList(),
-                  onChanged: (val) => setState(() => _selectedLoc = val),
-                  validator: (v) => (v == null || v.isEmpty)
-                      ? 'Select a standardized location'
-                      : null,
                 ),
                 const SizedBox(height: 12),
                 Focus(
