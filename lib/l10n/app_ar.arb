@@ -1,0 +1,20 @@
+{
+    "@@locale": "ar",
+    "settingsTitle": "الإعدادات",
+    "generalSettingsSection": "الإعدادات العامة",
+    "languageOption": "اللغة",
+    "themeOption": "السمة",
+    "notificationsOption": "الإشعارات",
+    "manageAlertsSubtitle": "إدارة التنبيهات والإشعارات",
+    "accountSecuritySection": "الحساب والأمان",
+    "changePasswordOption": "تغيير كلمة المرور",
+    "resetPasswordSubtitle": "إعادة تعيين كلمة المرور",
+    "accountVerificationStatus": "حالة توثيق الحساب",
+    "viewOnlyText": "للعرض فقط",
+    "myAccountDetailsSection": "تفاصيل حسابي",
+    "fullNameLabel": "الاسم الكامل",
+    "companyNameLabel": "اسم الشركة",
+    "registeredEmailLabel": "البريد الإلكتروني المسجل",
+    "contactPhoneLabel": "رقم الاتصال",
+    "logoutOption": "تسجيل الخروج"
+}

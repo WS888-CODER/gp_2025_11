@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'; // kDebugMode
 import 'package:flutter/services.dart'; // <-- NEW for input formatters
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -8,7 +7,6 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 const kUsersCollection = 'Users';
 
@@ -18,9 +16,9 @@ class UserFields {
   static const dob = 'DoB';
   static const nationality = 'Nationality';
   static const phone = 'Phone';
-  static const phoneVerified =
-      'PhoneVerified'; // لم نعد نستخدمه، لكن نتركه للتوافق
   static const isProfileComplete = 'IsProfileComplete';
+  static const cvPath = 'CVPath';
+  static const photoPath = 'PhotoPath';
 }
 
 // صيغة الهاتف المحلية: يبدأ بـ 5 وطوله 9 أرقام (سعودي)
@@ -61,7 +59,55 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
   String? _cvUrl, _photoUrl, _nationality;
   DateTime? _dob;
   bool _saving = false;
-  double? _progress; // 0..1 while uploading
+  double? _progress;
+  File? _pendingPhotoFile; // صورة محليّة قبل الرفع
+  File? _pendingCvFile;
+  static const int _kMaxImageBytes = 5 * 1024 * 1024; // 5MB
+  static const int _kMaxCvBytes = 10 * 1024 * 1024; // 10MB
+
+  String? _validateImageFile(File f) {
+    final len = f.lengthSync();
+    if (len > _kMaxImageBytes) return 'Image too large (max 5 MB)';
+    final ext = f.path.split('.').last.toLowerCase();
+    final normalized = (ext == 'jpeg') ? 'jpg' : ext;
+    if (!['jpg', 'png'].contains(normalized)) {
+      return 'Unsupported image (JPG/PNG only)';
+    }
+    return null; // valid
+  }
+
+  String? _validateCvFile(File f) {
+    final len = f.lengthSync();
+    if (len > _kMaxCvBytes) return 'File too large (max 10 MB)';
+    final ext = f.path.split('.').last.toLowerCase();
+    if (!['pdf', 'docx'].contains(ext)) {
+      return 'Unsupported file (PDF/DOCX only)';
+    }
+    return null; // valid
+  }
+
+  void _showSnackSuccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  void _showSnackError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+  // ======================================================================
 
   @override
   void dispose() {
@@ -69,54 +115,72 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
     super.dispose();
   }
 
-  bool _isAdult(DateTime dob) {
-    final now = DateTime.now();
-    int years = now.year - dob.year;
-    if (now.month < dob.month ||
-        (now.month == dob.month && now.day < dob.day)) {
-      years--;
-    }
-    return years >= 18;
-  }
-
-  // Helpers to convert phone formats
-  String _toE164(String local) => '$_saPrefix${local.trim()}'; // +9665XXXXXXXX
   String _toLocal(String e164) {
     final t = e164.trim();
     if (t.startsWith(_saPrefix)) return t.substring(_saPrefix.length);
     return t;
   }
 
-  Future<String> _uploadWithProgress({
-    required String pathPrefix,
-    required File file,
-    required List<String> exts,
-    required int maxBytes,
-  }) async {
-    final len = await file.length();
-    if (len > maxBytes) {
-      throw Exception('File too large');
-    }
-    final ext = file.path.split('.').last.toLowerCase();
-    if (!exts.contains(ext)) {
-      throw Exception('Unsupported file type');
-    }
+  Future<Map<String, String>> _uploadPhoto(File file) async {
+    final err = _validateImageFile(file);
+    if (err != null) throw Exception(err);
+
     final uid = FirebaseAuth.instance.currentUser!.uid;
     final name = file.path.split('/').last;
-    final ref = FirebaseStorage.instance
-        .ref('$pathPrefix/$uid/${DateTime.now().millisecondsSinceEpoch}_$name');
+    final ref = FirebaseStorage.instance.ref(
+      'photos/$uid/${DateTime.now().millisecondsSinceEpoch}_$name',
+    );
 
     setState(() => _progress = 0);
     final task = ref.putFile(file);
-    task.snapshotEvents.listen((snap) {
-      if (snap.totalBytes > 0) {
-        setState(() => _progress = snap.bytesTransferred / snap.totalBytes);
-      }
+    task.snapshotEvents.listen((s) {
+      if (!mounted) return;
+      final total = s.totalBytes;
+      if (total > 0) setState(() => _progress = s.bytesTransferred / total);
     });
+
     final snap = await task;
     final url = await snap.ref.getDownloadURL();
-    setState(() => _progress = null);
-    return url;
+    final path = snap.ref.fullPath;
+    if (mounted) setState(() => _progress = null);
+    return {'url': url, 'path': path};
+  }
+
+  Future<Map<String, String>> _uploadCv(File file) async {
+    final err = _validateCvFile(file);
+    if (err != null) throw Exception(err);
+
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+    final name = file.path.split('/').last;
+    final ref = FirebaseStorage.instance.ref(
+      'cv/$uid/${DateTime.now().millisecondsSinceEpoch}_$name',
+    );
+
+    setState(() => _progress = 0);
+    final task = ref.putFile(file);
+    task.snapshotEvents.listen((s) {
+      if (!mounted) return;
+      final total = s.totalBytes;
+      if (total > 0) setState(() => _progress = s.bytesTransferred / total);
+    });
+
+    final snap = await task;
+    final url = await snap.ref.getDownloadURL();
+    final path = snap.ref.fullPath;
+    if (mounted) setState(() => _progress = null);
+    return {'url': url, 'path': path};
+  }
+
+  Future<void> _deleteStorageFile(String? pathOrUrl) async {
+    if (pathOrUrl == null || pathOrUrl.isEmpty) return;
+    try {
+      final isUrl =
+          pathOrUrl.startsWith('http') || pathOrUrl.startsWith('gs://');
+      final ref = isUrl
+          ? FirebaseStorage.instance.refFromURL(pathOrUrl)
+          : FirebaseStorage.instance.ref(pathOrUrl);
+      await ref.delete();
+    } catch (_) {/* ignore */}
   }
 
   Future<void> _pickCV() async {
@@ -125,40 +189,14 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
       allowedExtensions: ['pdf', 'docx'],
     );
     if (res == null || res.files.single.path == null) return;
-    try {
-      final url = await _uploadWithProgress(
-        pathPrefix: 'cv',
-        file: File(res.files.single.path!),
-        exts: ['pdf', 'docx'],
-        maxBytes: 10 * 1024 * 1024,
-      );
-      setState(() => _cvUrl = url);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('CV uploaded')));
-    } catch (_) {
-      setState(() => _progress = null);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('CV upload failed')));
-    }
-  }
 
-  Future<void> _openCV(String url) async {
-    try {
-      final encoded = Uri.encodeFull(url);
-      final uri = Uri.parse(encoded);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        throw 'Cannot open';
-      }
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cannot open CV file')),
-      );
-    }
+    final file = File(res.files.single.path!);
+
+    // ✅ لا نرفع الآن — بس نخزن محلي
+    setState(() {
+      _pendingCvFile = file;
+    });
+    _showSnackSuccess('CV selected.');
   }
 
   Future<void> _pickPhoto() async {
@@ -186,114 +224,126 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
 
     final img = await ImagePicker().pickImage(source: src, imageQuality: 92);
     if (img == null) return;
-    try {
-      final url = await _uploadWithProgress(
-        pathPrefix: 'photos',
-        file: File(img.path),
-        exts: ['jpg', 'jpeg', 'png'],
-        maxBytes: 5 * 1024 * 1024,
-      );
-      setState(() => _photoUrl = url);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Photo uploaded')));
-    } catch (_) {
-      setState(() => _progress = null);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Photo upload failed')));
-    }
+
+    // ✅ لا نرفع الآن — بس نخزن محلي ونحدث المعاينة
+    setState(() {
+      _pendingPhotoFile = File(img.path);
+    });
+    _showSnackSuccess('Photo selected.');
   }
 
   Future<void> _save(Map<String, dynamic> current) async {
     if (_progress != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please wait for uploads to finish')),
-      );
+      _showSnackError('Please wait for uploads to finish');
       return;
     }
 
-    // المسترجع من السيرفر
+    // قيم حالية من السيرفر
     final dobCurrent = current[UserFields.dob] is Timestamp
         ? (current[UserFields.dob] as Timestamp).toDate()
         : null;
-    final serverPhoneE164 = (current[UserFields.phone] ?? '').toString();
-    final hasServerNat =
-        (current[UserFields.nationality] ?? '').toString().isNotEmpty;
 
-    // نحدد فقط الحقول التي تغيّرت
+    // تحقّق الجنسية (لو تم تغييرها)
+    if (_nationality != null && _nationality!.isEmpty) {
+      _showSnackError('Select nationality');
+      return;
+    }
+
+    // تحقّق الهاتف المحلي (5XXXXXXXX)
+    final local = _phone.text.trim();
+    if (local.isNotEmpty && !_localSaPhone.hasMatch(local)) {
+      _showSnackError('Enter a valid Saudi mobile number');
+      return;
+    }
+
+    // حضّري التحديثات
     final updates = <String, dynamic>{};
 
-    // CV & Photo (دعم الإزالة أو الإضافة فقط إذا تغيّر)
-    if (_cvUrl == '') {
-      updates[UserFields.cvUrl] = FieldValue.delete();
-    } else if (_cvUrl != null && _cvUrl != current[UserFields.cvUrl]) {
-      updates[UserFields.cvUrl] = _cvUrl;
-    }
+    // ========== 1) ارفعي الملفات المعلّقة ==========
+    String? newPhotoUrl, newPhotoPath;
+    String? newCvUrl, newCvPath;
 
-    if (_photoUrl == '') {
-      updates[UserFields.photoUrl] = FieldValue.delete();
-    } else if (_photoUrl != null && _photoUrl != current[UserFields.photoUrl]) {
-      updates[UserFields.photoUrl] = _photoUrl;
-    }
-
-    // DOB: نحفظ فقط إذا اخترتي تاريخًا جديدًا يختلف عن الحالي
-    if (_dob != null && _dob != dobCurrent) {
-      if (!_isAdult(_dob!)) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Must be at least 18')));
-        return;
+    try {
+      if (_pendingPhotoFile != null) {
+        final res = await _uploadPhoto(_pendingPhotoFile!);
+        newPhotoUrl = res['url'];
+        newPhotoPath = res['path'];
+        _pendingPhotoFile = null;
       }
+
+      if (_pendingCvFile != null) {
+        final res = await _uploadCv(_pendingCvFile!);
+        newCvUrl = res['url'];
+        newCvPath = res['path'];
+        _pendingCvFile = null;
+      }
+    } catch (e) {
+      _showSnackError(e.toString());
+      return;
+    }
+
+    // ========== 2) ضعي التغييرات في updates ==========
+    // CV - check new uploads first, then deletions
+    if (newCvUrl != null) {
+      updates[UserFields.cvUrl] = newCvUrl;
+      if (newCvPath != null) updates[UserFields.cvPath] = newCvPath;
+      _cvUrl = newCvUrl;
+    } else if (_cvUrl == '') {
+      updates[UserFields.cvUrl] = FieldValue.delete();
+      updates[UserFields.cvPath] = FieldValue.delete();
+    }
+
+    // Photo - check new uploads first, then deletions
+    if (newPhotoUrl != null) {
+      updates[UserFields.photoUrl] = newPhotoUrl;
+      if (newPhotoPath != null) updates[UserFields.photoPath] = newPhotoPath;
+      _photoUrl = newPhotoUrl;
+    } else if (_photoUrl == '') {
+      updates[UserFields.photoUrl] = FieldValue.delete();
+      updates[UserFields.photoPath] = FieldValue.delete();
+    }
+
+    // DOB
+    if (_dob != null && _dob != dobCurrent) {
       updates[UserFields.dob] = Timestamp.fromDate(_dob!);
     }
 
-    // Nationality: نحفظ فقط إذا تغيّرت
+    // Nationality
     if (_nationality != null &&
         _nationality != current[UserFields.nationality]) {
-      if (_nationality!.isEmpty) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Select nationality')));
-        return;
-      }
       updates[UserFields.nationality] = _nationality;
     }
 
-    // Phone: إذا كتبتي شيئًا في الحقل، نتحقق منه ونحفظه إن تغيّر
-    final local = _phone.text.trim(); // 5XXXXXXXX
-    if (local.isNotEmpty) {
-      if (!_localSaPhone.hasMatch(local)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Invalid phone format')));
-        return;
-      }
-      final e164 = _toE164(local); // +9665XXXXXXXX
-      if (e164 != serverPhoneE164) {
+    // Phone (حفظ بصيغة E.164 +9665XXXXXXXX إذا تغيّر)
+    if (local.isNotEmpty && _localSaPhone.hasMatch(local)) {
+      final e164 = '$_saPrefix$local';
+      if (e164 != (current[UserFields.phone] ?? '')) {
         updates[UserFields.phone] = e164;
       }
     }
 
     if (updates.isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('No changes to save')));
+      _showSnackError('No changes to save');
       return;
     }
 
-    // نحدّث IsProfileComplete بناءً على (القيم القديمة + التغييرات)
+    // ========== 3) احسبي IsProfileComplete بعد الدمج ==========
     final merged = {...current, ...updates};
 
     final cvOk = (merged[UserFields.cvUrl] ?? '').toString().isNotEmpty;
     final photoOk = (merged[UserFields.photoUrl] ?? '').toString().isNotEmpty;
     final dobOk = merged[UserFields.dob] != null;
     final natOk = (merged[UserFields.nationality] ?? '').toString().isNotEmpty;
+
     final phoneMerged = (merged[UserFields.phone] ?? '').toString();
     final phoneLocal =
         phoneMerged.startsWith(_saPrefix) ? _toLocal(phoneMerged) : phoneMerged;
-    final phoneOk = _localSaPhone.hasMatch(phoneLocal);
+    final phoneOk = phoneLocal.isNotEmpty && _localSaPhone.hasMatch(phoneLocal);
 
     final complete = cvOk && photoOk && dobOk && natOk && phoneOk;
     updates[UserFields.isProfileComplete] = complete;
 
-    // تنفيذ الحفظ
+    // ========== 4) نفّذي الحفظ ==========
     final uid = FirebaseAuth.instance.currentUser!.uid;
     setState(() => _saving = true);
     try {
@@ -302,14 +352,49 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
           .doc(uid)
           .set(updates, SetOptions(merge: true));
 
+      // ========== 5) تنظيف الملفات القديمة إن تغيّرت ==========
+      // Photo
+      if (newPhotoUrl != null) {
+        final oldPhotoPath = (current[UserFields.photoPath] ?? '').toString();
+        if (oldPhotoPath.isNotEmpty) {
+          await _deleteStorageFile(oldPhotoPath);
+        } else {
+          final oldPhotoUrl = (current[UserFields.photoUrl] ?? '').toString();
+          if (oldPhotoUrl.isNotEmpty) await _deleteStorageFile(oldPhotoUrl);
+        }
+      }
+      if (_photoUrl == '' &&
+          (current[UserFields.photoPath]?.toString().isNotEmpty ?? false)) {
+        await _deleteStorageFile(current[UserFields.photoPath]?.toString());
+      } else if (_photoUrl == '' &&
+          (current[UserFields.photoUrl]?.toString().isNotEmpty ?? false)) {
+        await _deleteStorageFile(current[UserFields.photoUrl]?.toString());
+      }
+
+      // CV
+      if (newCvUrl != null) {
+        final oldCvPath = (current[UserFields.cvPath] ?? '').toString();
+        if (oldCvPath.isNotEmpty) {
+          await _deleteStorageFile(oldCvPath);
+        } else {
+          final oldCvUrl = (current[UserFields.cvUrl] ?? '').toString();
+          if (oldCvUrl.isNotEmpty) await _deleteStorageFile(oldCvUrl);
+        }
+      }
+      if (_cvUrl == '' &&
+          (current[UserFields.cvPath]?.toString().isNotEmpty ?? false)) {
+        await _deleteStorageFile(current[UserFields.cvPath]?.toString());
+      } else if (_cvUrl == '' &&
+          (current[UserFields.cvUrl]?.toString().isNotEmpty ?? false)) {
+        await _deleteStorageFile(current[UserFields.cvUrl]?.toString());
+      }
+
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Saved')));
+      _showSnackSuccess('✅ Profile updated successfully');
       Navigator.pop(context);
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Save failed')));
+      _showSnackError('❌ Failed to update profile');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -335,11 +420,9 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
         }
         final data = snap.data?.data() ?? {};
 
-        // مليء الحقل من القيمة المخزنة إن وُجدت
         final serverPhoneE164 = (data[UserFields.phone] ?? '').toString();
         if (_phone.text.isEmpty && serverPhoneE164.isNotEmpty) {
           final local = _toLocal(serverPhoneE164);
-          // نتأكد أنه يبدو محلياً (يتجاهل أي بادئات أخرى غير +966)
           _phone.text = local.startsWith('5') ? local : '';
         }
 
@@ -351,11 +434,17 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
             ? 'Select date'
             : DateFormat('yyyy/MM/dd').format(_dob ?? dobCurrent!);
 
-        final hasCV =
-            (_cvUrl ?? data[UserFields.cvUrl])?.toString().isNotEmpty == true;
-        final hasPhoto =
-            (_photoUrl ?? data[UserFields.photoUrl])?.toString().isNotEmpty ==
-                true;
+        final hasCV = _pendingCvFile != null ||
+            (_cvUrl != '' &&
+                ((_cvUrl ?? data[UserFields.cvUrl])?.toString().isNotEmpty ??
+                    false));
+
+        final hasPhoto = _pendingPhotoFile != null ||
+            (_photoUrl != '' &&
+                ((_photoUrl ?? data[UserFields.photoUrl])
+                        ?.toString()
+                        .isNotEmpty ==
+                    true));
 
         final phoneLocal = _phone.text.trim();
         final phoneValid = _localSaPhone.hasMatch(phoneLocal);
@@ -369,9 +458,6 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                         .isNotEmpty ==
                     true) &&
                 phoneValid);
-        final hasServerPhone = serverPhoneE164.isNotEmpty;
-        final hasServerNat =
-            (data[UserFields.nationality] ?? '').toString().isNotEmpty;
         return Scaffold(
           appBar: AppBar(
             title: const Text('Profile'),
@@ -426,7 +512,7 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                       width: 18,
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Save'),
+                  : const Text('Update Profile'),
             ),
           ),
           body: Form(
@@ -445,37 +531,46 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                     Hero(
                       tag: 'profileAvatar',
                       child: CircleAvatar(
-                        radius: 32,
-                        backgroundImage:
-                            (_photoUrl ?? data[UserFields.photoUrl]) != null &&
+                        radius: 54,
+                        backgroundImage: _pendingPhotoFile != null
+                            ? FileImage(_pendingPhotoFile!) as ImageProvider
+                            : ((_photoUrl ?? data[UserFields.photoUrl]) !=
+                                        null &&
                                     (_photoUrl ?? data[UserFields.photoUrl])
                                         .toString()
-                                        .isNotEmpty
+                                        .isNotEmpty)
                                 ? NetworkImage(
                                     (_photoUrl ?? data[UserFields.photoUrl])
                                         .toString())
                                 : null,
-                        child:
-                            ((_photoUrl ?? data[UserFields.photoUrl]) == null ||
+                        child: (_pendingPhotoFile == null &&
+                                ((_photoUrl ?? data[UserFields.photoUrl]) ==
+                                        null ||
                                     (_photoUrl ?? data[UserFields.photoUrl])
                                         .toString()
-                                        .isEmpty)
-                                ? const Icon(Icons.person)
-                                : null,
+                                        .isEmpty))
+                            ? const Icon(Icons.person)
+                            : null,
                       ),
                     ),
                     const SizedBox(width: 12),
+                    const Spacer(),
                     FilledButton.tonal(
                       onPressed:
                           (_saving || _progress != null) ? null : _pickPhoto,
                       child: const Text('Upload Photo'),
                     ),
                     const SizedBox(width: 8),
-                    if (hasPhoto)
+                    if (_pendingPhotoFile != null || hasPhoto)
                       TextButton(
                         onPressed: (_saving || _progress != null)
                             ? null
-                            : () => setState(() => _photoUrl = ''),
+                            : () {
+                                setState(() {
+                                  _pendingPhotoFile = null;
+                                  _photoUrl = '';
+                                });
+                              },
                         child: const Text('Remove'),
                       ),
                   ],
@@ -485,9 +580,15 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('CV File'),
                   subtitle: Text(
-                    (_cvUrl ?? data[UserFields.cvUrl])?.toString() ?? 'No file',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    _pendingCvFile != null ||
+                            (_cvUrl != '' &&
+                                (data[UserFields.cvUrl]
+                                        ?.toString()
+                                        .isNotEmpty ??
+                                    false))
+                        ? 'File selected'
+                        : 'No file',
+                    style: const TextStyle(color: Colors.black54),
                   ),
                   trailing: Wrap(
                     spacing: 8,
@@ -499,15 +600,14 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                       ),
                       if (hasCV)
                         TextButton(
-                          onPressed: () => _openCV(
-                              (_cvUrl ?? data[UserFields.cvUrl]).toString()),
-                          child: const Text('Open'),
-                        ),
-                      if (hasCV)
-                        TextButton(
                           onPressed: (_saving || _progress != null)
                               ? null
-                              : () => setState(() => _cvUrl = ''),
+                              : () {
+                                  setState(() {
+                                    _pendingCvFile = null;
+                                    _cvUrl = '';
+                                  });
+                                },
                           child: const Text('Remove'),
                         ),
                     ],
@@ -555,6 +655,9 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                   decoration: const InputDecoration(
                       labelText: 'Nationality', border: OutlineInputBorder()),
                   validator: (v) {
+                    final hasServerNat = (data[UserFields.nationality] ?? '')
+                        .toString()
+                        .isNotEmpty;
                     if (hasServerNat) return null;
                     return (v == null || v.isEmpty)
                         ? 'Select nationality'
@@ -577,9 +680,12 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                   ),
                   validator: (v) {
                     final t = v?.trim() ?? '';
+                    final hasServerPhone =
+                        (data[UserFields.phone] ?? '').toString().isNotEmpty;
                     if (t.isEmpty) return hasServerPhone ? null : 'Enter phone';
-                    if (!_localSaPhone.hasMatch(t))
+                    if (!_localSaPhone.hasMatch(t)) {
                       return 'Must start with 5 and be 9 digits';
+                    }
                     return null;
                   },
                 ),

@@ -34,6 +34,30 @@ class UserDocFields {
   static const name = 'Name';
   static const companyName = 'CompanyName';
   static const cvKeywords = 'CVKeywords';
+
+  static const photoUrl = 'PhotoURL';
+  static const location = 'Location';
+  static const description = 'Description';
+  static const contactEmail = 'ContactEmail';
+  static const phone = 'Phone';
+}
+
+class CompanyInfo {
+  final String name;
+  final String logoUrl;
+  final String location;
+  final String description;
+  final String contactEmail;
+  final String phone;
+
+  const CompanyInfo({
+    this.name = 'Company',
+    this.logoUrl = '',
+    this.location = '',
+    this.description = '',
+    this.contactEmail = '',
+    this.phone = '',
+  });
 }
 
 /* ========================== MODEL ========================== */
@@ -132,15 +156,14 @@ class _JobsPageState extends State<JobsPage> {
   List<String> _specialties = ['All'];
   List<Job> _allJobs = [];
 
-  final Map<String, String> _companyNames = {};
-  bool _loadingCompanies = false;
-
   String _userType = 'JobSeeker';
   bool _isProfileComplete = false;
   UserProfile? _liveProfile;
 
   StreamSubscription<List<Job>>? _jobsSub;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userSub;
+  final Map<String, CompanyInfo> _company = {};
+  bool _loadingCompanies = false;
 
   @override
   void initState() {
@@ -358,39 +381,51 @@ class _JobsPageState extends State<JobsPage> {
   }
 
   Future<void> _ensureCompanyNames(Set<String> uids) async {
-    final missing = uids.where((id) => !_companyNames.containsKey(id)).toList();
+    final missing = uids.where((id) => !_company.containsKey(id)).toList();
     if (missing.isEmpty || _loadingCompanies) return;
 
     if (!mounted) return;
     setState(() => _loadingCompanies = true);
 
-    for (var i = 0; i < missing.length; i += 10) {
-      final chunk =
-          missing.sublist(i, i + 10 > missing.length ? missing.length : i + 10);
-      final qs = await FirebaseFirestore.instance
-          .collection(kUsersCollection)
-          .where(FieldPath.documentId, whereIn: chunk)
-          .get();
+    try {
+      // Firestore whereIn يسمح بـ 10 عناصر لكل استعلام
+      for (var i = 0; i < missing.length; i += 10) {
+        final chunk = missing.sublist(
+            i, i + 10 > missing.length ? missing.length : i + 10);
 
-      for (final doc in qs.docs) {
-        final data = doc.data();
-        final companyName =
-            (data[UserDocFields.companyName] ?? '').toString().trim();
-        final personalName = (data[UserDocFields.name] ?? '').toString().trim();
+        final qs = await FirebaseFirestore.instance
+            .collection(kUsersCollection)
+            .where(FieldPath.documentId, whereIn: chunk)
+            .get();
 
-        final display = companyName.isNotEmpty
-            ? companyName
-            : (personalName.isNotEmpty ? personalName : 'Company');
+        for (final doc in qs.docs) {
+          final data = doc.data();
 
-        _companyNames[doc.id] = display;
+          final rawCompany =
+              (data[UserDocFields.companyName] ?? '').toString().trim();
+          final rawName = (data[UserDocFields.name] ?? '').toString().trim();
+          final displayName = rawCompany.isNotEmpty
+              ? rawCompany
+              : (rawName.isNotEmpty ? rawName : 'Company');
+
+          _company[doc.id] = CompanyInfo(
+            name: displayName,
+            logoUrl: (data[UserDocFields.photoUrl] ?? '').toString(),
+            location: (data[UserDocFields.location] ?? '').toString(),
+            description: (data[UserDocFields.description] ?? '').toString(),
+            contactEmail: (data[UserDocFields.contactEmail] ?? '').toString(),
+            phone: (data[UserDocFields.phone] ?? '').toString(),
+          );
+        }
+
+        // أي عنصر ما رجع من الكويري نعبّيه باسم افتراضي
+        for (final id in chunk) {
+          _company.putIfAbsent(id, () => const CompanyInfo());
+        }
       }
-      for (final id in chunk) {
-        _companyNames.putIfAbsent(id, () => 'Company');
-      }
+    } finally {
+      if (mounted) setState(() => _loadingCompanies = false);
     }
-
-    if (!mounted) return;
-    setState(() => _loadingCompanies = false);
   }
 
   @override
@@ -491,14 +526,12 @@ class _JobsPageState extends State<JobsPage> {
                   separatorBuilder: (_, __) => const SizedBox(height: 10),
                   itemBuilder: (context, i) {
                     final j = jobs[i];
-                    final saved = _saved.contains(j.id);
-                    final companyName = _companyNames[j.userId] ?? 'Company';
+                    final info = _company[j.userId]; // CompanyInfo?
 
                     return Card(
                       elevation: 0.5,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
+                          borderRadius: BorderRadius.circular(16)),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(16),
                         onTap: () {
@@ -507,7 +540,7 @@ class _JobsPageState extends State<JobsPage> {
                             MaterialPageRoute(
                               builder: (_) => JobDetailsPage(
                                 job: j,
-                                companyName: companyName,
+                                company: info, // <-- نمرر CompanyInfo
                               ),
                             ),
                           );
@@ -517,54 +550,62 @@ class _JobsPageState extends State<JobsPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Header: logo + company name + save
                               Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  const SizedBox(width: 12),
+                                  CircleAvatar(
+                                    radius: 20,
+                                    backgroundImage:
+                                        (info?.logoUrl ?? '').isNotEmpty
+                                            ? NetworkImage(info!.logoUrl)
+                                            : null,
+                                    child: (info?.logoUrl ?? '').isEmpty
+                                        ? const Icon(Icons.business, size: 20)
+                                        : null,
+                                  ),
+                                  const SizedBox(width: 10),
                                   Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          j.title,
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          companyName,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodyMedium,
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          'Posted: ${_fmtDate(j.postedAt)}',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodySmall,
-                                        ),
-                                      ],
+                                    child: Text(
+                                      (info?.name ?? 'Company'),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
                                   IconButton(
-                                    tooltip: saved
+                                    tooltip: _saved.contains(j.id)
                                         ? 'Remove from saved'
                                         : 'Save for later',
-                                    icon: Icon(
-                                      saved
-                                          ? Icons.favorite
-                                          : Icons.favorite_border,
-                                    ),
+                                    icon: Icon(_saved.contains(j.id)
+                                        ? Icons.favorite
+                                        : Icons.favorite_border),
                                     onPressed: () => _toggleSave(j),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 10),
+                              const SizedBox(height: 8),
+
+                              // Title + position + posted date
+                              Text(
+                                j.title,
+                                style: const TextStyle(
+                                    fontSize: 16, fontWeight: FontWeight.w700),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(j.position,
+                                  style:
+                                      Theme.of(context).textTheme.bodyMedium),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Posted: ${_fmtDate(j.postedAt)}',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                              const SizedBox(height: 8),
+
+                              // Keywords
                               if (j.keywords.isNotEmpty)
                                 Wrap(
                                   spacing: 6,
@@ -578,15 +619,17 @@ class _JobsPageState extends State<JobsPage> {
                                     );
                                   }).toList(),
                                 ),
-                              const SizedBox(height: 10),
+
+                              if (j.keywords.isNotEmpty)
+                                const SizedBox(height: 8),
+
+                              // Specialty + Apply
                               Row(
                                 children: [
                                   if (j.specialty.isNotEmpty)
                                     Container(
                                       padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
+                                          horizontal: 8, vertical: 4),
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(8),
                                         color: Theme.of(context)
@@ -613,11 +656,9 @@ class _JobsPageState extends State<JobsPage> {
                                             final uri =
                                                 Uri.parse(j.applyUrl!.trim());
                                             if (await canLaunchUrl(uri)) {
-                                              await launchUrl(
-                                                uri,
-                                                mode: LaunchMode
-                                                    .externalApplication,
-                                              );
+                                              await launchUrl(uri,
+                                                  mode: LaunchMode
+                                                      .externalApplication);
                                             }
                                           }
                                         : null,
@@ -661,8 +702,8 @@ class UserProfile {
 
 class JobDetailsPage extends StatelessWidget {
   final Job job;
-  final String? companyName;
-  const JobDetailsPage({super.key, required this.job, this.companyName});
+  final CompanyInfo? company;
+  const JobDetailsPage({super.key, required this.job, this.company});
 
   String _fmtDate(DateTime d) =>
       '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
@@ -690,35 +731,83 @@ class JobDetailsPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // Company details card
           Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  CircleAvatar(
+                    radius: 28,
+                    backgroundImage: (company?.logoUrl ?? '').isNotEmpty
+                        ? NetworkImage(company!.logoUrl)
+                        : null,
+                    child: (company?.logoUrl ?? '').isEmpty
+                        ? const Icon(Icons.business)
+                        : null,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if ((companyName ?? '').isNotEmpty)
-                          Text(
-                            companyName!,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        if ((companyName ?? '').isNotEmpty)
-                          const SizedBox(height: 4),
-                        Text(job.position),
-                        const SizedBox(height: 4),
                         Text(
-                          'Posted: ${_fmtDate(job.postedAt)}'
-                          '${job.endDate != null ? ' • Ends: ${_fmtDate(job.endDate!)}' : ''}',
-                          style: Theme.of(context).textTheme.bodySmall,
+                          (company?.name ?? 'Company'),
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w700),
+                        ),
+                        if ((company?.location ?? '').isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(company!.location),
+                        ],
+                        if ((company?.description ?? '').isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Text(company!.description),
+                        ],
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 6,
+                          children: [
+                            if ((company?.contactEmail ?? '').isNotEmpty)
+                              InkWell(
+                                onTap: () {
+                                  final uri = Uri(
+                                      scheme: 'mailto',
+                                      path: company!.contactEmail);
+                                  launchUrl(uri,
+                                      mode: LaunchMode.externalApplication);
+                                },
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.email, size: 16),
+                                    const SizedBox(width: 4),
+                                    Text(company!.contactEmail),
+                                  ],
+                                ),
+                              ),
+                            if ((company?.phone ?? '').isNotEmpty)
+                              InkWell(
+                                onTap: () {
+                                  final uri =
+                                      Uri(scheme: 'tel', path: company!.phone);
+                                  launchUrl(uri,
+                                      mode: LaunchMode.externalApplication);
+                                },
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.phone, size: 16),
+                                    const SizedBox(width: 4),
+                                    Text(company!.phone),
+                                  ],
+                                ),
+                              ),
+                          ],
                         ),
                       ],
                     ),
@@ -727,11 +816,36 @@ class JobDetailsPage extends StatelessWidget {
               ),
             ),
           ),
+
           const SizedBox(height: 12),
+
+          // Meta card: position + dates
           Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(job.position),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Posted: ${_fmtDate(job.postedAt)}'
+                    '${job.endDate != null ? ' • Ends: ${_fmtDate(job.endDate!)}' : ''}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
             ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // Title + specialty + keywords
+          Card(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -740,9 +854,7 @@ class JobDetailsPage extends StatelessWidget {
                   Text(
                     job.title,
                     style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                    ),
+                        fontSize: 18, fontWeight: FontWeight.w800),
                   ),
                   if (job.specialty.isNotEmpty) ...[
                     const SizedBox(height: 8),
@@ -761,64 +873,60 @@ class JobDetailsPage extends StatelessWidget {
               ),
             ),
           ),
+
           const SizedBox(height: 12),
+
+          // Description
           Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Job Description',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
+                  const Text('Job Description',
+                      style: TextStyle(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 8),
-                  Text(
-                    job.description.isEmpty
-                        ? 'No description provided.'
-                        : job.description,
-                  ),
+                  Text(job.description.isEmpty
+                      ? 'No description provided.'
+                      : job.description),
                 ],
               ),
             ),
           ),
+
           const SizedBox(height: 12),
+
+          // Requirements
           Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Requirements',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
+                  const Text('Requirements',
+                      style: TextStyle(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 8),
                   if (job.requirements.isEmpty)
                     const Text('No requirements listed.')
                   else
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: job.requirements
-                          .map(
-                            (r) => Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text('• '),
-                                  Expanded(child: Text(r)),
-                                ],
-                              ),
-                            ),
-                          )
-                          .toList(),
+                      children: job.requirements.map((r) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('• '),
+                              Expanded(child: Text(r)),
+                            ],
+                          ),
+                        );
+                      }).toList(),
                     ),
                 ],
               ),

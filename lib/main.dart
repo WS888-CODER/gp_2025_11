@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
+import 'package:gp_2025_11/config/app_settings_notifier.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:gp_2025_11/l10n/app_localizations.dart';
 import 'package:gp_2025_11/screens/company_profile_page.dart';
 import 'package:gp_2025_11/screens/job_seeker_profile_page.dart';
 import 'firebase_options.dart';
@@ -13,13 +17,19 @@ import 'screens/admin_dashboard.dart';
 import 'screens/job_posting_page.dart';
 import 'screens/jobseeker_home.dart';
 import 'screens/company_home.dart';
+import 'screens/settings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(const Jadeer());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => AppSettingsNotifier(),
+      child: const Jadeer(),
+    ),
+  );
 }
 
 class Jadeer extends StatelessWidget {
@@ -27,9 +37,25 @@ class Jadeer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final settings = Provider.of<AppSettingsNotifier>(context);
+
     return MaterialApp(
       title: 'Jadeer',
       theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: settings.themeMode,
+
+      // تفويضات الترجمة: تتضمن تفويض الترجمة المُخصص
+      localizationsDelegates: const [
+        AppLocalizations.delegate, // ⬅️ التفويض الذي يترجم النصوص الثابتة
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+
+      locale: settings.locale,
+      supportedLocales: AppLocalizations.supportedLocales,
+
       debugShowCheckedModeBanner: false,
       home: StartScreen(),
       routes: {
@@ -51,6 +77,14 @@ class Jadeer extends StatelessWidget {
           final args = ModalRoute.of(context)!.settings.arguments
               as Map<String, dynamic>?;
           return CompanyHome(companyId: args?['companyId']);
+        },
+        '/settings': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments
+              as Map<String, dynamic>;
+          return SettingsScreen(
+            userType: args['userType'],
+            userId: args['userId'],
+          );
         },
       },
     );

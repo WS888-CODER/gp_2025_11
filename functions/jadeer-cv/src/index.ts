@@ -3,6 +3,10 @@ import admin from "firebase-admin";
 import path from "path";
 import os from "os";
 import fs from "fs";
+// @ts-ignore - ESM import issue
+import { PDFParse } from "pdf-parse";
+// @ts-ignore - CJS module
+import textract from "textract";
 
 // احمِ التهيئة على ESM
 if (!admin.apps || admin.apps.length === 0) {
@@ -76,8 +80,7 @@ function extractEnglishKeywords(text: string, limit = 20): string[] {
 
 export const extractCVKeywords = onObjectFinalized(
   {
-    bucket: "jadeer-b4953.firebasestorage.app",
-    region: "us-central1", // طابقيها مع موقع الـ Storage لو مختلف
+    region: "us-central1",
     memory: "1GiB",
     timeoutSeconds: 120,
   },
@@ -114,31 +117,17 @@ export const extractCVKeywords = onObjectFinalized(
     console.log("Downloaded to tmp:", tmp);
 
     let text = "";
-    let parseSource = "unknown";
     let errorMsg: string | null = null;
 
     try {
-      // ✅ dynamic import لتفادي مشاكل ESM/CJS عند تحميل الموديول
-      // pdf-parse
-      // @ts-ignore
-      const pdfParseModule = await import("pdf-parse");
-      const pdfParse: (buf: Buffer | Uint8Array) => Promise<{ text: string }> =
-        // @ts-ignore
-        (pdfParseModule as any).default ?? (pdfParseModule as any);
-
-      // textract
-      // @ts-ignore
-      const textractModule = await import("textract");
-      // @ts-ignore
-      const textract = (textractModule as any).default ?? (textractModule as any);
-
       const lowerName = objectName.toLowerCase();
 
       if (contentType.includes("pdf") || lowerName.endsWith(".pdf")) {
         const buf = fs.readFileSync(tmp);
-        const data = await pdfParse(buf);
-        text = (data.text || "").trim();
-        parseSource = "pdf-parse";
+        const parser = new PDFParse({ data: buf });
+        const result = await parser.getText();
+        text = (result.text || "").trim();
+        await parser.destroy();
       } else if (
         contentType.includes("word") ||
         contentType.includes("officedocument.wordprocessingml") ||
@@ -150,7 +139,6 @@ export const extractCVKeywords = onObjectFinalized(
             resolve((body || "").trim());
           });
         });
-        parseSource = "textract-docx";
       } else {
         text = await new Promise<string>((resolve, reject) => {
           textract.fromFileWithPath(tmp, (err: unknown, body?: string) => {
@@ -158,7 +146,6 @@ export const extractCVKeywords = onObjectFinalized(
             resolve((body || "").trim());
           });
         });
-        parseSource = "textract-generic";
       }
 
       console.log("Text length:", text.length);
@@ -182,16 +169,6 @@ export const extractCVKeywords = onObjectFinalized(
 
     const docRef = admin.firestore().collection("Users").doc(uid);
     const payload = {
-      LastCVProcess: {
-        at: admin.firestore.FieldValue.serverTimestamp(),
-        objectName,
-        contentType: contentType || null,
-        size,
-        parseSource,
-        textChars: text.length,
-        ok: !errorMsg,
-        error: errorMsg || null,
-      },
       CVKeywords: keywords,
     };
 

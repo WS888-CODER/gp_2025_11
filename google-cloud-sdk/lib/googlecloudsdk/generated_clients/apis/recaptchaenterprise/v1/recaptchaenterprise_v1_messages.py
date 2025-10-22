@@ -1602,8 +1602,6 @@ class GoogleCloudRecaptchaenterpriseV1TransactionDataUser(_messages.Message):
     emailVerified: Optional. Whether the email has been verified to be
       accessible by the user (OTP or similar).
     phoneNumber: Optional. The phone number of the user, with country code.
-    phoneVerified: Optional. Whether the phone number has been verified to be
-      accessible by the user (OTP or similar).
   """
 
   accountId = _messages.StringField(1)
@@ -1611,7 +1609,6 @@ class GoogleCloudRecaptchaenterpriseV1TransactionDataUser(_messages.Message):
   email = _messages.StringField(3)
   emailVerified = _messages.BooleanField(4)
   phoneNumber = _messages.StringField(5)
-  phoneVerified = _messages.BooleanField(6)
 
 
 class GoogleCloudRecaptchaenterpriseV1TransactionEvent(_messages.Message):

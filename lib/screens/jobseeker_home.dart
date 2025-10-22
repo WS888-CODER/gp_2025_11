@@ -1,3 +1,4 @@
+// lib/screens/jobseeker_home.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -145,12 +146,20 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
               const SnackBar(content: Text('Notifications – قريبًا')),
             ),
           ),
+          // ⬇️ ربط زر الإعدادات بصفحة الإعدادات
           IconButton(
             tooltip: 'Settings',
             icon: const Icon(Icons.settings_outlined, color: Colors.white),
-            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Settings – قريبًا')),
-            ),
+            onPressed: () {
+              final uid = FirebaseAuth.instance.currentUser?.uid;
+              if (uid != null) {
+                Navigator.pushNamed(
+                  context,
+                  '/settings',
+                  arguments: {'userType': 'JobSeeker', 'userId': uid},
+                );
+              }
+            },
           ),
         ],
       ),
@@ -268,7 +277,9 @@ class _ProfileButton extends StatelessWidget {
     final parts = s.split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
     if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
     final base = s.contains('@') ? s.split('@').first : s;
-    return base.isNotEmpty ? base[0].toUpperCase() : 'U';
+    return base.isNotEmpty
+        ? base.substring(0, base.length > 1 ? 2 : 1).toUpperCase()
+        : 'U';
   }
 
   @override
@@ -296,10 +307,11 @@ class _ProfileButton extends StatelessWidget {
                         style: const TextStyle(
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
+                          fontSize: 16,
                         ),
                       )
                     : null,
-                backgroundColor: Theme.of(context).colorScheme.secondary,
+                backgroundColor: const Color(0xFFFF7B7B),
               ),
               Positioned(
                 right: -1,
@@ -391,21 +403,33 @@ class _JobsPreview extends StatefulWidget {
 }
 
 class _JobsPreviewState extends State<_JobsPreview> {
-  final Map<String, String> _companyCache = {};
+  final Map<String, CompanyInfo> _companyCache = {};
 
-  Future<String> _companyName(String userId) async {
-    if (userId.isEmpty) return 'Company';
+  Future<CompanyInfo> _companyInfo(String userId) async {
+    if (userId.isEmpty) return const CompanyInfo();
     if (_companyCache.containsKey(userId)) return _companyCache[userId]!;
+
     final doc =
         await FirebaseFirestore.instance.collection('Users').doc(userId).get();
     final data = doc.data() ?? {};
-    final companyName = (data['CompanyName'] ?? '').toString().trim();
-    final name = (data['Name'] ?? '').toString().trim();
-    final display = companyName.isNotEmpty
-        ? companyName
-        : (name.isNotEmpty ? name : 'Company');
-    _companyCache[userId] = display;
-    return display;
+
+    final rawCompany = (data['CompanyName'] ?? '').toString().trim();
+    final rawName = (data['Name'] ?? '').toString().trim();
+    final display = rawCompany.isNotEmpty
+        ? rawCompany
+        : (rawName.isNotEmpty ? rawName : 'Company');
+
+    final info = CompanyInfo(
+      name: display,
+      logoUrl: (data['PhotoURL'] ?? '').toString().trim(),
+      location: (data['Location'] ?? '').toString().trim(),
+      description: (data['Description'] ?? '').toString().trim(),
+      contactEmail: (data['ContactEmail'] ?? '').toString().trim(),
+      phone: (data['Phone'] ?? '').toString().trim(),
+    );
+
+    _companyCache[userId] = info;
+    return info;
   }
 
   String _fmtDate(DateTime d) =>
@@ -448,10 +472,10 @@ class _JobsPreviewState extends State<_JobsPreview> {
 
         return Column(
           children: jobs.map((j) {
-            return FutureBuilder<String>(
-              future: _companyName(j.userId),
+            return FutureBuilder<CompanyInfo>(
+              future: _companyInfo(j.userId),
               builder: (context, companySnap) {
-                final companyName = companySnap.data ?? 'Company';
+                final info = companySnap.data ?? const CompanyInfo();
                 final hasKeywords = j.keywords.isNotEmpty;
                 final canApply =
                     j.applyUrl != null && j.applyUrl!.trim().isNotEmpty;
@@ -460,8 +484,7 @@ class _JobsPreviewState extends State<_JobsPreview> {
                   elevation: 0.5,
                   margin: const EdgeInsets.only(bottom: 12),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+                      borderRadius: BorderRadius.circular(16)),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(16),
                     onTap: () {
@@ -470,7 +493,7 @@ class _JobsPreviewState extends State<_JobsPreview> {
                         MaterialPageRoute(
                           builder: (_) => JobDetailsPage(
                             job: j,
-                            companyName: companyName,
+                            company: info,
                           ),
                         ),
                       );
@@ -497,7 +520,7 @@ class _JobsPreviewState extends State<_JobsPreview> {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      companyName,
+                                      info.name,
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodyMedium,
@@ -512,7 +535,6 @@ class _JobsPreviewState extends State<_JobsPreview> {
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              // compact preview (no save button)
                             ],
                           ),
                           const SizedBox(height: 10),
@@ -535,9 +557,7 @@ class _JobsPreviewState extends State<_JobsPreview> {
                               if (j.specialty.isNotEmpty)
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
+                                      horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(8),
                                     color: Theme.of(context)
@@ -564,7 +584,7 @@ class _JobsPreviewState extends State<_JobsPreview> {
                                           MaterialPageRoute(
                                             builder: (_) => JobDetailsPage(
                                               job: j,
-                                              companyName: companyName,
+                                              company: info,
                                             ),
                                           ),
                                         );
