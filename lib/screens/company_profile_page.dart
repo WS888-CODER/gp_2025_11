@@ -24,7 +24,39 @@ final _localSaPhone = RegExp(r'^(5\d{8}|01[1-7]\d{6,7})$');
 const _saPrefix = '+966';
 String _toLocal(String e164) {
   final t = e164.trim();
-  return t.startsWith(_saPrefix) ? t.substring(_saPrefix.length) : t;
+  if (!t.startsWith(_saPrefix)) return t;
+
+  final rest = t.substring(_saPrefix.length); // بعد +966
+  // موبايل: يبدأ بـ 5 → عرض محلي كما هو (5XXXXXXXXX)
+  if (rest.startsWith('5')) return rest;
+
+  // أرضي: يبدأ بـ 1X… → نرجع له الصفر: 0 + الباقي (011, 012, ...)
+  if (RegExp(r'^1[1-7]\d{6,7}$').hasMatch(rest)) return '0$rest';
+
+  // fallback
+  return rest;
+}
+
+// === Location (standardized) ===
+const _allowedLocations = <String>[
+  'Riyadh',
+  'Jeddah',
+  'Dammam',
+  'Khobar',
+  'Makkah',
+  'Madinah',
+  'Qassim',
+  'Tabuk',
+  'Abha',
+  'Jazan'
+];
+
+String? _matchAllowed(String raw) {
+  final t = raw.trim().toLowerCase();
+  for (final loc in _allowedLocations) {
+    if (loc.toLowerCase() == t) return loc; // أعِد النسخة القياسية
+  }
+  return null;
 }
 
 class CompanyProfile extends StatefulWidget {
@@ -37,7 +69,6 @@ class CompanyProfile extends StatefulWidget {
 class _CompanyProfileState extends State<CompanyProfile> {
   final _form = GlobalKey<FormState>();
   final _desc = TextEditingController();
-  final _loc = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _phone = TextEditingController();
   File? _pendingLogoFile;
@@ -46,23 +77,55 @@ class _CompanyProfileState extends State<CompanyProfile> {
   bool _saving = false;
   double? _progress;
   final _descKey = GlobalKey<FormFieldState>();
-  final _locKey = GlobalKey<FormFieldState>();
   final _emailKey = GlobalKey<FormFieldState>();
   final _phoneKey = GlobalKey<FormFieldState>();
   final _descFocus = FocusNode();
-  final _locFocus = FocusNode();
   final _emailFocus = FocusNode();
   final _phoneFocus = FocusNode();
   bool _filledFromServer = false;
+  String? _selectedLoc;
 
+  // 1) تحقق صارم: الحجم + الامتداد + ترويسة الملف (PNG/JPG فقط)
   String? _validateImageFile(File f) {
     final len = f.lengthSync();
     if (len > _kMaxImageBytes) return 'Image too large (max 5 MB)';
+
     final ext = f.path.split('.').last.toLowerCase();
-    final normalized = (ext == 'jpeg') ? 'jpg' : ext;
-    if (!['jpg', 'png'].contains(normalized)) {
-      return 'Unsupported image (JPG/PNG only)';
+    // نرفض jpeg صراحةً
+    if (!(ext == 'png' || ext == 'jpg')) {
+      return 'Unsupported image type. Use PNG or JPG (JPEG is not allowed).';
     }
+
+    try {
+      final bytes = f.openSync(mode: FileMode.read)..setPositionSync(0);
+      final header = bytes.readSync(12);
+      bytes.closeSync();
+
+      bool isPng = header.length >= 8 &&
+          header[0] == 0x89 &&
+          header[1] == 0x50 && // 'P'
+          header[2] == 0x4E && // 'N'
+          header[3] == 0x47 && // 'G'
+          header[4] == 0x0D &&
+          header[5] == 0x0A &&
+          header[6] == 0x1A &&
+          header[7] == 0x0A;
+
+      bool isJpeg = header.length >= 3 &&
+          header[0] == 0xFF &&
+          header[1] == 0xD8 &&
+          header[2] == 0xFF;
+
+      if (ext == 'png' && !isPng) {
+        return 'File content is not valid PNG.';
+      }
+      if (ext == 'jpg' && !isJpeg) {
+        return 'File content is not valid JPG.';
+      }
+    } catch (_) {
+      return 'Could not read image file.';
+    }
+
     return null; // valid
   }
 
@@ -87,17 +150,16 @@ class _CompanyProfileState extends State<CompanyProfile> {
       ),
     );
   }
+
   // ==================================================================
 
   @override
   void dispose() {
     _desc.dispose();
-    _loc.dispose();
     _emailCtrl.dispose();
     _phone.dispose();
 
     _descFocus.dispose();
-    _locFocus.dispose();
     _emailFocus.dispose();
     _phoneFocus.dispose();
     super.dispose();
@@ -117,12 +179,42 @@ class _CompanyProfileState extends State<CompanyProfile> {
     }
   }
 
+  // 2) الرفع: نفس القيود تمامًا (بدون أي تطبيع لـ jpeg)
   Future<Map<String, String>> _uploadLogoWithProgress(File file) async {
     final len = await file.length();
     if (len > 5 * 1024 * 1024) throw Exception('Image too large');
+
     final ext = file.path.split('.').last.toLowerCase();
-    if (!['jpg', 'png'].contains(ext)) {
-      throw Exception('Unsupported image');
+    if (!(ext == 'png' || ext == 'jpg')) {
+      throw Exception('Unsupported image type. Use PNG or JPG only.');
+    }
+
+    // فحص ترويسة سريع قبل الرفع (دفاع مزدوج)
+    try {
+      final raf = file.openSync(mode: FileMode.read)..setPositionSync(0);
+      final header = raf.readSync(12);
+      raf.closeSync();
+
+      bool isPng = header.length >= 8 &&
+          header[0] == 0x89 &&
+          header[1] == 0x50 &&
+          header[2] == 0x4E &&
+          header[3] == 0x47 &&
+          header[4] == 0x0D &&
+          header[5] == 0x0A &&
+          header[6] == 0x1A &&
+          header[7] == 0x0A;
+
+      bool isJpeg = header.length >= 3 &&
+          header[0] == 0xFF &&
+          header[1] == 0xD8 &&
+          header[2] == 0xFF;
+
+      if ((ext == 'png' && !isPng) || (ext == 'jpg' && !isJpeg)) {
+        throw Exception('File content does not match extension.');
+      }
+    } catch (e) {
+      throw Exception('Corrupted or unreadable image.');
     }
 
     final uid = FirebaseAuth.instance.currentUser!.uid;
@@ -139,11 +231,19 @@ class _CompanyProfileState extends State<CompanyProfile> {
       }
     });
 
-    final snap = await task;
-    final url = await snap.ref.getDownloadURL();
-    final path = snap.ref.fullPath; // 👈 هذا المهم لحذف القديم لاحقاً
-    if (mounted) setState(() => _progress = null);
-    return {'url': url, 'path': path};
+    try {
+      final snap = await task;
+      final url = await snap.ref.getDownloadURL();
+      final path = snap.ref.fullPath;
+      if (mounted) setState(() => _progress = null);
+      return {'url': url, 'path': path};
+    } on FirebaseException catch (e) {
+      if (mounted) {
+        _showSnackError('Upload failed: ${e.message ?? e.code}');
+        setState(() => _progress = null);
+      }
+      rethrow;
+    }
   }
 
   Future<void> _pickLogo() async {
@@ -159,6 +259,15 @@ class _CompanyProfileState extends State<CompanyProfile> {
     _showSnackSuccess('Logo selected.');
   }
 
+  bool _hasAnyLogo(Map<String, dynamic> current) {
+    final hasPending = _pendingLogoFile != null;
+    final hasExisting =
+        ((_logoUrl ?? current[UserFields.photoUrl])?.toString().isNotEmpty ??
+            false);
+    // لو المستخدم ضغط "Remove" نخزن _logoUrl = '' (يعني حذف)، فـ hasExisting تصير false
+    return hasPending || hasExisting;
+  }
+
   Future<void> _save(Map<String, dynamic> current) async {
     if (_progress != null) {
       _showSnackError('Please wait for uploads to finish');
@@ -166,6 +275,11 @@ class _CompanyProfileState extends State<CompanyProfile> {
     }
 
     if (!_form.currentState!.validate()) return;
+    if (!_hasAnyLogo(current)) {
+      _showSnackError('Company logo is required before updating.');
+      setState(() => _saving = false);
+      return;
+    }
 
     final email = _emailCtrl.text.trim();
     final phoneLocal = _phone.text.trim();
@@ -184,8 +298,9 @@ class _CompanyProfileState extends State<CompanyProfile> {
     String normalizePhoneToE164(String local) {
       final s = local.trim();
       if (RegExp(r'^5\d{8}$').hasMatch(s)) return '+966$s'; // Mobile
-      if (RegExp(r'^(01[1-7]\d{6,7})$').hasMatch(s))
+      if (RegExp(r'^(01[1-7]\d{6,7})$').hasMatch(s)) {
         return '+966${s.substring(1)}'; // Landline
+      }
       return '';
     }
 
@@ -203,7 +318,8 @@ class _CompanyProfileState extends State<CompanyProfile> {
 
     setState(() => _saving = true);
     try {
-      // ========= 1) رفع اللوجو إن وُجد =========
+      // ========= 1) رفع اللوجو =========
+      // ========= 1) رفع اللوجو =========
       String? newLogoUrl;
       String? newLogoPath;
       if (_pendingLogoFile != null) {
@@ -223,7 +339,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
 
       // ========= 2) بناء التحديثات (بدون فرض إيميل) =========
       final desc = _desc.text.trim();
-      final loc = _loc.text.trim();
+      final loc = (_selectedLoc ?? '').trim();
 
       // “مكتمل” = وصف + موقع + (إيميل صحيح أو رقم صحيح)
       final complete = desc.length >= 100 &&
@@ -329,15 +445,11 @@ class _CompanyProfileState extends State<CompanyProfile> {
 
         if (!_filledFromServer) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return; // مهم جداً
+            if (!mounted) return;
 
             _desc.text = _desc.text.isNotEmpty
                 ? _desc.text
                 : (data[UserFields.description] ?? '');
-
-            _loc.text = _loc.text.isNotEmpty
-                ? _loc.text
-                : (data[UserFields.location] ?? '');
 
             _emailCtrl.text = _emailCtrl.text.isNotEmpty
                 ? _emailCtrl.text
@@ -350,7 +462,10 @@ class _CompanyProfileState extends State<CompanyProfile> {
                     return p.isEmpty ? '' : _toLocal(p);
                   })();
 
+            final serverLoc = (data[UserFields.location] ?? '').toString();
+            _selectedLoc = _matchAllowed(serverLoc);
             _filledFromServer = true;
+            setState(() {});
           });
         }
 
@@ -366,8 +481,10 @@ class _CompanyProfileState extends State<CompanyProfile> {
 
         final profileComplete = (data[UserFields.isProfileComplete] == true) ||
             (_desc.text.trim().length >= 100 &&
-                _loc.text.trim().isNotEmpty &&
+                hasLogo &&
+                (_selectedLoc ?? '').trim().isNotEmpty &&
                 (hasEmailValidNow || hasPhoneValidNow));
+
         return Scaffold(
           appBar: AppBar(
             title: const Text('Company Profile'),
@@ -483,9 +600,9 @@ class _CompanyProfileState extends State<CompanyProfile> {
                   },
                   child: TextFormField(
                     key: _descKey,
-                    autovalidateMode: AutovalidateMode.disabled,
                     controller: _desc,
                     maxLines: 4,
+                    maxLength: 600,
                     decoration: const InputDecoration(
                       labelText: 'Description (min 100 chars)',
                       border: OutlineInputBorder(),
@@ -494,28 +611,25 @@ class _CompanyProfileState extends State<CompanyProfile> {
                       final t = v?.trim() ?? '';
                       if (t.isEmpty) return 'Enter description';
                       if (t.length < 100) return 'Too short';
+                      if (t.length > 600) return 'Too long (max 600)';
                       return null;
                     },
                   ),
                 ),
                 const SizedBox(height: 12),
-                Focus(
-                  focusNode: _locFocus,
-                  onFocusChange: (hasFocus) {
-                    if (!hasFocus) _locKey.currentState?.validate();
-                  },
-                  child: TextFormField(
-                    key: _locKey,
-                    autovalidateMode: AutovalidateMode.disabled,
-                    controller: _loc,
-                    decoration: const InputDecoration(
-                      labelText: 'Location',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (v) => (v == null || v.trim().isEmpty)
-                        ? 'Enter location'
-                        : null,
+                DropdownButtonFormField<String>(
+                  value: _selectedLoc,
+                  decoration: const InputDecoration(
+                    labelText: 'Location',
+                    border: OutlineInputBorder(),
                   ),
+                  items: _allowedLocations
+                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                      .toList(),
+                  onChanged: (val) => setState(() => _selectedLoc = val),
+                  validator: (v) => (v == null || v.isEmpty)
+                      ? 'Select a standardized location'
+                      : null,
                 ),
                 const SizedBox(height: 12),
                 Focus(
