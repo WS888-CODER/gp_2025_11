@@ -24,7 +24,17 @@ final _localSaPhone = RegExp(r'^(5\d{8}|01[1-7]\d{6,7})$');
 const _saPrefix = '+966';
 String _toLocal(String e164) {
   final t = e164.trim();
-  return t.startsWith(_saPrefix) ? t.substring(_saPrefix.length) : t;
+  if (!t.startsWith(_saPrefix)) return t;
+
+  final rest = t.substring(_saPrefix.length); // بعد +966
+  // موبايل: يبدأ بـ 5 → عرض محلي كما هو (5XXXXXXXXX)
+  if (rest.startsWith('5')) return rest;
+
+  // أرضي: يبدأ بـ 1X… → نرجع له الصفر: 0 + الباقي (011, 012, ...)
+  if (RegExp(r'^1[1-7]\d{6,7}$').hasMatch(rest)) return '0$rest';
+
+  // fallback
+  return rest;
 }
 
 class CompanyProfile extends StatefulWidget {
@@ -37,7 +47,6 @@ class CompanyProfile extends StatefulWidget {
 class _CompanyProfileState extends State<CompanyProfile> {
   final _form = GlobalKey<FormState>();
   final _desc = TextEditingController();
-  final _loc = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _phone = TextEditingController();
   File? _pendingLogoFile;
@@ -46,23 +55,59 @@ class _CompanyProfileState extends State<CompanyProfile> {
   bool _saving = false;
   double? _progress;
   final _descKey = GlobalKey<FormFieldState>();
-  final _locKey = GlobalKey<FormFieldState>();
   final _emailKey = GlobalKey<FormFieldState>();
   final _phoneKey = GlobalKey<FormFieldState>();
   final _descFocus = FocusNode();
-  final _locFocus = FocusNode();
   final _emailFocus = FocusNode();
   final _phoneFocus = FocusNode();
   bool _filledFromServer = false;
-
+  final _locCtrl = TextEditingController();
+  final _locKey = GlobalKey<FormFieldState>();
+  final _locFocus = FocusNode();
+  final _locAllowed =
+      RegExp(r"^[A-Za-z\u0600-\u06FF][A-Za-z\u0600-\u06FF\s\.'-]{1,39}$");
+  String _cleanLoc(String raw) => raw.trim().replaceAll(RegExp(r'\s+'), ' ');
+  // 1) تحقق صارم: الحجم + الامتداد + ترويسة الملف (PNG/JPG فقط)
   String? _validateImageFile(File f) {
     final len = f.lengthSync();
     if (len > _kMaxImageBytes) return 'Image too large (max 5 MB)';
+
     final ext = f.path.split('.').last.toLowerCase();
-    final normalized = (ext == 'jpeg') ? 'jpg' : ext;
-    if (!['jpg', 'png'].contains(normalized)) {
-      return 'Unsupported image (JPG/PNG only)';
+    // نرفض jpeg صراحةً
+    if (!(ext == 'png' || ext == 'jpg')) {
+      return 'Unsupported image type. Use PNG or JPG (JPEG is not allowed).';
     }
+
+    try {
+      final bytes = f.openSync(mode: FileMode.read)..setPositionSync(0);
+      final header = bytes.readSync(12);
+      bytes.closeSync();
+
+      bool isPng = header.length >= 8 &&
+          header[0] == 0x89 &&
+          header[1] == 0x50 && // 'P'
+          header[2] == 0x4E && // 'N'
+          header[3] == 0x47 && // 'G'
+          header[4] == 0x0D &&
+          header[5] == 0x0A &&
+          header[6] == 0x1A &&
+          header[7] == 0x0A;
+
+      bool isJpeg = header.length >= 3 &&
+          header[0] == 0xFF &&
+          header[1] == 0xD8 &&
+          header[2] == 0xFF;
+
+      if (ext == 'png' && !isPng) {
+        return 'File content is not valid PNG.';
+      }
+      if (ext == 'jpg' && !isJpeg) {
+        return 'File content is not valid JPG.';
+      }
+    } catch (_) {
+      return 'Could not read image file.';
+    }
+
     return null; // valid
   }
 
@@ -87,19 +132,21 @@ class _CompanyProfileState extends State<CompanyProfile> {
       ),
     );
   }
+
   // ==================================================================
 
   @override
   void dispose() {
     _desc.dispose();
-    _loc.dispose();
     _emailCtrl.dispose();
     _phone.dispose();
 
     _descFocus.dispose();
-    _locFocus.dispose();
     _emailFocus.dispose();
     _phoneFocus.dispose();
+    _locCtrl.dispose();
+    _locFocus.dispose();
+
     super.dispose();
   }
 
@@ -117,12 +164,42 @@ class _CompanyProfileState extends State<CompanyProfile> {
     }
   }
 
+  // 2) الرفع: نفس القيود تمامًا (بدون أي تطبيع لـ jpeg)
   Future<Map<String, String>> _uploadLogoWithProgress(File file) async {
     final len = await file.length();
     if (len > 5 * 1024 * 1024) throw Exception('Image too large');
+
     final ext = file.path.split('.').last.toLowerCase();
-    if (!['jpg', 'png'].contains(ext)) {
-      throw Exception('Unsupported image');
+    if (!(ext == 'png' || ext == 'jpg')) {
+      throw Exception('Unsupported image type. Use PNG or JPG only.');
+    }
+
+    // فحص ترويسة سريع قبل الرفع (دفاع مزدوج)
+    try {
+      final raf = file.openSync(mode: FileMode.read)..setPositionSync(0);
+      final header = raf.readSync(12);
+      raf.closeSync();
+
+      bool isPng = header.length >= 8 &&
+          header[0] == 0x89 &&
+          header[1] == 0x50 &&
+          header[2] == 0x4E &&
+          header[3] == 0x47 &&
+          header[4] == 0x0D &&
+          header[5] == 0x0A &&
+          header[6] == 0x1A &&
+          header[7] == 0x0A;
+
+      bool isJpeg = header.length >= 3 &&
+          header[0] == 0xFF &&
+          header[1] == 0xD8 &&
+          header[2] == 0xFF;
+
+      if ((ext == 'png' && !isPng) || (ext == 'jpg' && !isJpeg)) {
+        throw Exception('File content does not match extension.');
+      }
+    } catch (e) {
+      throw Exception('Corrupted or unreadable image.');
     }
 
     final uid = FirebaseAuth.instance.currentUser!.uid;
@@ -139,11 +216,19 @@ class _CompanyProfileState extends State<CompanyProfile> {
       }
     });
 
-    final snap = await task;
-    final url = await snap.ref.getDownloadURL();
-    final path = snap.ref.fullPath; // 👈 هذا المهم لحذف القديم لاحقاً
-    if (mounted) setState(() => _progress = null);
-    return {'url': url, 'path': path};
+    try {
+      final snap = await task;
+      final url = await snap.ref.getDownloadURL();
+      final path = snap.ref.fullPath;
+      if (mounted) setState(() => _progress = null);
+      return {'url': url, 'path': path};
+    } on FirebaseException catch (e) {
+      if (mounted) {
+        _showSnackError('Upload failed: ${e.message ?? e.code}');
+        setState(() => _progress = null);
+      }
+      rethrow;
+    }
   }
 
   Future<void> _pickLogo() async {
@@ -159,45 +244,55 @@ class _CompanyProfileState extends State<CompanyProfile> {
     _showSnackSuccess('Logo selected.');
   }
 
+  bool _hasAnyLogo(Map<String, dynamic> current) {
+    final hasPending = _pendingLogoFile != null;
+    final hasExisting =
+        ((_logoUrl ?? current[UserFields.photoUrl])?.toString().isNotEmpty ??
+            false);
+    // لو المستخدم ضغط "Remove" نخزن _logoUrl = '' (يعني حذف)، فـ hasExisting تصير false
+    return hasPending || hasExisting;
+  }
+
   Future<void> _save(Map<String, dynamic> current) async {
-    // لا نحفظ أثناء وجود رفع سابق
     if (_progress != null) {
       _showSnackError('Please wait for uploads to finish');
       return;
     }
 
-    // تحقّق الحقول
     if (!_form.currentState!.validate()) return;
-
-    final email = _emailCtrl.text.trim();
-    if (!_email.hasMatch(email)) {
-      _showSnackError('Please enter a valid email');
+    if (!_hasAnyLogo(current)) {
+      _showSnackError('Company logo is required before updating.');
+      setState(() => _saving = false);
       return;
     }
 
-    // ===== الهاتف: تحقّق + تحويل إلى E.164 للمحمول والأرضي =====
+    final email = _emailCtrl.text.trim();
     final phoneLocal = _phone.text.trim();
 
+    // صالح إذا كان غير فاضي وبصيغة صحيحة
+    final hasEmailValid = email.isNotEmpty && _email.hasMatch(email);
+    final hasPhoneFormat =
+        phoneLocal.isNotEmpty && _localSaPhone.hasMatch(phoneLocal);
+
+    if (!(hasEmailValid || hasPhoneFormat)) {
+      _showSnackError('Provide at least a valid email OR a valid phone number');
+      return;
+    }
+
+    // ===== الهاتف: E.164 للمحمول/الأرضي عند الحاجة فقط =====
     String normalizePhoneToE164(String local) {
       final s = local.trim();
-      // موبايل: 5XXXXXXXX
-      if (RegExp(r'^5\d{8}$').hasMatch(s)) return '+966$s';
-      // أرضي: 01XXXXXXXX أو 01XXXXXXX (رياض/جدة/دمام ...)
+      if (RegExp(r'^5\d{8}$').hasMatch(s)) return '+966$s'; // Mobile
       if (RegExp(r'^(01[1-7]\d{6,7})$').hasMatch(s)) {
-        // نحذف الصفر ونخزن +9661XXXXXXXX
-        return '+966${s.substring(1)}';
+        return '+966${s.substring(1)}'; // Landline
       }
       return '';
     }
 
-    String oldPhoneE164 = (current[UserFields.phone] ?? '').toString();
-    String? newPhoneE164; // قد تبقى null إن المستخدم ما غيّر شيء
+    final oldPhoneE164 = (current[UserFields.phone] ?? '').toString();
+    String? newPhoneE164;
 
-    if (phoneLocal.isNotEmpty) {
-      if (!_localSaPhone.hasMatch(phoneLocal)) {
-        _showSnackError('Enter a valid Saudi mobile or landline number');
-        return;
-      }
+    if (hasPhoneFormat) {
       final candidate = normalizePhoneToE164(phoneLocal);
       if (candidate.isEmpty) {
         _showSnackError('Phone format not recognized');
@@ -205,14 +300,12 @@ class _CompanyProfileState extends State<CompanyProfile> {
       }
       if (candidate != oldPhoneE164) newPhoneE164 = candidate;
     }
-    // إن كانت الخانة فاضية: لا نكتب '' ولا نحذف إلا لو وفّرنا زر "Remove"
 
     setState(() => _saving = true);
     try {
-      // ========= 1) رفع اللوجو الجديد إن وُجد =========
+      // ========= 1) رفع اللوجو =========
       String? newLogoUrl;
       String? newLogoPath;
-
       if (_pendingLogoFile != null) {
         final err = _validateImageFile(_pendingLogoFile!);
         if (err != null) {
@@ -220,7 +313,6 @@ class _CompanyProfileState extends State<CompanyProfile> {
           setState(() => _saving = false);
           return;
         }
-
         setState(() => _progress = 0);
         final res = await _uploadLogoWithProgress(_pendingLogoFile!);
         newLogoUrl = res['url'];
@@ -229,51 +321,60 @@ class _CompanyProfileState extends State<CompanyProfile> {
         if (mounted) setState(() => _progress = null);
       }
 
-      // ========= 2) بناء التحديثات =========
+      // ========= 2) بناء التحديثات (بدون فرض إيميل) =========
       final desc = _desc.text.trim();
-      final loc = _loc.text.trim();
+      final loc = _cleanLoc(_locCtrl.text);
 
-      final complete = desc.length >= 100 && loc.isNotEmpty && email.isNotEmpty;
+      // “مكتمل” = وصف + موقع + (إيميل صحيح أو رقم صحيح)
+      final complete = desc.length >= 100 &&
+          loc.isNotEmpty &&
+          (hasEmailValid || hasPhoneFormat);
 
       final updates = <String, dynamic>{
         UserFields.description: desc,
         UserFields.location: loc,
-        UserFields.contactEmail: email,
         UserFields.isProfileComplete: complete,
       };
+
+      // حدّث/احذف الإيميل فقط لو تغيّر عن الموجود
+      final oldEmail = (current[UserFields.contactEmail] ?? '').toString();
+      if (email != oldEmail) {
+        if (email.isEmpty) {
+          updates[UserFields.contactEmail] = FieldValue.delete();
+        } else {
+          updates[UserFields.contactEmail] = email;
+        }
+      }
 
       // الهاتف (أضفه فقط إذا تغيّر)
       if (newPhoneE164 != null) {
         updates[UserFields.phone] = newPhoneE164;
       }
 
-      // شعار الشركة
+      // الشعار
       if (newLogoUrl != null) {
         updates[UserFields.photoUrl] = newLogoUrl;
         if (newLogoPath != null) updates[UserFields.photoPath] = newLogoPath;
         _logoUrl = newLogoUrl;
       } else if (_logoUrl == '') {
-        // حالة إزالة الشعار
         updates[UserFields.photoUrl] = FieldValue.delete();
         updates[UserFields.photoPath] = FieldValue.delete();
       }
 
-      // لا تحفظ لو ما فيه أي تغيير فعلي
       if (updates.isEmpty) {
         _showSnackError('No changes to save');
         setState(() => _saving = false);
         return;
       }
 
-      // ========= 3) حفظ في Firestore =========
+      // ========= 3) حفظ =========
       final uid = FirebaseAuth.instance.currentUser!.uid;
       await FirebaseFirestore.instance
           .collection(kUsersCollection)
           .doc(uid)
           .set(updates, SetOptions(merge: true));
 
-      // ========= 4) حذف القديم من التخزين بعد نجاح الحفظ =========
-      // لو رفعنا جديد: احذف القديم إن وُجد
+      // ========= 4) تنظيف تخزين الشعار القديم =========
       if (newLogoUrl != null) {
         final oldPath = (current[UserFields.photoPath] ?? '').toString();
         if (oldPath.isNotEmpty) {
@@ -283,8 +384,6 @@ class _CompanyProfileState extends State<CompanyProfile> {
           if (oldUrl.isNotEmpty) await _deleteStorageFile(oldUrl);
         }
       }
-
-      // لو المستخدم اختار Remove: احذف القديم
       if (_logoUrl == '' &&
           (current[UserFields.photoPath]?.toString().isNotEmpty ?? false)) {
         await _deleteStorageFile(current[UserFields.photoPath]?.toString());
@@ -330,15 +429,11 @@ class _CompanyProfileState extends State<CompanyProfile> {
 
         if (!_filledFromServer) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return; // مهم جداً
+            if (!mounted) return;
 
             _desc.text = _desc.text.isNotEmpty
                 ? _desc.text
                 : (data[UserFields.description] ?? '');
-
-            _loc.text = _loc.text.isNotEmpty
-                ? _loc.text
-                : (data[UserFields.location] ?? '');
 
             _emailCtrl.text = _emailCtrl.text.isNotEmpty
                 ? _emailCtrl.text
@@ -350,18 +445,30 @@ class _CompanyProfileState extends State<CompanyProfile> {
                     final p = (data[UserFields.phone] ?? '').toString();
                     return p.isEmpty ? '' : _toLocal(p);
                   })();
+            final serverLoc = (data[UserFields.location] ?? '').toString();
+            _locCtrl.text =
+                _locCtrl.text.isNotEmpty ? _locCtrl.text : serverLoc;
 
             _filledFromServer = true;
+            setState(() {});
           });
         }
 
         final hasLogo = _pendingLogoFile != null ||
             ((_logoUrl ?? data[UserFields.photoUrl])?.toString().isNotEmpty ??
                 false);
+        final emailNow = _emailCtrl.text.trim();
+        final phoneNow = _phone.text.trim();
+        final hasEmailValidNow =
+            emailNow.isNotEmpty && _email.hasMatch(emailNow);
+        final hasPhoneValidNow =
+            phoneNow.isNotEmpty && _localSaPhone.hasMatch(phoneNow);
+
         final profileComplete = (data[UserFields.isProfileComplete] == true) ||
             (_desc.text.trim().length >= 100 &&
-                _loc.text.trim().isNotEmpty &&
-                _email.hasMatch(_emailCtrl.text.trim()));
+                hasLogo &&
+                _cleanLoc(_locCtrl.text).isNotEmpty &&
+                (hasEmailValidNow || hasPhoneValidNow));
 
         return Scaffold(
           appBar: AppBar(
@@ -478,9 +585,9 @@ class _CompanyProfileState extends State<CompanyProfile> {
                   },
                   child: TextFormField(
                     key: _descKey,
-                    autovalidateMode: AutovalidateMode.disabled,
                     controller: _desc,
                     maxLines: 4,
+                    maxLength: 600,
                     decoration: const InputDecoration(
                       labelText: 'Description (min 100 chars)',
                       border: OutlineInputBorder(),
@@ -489,6 +596,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
                       final t = v?.trim() ?? '';
                       if (t.isEmpty) return 'Enter description';
                       if (t.length < 100) return 'Too short';
+                      if (t.length > 600) return 'Too long (max 600)';
                       return null;
                     },
                   ),
@@ -501,15 +609,27 @@ class _CompanyProfileState extends State<CompanyProfile> {
                   },
                   child: TextFormField(
                     key: _locKey,
-                    autovalidateMode: AutovalidateMode.disabled,
-                    controller: _loc,
+                    controller: _locCtrl,
+                    textCapitalization: TextCapitalization.words,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r"[A-Za-z\u0600-\u06FF\s\.'-]"),
+                      ),
+                      LengthLimitingTextInputFormatter(40),
+                    ],
                     decoration: const InputDecoration(
                       labelText: 'Location',
+                      hintText: 'e.g., Riyadh / جدة / Al Khobar',
                       border: OutlineInputBorder(),
                     ),
-                    validator: (v) => (v == null || v.trim().isEmpty)
-                        ? 'Enter location'
-                        : null,
+                    validator: (v) {
+                      final t = _cleanLoc(v ?? '');
+                      if (t.isEmpty) return 'Enter location';
+                      if (!_locAllowed.hasMatch(t)) {
+                        return '2–40 letters only (Arabic/English), no numbers';
+                      }
+                      return null;
+                    },
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -526,10 +646,11 @@ class _CompanyProfileState extends State<CompanyProfile> {
                     decoration: const InputDecoration(
                       labelText: 'Contact Email',
                       border: OutlineInputBorder(),
+                      helperText: 'Provide email OR phone (one is enough)',
                     ),
                     validator: (v) {
                       final t = v?.trim() ?? '';
-                      if (t.isEmpty) return 'Enter email';
+                      if (t.isEmpty) return null;
                       if (!_email.hasMatch(t)) return 'Invalid email';
                       return null;
                     },

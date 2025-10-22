@@ -5,7 +5,7 @@ class AppTheme {
   // Brand Colors
   static const Color primaryPurple = Color(0xFF49469F);
   static const Color accentCoral = Color(0xFFFD6C67);
-  
+
   // 1. الوضع الفاتح (Light Theme)
   static ThemeData get lightTheme {
     return ThemeData(
