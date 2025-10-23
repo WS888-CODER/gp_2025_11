@@ -240,7 +240,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: const Color(0xFF49469F), // Selected date background (purple)
+              primary: const Color(0xFF4A5FBC), // Selected date background (purple)
               onPrimary: Colors.white, // Selected date text
               onSurface: Colors.black, // Default text color
             ),
@@ -248,7 +248,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
               todayBorder: BorderSide.none,
               todayBackgroundColor: MaterialStateColor.resolveWith((states) {
                 if (states.contains(MaterialState.selected)) {
-                  return const Color(0xFF49469F); // Selected today background (purple)
+                  return const Color(0xFF4A5FBC); // Selected today background (purple)
                 }
                 return Colors.grey.shade300; // Unselected today background
               }),
@@ -292,7 +292,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: const Color(0xFF49469F), // Selected date background (purple)
+              primary: const Color(0xFF4A5FBC), // Selected date background (purple)
               onPrimary: Colors.white, // Selected date text
               onSurface: Colors.black, // Default text color
             ),
@@ -300,7 +300,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
               todayBorder: BorderSide.none,
               todayBackgroundColor: MaterialStateColor.resolveWith((states) {
                 if (states.contains(MaterialState.selected)) {
-                  return const Color(0xFF49469F); // Selected today background (purple)
+                  return const Color(0xFF4A5FBC); // Selected today background (purple)
                 }
                 return Colors.grey.shade300; // Unselected today background
               }),
@@ -767,6 +767,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
         child: Scaffold(
           backgroundColor: const Color(0xFFF6F5FB),
           appBar: AppBar(
+            backgroundColor: const Color(0xFF4A5FBC),
+            foregroundColor: Colors.white,
             title: Text(_isEdit ? 'Edit Job' : 'Create Job Posting'),
           ),
           body: Form(
@@ -935,29 +937,36 @@ class _JobPostingPageState extends State<JobPostingPage> {
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [
-                              Color(0xFF49469F), // Deep purple
-                              Color(0xFF5752B8), // Mid purple
-                              Color(0xFF655DD1), // Brighter purple
-                              Color(0xFF7368DD), // Light purple
+                              Color(0xFF6B4CE6), // Vibrant purple
+                              Color(0xFF4A5FBC), // Brand purple
+                              Color(0xFF3B8FD9), // Blue accent
                             ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
                           borderRadius: BorderRadius.circular(30),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF6B4CE6).withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
                         ),
                         child: TextButton.icon(
                           onPressed: _generateJobPost,
-                          icon: const Icon(Icons.auto_awesome, size: 18, color: Colors.white),
+                          icon: const Icon(Icons.auto_awesome, size: 20, color: Colors.white),
                           label: const Text(
                             'Generate with AI',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                               color: Colors.white,
+                              letterSpacing: 0.5,
                             ),
                           ),
                           style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30),
                             ),
@@ -1095,6 +1104,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
                           ElevatedButton(
                             onPressed: _requirements.length >= 15 ? null : _addRequirement,
                             style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF4A5FBC),
+                              foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(30),
                               ),
@@ -1246,6 +1257,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
             ElevatedButton(
               onPressed: _submitForm,
               style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF4A5FBC),
+                foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
