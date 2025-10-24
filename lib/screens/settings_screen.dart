@@ -4,8 +4,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:gp_2025_11/config/app_settings_notifier.dart';
-// ⬇️ استيراد مكتبة الترجمة التي سيتم إنشاؤها
-import 'package:gp_2025_11/l10n/app_localizations.dart';
+import 'package:gp_2025_11/l10n/app_localizations.dart'; 
+import 'package:gp_2025_11/screens/account_details_page.dart'; // الاستيراد النهائي
+
+
 class SettingsScreen extends StatefulWidget {
   final String userType;
   final String userId;
@@ -22,14 +24,21 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   
+  bool _isNotificationsEnabled = false; 
+  static const Color _brandColor = Color(0xFF4A5FBC); 
+  static final Color _hoverColor = _brandColor.withOpacity(0.08);
+  static const Color _lightLavenderColor = Color(0xFFD0D0FF); 
+
+
+  // 1. منطق تسجيل الخروج
   Future<void> _handleLogout(BuildContext context) async {
-    final l10n = AppLocalizations.of(context)!; // استيراد الترجمة
+    final l10n = AppLocalizations.of(context)!;
 
     bool? confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(l10n.logoutOption), // استخدام الترجمة
-        content: Text('Are you sure you want to log out?'), // يمكن ترجمة هذا أيضاً
+        title: Text(l10n.logoutOption),
+        content: const Text('Are you sure you want to log out?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -37,7 +46,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(l10n.logoutOption, style: TextStyle(color: Colors.red)),
+            child: Text(l10n.logoutOption, style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -54,26 +63,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // منطق تغيير اللغة والثيم
-  void _toggleTheme(AppSettingsNotifier settings) {
-    ThemeMode newMode = settings.themeMode == ThemeMode.light 
-        ? ThemeMode.dark 
-        : ThemeMode.light;
+  // منطق تغيير الثيم
+  void _toggleTheme(AppSettingsNotifier settings, bool value) {
+    ThemeMode newMode = value ? ThemeMode.dark : ThemeMode.light;
     settings.toggleTheme(newMode);
     ScaffoldMessenger.of(context).showSnackBar(
-       SnackBar(content: Text('Theme changed to ${newMode == ThemeMode.light ? "Light" : "Dark"}')),
+        SnackBar(content: Text('Theme changed to ${newMode == ThemeMode.light ? "Light Mode" : "Dark Mode"}')),
     );
   }
   
-  void _changeLanguage(AppSettingsNotifier settings) async {
-    final l10n = AppLocalizations.of(context)!;
-    final newLang = settings.currentLanguageName == 'English' ? 'Arabic' : 'English';
+  // منطق تغيير اللغة
+  void _changeLanguage(AppSettingsNotifier settings, AppLocalizations l10n) async {
+    final targetLangName = settings.currentLanguageName == 'English' ? 'Arabic' : 'English';
     
     bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.languageOption),
-        content: Text('Are you sure you want to switch to $newLang?'),
+        content: Text('Are you sure you want to switch to $targetLangName?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -88,11 +95,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
 
     if (confirmed == true) {
-      settings.toggleLanguage(); // سيؤدي إلى إعادة بناء MaterialApp
+      settings.toggleLanguage(); 
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Language switched to ${settings.currentLanguageName}')),
       );
     }
+  }
+  
+  void _toggleNotifications(bool value) {
+    setState(() {
+      _isNotificationsEnabled = value;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Notifications are ${_isNotificationsEnabled ? "ON" : "OFF"}')),
+    );
   }
 
   Future<Map<String, dynamic>?> _fetchUserData() async {
@@ -101,20 +117,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
         await FirebaseFirestore.instance.collection('Users').doc(widget.userId).get();
     return doc.data();
   }
-
+  
   @override
   Widget build(BuildContext context) {
     bool isJobSeeker = widget.userType == 'JobSeeker';
-    Color brandColor = const Color(0xFF4A5FBC);
     
-    // ⬇️ قراءة حالة الإعدادات والترجمة
     final settings = Provider.of<AppSettingsNotifier>(context);
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context)!; 
+
+    final currentLangIsArabic = settings.currentLanguageName == 'Arabic';
+    final targetLang = settings.currentLanguageName == 'English' ? 'Arabic' : 'English';
 
     return Scaffold(
+      backgroundColor: Colors.white, // خلفية الشاشة بيضاء
       appBar: AppBar(
-        title: Text(l10n.settingsTitle), // استخدام الترجمة
-        backgroundColor: brandColor,
+        title: Text(l10n.settingsTitle),
+        backgroundColor: _SettingsItem._brandColor,
       ),
       body: FutureBuilder<Map<String, dynamic>?>(
         future: _fetchUserData(),
@@ -124,14 +142,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           }
           
           final userData = snapshot.data ?? {};
-          
-          final mainName = isJobSeeker
-              ? (userData['Name'] ?? l10n.fullNameLabel)
-              : (userData['CompanyName'] ?? l10n.companyNameLabel);
-          final email = userData['Email'] ?? 'N/A';
-          final phone = userData['Phone'] ?? 'N/A';
-          
-          String displayPhone = phone.startsWith('+966') ? '0${phone.substring(4)}' : phone;
           
           String accountStatus = userData['AccountStatus'] ?? 'Unknown';
           Color statusColor = Colors.grey;
@@ -150,127 +160,121 @@ class _SettingsScreenState extends State<SettingsScreen> {
             }
           }
 
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              // 1. قسم الإعدادات العامة
-              _SectionTitle(l10n.generalSettingsSection),
-              
-              // 1.1 اللغة 
-              Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  leading: const Icon(Icons.language, color: Colors.blue),
-                  title: Text(l10n.languageOption),
-                  subtitle: Text(settings.currentLanguageName),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _changeLanguage(settings),
-                ),
+          // ⬇️ تعديل الـ Padding ليناسب بداية المربع البيضاوي من منتصف الصفحة
+          return Padding( 
+            padding: const EdgeInsets.fromLTRB(20.0, 120.0, 20.0, 25.0), 
+            child: Container( 
+              decoration: BoxDecoration(
+                color: _lightLavenderColor, // اللون البنفسجي الجديد
+                borderRadius: BorderRadius.circular(20), 
               ),
-
-              // 1.2 الثيم 
-              Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  leading: const Icon(Icons.light_mode_outlined, color: Colors.orange),
-                  title: Text(l10n.themeOption),
-                  subtitle: Text(settings.themeMode == ThemeMode.light ? 'Light Mode' : 'Dark Mode'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _toggleTheme(settings),
-                ),
-              ),
-
-              // 1.3 الإشعارات
-              Card(
-                margin: const EdgeInsets.only(bottom: 16),
-                child: ListTile(
-                  leading: const Icon(Icons.notifications_outlined, color: Colors.purple),
-                  title: Text(l10n.notificationsOption),
-                  subtitle: Text(l10n.manageAlertsSubtitle),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                     ScaffoldMessenger.of(context).showSnackBar(
-                       const SnackBar(content: Text('Notification settings: Future feature.')),
-                     );
-                  },
-                ),
-              ),
-              
-              const Divider(height: 30),
-
-              // 2. قسم الحساب والأمان
-              _SectionTitle(l10n.accountSecuritySection),
-              
-              // 2.1 تغيير كلمة المرور
-              Card(
-                margin: const EdgeInsets.only(bottom: 16),
-                child: ListTile(
-                  leading: const Icon(Icons.lock_outline, color: Color(0xFF4A5FBC)),
-                  title: Text(l10n.changePasswordOption),
-                  subtitle: Text(l10n.resetPasswordSubtitle),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.pushNamed(context, '/forgot-password');
-                  },
-                ),
-              ),
-
-              // 2.2 حالة توثيق الشركة
-              if (!isJobSeeker)
-                Card(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  child: ListTile(
-                    leading: Icon(Icons.verified_user_outlined, color: statusColor),
-                    title: Text(l10n.accountVerificationStatus),
-                    subtitle: Text(accountStatus),
-                    trailing: Text(
-                      l10n.viewOnlyText,
-                      style: TextStyle(
-                          color: statusColor, fontWeight: FontWeight.bold),
-                    ),
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content:
-                                Text('Verification status managed by Admin.')),
-                      );
-                    },
+              child: ListView(
+                padding: EdgeInsets.zero, 
+                children: [
+                  
+                  // 1.1 اللغة 
+                  _SettingsSwitchItem(
+                    icon: Icons.language,
+                    iconColor: Colors.blue,
+                    title: 'Switch Language to $targetLang',
+                    value: currentLangIsArabic,
+                    onChanged: (value) => _changeLanguage(settings, l10n),
+                    switchColor: _SettingsItem._brandColor,
+                    subtitle: Text('Current: ${settings.currentLanguageName}'), 
+                    isTitleBold: true, 
                   ),
-                ),
-              
-              // 2.3 معلومات الحساب (Account Details)
-              _SectionTitle(l10n.myAccountDetailsSection),
-              
-              Card(
-                margin: const EdgeInsets.only(bottom: 30),
-                child: Column(
-                  children: [
-                    ListTile(
-                      leading: const Icon(Icons.account_circle, color: Colors.teal),
-                      title: Text(isJobSeeker ? l10n.fullNameLabel : l10n.companyNameLabel),
-                      subtitle: Text(mainName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.email_outlined, color: Colors.teal),
-                      title: Text(l10n.registeredEmailLabel),
-                      subtitle: Text(email),
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.phone_outlined, color: Colors.teal),
-                      title: Text(l10n.contactPhoneLabel),
-                      subtitle: Text(displayPhone),
-                    ),
-                  ],
-                ),
-              ),
 
-              // 3. تسجيل الخروج
-              ListTile(
-                leading: const Icon(Icons.logout, color: Colors.red),
-                title: Text(l10n.logoutOption, style: TextStyle(color: Colors.red)),
-                onTap: () => _handleLogout(context),
+                  // 1.2 الثيم
+                  _SettingsSwitchItem(
+                    title: settings.themeMode == ThemeMode.dark ? 'Dark Mode' : 'Light Mode',
+                    icon: Icons.light_mode,
+                    iconColor: Colors.orange,
+                    value: settings.themeMode == ThemeMode.dark,
+                    onChanged: (value) => _toggleTheme(settings, value),
+                    switchColor: _SettingsItem._brandColor,
+                    isTitleBold: true, 
+                  ),
+
+                  // 1.3 الإشعارات
+                  _SettingsSwitchItem(
+                    title: l10n.notificationsOption,
+                    icon: Icons.notifications_none,
+                    iconColor: Colors.purple,
+                    value: _isNotificationsEnabled,
+                    onChanged: _toggleNotifications,
+                    switchColor: _SettingsItem._brandColor,
+                    subtitle: Text(l10n.manageAlertsSubtitle),
+                    isTitleBold: true, 
+                  ),
+                  
+                  // 2.1 تغيير كلمة المرور
+                  _SettingsItem(
+                    title: l10n.changePasswordOption,
+                    icon: Icons.lock_outline,
+                    iconColor: _SettingsItem._brandColor,
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.pushNamed(context, '/forgot-password'),
+                    subtitle: Text(l10n.resetPasswordSubtitle),
+                    isTitleBold: true, 
+                  ),
+
+                  // 2.2 الحساب (Account - توجيه لصفحة عادية)
+                  _SettingsItem(
+                    title: 'Account',
+                    icon: Icons.account_circle,
+                    iconColor: Colors.teal,
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                        Navigator.pushNamed(
+                          context, 
+                          '/account-details',
+                          arguments: {'userId': widget.userId, 'userType': widget.userType}
+                        );
+                    },
+                    subtitle: const Text('View your registered details'),
+                    isTitleBold: true, 
+                  ),
+                
+                  // 2.3 حالة توثيق الشركة (للشركات فقط)
+                  if (!isJobSeeker)
+                    _SettingsItem(
+                      title: l10n.accountVerificationStatus,
+                      icon: Icons.verified_user_outlined,
+                      iconColor: statusColor,
+                      trailing: Text(l10n.viewOnlyText, style: TextStyle(color: statusColor, fontWeight: FontWeight.bold)),
+                      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Verification status managed by Admin.')),
+                      ),
+                      isTitleBold: true, 
+                    ),
+                  
+                  // 2.4 حول (About)
+                  _SettingsItem(
+                    title: 'About',
+                    icon: Icons.info_outline,
+                    iconColor: Colors.lightGreen,
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('App version and information'))),
+                    subtitle: const Text('App version and information'),
+                    isTitleBold: true, 
+                  ),
+                  
+                  // 3. تسجيل الخروج (Logout) 
+                  _SettingsItem(
+                    title: l10n.logoutOption,
+                    icon: Icons.logout,
+                    iconColor: Colors.red,
+                    trailing: null,
+                    onTap: () => _handleLogout(context),
+                    isTitleBold: true, 
+                  ),
+                  
+                  // مسافة سفلية داخل المربع البيضاوي
+                  const SizedBox(height: 10),
+                ],
               ),
-            ],
+            ),
           );
         },
       ),
@@ -278,23 +282,134 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
-// ويدجت عنوان القسم
+// ⬇️ ويدجت لعرض التفاصيل داخل الحوار
+class _DetailRow extends StatelessWidget {
+  final String label;
+  final String value;
+  const _DetailRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ⬇️ ويدجت لعنصر إعداد عادي (سهم) - يطبق Hover
+class _SettingsItem extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final Color iconColor;
+  final Widget? trailing;
+  final VoidCallback onTap;
+  final Widget? subtitle;
+  final bool isTitleBold; 
+
+  const _SettingsItem({
+    required this.title,
+    required this.icon,
+    required this.iconColor,
+    this.trailing,
+    required this.onTap,
+    this.subtitle,
+    this.isTitleBold = false, 
+  });
+
+  static const Color _brandColor = Color(0xFF4A5FBC);
+  static final Color _hoverColor = _brandColor.withOpacity(0.08);
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      hoverColor: _hoverColor, 
+      child: ListTile(
+        visualDensity: VisualDensity.compact, 
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16), 
+        leading: Icon(icon, color: iconColor),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontWeight: isTitleBold ? FontWeight.bold : FontWeight.normal, 
+          ),
+        ),
+        trailing: trailing,
+        subtitle: subtitle,
+      ),
+    );
+  }
+}
+
+// ⬇️ ويدجت لعنصر إعداد مع زر تبديل (Switch) - يطبق Hover
+class _SettingsSwitchItem extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final Color iconColor;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  final Color switchColor;
+  final Widget? subtitle;
+  final bool isTitleBold; 
+
+  const _SettingsSwitchItem({
+    required this.title,
+    required this.icon,
+    required this.iconColor,
+    required this.value,
+    required this.onChanged,
+    required this.switchColor,
+    this.subtitle,
+    this.isTitleBold = false, 
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => onChanged(!value), 
+      hoverColor: _SettingsItem._hoverColor, 
+      child: ListTile(
+        visualDensity: VisualDensity.compact, 
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16), 
+        leading: Icon(icon, color: iconColor),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontWeight: isTitleBold ? FontWeight.bold : FontWeight.normal, 
+          ),
+        ),
+        subtitle: subtitle,
+        trailing: Switch(
+          value: value,
+          onChanged: onChanged,
+          activeColor: switchColor,
+        ),
+      ),
+    );
+  }
+}
+
+// ويدجت عنوان القسم (تم إزالته من الاستخدام)
 class _SectionTitle extends StatelessWidget {
   final String title;
   const _SectionTitle(this.title);
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: Colors.grey[700],
-        ),
-      ),
-    );
+    return const SizedBox.shrink(); 
   }
 }
