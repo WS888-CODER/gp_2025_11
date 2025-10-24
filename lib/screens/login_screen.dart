@@ -53,10 +53,19 @@ class _LoginScreenState extends State<LoginScreen> {
   void _showSuccessSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
+        content: Text(
+          message,
+          style: TextStyle(
+            color: Colors.white, // ✅ نص أبيض
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center, // ✅ وسطه مثل الملك
+        ),
+        backgroundColor: Color(0xFFFF7B7B).withOpacity(0.8), // ✅ اللون حقك
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
       ),
     );
   }
@@ -127,7 +136,7 @@ class _LoginScreenState extends State<LoginScreen> {
         final otp = _generateOTP();
         final ok = await _sendOTPEmail(_emailController.text.trim(), otp);
         if (ok) {
-          _showSuccessSnackBar('✅ Verification code sent to your email');
+          _showSuccessSnackBar('Verification code sent to your email');
           Navigator.pushReplacementNamed(
             context,
             '/otp-verification',
@@ -210,15 +219,12 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SizedBox.expand(
         child: Stack(
           children: [
-            // خلفية office.png
             Positioned.fill(
               child: Image.asset(
                 'assets/images/office.png',
                 fit: BoxFit.cover,
               ),
             ),
-
-            // الموجة البنفسجية (3/4 الشاشة)
             Positioned(
               bottom: 0,
               left: 0,
@@ -228,8 +234,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 painter: WavePainter(),
               ),
             ),
-
-            // لوجو j_filled في أعلى اليمين
             Positioned(
               top: 50,
               right: 30,
@@ -240,8 +244,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 fit: BoxFit.contain,
               ),
             ),
-
-            // المحتوى - نزّلناه أكثر
             SafeArea(
               child: SingleChildScrollView(
                 child: Padding(
@@ -251,9 +253,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: 360), // نزّلناه أكثر (كان 300)
-
-                        // Log In
+                        const SizedBox(height: 360),
                         const Text(
                           'Log In',
                           style: TextStyle(
@@ -262,10 +262,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             color: Colors.white,
                           ),
                         ),
-
                         const SizedBox(height: 40),
-
-                        // Email
                         const Text(
                           'Email',
                           style: TextStyle(
@@ -306,10 +303,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             return null;
                           },
                         ),
-
                         const SizedBox(height: 30),
-
-                        // Password
                         const Text(
                           'Password',
                           style: TextStyle(
@@ -359,10 +353,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             return null;
                           },
                         ),
-
                         const SizedBox(height: 16),
-
-                        // Forgot Password
                         Align(
                           alignment: Alignment.centerRight,
                           child: GestureDetector(
@@ -378,10 +369,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ),
-
                         const SizedBox(height: 60),
-
-                        // Login Button
                         Align(
                           alignment: Alignment.centerRight,
                           child: Container(
@@ -411,11 +399,25 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ),
-
                         const SizedBox(height: 40),
                       ],
                     ),
                   ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 50,
+              left: 30,
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                icon: const Icon(
+                  Icons.arrow_back,
+                  color: Color(0xFFFF7B7B),
+                  size: 32,
                 ),
               ),
             ),
@@ -426,7 +428,6 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-// رسم الموجة البنفسجية من تحت
 class WavePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
