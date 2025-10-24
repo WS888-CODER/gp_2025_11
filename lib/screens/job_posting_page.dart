@@ -198,15 +198,92 @@ class _JobPostingPageState extends State<JobPostingPage> {
     }
   }
 
-  void _showErrorAndGoBack(String message) {
+  void _showSuccessSnackBar(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 3),
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        backgroundColor: const Color(0xFF4CAF50).withOpacity(0.8), // Green
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
       ),
     );
+  }
+
+  void _showErrorSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        backgroundColor: const Color(0xFFFF7B7B).withOpacity(0.8), // Red
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
+  }
+
+  void _showWarningSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        backgroundColor: const Color(0xFFFF7B7B).withOpacity(0.8), // Same red as team leader
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
+  }
+
+  void _showInfoSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.8), // Brand purple
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
+  }
+
+  void _showErrorAndGoBack(String message) {
+    _showErrorSnackBar(message);
     Future.delayed(const Duration(seconds: 1), () {
       if (mounted) Navigator.pop(context);
     });
@@ -240,7 +317,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: const Color(0xFF49469F), // Selected date background (purple)
+              primary: const Color(0xFF4A5FBC), // Selected date background (purple)
               onPrimary: Colors.white, // Selected date text
               onSurface: Colors.black, // Default text color
             ),
@@ -248,7 +325,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
               todayBorder: BorderSide.none,
               todayBackgroundColor: MaterialStateColor.resolveWith((states) {
                 if (states.contains(MaterialState.selected)) {
-                  return const Color(0xFF49469F); // Selected today background (purple)
+                  return const Color(0xFF4A5FBC); // Selected today background (purple)
                 }
                 return Colors.grey.shade300; // Unselected today background
               }),
@@ -292,7 +369,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: const Color(0xFF49469F), // Selected date background (purple)
+              primary: const Color(0xFF4A5FBC), // Selected date background (purple)
               onPrimary: Colors.white, // Selected date text
               onSurface: Colors.black, // Default text color
             ),
@@ -300,7 +377,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
               todayBorder: BorderSide.none,
               todayBackgroundColor: MaterialStateColor.resolveWith((states) {
                 if (states.contains(MaterialState.selected)) {
-                  return const Color(0xFF49469F); // Selected today background (purple)
+                  return const Color(0xFF4A5FBC); // Selected today background (purple)
                 }
                 return Colors.grey.shade300; // Unselected today background
               }),
@@ -323,9 +400,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
 
   void _addRequirement() {
     if (_requirements.length >= 15) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Maximum 15 requirements allowed')),
-      );
+      _showWarningSnackBar('Maximum 15 requirements allowed');
       return;
     }
     if (_requirementController.text.trim().isNotEmpty) {
@@ -436,32 +511,24 @@ class _JobPostingPageState extends State<JobPostingPage> {
 
   Future<void> _generateJobPost() async {
     if (_jobTitleController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter job title first')),
-      );
+      _showWarningSnackBar('Please enter job title first');
       return;
     }
 
     if (_positionController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter position first')),
-      );
+      _showWarningSnackBar('Please enter position first');
       return;
     }
 
     if (_specialityController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter speciality first')),
-      );
+      _showWarningSnackBar('Please enter speciality first');
       return;
     }
 
     // Check if user is logged in
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You must be logged in to use AI generation')),
-      );
+      _showWarningSnackBar('You must be logged in to use AI generation');
       return;
     }
 
@@ -473,9 +540,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
           .get();
 
       if (!userDoc.exists) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('User data not found')),
-        );
+        _showErrorSnackBar('User data not found');
         return;
       }
 
@@ -511,32 +576,20 @@ class _JobPostingPageState extends State<JobPostingPage> {
         jobPostingCount = 2;
 
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Daily AI usage limit has been reset!'),
-            duration: Duration(seconds: 2),
-          ),
-        );
+        _showInfoSnackBar('Daily AI usage limit has been reset!');
       } else {
         jobPostingCount = (aiUsage?['JobPosting'] ?? 0) as int;
       }
 
       if (jobPostingCount <= 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('You have reached your AI generation limit for job postings. Resets tomorrow!'),
-            duration: Duration(seconds: 3),
-          ),
-        );
+        _showWarningSnackBar('You have reached your AI generation limit for job postings. Resets tomorrow!');
         return;
       }
 
       // Call your Cloud Function from firebase RUNNING THIS REQUIRES WIFI
       final url = Uri.parse('https://us-central1-jadeer-b4953.cloudfunctions.net/generateJobPost');
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Generating job description...')),
-      );
+      _showInfoSnackBar('Generating job description...');
 
       final response = await http.post(
         url,
@@ -577,21 +630,13 @@ class _JobPostingPageState extends State<JobPostingPage> {
           _aiCreditsRemaining = jobPostingCount - 1;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('AI job description generated! (${jobPostingCount - 1} uses remaining)'),
-          ),
-        );
+        _showSuccessSnackBar('AI job description generated! (${jobPostingCount - 1} uses remaining)');
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: ${response.body}')),
-        );
+        _showErrorSnackBar('Failed: ${response.body}');
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      _showErrorSnackBar('Error: $e');
     }
   }
 
@@ -602,18 +647,14 @@ class _JobPostingPageState extends State<JobPostingPage> {
 
     // Check required fields
     if (_startDate == null || _endDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select start and end dates')),
-      );
+      _showWarningSnackBar('Please select start and end dates');
       return;
     }
 
     // Get current user ID
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You must be logged in to post a job')),
-      );
+      _showWarningSnackBar('You must be logged in to post a job');
       return;
     }
 
@@ -628,15 +669,11 @@ class _JobPostingPageState extends State<JobPostingPage> {
           'StartDate': _startDate,
           'EndDate': _endDate,
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Job dates updated successfully')),
-        );
+        _showSuccessSnackBar('Job dates updated successfully');
       } else {
         // CREATE MODE - Validate requirements first
         if (_requirements.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please add at least one requirement')),
-          );
+          _showWarningSnackBar('Please add at least one requirement');
           return;
         }
 
@@ -663,18 +700,14 @@ class _JobPostingPageState extends State<JobPostingPage> {
           'JobID': jobId,
           'JobStatus': 'Open',
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Job created successfully')),
-        );
+        _showSuccessSnackBar('Job created successfully');
       }
 
       if (!mounted) return;
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      _showErrorSnackBar('Error: $e');
     }
   }
 
@@ -711,13 +744,17 @@ class _JobPostingPageState extends State<JobPostingPage> {
     final shouldPop = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
         title: const Text(
           'Abandon Changes?',
           textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         content: const Text(
           'Are you sure you want to go back? Any unsaved changes will be lost.',
           textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white),
         ),
         contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
         actionsPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -726,14 +763,14 @@ class _JobPostingPageState extends State<JobPostingPage> {
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             style: TextButton.styleFrom(
-              backgroundColor: const Color(0xFFF6F5FB),
-              foregroundColor: Colors.black,
+              backgroundColor: Colors.white.withOpacity(0.9),
+              foregroundColor: const Color(0xFF4A5FBC),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
             ),
-            child: const Text('Cancel'),
+            child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
           const SizedBox(width: 12),
           TextButton(
@@ -746,7 +783,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                 borderRadius: BorderRadius.circular(20),
               ),
             ),
-            child: const Text('Leave'),
+            child: const Text('Leave', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -767,6 +804,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
         child: Scaffold(
           backgroundColor: const Color(0xFFF6F5FB),
           appBar: AppBar(
+            backgroundColor: const Color(0xFF4A5FBC),
+            foregroundColor: Colors.white,
             title: Text(_isEdit ? 'Edit Job' : 'Create Job Posting'),
           ),
           body: Form(
@@ -935,29 +974,36 @@ class _JobPostingPageState extends State<JobPostingPage> {
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [
-                              Color(0xFF49469F), // Deep purple
-                              Color(0xFF5752B8), // Mid purple
-                              Color(0xFF655DD1), // Brighter purple
-                              Color(0xFF7368DD), // Light purple
+                              Color(0xFF6B4CE6), // Vibrant purple
+                              Color(0xFF4A5FBC), // Brand purple
+                              Color(0xFF3B8FD9), // Blue accent
                             ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
                           borderRadius: BorderRadius.circular(30),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF6B4CE6).withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
                         ),
                         child: TextButton.icon(
                           onPressed: _generateJobPost,
-                          icon: const Icon(Icons.auto_awesome, size: 18, color: Colors.white),
+                          icon: const Icon(Icons.auto_awesome, size: 20, color: Colors.white),
                           label: const Text(
                             'Generate with AI',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                               color: Colors.white,
+                              letterSpacing: 0.5,
                             ),
                           ),
                           style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30),
                             ),
@@ -1095,6 +1141,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
                           ElevatedButton(
                             onPressed: _requirements.length >= 15 ? null : _addRequirement,
                             style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF4A5FBC),
+                              foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(30),
                               ),
@@ -1246,6 +1294,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
             ElevatedButton(
               onPressed: _submitForm,
               style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF4A5FBC),
+                foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),

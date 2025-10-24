@@ -37,16 +37,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
     bool? confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+<<<<<<< HEAD
         title: Text(l10n.logoutOption),
         content: const Text('Are you sure you want to log out?'),
+=======
+        title: Text(
+          l10n.logoutOption,
+          textAlign: TextAlign.center,
+        ),
+        content: const Text(
+          'Are you sure you want to log out?',
+          textAlign: TextAlign.center,
+        ),
+        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        actionsAlignment: MainAxisAlignment.center,
+>>>>>>> 652cf30690840e06bf606cdfee0e39344e5a178d
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
+            style: TextButton.styleFrom(
+              backgroundColor: const Color(0xFFF6F5FB),
+              foregroundColor: Colors.black,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
             child: const Text('Cancel'),
           ),
+          const SizedBox(width: 12),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
+<<<<<<< HEAD
             child: Text(l10n.logoutOption, style: const TextStyle(color: Colors.red)),
+=======
+            style: TextButton.styleFrom(
+              backgroundColor: const Color(0xFFFC686A),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            child: Text(l10n.logoutOption),
+>>>>>>> 652cf30690840e06bf606cdfee0e39344e5a178d
           ),
         ],
       ),
@@ -79,15 +114,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
     bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+<<<<<<< HEAD
         title: Text(l10n.languageOption),
         content: Text('Are you sure you want to switch to $targetLangName?'),
+=======
+        title: Text(
+          l10n.languageOption,
+          textAlign: TextAlign.center,
+        ),
+        content: Text(
+          'Are you sure you want to switch to $newLang?',
+          textAlign: TextAlign.center,
+        ),
+        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        actionsAlignment: MainAxisAlignment.center,
+>>>>>>> 652cf30690840e06bf606cdfee0e39344e5a178d
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
+            style: TextButton.styleFrom(
+              backgroundColor: const Color(0xFFF6F5FB),
+              foregroundColor: Colors.black,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
             child: const Text('Cancel'),
           ),
+          const SizedBox(width: 12),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(
+              backgroundColor: const Color(0xFF4A5FBC),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
             child: const Text('Confirm'),
           ),
         ],
@@ -129,7 +195,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final targetLang = settings.currentLanguageName == 'English' ? 'Arabic' : 'English';
 
     return Scaffold(
+<<<<<<< HEAD
       backgroundColor: Colors.white, // خلفية الشاشة بيضاء
+=======
+      backgroundColor: const Color(0xFFF7F6FC),
+>>>>>>> 652cf30690840e06bf606cdfee0e39344e5a178d
       appBar: AppBar(
         title: Text(l10n.settingsTitle),
         backgroundColor: _SettingsItem._brandColor,
@@ -168,6 +238,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 color: _lightLavenderColor, // اللون البنفسجي الجديد
                 borderRadius: BorderRadius.circular(20), 
               ),
+<<<<<<< HEAD
               child: ListView(
                 padding: EdgeInsets.zero, 
                 children: [
@@ -182,6 +253,76 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     switchColor: _SettingsItem._brandColor,
                     subtitle: Text('Current: ${settings.currentLanguageName}'), 
                     isTitleBold: true, 
+=======
+
+              // 1.2 الثيم 
+              Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  leading: const Icon(Icons.light_mode_outlined, color: Colors.orange),
+                  title: Text(l10n.themeOption),
+                  subtitle: Text(settings.themeMode == ThemeMode.light ? 'Light Mode' : 'Dark Mode'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _toggleTheme(settings),
+                ),
+              ),
+
+              // 1.3 الإشعارات
+              Card(
+                margin: const EdgeInsets.only(bottom: 16),
+                child: ListTile(
+                  leading: const Icon(Icons.notifications_outlined, color: Colors.purple),
+                  title: Text(l10n.notificationsOption),
+                  subtitle: Text(l10n.manageAlertsSubtitle),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                     ScaffoldMessenger.of(context).showSnackBar(
+                       const SnackBar(content: Text('Notification settings: Future feature.')),
+                     );
+                  },
+                ),
+              ),
+              
+
+
+              // 2. قسم الحساب والأمان
+              _SectionTitle(l10n.accountSecuritySection),
+              
+              // 2.1 تغيير كلمة المرور
+              Card(
+                margin: const EdgeInsets.only(bottom: 16),
+                child: ListTile(
+                  leading: const Icon(Icons.lock_outline, color: Color(0xFF4A5FBC)),
+                  title: Text(l10n.changePasswordOption),
+                  subtitle: Text(l10n.resetPasswordSubtitle),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.pushNamed(context, '/forgot-password');
+                  },
+                ),
+              ),
+
+              // 2.2 حالة توثيق الشركة
+              if (!isJobSeeker)
+                Card(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  child: ListTile(
+                    leading: Icon(Icons.verified_user_outlined, color: statusColor),
+                    title: Text(l10n.accountVerificationStatus),
+                    subtitle: Text(accountStatus),
+                    trailing: Text(
+                      l10n.viewOnlyText,
+                      style: TextStyle(
+                          color: statusColor, fontWeight: FontWeight.bold),
+                    ),
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content:
+                                Text('Verification status managed by Admin.')),
+                      );
+                    },
+>>>>>>> 652cf30690840e06bf606cdfee0e39344e5a178d
                   ),
 
                   // 1.2 الثيم

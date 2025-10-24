@@ -206,23 +206,36 @@ class _SignupScreenState extends State<SignupScreen> {
           return false;
         }
         if (!_isValidEmail(_companyEmailController.text.trim())) {
-          setState(() => _companyEmailError = 'Invalid email address');
+          setState(() => _companyEmailError = 'Invalid email format');
           return false;
         }
-        setState(() => _isLoading = true);
-        bool isUnique =
-            await _isEmailUnique(_companyEmailController.text.trim());
-        setState(() => _isLoading = false);
+        bool isUnique = await _isEmailUnique(_companyEmailController.text);
         if (!isUnique) {
-          setState(
-              () => _companyEmailError = 'This email is already registered');
+          setState(() =>
+              _companyEmailError = 'Email already in use. Please log in.');
+          return false;
+        }
+      } else if (_currentStep == 2) {
+        // Step 3: Password validation
+        if (_companyPasswordController.text.isEmpty) {
+          _showErrorDialog('Please enter a password');
+          return false;
+        }
+        if (!_isStrongPassword(_companyPasswordController.text)) {
+          String req =
+              _getPasswordRequirements(_companyPasswordController.text);
+          _showErrorDialog(req);
+          return false;
+        }
+        if (_companyPasswordController.text !=
+            _companyConfirmPasswordController.text) {
+          _showErrorDialog('Passwords do not match');
           return false;
         }
       }
     } else {
       // JobSeeker validation
       if (_currentStep == 0) {
-        // Step 1: Full Name + Email
         if (_seekerNameController.text.trim().isEmpty) {
           setState(() => _seekerNameError = 'Please enter your full name');
           return false;
@@ -236,16 +249,28 @@ class _SignupScreenState extends State<SignupScreen> {
           return false;
         }
         if (!_isValidEmail(_seekerEmailController.text.trim())) {
-          setState(() => _seekerEmailError = 'Invalid email address');
+          setState(() => _seekerEmailError = 'Invalid email format');
           return false;
         }
-        setState(() => _isLoading = true);
-        bool isUnique =
-            await _isEmailUnique(_seekerEmailController.text.trim());
-        setState(() => _isLoading = false);
+        bool isUnique = await _isEmailUnique(_seekerEmailController.text);
         if (!isUnique) {
           setState(
-              () => _seekerEmailError = 'This email is already registered');
+              () => _seekerEmailError = 'Email already in use. Please log in.');
+          return false;
+        }
+      } else if (_currentStep == 1) {
+        if (_seekerPasswordController.text.isEmpty) {
+          _showErrorDialog('Please enter a password');
+          return false;
+        }
+        if (!_isStrongPassword(_seekerPasswordController.text)) {
+          String req = _getPasswordRequirements(_seekerPasswordController.text);
+          _showErrorDialog(req);
+          return false;
+        }
+        if (_seekerPasswordController.text !=
+            _seekerConfirmPasswordController.text) {
+          _showErrorDialog('Passwords do not match');
           return false;
         }
       }
@@ -253,215 +278,241 @@ class _SignupScreenState extends State<SignupScreen> {
     return true;
   }
 
-  Future<void> _handleJobSeekerSignup() async {
-    setState(() => _isLoading = true);
-    try {
-      if (!_isStrongPassword(_seekerPasswordController.text)) {
-        _showErrorDialog(
-            _getPasswordRequirements(_seekerPasswordController.text));
-        setState(() => _isLoading = false);
-        return;
-      }
-      if (_seekerPasswordController.text !=
-          _seekerConfirmPasswordController.text) {
-        _showErrorDialog('Passwords do not match');
-        setState(() => _isLoading = false);
-        return;
-      }
-      UserCredential userCredential =
-          await _auth.createUserWithEmailAndPassword(
-        email: _seekerEmailController.text.trim(),
-        password: _seekerPasswordController.text.trim(),
-      );
-      String userId = userCredential.user!.uid;
-      await _firestore.collection('Users').doc(userId).set({
-        'UserID': userId,
-        'UserType': 'JobSeeker',
-        'Email': _seekerEmailController.text.trim().toLowerCase(),
-        'Name': _seekerNameController.text.trim(),
-        'DoB': null,
-        'Nationality': null,
-        'Phone': null,
-        'PhotoURL': null,
-        'CVURL': null,
-        'IsProfileComplete': false,
-        'CVKeywords': null,
-        'ContactEmail': null,
-        'IsEmailVerified': false,
-        'PhotoPath': null,
-        'CVPath': null,
-        'Date': FieldValue.serverTimestamp(),
-        'AiUsage': {
-          'LastReset': FieldValue.serverTimestamp(),
-          'CvEnhancement': 2,
-          'MockInterview': 2,
-        },
-      });
-      String otp = _generateOTP();
-      bool otpSent = await _sendOTPEmail(
-          _seekerEmailController.text.trim(), otp, 'JobSeeker');
-      if (otpSent) {
-        Navigator.pushReplacementNamed(context, '/otp-verification',
-            arguments: {
-              'email': _seekerEmailController.text.trim(),
-              'userId': userId,
-              'userType': 'JobSeeker',
-            });
-      } else {
-        await userCredential.user!.delete();
-        await _firestore.collection('Users').doc(userId).delete();
-        _showErrorDialog('Failed to send verification code');
-      }
-    } on FirebaseAuthException catch (e) {
-      String errorMessage = 'An error occurred';
-      if (e.code == 'email-already-in-use') {
-        errorMessage = 'This email is already registered';
-      } else if (e.code == 'weak-password') {
-        errorMessage = 'Password is too weak';
-      }
-      _showErrorDialog(errorMessage);
-    } catch (e) {
-      _showErrorDialog('Unexpected error: ${e.toString()}');
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
   Future<void> _handleCompanySignup() async {
-    setState(() => _isLoading = true);
     try {
-      if (!_isStrongPassword(_companyPasswordController.text)) {
-        _showErrorDialog(
-            _getPasswordRequirements(_companyPasswordController.text));
-        setState(() => _isLoading = false);
-        return;
-      }
-      if (_companyPasswordController.text !=
-          _companyConfirmPasswordController.text) {
-        _showErrorDialog('Passwords do not match');
-        setState(() => _isLoading = false);
-        return;
-      }
       UserCredential userCredential =
           await _auth.createUserWithEmailAndPassword(
         email: _companyEmailController.text.trim(),
         password: _companyPasswordController.text.trim(),
       );
       String userId = userCredential.user!.uid;
+      String email = _companyEmailController.text.trim().toLowerCase();
       await _firestore.collection('Users').doc(userId).set({
-        'UserID': userId,
-        'UserType': 'Company',
-        'Email': _companyEmailController.text.trim().toLowerCase(),
-        'Name': _companyFullNameController.text.trim(),
         'CompanyName': _companyNameController.text.trim(),
-        'Phone': null,
-        'PhotoURL': null,
-        'IsProfileComplete': false,
-        'ContactEmail': null,
-        'Location': null,
-        'Description': null,
+        'Name': _companyFullNameController.text.trim(),
+        'Email': email,
+        'UserType': 'Company',
         'AccountStatus': 'Pending',
         'IsEmailVerified': false,
-        'PhotoPath': null,
-        'Date': FieldValue.serverTimestamp(),
-        'AiUsage': {
-          'LastReset': FieldValue.serverTimestamp(),
-          'JobPosting': 2,
-        },
+        'CreatedAt': FieldValue.serverTimestamp(),
       });
       String otp = _generateOTP();
-      bool otpSent = await _sendOTPEmail(
-          _companyEmailController.text.trim(), otp, 'Company');
-      if (otpSent) {
-        try {
-          final functions =
-              FirebaseFunctions.instanceFor(region: 'us-central1');
-          final notifyAdmin = functions.httpsCallable('notifyAdminNewCompany');
-          await notifyAdmin.call({
-            'companyName': _companyNameController.text.trim(),
-            'companyEmail': _companyEmailController.text.trim(),
-          });
-          print('✅ Admin notified successfully');
-        } catch (e) {
-          print('⚠️ Failed to notify admin: $e');
-        }
-        Navigator.pushReplacementNamed(context, '/otp-verification',
-            arguments: {
-              'email': _companyEmailController.text.trim(),
-              'userId': userId,
-              'userType': 'Company',
-            });
-      } else {
-        await userCredential.user!.delete();
-        await _firestore.collection('Users').doc(userId).delete();
-        _showErrorDialog('Failed to send verification code');
+      bool otpSent = await _sendOTPEmail(email, otp, 'Company');
+      if (!otpSent) {
+        _showErrorDialog(
+            'Failed to send verification code. Please try again later.');
+        return;
       }
+      Navigator.pushReplacementNamed(
+        context,
+        '/otp-verification',
+        arguments: {
+          'email': email,
+          'userId': userId,
+          'userType': 'Company',
+          'companyName': _companyNameController.text.trim(),
+          'name': _companyFullNameController.text.trim(),
+        },
+      );
     } on FirebaseAuthException catch (e) {
-      String errorMessage = 'An error occurred';
-      if (e.code == 'email-already-in-use') {
-        errorMessage = 'This email is already registered';
-      } else if (e.code == 'weak-password') {
-        errorMessage = 'Password is too weak';
-      }
-      _showErrorDialog(errorMessage);
+      String message = 'An error occurred during signup';
+      if (e.code == 'email-already-in-use')
+        message = 'Email already in use';
+      else if (e.code == 'weak-password')
+        message = 'Password is too weak';
+      else if (e.code == 'invalid-email') message = 'Invalid email format';
+      _showErrorDialog(message);
     } catch (e) {
-      _showErrorDialog('Unexpected error: ${e.toString()}');
-    } finally {
-      setState(() => _isLoading = false);
+      _showErrorDialog('Signup failed: $e');
     }
   }
 
-  Widget _buildTextField({
-    required String label,
-    required TextEditingController controller,
-    required String hint,
-    TextInputType? keyboardType,
-    String? errorText,
-  }) {
+  Future<void> _handleJobSeekerSignup() async {
+    try {
+      UserCredential userCredential =
+          await _auth.createUserWithEmailAndPassword(
+        email: _seekerEmailController.text.trim(),
+        password: _seekerPasswordController.text.trim(),
+      );
+      String userId = userCredential.user!.uid;
+      String email = _seekerEmailController.text.trim().toLowerCase();
+      await _firestore.collection('Users').doc(userId).set({
+        'Name': _seekerNameController.text.trim(),
+        'Email': email,
+        'UserType': 'JobSeeker',
+        'IsEmailVerified': false,
+        'CreatedAt': FieldValue.serverTimestamp(),
+      });
+      String otp = _generateOTP();
+      bool otpSent = await _sendOTPEmail(email, otp, 'JobSeeker');
+      if (!otpSent) {
+        _showErrorDialog(
+            'Failed to send verification code. Please try again later.');
+        return;
+      }
+      Navigator.pushReplacementNamed(
+        context,
+        '/otp-verification',
+        arguments: {'email': email, 'userId': userId, 'userType': 'JobSeeker'},
+      );
+    } on FirebaseAuthException catch (e) {
+      String message = 'An error occurred during signup';
+      if (e.code == 'email-already-in-use')
+        message = 'Email already in use';
+      else if (e.code == 'weak-password')
+        message = 'Password is too weak';
+      else if (e.code == 'invalid-email') message = 'Invalid email format';
+      _showErrorDialog(message);
+    } catch (e) {
+      _showErrorDialog('Signup failed: $e');
+    }
+  }
+
+  Widget _buildCompanyStep1() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: const TextStyle(
+        const Text('Company Name',
+            style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: Colors.white)),
         const SizedBox(height: 8),
         TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
+          controller: _companyNameController,
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
-            hintText: hint,
+            hintText: 'Enter company name',
             hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
             enabledBorder: UnderlineInputBorder(
               borderSide: BorderSide(
-                  color: errorText != null
+                  color: _companyNameError != null
                       ? Colors.red
                       : Colors.white.withOpacity(0.5)),
             ),
             focusedBorder: UnderlineInputBorder(
               borderSide: BorderSide(
-                  color: errorText != null ? Colors.red : Colors.white),
+                  color: _companyNameError != null ? Colors.red : Colors.white),
             ),
             errorBorder: const UnderlineInputBorder(
                 borderSide: BorderSide(color: Colors.red)),
             focusedErrorBorder: const UnderlineInputBorder(
                 borderSide: BorderSide(color: Colors.red)),
-            errorStyle: const TextStyle(color: Colors.red),
           ),
+          onChanged: (value) {
+            if (_companyNameError != null) {
+              setState(() {
+                _companyNameError = null;
+              });
+            }
+          },
         ),
-        if (errorText != null)
+        if (_companyNameError != null)
           Padding(
             padding: const EdgeInsets.only(top: 8),
-            child: Text(errorText,
+            child: Text(_companyNameError!,
                 style: const TextStyle(color: Colors.red, fontSize: 12)),
           ),
       ],
     );
   }
 
-  Widget _buildPasswordField(TextEditingController controller) {
+  Widget _buildCompanyStep2() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Full Name',
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.white)),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _companyFullNameController,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'Enter your full name',
+            hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(
+                  color: _companyFullNameError != null
+                      ? Colors.red
+                      : Colors.white.withOpacity(0.5)),
+            ),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(
+                  color: _companyFullNameError != null
+                      ? Colors.red
+                      : Colors.white),
+            ),
+            errorBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.red)),
+            focusedErrorBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.red)),
+          ),
+          onChanged: (value) {
+            if (_companyFullNameError != null) {
+              setState(() {
+                _companyFullNameError = null;
+              });
+            }
+          },
+        ),
+        if (_companyFullNameError != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(_companyFullNameError!,
+                style: const TextStyle(color: Colors.red, fontSize: 12)),
+          ),
+        const SizedBox(height: 30),
+        const Text('Email',
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.white)),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _companyEmailController,
+          keyboardType: TextInputType.emailAddress,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'Enter your email',
+            hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(
+                  color: _companyEmailError != null
+                      ? Colors.red
+                      : Colors.white.withOpacity(0.5)),
+            ),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(
+                  color:
+                      _companyEmailError != null ? Colors.red : Colors.white),
+            ),
+            errorBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.red)),
+            focusedErrorBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.red)),
+          ),
+          onChanged: (value) {
+            if (_companyEmailError != null) {
+              setState(() {
+                _companyEmailError = null;
+              });
+            }
+          },
+        ),
+        if (_companyEmailError != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(_companyEmailError!,
+                style: const TextStyle(color: Colors.red, fontSize: 12)),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildCompanyStep3() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -472,21 +523,21 @@ class _SignupScreenState extends State<SignupScreen> {
                 color: Colors.white)),
         const SizedBox(height: 8),
         TextFormField(
-          controller: controller,
+          controller: _companyPasswordController,
           obscureText: _obscurePassword,
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
             hintText: 'Enter your password',
             hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
             enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.white.withOpacity(0.5))),
+              borderSide: BorderSide(color: Colors.white.withOpacity(0.5)),
+            ),
             focusedBorder: const UnderlineInputBorder(
                 borderSide: BorderSide(color: Colors.white)),
             errorBorder: const UnderlineInputBorder(
                 borderSide: BorderSide(color: Colors.red)),
             focusedErrorBorder: const UnderlineInputBorder(
                 borderSide: BorderSide(color: Colors.red)),
-            errorStyle: const TextStyle(color: Colors.red),
             suffixIcon: IconButton(
               icon: Icon(
                   _obscurePassword ? Icons.visibility_off : Icons.visibility,
@@ -496,20 +547,7 @@ class _SignupScreenState extends State<SignupScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 8),
-        Text('Must include: uppercase, lowercase, number, special character',
-            style: TextStyle(
-                fontSize: 12,
-                color: Colors.white.withOpacity(0.7),
-                fontStyle: FontStyle.italic)),
-      ],
-    );
-  }
-
-  Widget _buildConfirmPasswordField(TextEditingController confirmController) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+        const SizedBox(height: 30),
         const Text('Confirm Password',
             style: TextStyle(
                 fontSize: 16,
@@ -517,21 +555,186 @@ class _SignupScreenState extends State<SignupScreen> {
                 color: Colors.white)),
         const SizedBox(height: 8),
         TextFormField(
-          controller: confirmController,
+          controller: _companyConfirmPasswordController,
           obscureText: _obscureConfirmPassword,
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
             hintText: 'Re-enter your password',
             hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
             enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.white.withOpacity(0.5))),
+              borderSide: BorderSide(color: Colors.white.withOpacity(0.5)),
+            ),
             focusedBorder: const UnderlineInputBorder(
                 borderSide: BorderSide(color: Colors.white)),
             errorBorder: const UnderlineInputBorder(
                 borderSide: BorderSide(color: Colors.red)),
             focusedErrorBorder: const UnderlineInputBorder(
                 borderSide: BorderSide(color: Colors.red)),
-            errorStyle: const TextStyle(color: Colors.red),
+            suffixIcon: IconButton(
+              icon: Icon(
+                  _obscureConfirmPassword
+                      ? Icons.visibility_off
+                      : Icons.visibility,
+                  color: Colors.white),
+              onPressed: () => setState(
+                  () => _obscureConfirmPassword = !_obscureConfirmPassword),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildJobSeekerStep1() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Full Name',
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.white)),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _seekerNameController,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'Enter your full name',
+            hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(
+                  color: _seekerNameError != null
+                      ? Colors.red
+                      : Colors.white.withOpacity(0.5)),
+            ),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(
+                  color: _seekerNameError != null ? Colors.red : Colors.white),
+            ),
+            errorBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.red)),
+            focusedErrorBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.red)),
+          ),
+          onChanged: (value) {
+            if (_seekerNameError != null) {
+              setState(() {
+                _seekerNameError = null;
+              });
+            }
+          },
+        ),
+        if (_seekerNameError != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(_seekerNameError!,
+                style: const TextStyle(color: Colors.red, fontSize: 12)),
+          ),
+        const SizedBox(height: 30),
+        const Text('Email',
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.white)),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _seekerEmailController,
+          keyboardType: TextInputType.emailAddress,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'Enter your email',
+            hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(
+                  color: _seekerEmailError != null
+                      ? Colors.red
+                      : Colors.white.withOpacity(0.5)),
+            ),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(
+                  color: _seekerEmailError != null ? Colors.red : Colors.white),
+            ),
+            errorBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.red)),
+            focusedErrorBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.red)),
+          ),
+          onChanged: (value) {
+            if (_seekerEmailError != null) {
+              setState(() {
+                _seekerEmailError = null;
+              });
+            }
+          },
+        ),
+        if (_seekerEmailError != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(_seekerEmailError!,
+                style: const TextStyle(color: Colors.red, fontSize: 12)),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildJobSeekerStep2() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Password',
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.white)),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _seekerPasswordController,
+          obscureText: _obscurePassword,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'Enter your password',
+            hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.white.withOpacity(0.5)),
+            ),
+            focusedBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.white)),
+            errorBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.red)),
+            focusedErrorBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.red)),
+            suffixIcon: IconButton(
+              icon: Icon(
+                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                  color: Colors.white),
+              onPressed: () =>
+                  setState(() => _obscurePassword = !_obscurePassword),
+            ),
+          ),
+        ),
+        const SizedBox(height: 30),
+        const Text('Confirm Password',
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.white)),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _seekerConfirmPasswordController,
+          obscureText: _obscureConfirmPassword,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'Re-enter your password',
+            hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.white.withOpacity(0.5)),
+            ),
+            focusedBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.white)),
+            errorBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.red)),
+            focusedErrorBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.red)),
             suffixIcon: IconButton(
               icon: Icon(
                   _obscureConfirmPassword
@@ -551,115 +754,43 @@ class _SignupScreenState extends State<SignupScreen> {
     int totalSteps = _selectedTab == 0 ? 3 : 2;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(totalSteps, (index) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: _currentStep == index
-                  ? Colors.white
-                  : Colors.white.withOpacity(0.3),
-            ),
+      children: List.generate(
+        totalSteps,
+        (index) => Container(
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: _currentStep == index
+                ? Colors.white
+                : Colors.white.withOpacity(0.3),
           ),
-        );
-      }),
-    );
-  }
-
-  Widget _buildCompanyStep1() {
-    return Column(
-      children: [
-        _buildTextField(
-          label: 'Company Name',
-          controller: _companyNameController,
-          hint: 'Enter company name',
-          errorText: _companyNameError,
         ),
-      ],
+      ),
     );
   }
 
-  Widget _buildCompanyStep2() {
-    return Column(
-      children: [
-        _buildTextField(
-          label: 'Full Name',
-          controller: _companyFullNameController,
-          hint: 'Enter your full name (First Last)',
-          errorText: _companyFullNameError,
-        ),
-        const SizedBox(height: 24),
-        _buildTextField(
-          label: 'Email',
-          controller: _companyEmailController,
-          hint: 'Enter your email',
-          keyboardType: TextInputType.emailAddress,
-          errorText: _companyEmailError,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCompanyStep3() {
-    return Column(
-      children: [
-        _buildPasswordField(_companyPasswordController),
-        const SizedBox(height: 24),
-        _buildConfirmPasswordField(_companyConfirmPasswordController),
-      ],
-    );
-  }
-
-  Widget _buildJobSeekerStep1() {
-    return Column(
-      children: [
-        _buildTextField(
-          label: 'Full Name',
-          controller: _seekerNameController,
-          hint: 'Enter your full name (First Last)',
-          errorText: _seekerNameError,
-        ),
-        const SizedBox(height: 24),
-        _buildTextField(
-          label: 'Email',
-          controller: _seekerEmailController,
-          hint: 'Enter your email',
-          keyboardType: TextInputType.emailAddress,
-          errorText: _seekerEmailError,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildJobSeekerStep2() {
-    return Column(
-      children: [
-        _buildPasswordField(_seekerPasswordController),
-        const SizedBox(height: 24),
-        _buildConfirmPasswordField(_seekerConfirmPasswordController),
-      ],
-    );
-  }
-
-  void _handleNextButton() async {
+  Future<void> _handleNextButton() async {
+    setState(() => _isLoading = true);
     bool isValid = await _validateCurrentStep();
+    setState(() => _isLoading = false);
+
     if (!isValid) return;
 
     if (_selectedTab == 0) {
-      // Company: 3 steps
       if (_currentStep < 2) {
         setState(() => _currentStep++);
       } else {
+        setState(() => _isLoading = true);
         await _handleCompanySignup();
+        setState(() => _isLoading = false);
       }
     } else {
-      // JobSeeker: 2 steps
       if (_currentStep < 1) {
         setState(() => _currentStep++);
       } else {
+        setState(() => _isLoading = true);
         await _handleJobSeekerSignup();
       }
     }
@@ -831,6 +962,22 @@ class _SignupScreenState extends State<SignupScreen> {
                       ],
                     ),
                   ),
+                ),
+              ),
+            ),
+            // ✅ إضافة سهم الرجوع للخلف في أعلى اليسار - آخر عنصر في Stack
+            Positioned(
+              top: 50,
+              left: 30,
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                icon: const Icon(
+                  Icons.arrow_back,
+                  color: Color(0xFFFF7B7B),
+                  size: 32,
                 ),
               ),
             ),

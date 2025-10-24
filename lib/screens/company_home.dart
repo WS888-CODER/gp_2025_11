@@ -54,14 +54,33 @@ class _CompanyHomeState extends State<CompanyHome> {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Profile Incomplete'),
+            backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+            title: const Text(
+              'Profile Incomplete',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
             content: const Text(
               'Please complete your company profile before creating or editing job postings.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white),
             ),
+            contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+            actionsPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            actionsAlignment: MainAxisAlignment.center,
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.white.withOpacity(0.9),
+                  foregroundColor: const Color(0xFF4A5FBC),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+                child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -97,6 +116,43 @@ class _CompanyHomeState extends State<CompanyHome> {
         ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
       }
     });
+  }
+
+  Widget _buildNavItem({
+    required IconData icon,
+    required IconData filledIcon,
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Outer layer for bold outline (coral orange)
+          if (isSelected)
+            Icon(
+              filledIcon,
+              size: 34,
+              color: const Color(0xFFFC686A),
+            ),
+          // Middle layer filled icon (light coral)
+          if (isSelected)
+            Icon(
+              filledIcon,
+              size: 32,
+              color: const Color(0xFFFFDADD),
+            ),
+          // Foreground outlined icon (coral orange or lighter grey)
+          Icon(
+            icon,
+            size: 32,
+            color: isSelected ? const Color(0xFFFC686A) : Colors.grey[400],
+          ),
+        ],
+      ),
+    );
   }
 
   /// اسم الشركة من Firestore (Users/{companyId})
@@ -154,8 +210,8 @@ class _CompanyHomeState extends State<CompanyHome> {
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
             Padding(
-              padding: const EdgeInsets.only(right: 20.0, top: 8),
-              child: OutlinedButton(
+              padding: const EdgeInsets.only(right: 8.0, top: 8),
+              child: ElevatedButton(
                 onPressed: () async {
                   // Check profile completion first
                   final canProceed = await _checkProfileComplete();
@@ -163,8 +219,9 @@ class _CompanyHomeState extends State<CompanyHome> {
                     Navigator.pushNamed(context, '/job-posting');
                   }
                 },
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: _brand),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _brand,
+                  foregroundColor: Colors.white,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   shape: RoundedRectangleBorder(
@@ -172,9 +229,8 @@ class _CompanyHomeState extends State<CompanyHome> {
                   ),
                 ),
                 child: const Text(
-                  'Create',
+                  'Create Job Post',
                   style: TextStyle(
-                    color: _brand,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
@@ -185,7 +241,6 @@ class _CompanyHomeState extends State<CompanyHome> {
         ),
 
         const SizedBox(height: 20),
-        const Divider(height: 32),
 
         const _SectionTitle(),
 
@@ -315,13 +370,11 @@ class _CompanyHomeState extends State<CompanyHome> {
         ),
 
         const SizedBox(height: 12),
-        const Divider(height: 32),
-        const SizedBox(height: 12),
       ],
     );
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF7F6FC),
       appBar: AppBar(
         backgroundColor: _brand,
         elevation: 0,
@@ -383,14 +436,42 @@ class _CompanyHomeState extends State<CompanyHome> {
           homeBody,
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _tab,
-        onDestinationSelected: (i) => setState(() => _tab = i),
-        destinations: const [
-          NavigationDestination(
-              icon: Icon(Icons.insert_chart_outlined), label: 'Reports'),
-          NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
-        ],
+      bottomNavigationBar: Container(
+        height: 70,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(15),
+            topRight: Radius.circular(15),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildNavItem(
+              icon: Icons.assessment_outlined,
+              filledIcon: Icons.assessment,
+              label: 'Reports',
+              isSelected: _tab == 0,
+              onTap: () => setState(() => _tab = 0),
+            ),
+            const SizedBox(width: 120),
+            _buildNavItem(
+              icon: Icons.home_outlined,
+              filledIcon: Icons.home,
+              label: 'Home',
+              isSelected: _tab == 1,
+              onTap: () => setState(() => _tab = 1),
+            ),
+          ],
+        ),
       ),
     );
   }

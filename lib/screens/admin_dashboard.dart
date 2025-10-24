@@ -232,6 +232,9 @@ class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
     return AppBar(
       backgroundColor: const Color(0xFF4A5FBC),
       elevation: 0,
+      centerTitle: false,
+      leading: const SizedBox(),
+      leadingWidth: 0,
       title: const Text(
         'Admin Dashboard',
         style: TextStyle(
@@ -298,7 +301,7 @@ class _CardCompanyWidget extends StatelessWidget {
     final email = data['Email'] ?? 'No email';
     final accountStatus = data['AccountStatus'] ?? 'Pending';
     final isEmailVerified = data['IsEmailVerified'] ?? false;
-    final createdAt = (data['CreatedAt'] as Timestamp?)?.toDate();
+    final createdAt = (data['Date'] as Timestamp?)?.toDate();
 
     return Card(
         elevation: 0.2,

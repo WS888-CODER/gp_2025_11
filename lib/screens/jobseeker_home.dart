@@ -38,6 +38,43 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
     super.dispose();
   }
 
+  Widget _buildNavItem({
+    required IconData icon,
+    required IconData filledIcon,
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Outer layer for bold outline (coral orange)
+          if (isSelected)
+            Icon(
+              filledIcon,
+              size: 34,
+              color: const Color(0xFFFC686A),
+            ),
+          // Middle layer filled icon (light coral)
+          if (isSelected)
+            Icon(
+              filledIcon,
+              size: 32,
+              color: const Color(0xFFFFDADD),
+            ),
+          // Foreground outlined icon (coral orange or lighter grey)
+          Icon(
+            icon,
+            size: 32,
+            color: isSelected ? const Color(0xFFFC686A) : Colors.grey[400],
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // hide any previous MaterialBanner
@@ -51,44 +88,26 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
       controller: _homeScroll,
       padding: const EdgeInsets.all(16),
       children: [
-        const Row(
-          children: [
-            Icon(Icons.work_outline, size: 36, color: _brand),
-            SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Job Seeker Dashboard',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: _brand,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-
         Row(
           children: [
             Expanded(
               child: _BigTile(
-                label: 'Mock',
+                label: 'Mock Interviews',
                 icon: Icons.quiz_outlined,
                 color: _brand,
                 onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Mock – قريبًا')),
+                  const SnackBar(content: Text('Mock Interviews – قريبًا')),
                 ),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _BigTile(
-                label: 'CV',
+                label: 'CV Enhancement',
                 icon: Icons.description_outlined,
                 color: _brand,
                 onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('CV – قريبًا')),
+                  const SnackBar(content: Text('CV Enhancement – قريبًا')),
                 ),
               ),
             ),
@@ -127,7 +146,7 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
     final userId = _effectiveUserId;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF7F6FC),
       appBar: AppBar(
         backgroundColor: _brand,
         elevation: 0,
@@ -174,26 +193,58 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
           const _WishlistPlaceholder(),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _tab,
-        onDestinationSelected: (i) {
-          if (i == _tab) {
-            if (i == 1) {
-              _homeScroll.animateTo(0,
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOut);
-            }
-            return;
-          }
-          setState(() => _tab = i);
-        },
-        destinations: const [
-          NavigationDestination(
-              icon: Icon(Icons.bar_chart_outlined), label: 'Reports'),
-          NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
-          NavigationDestination(
-              icon: Icon(Icons.favorite_border), label: 'Wishlist'),
-        ],
+      bottomNavigationBar: Container(
+        height: 70,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(15),
+            topRight: Radius.circular(15),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildNavItem(
+              icon: Icons.assessment_outlined,
+              filledIcon: Icons.assessment,
+              label: 'Reports',
+              isSelected: _tab == 0,
+              onTap: () => setState(() => _tab = 0),
+            ),
+            const SizedBox(width: 80),
+            _buildNavItem(
+              icon: Icons.home_outlined,
+              filledIcon: Icons.home,
+              label: 'Home',
+              isSelected: _tab == 1,
+              onTap: () {
+                if (_tab == 1) {
+                  _homeScroll.animateTo(0,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut);
+                } else {
+                  setState(() => _tab = 1);
+                }
+              },
+            ),
+            const SizedBox(width: 80),
+            _buildNavItem(
+              icon: Icons.favorite_border,
+              filledIcon: Icons.favorite,
+              label: 'Wishlist',
+              isSelected: _tab == 2,
+              onTap: () => setState(() => _tab = 2),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -367,26 +418,32 @@ class _BigTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
+    return Material(
+      color: Colors.white,
       borderRadius: BorderRadius.circular(16),
-      child: Ink(
-        height: 90,
-        decoration: BoxDecoration(
-          color: color.withOpacity(.08),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: color),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: TextStyle(color: color, fontWeight: FontWeight.w700),
-              ),
-            ],
+      elevation: 4,
+      shadowColor: Colors.black.withOpacity(0.2),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          height: 90,
+          child: Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, color: color, size: 28),
+                const SizedBox(width: 10),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
