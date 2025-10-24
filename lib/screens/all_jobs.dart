@@ -151,6 +151,7 @@ class _JobsPageState extends State<JobsPage> {
   String _selectedSpecialty = 'All';
   SortOrder _sort = SortOrder.newestFirst;
   bool _forYou = false;
+  bool _showClosedJobs = false; // Toggle for showing closed jobs
 
   late Set<String> _saved;
   List<String> _specialties = ['All'];
@@ -252,6 +253,11 @@ class _JobsPageState extends State<JobsPage> {
 
   List<Job> _applyFilters(List<Job> jobs) {
     Iterable<Job> res = jobs;
+
+    // Filter by job status (hide closed jobs by default)
+    if (!_showClosedJobs) {
+      res = res.where((j) => j.status != 'Closed');
+    }
 
     if (_search.trim().isNotEmpty) {
       final q = _search.toLowerCase();
@@ -456,40 +462,54 @@ class _JobsPageState extends State<JobsPage> {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
+            child: Column(
               children: [
-                DropdownButton<String>(
-                  value: _selectedSpecialty,
-                  items: _specialties
-                      .map((m) => DropdownMenuItem(value: m, child: Text(m)))
-                      .toList(),
-                  onChanged: (val) =>
-                      setState(() => _selectedSpecialty = val ?? 'All'),
-                ),
-                DropdownButton<SortOrder>(
-                  value: _sort,
-                  items: const [
-                    DropdownMenuItem(
-                      value: SortOrder.newestFirst,
-                      child: Text('Newest first'),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    DropdownButton<String>(
+                      value: _selectedSpecialty,
+                      items: _specialties
+                          .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                          .toList(),
+                      onChanged: (val) =>
+                          setState(() => _selectedSpecialty = val ?? 'All'),
                     ),
-                    DropdownMenuItem(
-                      value: SortOrder.oldestFirst,
-                      child: Text('Oldest first'),
+                    DropdownButton<SortOrder>(
+                      value: _sort,
+                      items: const [
+                        DropdownMenuItem(
+                          value: SortOrder.newestFirst,
+                          child: Text('Newest first'),
+                        ),
+                        DropdownMenuItem(
+                          value: SortOrder.oldestFirst,
+                          child: Text('Oldest first'),
+                        ),
+                      ],
+                      onChanged: (val) => setState(() => _sort = val!),
+                    ),
+                    FilterChip(
+                      selected: _forYou,
+                      label: const Text('For You'),
+                      onSelected: (v) {
+                        setState(() => _forYou = v);
+                        _maybeShowCvBanner();
+                      },
                     ),
                   ],
-                  onChanged: (val) => setState(() => _sort = val!),
                 ),
-                FilterChip(
-                  selected: _forYou,
-                  label: const Text('For You'),
-                  onSelected: (v) {
-                    setState(() => _forYou = v);
-                    _maybeShowCvBanner();
-                  },
+                // Toggle for showing closed jobs
+                Row(
+                  children: [
+                    Checkbox(
+                      value: _showClosedJobs,
+                      onChanged: (val) => setState(() => _showClosedJobs = val ?? false),
+                    ),
+                    const Text('Show closed jobs'),
+                  ],
                 ),
               ],
             ),
@@ -527,9 +547,11 @@ class _JobsPageState extends State<JobsPage> {
                   itemBuilder: (context, i) {
                     final j = jobs[i];
                     final info = _company[j.userId]; // CompanyInfo?
+                    final isClosed = j.status == 'Closed';
 
                     return Card(
                       elevation: 0.5,
+                      color: isClosed ? Colors.grey[300] : null,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16)),
                       child: InkWell(
@@ -570,7 +592,10 @@ class _JobsPageState extends State<JobsPage> {
                                       (info?.name ?? 'Company'),
                                       style: Theme.of(context)
                                           .textTheme
-                                          .bodyMedium,
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            color: isClosed ? Colors.grey[600] : null,
+                                          ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -591,9 +616,10 @@ class _JobsPageState extends State<JobsPage> {
                               // Title + position + posted date  (REPLACED)
                               Text(
                                 j.title,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w800,
+                                  color: isClosed ? Colors.grey[600] : null,
                                 ),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
@@ -601,7 +627,9 @@ class _JobsPageState extends State<JobsPage> {
                               const SizedBox(height: 6),
                               Row(
                                 children: [
-                                  const Icon(Icons.work_outline, size: 16),
+                                  Icon(Icons.work_outline,
+                                      size: 16,
+                                      color: isClosed ? Colors.grey[500] : null),
                                   const SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
@@ -613,6 +641,7 @@ class _JobsPageState extends State<JobsPage> {
                                           .bodyMedium
                                           ?.copyWith(
                                             fontWeight: FontWeight.w600,
+                                            color: isClosed ? Colors.grey[500] : null,
                                           ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -623,14 +652,16 @@ class _JobsPageState extends State<JobsPage> {
                               const SizedBox(height: 6),
                               Text(
                                 'Posted: ${_fmtDate(j.postedAt)}',
-                                style: Theme.of(context).textTheme.bodySmall,
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: isClosed ? Colors.grey[500] : null,
+                                ),
                               ),
                               const SizedBox(height: 8),
 
-                              // Specialty + Apply
+                              // Specialty + Apply (or Closed badge + Closed button)
                               Row(
                                 children: [
-                                  if (j.specialty.isNotEmpty)
+                                  if (j.specialty.isNotEmpty && !isClosed)
                                     Container(
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 8, vertical: 4),
@@ -652,21 +683,48 @@ class _JobsPageState extends State<JobsPage> {
                                         ),
                                       ),
                                     ),
+                                  // Closed badge at bottom left for closed jobs
+                                  if (isClosed)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[500],
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Text(
+                                        'Closed',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
                                   const Spacer(),
+                                  // Apply button or Closed button
                                   FilledButton(
-                                    onPressed: (j.applyUrl != null &&
-                                            j.applyUrl!.trim().isNotEmpty)
-                                        ? () async {
-                                            final uri =
-                                                Uri.parse(j.applyUrl!.trim());
-                                            if (await canLaunchUrl(uri)) {
-                                              await launchUrl(uri,
-                                                  mode: LaunchMode
-                                                      .externalApplication);
-                                            }
-                                          }
+                                    onPressed: isClosed
+                                        ? null
+                                        : (j.applyUrl != null &&
+                                                j.applyUrl!.trim().isNotEmpty)
+                                            ? () async {
+                                                final uri =
+                                                    Uri.parse(j.applyUrl!.trim());
+                                                if (await canLaunchUrl(uri)) {
+                                                  await launchUrl(uri,
+                                                      mode: LaunchMode
+                                                          .externalApplication);
+                                                }
+                                              }
+                                            : null,
+                                    style: isClosed
+                                        ? FilledButton.styleFrom(
+                                            backgroundColor: Colors.grey[400],
+                                            disabledBackgroundColor: Colors.grey[400],
+                                          )
                                         : null,
-                                    child: const Text('Apply'),
+                                    child: Text(isClosed ? 'Closed' : 'Apply'),
                                   ),
                                 ],
                               ),
@@ -802,7 +860,8 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
   Widget build(BuildContext context) {
     final job = widget.job;
     final company = widget.company;
-    final canApply = job.applyUrl != null && job.applyUrl!.trim().isNotEmpty;
+    final isClosed = job.status == 'Closed';
+    final canApply = !isClosed && job.applyUrl != null && job.applyUrl!.trim().isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Job Details')),
@@ -817,7 +876,13 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                   }
                 }
               : null,
-          child: const Text('Apply'),
+          style: isClosed
+              ? FilledButton.styleFrom(
+                  backgroundColor: Colors.grey[400],
+                  disabledBackgroundColor: Colors.grey[400],
+                )
+              : null,
+          child: Text(isClosed ? 'Closed' : 'Apply'),
         ),
       ),
       body: ListView(
@@ -950,14 +1015,39 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    job.title.isEmpty ? 'Untitled Job' : job.title,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                    ),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
+                  // Title and Closed badge
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          job.title.isEmpty ? 'Untitled Job' : job.title,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                          ),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (isClosed)
+                        Container(
+                          margin: const EdgeInsets.only(left: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[500],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Text(
+                            'Closed',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
 
                   const SizedBox(height: 12),

@@ -525,7 +525,11 @@ class _JobsPreviewState extends State<_JobsPreview> {
           );
         }
 
-        final jobs = docs.map((d) => Job.fromDoc(d)).toList();
+        // Filter out closed jobs on client side
+        final jobs = docs
+            .map((d) => Job.fromDoc(d))
+            .where((j) => j.status != 'Closed')
+            .toList();
 
         return Column(
           children: jobs.map((j) {

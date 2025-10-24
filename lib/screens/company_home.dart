@@ -25,6 +25,7 @@ class CompanyHome extends StatefulWidget {
 class _CompanyHomeState extends State<CompanyHome> {
   static const Color _brand = Color(0xFF4A5FBC);
   int _tab = 1; // 0: Reports, 1: Home
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   String get _effectiveCompanyId {
     final args =
@@ -108,6 +109,159 @@ class _CompanyHomeState extends State<CompanyHome> {
     }
   }
 
+  /// Close or reopen a job
+  Future<void> _closeJob(String jobId, bool isClosed, BuildContext ctx) async {
+    try {
+      await FirebaseFirestore.instance.collection('Jobs').doc(jobId).update({
+        'JobStatus': isClosed ? 'Open' : 'Closed',
+      });
+
+      // Check mounted after async operation
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(ctx).showSnackBar(
+          SnackBar(
+            content: Text(
+              isClosed ? 'Job reopened successfully' : 'Job closed successfully',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            backgroundColor: const Color(0xFF4CAF50).withOpacity(0.8),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(ctx).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Error: $e',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            backgroundColor: const Color(0xFFFF7B7B).withOpacity(0.8),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+    }
+  }
+
+  /// Delete a job with confirmation
+  Future<void> _deleteJob(String jobId, String jobTitle, BuildContext ctx) async {
+    if (!mounted) return;
+
+    final shouldDelete = await showDialog<bool>(
+      context: ctx,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        title: const Text(
+          'Delete Job?',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Are you sure you want to permanently delete "$jobTitle"? This action cannot be undone.',
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: Colors.white),
+        ),
+        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.white.withOpacity(0.9),
+              foregroundColor: const Color(0xFF4A5FBC),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+          const SizedBox(width: 12),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              backgroundColor: const Color(0xFFFC686A),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    // Check mounted after dialog closes
+    if (!mounted) return;
+
+    if (shouldDelete == true) {
+      try {
+        await FirebaseFirestore.instance.collection('Jobs').doc(jobId).delete();
+
+        // Check mounted after async operation
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(ctx).showSnackBar(
+            SnackBar(
+              content: const Text(
+                'Job deleted successfully',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              backgroundColor: const Color(0xFF4CAF50).withOpacity(0.8),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          );
+      } catch (e) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(ctx).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Error: $e',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              backgroundColor: const Color(0xFFFF7B7B).withOpacity(0.8),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          );
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -182,6 +336,29 @@ class _CompanyHomeState extends State<CompanyHome> {
     }
     return q.snapshots().map((snap) {
       final docs = snap.docs.toList();
+      final now = DateTime.now();
+
+      // Auto-close expired jobs only (no auto-reopening)
+      for (final doc in docs) {
+        final data = doc.data();
+        final endDateField = data['EndDate'];
+        final currentStatus = data['JobStatus'] ?? 'Open';
+
+        if (endDateField is Timestamp) {
+          final endDate = endDateField.toDate();
+
+          // If job is past end date and still Open, close it automatically
+          if (endDate.isBefore(now) && currentStatus == 'Open') {
+            FirebaseFirestore.instance
+                .collection('Jobs')
+                .doc(doc.id)
+                .update({'JobStatus': 'Closed'});
+          }
+          // Note: We don't auto-reopen closed jobs, even if date is extended
+          // Company can manually reopen using "Reopen Job" option
+        }
+      }
+
       // ترتيب محلي حسب StartDate (الأحدث أولًا)
       docs.sort((a, b) {
         final sa = a.data()['StartDate'];
@@ -276,13 +453,15 @@ class _CompanyHomeState extends State<CompanyHome> {
                 final title = (data['JobTitle'] ?? 'Untitled').toString();
                 final position = (data['Position'] ?? '').toString();
                 final specialty = (data['Specialty'] ?? '').toString();
+                final jobStatus = (data['JobStatus'] ?? 'Open').toString();
+                final isClosed = jobStatus == 'Closed';
 
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
                   padding:
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: isClosed ? Colors.grey[300] : Colors.white,
                     borderRadius: BorderRadius.circular(14),
                     boxShadow: [
                       BoxShadow(
@@ -301,9 +480,10 @@ class _CompanyHomeState extends State<CompanyHome> {
                           children: [
                             Text(
                               title,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 16,
+                                color: isClosed ? Colors.grey[600] : Colors.black,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -311,14 +491,35 @@ class _CompanyHomeState extends State<CompanyHome> {
                               [position, specialty]
                                   .where((e) => e.isNotEmpty)
                                   .join(' • '),
-                              style: const TextStyle(color: Colors.black54),
+                              style: TextStyle(
+                                color: isClosed ? Colors.grey[500] : Colors.black54,
+                              ),
                             ),
+                            // Closed badge at bottom left
+                            if (isClosed)
+                              Container(
+                                margin: const EdgeInsets.only(top: 8),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[500],
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Text(
+                                  'Closed',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       ),
                       const SizedBox(width: 10),
 
-                      // Edit => يفتح صفحة job_posting ببيانات الوظيفة للتحرير
+                      // Edit button
                       OutlinedButton(
                         onPressed: () async {
                           // Check profile completion first
@@ -361,6 +562,68 @@ class _CompanyHomeState extends State<CompanyHome> {
                         ),
                         child: const Text('Edit'),
                       ),
+
+                      // More options menu (using IconButton + Dialog)
+                      IconButton(
+                        icon: const Icon(Icons.more_vert, color: _brand),
+                        onPressed: () {
+                          final safeCtx = _scaffoldKey.currentContext;
+                          if (safeCtx == null) return;
+
+                          showDialog(
+                            context: safeCtx,
+                            builder: (dialogContext) => AlertDialog(
+                              backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  ListTile(
+                                    leading: Icon(
+                                      isClosed ? Icons.lock_open_outlined : Icons.lock_outline,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                    title: Text(
+                                      isClosed ? 'Reopen Job' : 'Close Job',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    onTap: () {
+                                      Navigator.pop(dialogContext);
+                                      _closeJob(doc.id, isClosed, safeCtx);
+                                    },
+                                  ),
+                                  ListTile(
+                                    leading: const Icon(
+                                      Icons.delete_outline,
+                                      color: Color(0xFFFF7B7B),
+                                      size: 20,
+                                    ),
+                                    title: const Text(
+                                      'Delete Job',
+                                      style: TextStyle(
+                                        color: Color(0xFFFF7B7B),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    onTap: () {
+                                      Navigator.pop(dialogContext);
+                                      _deleteJob(doc.id, title, safeCtx);
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+
                     ],
                   ),
                 );
@@ -374,6 +637,7 @@ class _CompanyHomeState extends State<CompanyHome> {
     );
 
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: const Color(0xFFF7F6FC),
       appBar: AppBar(
         backgroundColor: _brand,
