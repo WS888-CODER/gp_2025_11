@@ -80,22 +80,16 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
         content: Text(
           message,
           style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: Colors.white,
+            color: Colors.white, // ✅ نص أبيض
+            fontWeight: FontWeight.bold,
           ),
-          textAlign: TextAlign.center,
+          textAlign: TextAlign.center, // ✅ وسطه مثل الملك
         ),
-        backgroundColor: Color(0xFFFF9800), // لون برتقالي
-        behavior: SnackBarBehavior.fixed,
+        backgroundColor: Color(0xFFFF7B7B).withOpacity(0.8), // ✅ اللون حقك
+        behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(16),
-            topRight: Radius.circular(16),
-          ),
+          borderRadius: BorderRadius.circular(10),
         ),
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        duration: Duration(seconds: 3),
       ),
     );
   }
@@ -534,6 +528,22 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                       ),
                     ],
                   ),
+                ),
+              ),
+            ),
+            // ✅ إضافة سهم الرجوع للخلف في أعلى اليسار - آخر عنصر في Stack
+            Positioned(
+              top: 50,
+              left: 30,
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                icon: const Icon(
+                  Icons.arrow_back,
+                  color: Color(0xFFFF7B7B),
+                  size: 32,
                 ),
               ),
             ),

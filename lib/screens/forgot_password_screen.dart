@@ -135,6 +135,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     try {
       String email = _emailController.text.trim().toLowerCase();
 
+      // ✅ التحقق من أن الإيميل موجود في جدول Users
       QuerySnapshot userSnapshot = await _firestore
           .collection('Users')
           .where('Email', isEqualTo: email)
@@ -149,6 +150,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         return;
       }
 
+      // ✅ التحقق من UserType - إذا كان Admin، منع إعادة تعيين كلمة المرور
+      Map<String, dynamic> userData =
+          userSnapshot.docs.first.data() as Map<String, dynamic>;
+      String userType = userData['UserType'] ?? '';
+
+      if (userType == 'Admin') {
+        setState(() {
+          _emailError = 'Cannot reset password.';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // ✅ المتابعة لإرسال OTP
       String otp = _generateOTP();
       bool otpSent = await _sendOTPEmail(email, otp);
 
@@ -363,22 +378,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         content: Text(
           message,
           style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: Colors.white,
+            color: Colors.white, // ✅ نص أبيض
+            fontWeight: FontWeight.bold,
           ),
-          textAlign: TextAlign.center,
+          textAlign: TextAlign.center, // ✅ وسطه مثل الملك
         ),
-        backgroundColor: Color(0xFFFF9800),
-        behavior: SnackBarBehavior.fixed,
+        backgroundColor: Color(0xFFFF7B7B).withOpacity(0.8), // ✅ اللون حقك
+        behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(16),
-            topRight: Radius.circular(16),
-          ),
+          borderRadius: BorderRadius.circular(10),
         ),
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        duration: Duration(seconds: 3),
       ),
     );
   }
@@ -906,6 +915,22 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       ],
                     ),
                   ),
+                ),
+              ),
+            ),
+            // ✅ إضافة سهم الرجوع للخلف في أعلى اليسار - آخر عنصر في Stack
+            Positioned(
+              top: 50,
+              left: 30,
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                icon: const Icon(
+                  Icons.arrow_back,
+                  color: Color(0xFFFF7B7B),
+                  size: 32,
                 ),
               ),
             ),
