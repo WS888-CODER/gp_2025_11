@@ -744,13 +744,17 @@ class _JobPostingPageState extends State<JobPostingPage> {
     final shouldPop = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
         title: const Text(
           'Abandon Changes?',
           textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         content: const Text(
           'Are you sure you want to go back? Any unsaved changes will be lost.',
           textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white),
         ),
         contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
         actionsPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -759,14 +763,14 @@ class _JobPostingPageState extends State<JobPostingPage> {
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             style: TextButton.styleFrom(
-              backgroundColor: const Color(0xFFF6F5FB),
-              foregroundColor: Colors.black,
+              backgroundColor: Colors.white.withOpacity(0.9),
+              foregroundColor: const Color(0xFF4A5FBC),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
             ),
-            child: const Text('Cancel'),
+            child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
           const SizedBox(width: 12),
           TextButton(
@@ -779,7 +783,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                 borderRadius: BorderRadius.circular(20),
               ),
             ),
-            child: const Text('Leave'),
+            child: const Text('Leave', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
