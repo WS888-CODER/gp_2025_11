@@ -531,6 +531,22 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                 ),
               ),
             ),
+            // ✅ إضافة سهم الرجوع للخلف في أعلى اليسار - آخر عنصر في Stack
+            Positioned(
+              top: 50,
+              left: 30,
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                icon: const Icon(
+                  Icons.arrow_back,
+                  color: Color(0xFFFF7B7B),
+                  size: 32,
+                ),
+              ),
+            ),
           ],
         ),
       ),
