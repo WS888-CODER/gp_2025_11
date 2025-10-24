@@ -21,7 +21,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     loadCompanies();
   }
 
-  String selectedStatus = 'all';
+  String selectedStatus = 'All';
   bool isLoading = false;
   List<QueryDocumentSnapshot>? companies;
 
@@ -62,6 +62,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF7F6FC),
       appBar: const _AdminDashboardAppBar(),
       body: Column(
         children: [
@@ -162,11 +163,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
   ChoiceChip _getChoiceChip(String value) => ChoiceChip(
         label: Text(value),
         selected: selectedStatus == value,
-        side: const BorderSide(color: AppTheme.primaryPurple, width: 1.2),
-        selectedColor: AppTheme.primaryPurple,
+        // side: const BorderSide(color: AppTheme.primaryPurple, width: 1.2),
+        // selectedColor: AppTheme.primaryPurple,
+        side: const BorderSide(color: AppTheme.accentCoral, width: 1.2),
+        selectedColor: AppTheme.accentCoral,
+
         shadowColor: Colors.transparent,
         labelStyle: TextStyle(
-          color: selectedStatus == value ? Colors.white : Colors.black,
+          color:
+              selectedStatus == value ? Colors.white : AppTheme.primaryPurple,
         ),
         onSelected: (selected) async {
           selectedStatus = value;
@@ -251,16 +256,46 @@ class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
     bool? confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Confirm Logout'),
-        content: const Text('Are you sure you want to log out?'),
+        backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        title: const Text(
+          'Confirm Logout',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'Are you sure you want to log out?',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white),
+        ),
+        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+        actionsPadding:
+            const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        actionsAlignment: MainAxisAlignment.center,
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.white.withOpacity(0.9),
+              foregroundColor: const Color(0xFF4A5FBC),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Logout', style: TextStyle(color: Colors.red)),
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            child: const Text('Logout'),
           ),
         ],
       ),
@@ -350,8 +385,8 @@ class _CardCompanyWidget extends StatelessWidget {
     final createdAt = (data['Date'] as Timestamp?)?.toDate();
 
     return Card(
-        elevation: 0,
-        color: AppTheme.primaryPurple.withAlpha(50),
+        elevation: 0.2,
+        //color: AppTheme.primaryPurple.withAlpha(50),
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -392,7 +427,7 @@ class _CardCompanyWidget extends StatelessWidget {
                   ),
                 ],
               ),
-              const Divider(thickness: 0.5, color: Colors.grey),
+              //   const Divider(thickness: 0.5, color: Colors.grey),
               _InfoWidget(
                 icon: Iconsax.sms_copy,
                 label: email,
@@ -409,7 +444,7 @@ class _CardCompanyWidget extends StatelessWidget {
                     ? "---"
                     : 'Registered: ${createdAt.toLocal().toString().split(' ')[0]}',
               ),
-              const Divider(thickness: 0.5, color: Colors.grey),
+              //  const Divider(thickness: 0.5, color: Colors.grey),
               PopupMenuButton<String>(
                 padding: EdgeInsets.zero,
                 icon: TextButton.icon(
