@@ -31,7 +31,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         .collection('Users')
         .where('UserType', isEqualTo: 'Company');
 
-    if (selectedStatus == 'all') {
+    if (selectedStatus == 'All') {
       return await collection.get();
     } else {
       return await collection
@@ -65,27 +65,58 @@ class _AdminDashboardState extends State<AdminDashboard> {
       appBar: const _AdminDashboardAppBar(),
       body: Column(
         children: [
-          // 🔹 فلتر الحالات
-          Padding(
+          Container(
+            width: double.infinity,
             padding: const EdgeInsets.all(8.0),
-            child: DropdownButtonFormField<String>(
-              value: selectedStatus,
-              decoration: const InputDecoration(
-                labelText: 'Filter by status',
-                border: OutlineInputBorder(),
+            // decoration: const BoxDecoration(
+            //   color: AppTheme.primaryPurple,
+            //   borderRadius: BorderRadius.only(
+            //     bottomLeft: Radius.circular(14),
+            //     bottomRight: Radius.circular(14),
+            //   ),
+            //   boxShadow: [
+            //     BoxShadow(
+            //       color: Colors.black12,
+            //       blurRadius: 4,
+            //       offset: Offset(0, 2),
+            //     ),
+            //   ],
+            // ),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const ClampingScrollPhysics(),
+              child: Row(
+                spacing: 8,
+                children: [
+                  _getChoiceChip('All'),
+                  _getChoiceChip('Pending'),
+                  _getChoiceChip('Verified'),
+                  _getChoiceChip('Rejected'),
+                ],
               ),
-              items: const [
-                DropdownMenuItem(value: 'all', child: Text('All')),
-                DropdownMenuItem(value: 'Pending', child: Text('Pending')),
-                DropdownMenuItem(value: 'Verified', child: Text('Verified')),
-                DropdownMenuItem(value: 'Rejected', child: Text('Rejected')),
-              ],
-              onChanged: (value) async {
-                selectedStatus = value!;
-                await loadCompanies();
-              },
             ),
           ),
+          // 🔹 فلتر الحالات
+          // Padding(
+          //   padding: const EdgeInsets.all(8.0),
+          //   child: DropdownButtonFormField<String>(
+          //     value: selectedStatus,
+          //     decoration: const InputDecoration(
+          //       labelText: 'Filter by status',
+          //       border: OutlineInputBorder(),
+          //     ),
+          //     items: const [
+          //       DropdownMenuItem(value: 'All', child: Text('All')),
+          //       DropdownMenuItem(value: 'Pending', child: Text('Pending')),
+          //       DropdownMenuItem(value: 'Verified', child: Text('Verified')),
+          //       DropdownMenuItem(value: 'Rejected', child: Text('Rejected')),
+          //     ],
+          //     onChanged: (value) async {
+          //       selectedStatus = value!;
+          //       await loadCompanies();
+          //     },
+          //   ),
+          // ),
 
           // 🔹 عرض القائمة
           Expanded(
@@ -127,11 +158,26 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
     );
   }
+
+  ChoiceChip _getChoiceChip(String value) => ChoiceChip(
+        label: Text(value),
+        selected: selectedStatus == value,
+        side: const BorderSide(color: AppTheme.primaryPurple, width: 1.2),
+        selectedColor: AppTheme.primaryPurple,
+        shadowColor: Colors.transparent,
+        labelStyle: TextStyle(
+          color: selectedStatus == value ? Colors.white : Colors.black,
+        ),
+        onSelected: (selected) async {
+          selectedStatus = value;
+          await loadCompanies();
+        },
+      );
 }
 
 class _AdminDashboardAppBar extends StatefulWidget
     implements PreferredSizeWidget {
-  const _AdminDashboardAppBar({super.key});
+  const _AdminDashboardAppBar();
 
   @override
   State<_AdminDashboardAppBar> createState() => _AdminDashboardAppBarState();
@@ -230,11 +276,11 @@ class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: const Color(0xFF4A5FBC),
+      backgroundColor: AppTheme.primaryPurple,
       elevation: 0,
-      centerTitle: false,
-      leading: const SizedBox(),
       leadingWidth: 0,
+      leading: const SizedBox(),
+      centerTitle: false,
       title: const Text(
         'Admin Dashboard',
         style: TextStyle(
@@ -304,7 +350,8 @@ class _CardCompanyWidget extends StatelessWidget {
     final createdAt = (data['Date'] as Timestamp?)?.toDate();
 
     return Card(
-        elevation: 0.2,
+        elevation: 0,
+        color: AppTheme.primaryPurple.withAlpha(50),
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -321,7 +368,10 @@ class _CardCompanyWidget extends StatelessWidget {
                       companyName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                          color: AppTheme.primaryPurple,
+                          //color: Color(0xFFF7F6FC),
+                          fontWeight: FontWeight.bold),
                     ),
                   ),
                   Container(
