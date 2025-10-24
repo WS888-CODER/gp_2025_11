@@ -198,15 +198,92 @@ class _JobPostingPageState extends State<JobPostingPage> {
     }
   }
 
-  void _showErrorAndGoBack(String message) {
+  void _showSuccessSnackBar(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 3),
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        backgroundColor: const Color(0xFF4CAF50).withOpacity(0.8), // Green
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
       ),
     );
+  }
+
+  void _showErrorSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        backgroundColor: const Color(0xFFFF7B7B).withOpacity(0.8), // Red
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
+  }
+
+  void _showWarningSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        backgroundColor: const Color(0xFFFF7B7B).withOpacity(0.8), // Same red as team leader
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
+  }
+
+  void _showInfoSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.8), // Brand purple
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
+  }
+
+  void _showErrorAndGoBack(String message) {
+    _showErrorSnackBar(message);
     Future.delayed(const Duration(seconds: 1), () {
       if (mounted) Navigator.pop(context);
     });
@@ -323,9 +400,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
 
   void _addRequirement() {
     if (_requirements.length >= 15) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Maximum 15 requirements allowed')),
-      );
+      _showWarningSnackBar('Maximum 15 requirements allowed');
       return;
     }
     if (_requirementController.text.trim().isNotEmpty) {
@@ -436,32 +511,24 @@ class _JobPostingPageState extends State<JobPostingPage> {
 
   Future<void> _generateJobPost() async {
     if (_jobTitleController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter job title first')),
-      );
+      _showWarningSnackBar('Please enter job title first');
       return;
     }
 
     if (_positionController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter position first')),
-      );
+      _showWarningSnackBar('Please enter position first');
       return;
     }
 
     if (_specialityController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter speciality first')),
-      );
+      _showWarningSnackBar('Please enter speciality first');
       return;
     }
 
     // Check if user is logged in
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You must be logged in to use AI generation')),
-      );
+      _showWarningSnackBar('You must be logged in to use AI generation');
       return;
     }
 
@@ -473,9 +540,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
           .get();
 
       if (!userDoc.exists) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('User data not found')),
-        );
+        _showErrorSnackBar('User data not found');
         return;
       }
 
@@ -511,32 +576,20 @@ class _JobPostingPageState extends State<JobPostingPage> {
         jobPostingCount = 2;
 
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Daily AI usage limit has been reset!'),
-            duration: Duration(seconds: 2),
-          ),
-        );
+        _showInfoSnackBar('Daily AI usage limit has been reset!');
       } else {
         jobPostingCount = (aiUsage?['JobPosting'] ?? 0) as int;
       }
 
       if (jobPostingCount <= 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('You have reached your AI generation limit for job postings. Resets tomorrow!'),
-            duration: Duration(seconds: 3),
-          ),
-        );
+        _showWarningSnackBar('You have reached your AI generation limit for job postings. Resets tomorrow!');
         return;
       }
 
       // Call your Cloud Function from firebase RUNNING THIS REQUIRES WIFI
       final url = Uri.parse('https://us-central1-jadeer-b4953.cloudfunctions.net/generateJobPost');
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Generating job description...')),
-      );
+      _showInfoSnackBar('Generating job description...');
 
       final response = await http.post(
         url,
@@ -577,21 +630,13 @@ class _JobPostingPageState extends State<JobPostingPage> {
           _aiCreditsRemaining = jobPostingCount - 1;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('AI job description generated! (${jobPostingCount - 1} uses remaining)'),
-          ),
-        );
+        _showSuccessSnackBar('AI job description generated! (${jobPostingCount - 1} uses remaining)');
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: ${response.body}')),
-        );
+        _showErrorSnackBar('Failed: ${response.body}');
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      _showErrorSnackBar('Error: $e');
     }
   }
 
@@ -602,18 +647,14 @@ class _JobPostingPageState extends State<JobPostingPage> {
 
     // Check required fields
     if (_startDate == null || _endDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select start and end dates')),
-      );
+      _showWarningSnackBar('Please select start and end dates');
       return;
     }
 
     // Get current user ID
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You must be logged in to post a job')),
-      );
+      _showWarningSnackBar('You must be logged in to post a job');
       return;
     }
 
@@ -628,15 +669,11 @@ class _JobPostingPageState extends State<JobPostingPage> {
           'StartDate': _startDate,
           'EndDate': _endDate,
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Job dates updated successfully')),
-        );
+        _showSuccessSnackBar('Job dates updated successfully');
       } else {
         // CREATE MODE - Validate requirements first
         if (_requirements.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please add at least one requirement')),
-          );
+          _showWarningSnackBar('Please add at least one requirement');
           return;
         }
 
@@ -663,18 +700,14 @@ class _JobPostingPageState extends State<JobPostingPage> {
           'JobID': jobId,
           'JobStatus': 'Open',
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Job created successfully')),
-        );
+        _showSuccessSnackBar('Job created successfully');
       }
 
       if (!mounted) return;
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      _showErrorSnackBar('Error: $e');
     }
   }
 

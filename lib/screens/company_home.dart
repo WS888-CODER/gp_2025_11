@@ -54,13 +54,28 @@ class _CompanyHomeState extends State<CompanyHome> {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Profile Incomplete'),
+            title: const Text(
+              'Profile Incomplete',
+              textAlign: TextAlign.center,
+            ),
             content: const Text(
               'Please complete your company profile before creating or editing job postings.',
+              textAlign: TextAlign.center,
             ),
+            contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+            actionsPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            actionsAlignment: MainAxisAlignment.center,
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
+                style: TextButton.styleFrom(
+                  backgroundColor: const Color(0xFF4A5FBC),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
                 child: const Text('OK'),
               ),
             ],
