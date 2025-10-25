@@ -813,6 +813,7 @@ class _ExpandableTextState extends State<_ExpandableText> {
 
 class _JobDetailsPageState extends State<JobDetailsPage> {
   bool _companyExpanded = false;
+  bool _saved = false;
 
   String _fmtDate(DateTime d) =>
       '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
@@ -824,34 +825,78 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
     final isClosed = job.status.trim().toLowerCase() == 'closed';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Job Details')),
-      bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.all(12),
-        child: FilledButton(
-          onPressed: isClosed
-              ? null
-              : () {
-                  // لما يضغط Apply (شغال فقط لو مو Closed)
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Coming soon')),
-                  );
-                },
-          style: FilledButton.styleFrom(
-            backgroundColor:
-                isClosed ? Colors.grey[400] : const Color(0xFF4A5FBC),
-            disabledBackgroundColor: Colors.grey[400],
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+      backgroundColor: const Color(0xFFF7F6FC), // نفس صفحة Jobs
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF4A5FBC),
+        title: const Text(
+          'Job Details',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
+        iconTheme: const IconThemeData(
+          color: Colors.white, // back arrow يصير أبيض
+        ),
+        actions: [
+          IconButton(
+            tooltip:
+                isClosed ? 'Closed job' : (_saved ? 'Saved' : 'Save for later'),
+            onPressed: isClosed
+                ? null
+                : () {
+                    setState(() {
+                      _saved = !_saved;
+                    });
+                  },
+            icon: Icon(
+              _saved ? Icons.favorite : Icons.favorite_border,
+              color:
+                  isClosed ? Colors.grey : (_saved ? Colors.red : Colors.white),
             ),
           ),
-          child: Text(
-            isClosed ? 'Closed' : 'Apply',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+          const SizedBox(width: 4),
+        ],
+      ),
+
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.07),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
             ),
+          ],
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: SafeArea(
+          top: false,
+          minimum: const EdgeInsets.only(bottom: 8),
+          child: FilledButton(
+            onPressed: isClosed
+                ? null
+                : () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Coming soon')),
+                    );
+                  },
+            style: FilledButton.styleFrom(
+              backgroundColor:
+                  isClosed ? Colors.grey[400] : const Color(0xFF4A5FBC),
+              disabledBackgroundColor: Colors.grey[400],
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              textStyle: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            child: Text(isClosed ? 'Closed' : 'Apply'),
           ),
         ),
       ),
@@ -860,8 +905,11 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
         children: [
           // Company details card (with truncated/expandable description)
           Card(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            elevation: 2,
+            shadowColor: Colors.black.withOpacity(0.05),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -873,57 +921,118 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                         ? NetworkImage(company!.logoUrl)
                         : null,
                     child: (company?.logoUrl ?? '').isEmpty
-                        ? const Icon(Icons.business)
+                        ? const Icon(Icons.business, size: 28)
                         : null,
+                    backgroundColor: const Color(0xFFE8E8FF),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          (company?.name ?? 'Company'),
-                          style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w700),
+                        // اسم الشركة + بادج Closed
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                (company?.name ?? 'Company'),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: isClosed
+                                      ? Colors.grey[600]
+                                      : const Color(0xFF4A5FBC),
+                                ),
+                              ),
+                            ),
+                            if (isClosed)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[500],
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Text(
+                                  'Closed',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
+
                         if ((company?.location ?? '').isNotEmpty) ...[
                           const SizedBox(height: 4),
-                          Text(company!.location),
+                          Row(
+                            children: [
+                              Icon(Icons.location_on_outlined,
+                                  size: 14, color: Colors.grey[600]),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  company!.location,
+                                  style: TextStyle(
+                                    color: Colors.grey[700],
+                                    fontSize: 13,
+                                    height: 1.3,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ],
-                        // Truncated / expandable description
+
                         if ((company?.description ?? '').isNotEmpty) ...[
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 8),
                           AnimatedCrossFade(
                             firstChild: Text(
                               company!.description,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[800],
+                                height: 1.35,
+                              ),
                             ),
-                            secondChild: Text(company!.description),
+                            secondChild: Text(
+                              company.description,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[800],
+                                height: 1.35,
+                              ),
+                            ),
                             crossFadeState: _companyExpanded
                                 ? CrossFadeState.showSecond
                                 : CrossFadeState.showFirst,
                             duration: const Duration(milliseconds: 200),
                           ),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              TextButton(
-                                style: TextButton.styleFrom(
-                                  padding: EdgeInsets.zero,
-                                  minimumSize: const Size(40, 24),
-                                  tapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                ),
-                                onPressed: () => setState(
-                                    () => _companyExpanded = !_companyExpanded),
-                                child: Text(_companyExpanded
-                                    ? 'Show less'
-                                    : 'Show more'),
+                          TextButton(
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              minimumSize: const Size(40, 24),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            onPressed: () => setState(
+                                () => _companyExpanded = !_companyExpanded),
+                            child: Text(
+                              _companyExpanded ? 'Show less' : 'Show more',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
                               ),
-                            ],
+                            ),
                           ),
                         ],
+
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 12,
@@ -933,8 +1042,9 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                               InkWell(
                                 onTap: () {
                                   final uri = Uri(
-                                      scheme: 'mailto',
-                                      path: company!.contactEmail);
+                                    scheme: 'mailto',
+                                    path: company!.contactEmail,
+                                  );
                                   launchUrl(uri,
                                       mode: LaunchMode.externalApplication);
                                 },
@@ -943,7 +1053,10 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                                   children: [
                                     const Icon(Icons.email, size: 16),
                                     const SizedBox(width: 4),
-                                    Text(company!.contactEmail),
+                                    Text(
+                                      company!.contactEmail,
+                                      style: const TextStyle(fontSize: 13),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -951,7 +1064,7 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                               InkWell(
                                 onTap: () {
                                   final uri =
-                                      Uri(scheme: 'tel', path: company.phone);
+                                      Uri(scheme: 'tel', path: company!.phone);
                                   launchUrl(uri,
                                       mode: LaunchMode.externalApplication);
                                 },
@@ -960,7 +1073,10 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                                   children: [
                                     const Icon(Icons.phone, size: 16),
                                     const SizedBox(width: 4),
-                                    Text(company!.phone),
+                                    Text(
+                                      company!.phone,
+                                      style: const TextStyle(fontSize: 13),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -978,77 +1094,48 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
 
 // ===== Job Summary (Clear & Explicit) =====
           Card(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            elevation: 2,
+            shadowColor: Colors.black.withOpacity(0.05),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title and Closed badge
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          job.title.isEmpty ? 'Untitled Job' : job.title,
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                          ),
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (isClosed)
-                        Container(
-                          margin: const EdgeInsets.only(left: 8),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[500],
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Text(
-                            'Closed',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                    ],
+                  Text(
+                    job.title.isEmpty ? 'Untitled Job' : job.title,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: isClosed ? Colors.grey[700] : Colors.black,
+                      height: 1.2,
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
                   ),
-
                   const SizedBox(height: 12),
                   const Divider(height: 1),
-
                   const SizedBox(height: 12),
-
                   _infoRow(
                     context,
                     icon: Icons.local_offer_outlined,
                     label: 'Specialty',
                     value: job.specialty.isEmpty ? '—' : job.specialty,
                   ),
-
-                  // Position
                   _infoRow(
                     context,
                     icon: Icons.work_outline,
                     label: 'Position',
                     value: job.position.isEmpty ? '—' : job.position,
                   ),
-
-                  // Posted (بسطر مستقل)
                   _infoRow(
                     context,
                     icon: Icons.calendar_today,
                     label: 'Posted',
                     value: _fmtDate(job.postedAt),
                   ),
-
-                  // Ends (بسطر مستقل وواضح)
                   if (job.endDate != null)
                     _infoRow(
                       context,
