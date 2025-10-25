@@ -288,13 +288,30 @@ class _SignupScreenState extends State<SignupScreen> {
       String userId = userCredential.user!.uid;
       String email = _companyEmailController.text.trim().toLowerCase();
       await _firestore.collection('Users').doc(userId).set({
-        'CompanyName': _companyNameController.text.trim(),
-        'Name': _companyFullNameController.text.trim(),
-        'Email': email,
+        'UserID': userId,
         'UserType': 'Company',
+        'Email':
+            _companyEmailController.text.trim().toLowerCase(), // ✅ lowercase
+        'Name': _companyFullNameController.text.trim(),
+        'CompanyName': _companyNameController.text.trim(),
+        'Phone': null,
+        'PhotoURL': null,
+        'IsProfileComplete': false,
+        'ContactEmail': null,
+        'Location': null,
+        'Description': null,
         'AccountStatus': 'Pending',
         'IsEmailVerified': false,
-        'CreatedAt': FieldValue.serverTimestamp(),
+        'PhotoPath': null,
+        'failedLoginAttempts': 0,
+        'lastFailedLoginDate': null,
+        'accountLocked': false,
+        'mustResetPassword': false,
+        'Date': FieldValue.serverTimestamp(),
+        'AiUsage': {
+          'LastReset': FieldValue.serverTimestamp(),
+          'JobPosting': 2,
+        },
       });
       String otp = _generateOTP();
       bool otpSent = await _sendOTPEmail(email, otp, 'Company');
@@ -337,11 +354,32 @@ class _SignupScreenState extends State<SignupScreen> {
       String userId = userCredential.user!.uid;
       String email = _seekerEmailController.text.trim().toLowerCase();
       await _firestore.collection('Users').doc(userId).set({
-        'Name': _seekerNameController.text.trim(),
-        'Email': email,
+        'UserID': userId,
         'UserType': 'JobSeeker',
+        'Email':
+            _seekerEmailController.text.trim().toLowerCase(), // ✅ lowercase
+        'Name': _seekerNameController.text.trim(),
+        'DoB': null,
+        'Nationality': null,
+        'Phone': null,
+        'PhotoURL': null,
+        'CVURL': null,
+        'IsProfileComplete': false,
+        'CVKeywords': null,
+        'ContactEmail': null,
         'IsEmailVerified': false,
-        'CreatedAt': FieldValue.serverTimestamp(),
+        'PhotoPath': null,
+        'CVPath': null,
+        'failedLoginAttempts': 0,
+        'lastFailedLoginDate': null,
+        'accountLocked': false,
+        'mustResetPassword': false,
+        'Date': FieldValue.serverTimestamp(),
+        'AiUsage': {
+          'LastReset': FieldValue.serverTimestamp(),
+          'CvEnhancement': 2,
+          'MockInterview': 2,
+        },
       });
       String otp = _generateOTP();
       bool otpSent = await _sendOTPEmail(email, otp, 'JobSeeker');

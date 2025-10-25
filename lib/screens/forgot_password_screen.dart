@@ -104,7 +104,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       }
       return false;
     } catch (e) {
-      print('❌ Error sending OTP: $e');
+      print('âŒ Error sending OTP: $e');
       return false;
     }
   }
@@ -135,7 +135,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     try {
       String email = _emailController.text.trim().toLowerCase();
 
-      // ✅ التحقق من أن الإيميل موجود في جدول Users
       QuerySnapshot userSnapshot = await _firestore
           .collection('Users')
           .where('Email', isEqualTo: email)
@@ -150,20 +149,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         return;
       }
 
-      // ✅ التحقق من UserType - إذا كان Admin، منع إعادة تعيين كلمة المرور
+      // 🔒 Check if user is Admin - they cannot reset password themselves
       Map<String, dynamic> userData =
           userSnapshot.docs.first.data() as Map<String, dynamic>;
-      String userType = userData['UserType'] ?? '';
+      String userType = userData['UserType'] ?? userData['userType'] ?? '';
 
       if (userType == 'Admin') {
         setState(() {
-          _emailError = 'Cannot reset password for Admin accounts.';
+          _emailError =
+              'Cannot reset password. Please contact system administrator.';
           _isLoading = false;
         });
         return;
       }
 
-      // ✅ المتابعة لإرسال OTP
       String otp = _generateOTP();
       bool otpSent = await _sendOTPEmail(email, otp);
 
@@ -324,13 +323,34 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       });
 
       if (result.data != null && result.data['success'] == true) {
+        // 🔒 Reset account lock status after successful password reset
+        QuerySnapshot userSnapshot = await _firestore
+            .collection('Users')
+            .where('Email', isEqualTo: _userEmail)
+            .limit(1)
+            .get();
+
+        if (userSnapshot.docs.isNotEmpty) {
+          String userId = userSnapshot.docs.first.id;
+
+          // Reset all security counters and unlock the account
+          await _firestore.collection('Users').doc(userId).update({
+            'failedLoginAttempts': 0,
+            'lastFailedLoginDate': null,
+            'accountLocked': false,
+            'mustResetPassword': false,
+          });
+
+          print('✅ Account unlocked successfully for user: $userId');
+        }
+
         await _firestore
             .collection('PasswordResetOTPs')
             .doc(_userEmail)
             .delete();
 
         _showSuccessDialog(
-          'Password reset successfully!\n\nYou can now login with your new password.',
+          'Password reset successfully!\n\nYour account has been unlocked and you can now login with your new password.',
         );
       } else {
         setState(() {
@@ -338,7 +358,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         });
       }
     } catch (e) {
-      print('❌ Error: $e');
+      print('âŒ Error: $e');
       setState(() {
         _passwordError = 'An error occurred: ${e.toString()}';
       });
@@ -378,12 +398,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         content: Text(
           message,
           style: TextStyle(
-            color: Colors.white, // ✅ نص أبيض
+            color: Colors.white, // âœ… Ù†Øµ Ø£Ø¨ÙŠØ¶
             fontWeight: FontWeight.bold,
           ),
-          textAlign: TextAlign.center, // ✅ وسطه مثل الملك
+          textAlign: TextAlign.center, // âœ… ÙˆØ³Ø·Ù‡ Ù…Ø«Ù„ Ø§Ù„Ù…Ù„Ùƒ
         ),
-        backgroundColor: Color(0xFFFF7B7B).withOpacity(0.8), // ✅ اللون حقك
+        backgroundColor:
+            Color(0xFFFF7B7B).withOpacity(0.8), // âœ… Ø§Ù„Ù„ÙˆÙ† Ø­Ù‚Ùƒ
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
@@ -431,7 +452,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       body: SizedBox.expand(
         child: Stack(
           children: [
-            // خلفية office.png
+            // Ø®Ù„ÙÙŠØ© office.png
             Positioned.fill(
               child: Image.asset(
                 'assets/images/office.png',
@@ -439,7 +460,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ),
             ),
 
-            // لوجو j_filled في أعلى اليمين
+            // Ù„ÙˆØ¬Ùˆ j_filled ÙÙŠ Ø£Ø¹Ù„Ù‰ Ø§Ù„ÙŠÙ…ÙŠÙ†
             Positioned(
               top: 50,
               right: 30,
@@ -451,7 +472,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ),
             ),
 
-            // المربع البنفسجي في منتصف الشاشة
+            // Ø§Ù„Ù…Ø±Ø¨Ø¹ Ø§Ù„Ø¨Ù†ÙØ³Ø¬ÙŠ ÙÙŠ Ù…Ù†ØªØµÙ Ø§Ù„Ø´Ø§Ø´Ø©
             Center(
               child: Container(
                 width: MediaQuery.of(context).size.width * 0.85,
@@ -467,7 +488,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // العنوان الرئيسي
+                        // Ø§Ù„Ø¹Ù†ÙˆØ§Ù† Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ
                         Text(
                           _currentStep == 1
                               ? 'Forgot Password?'
@@ -484,7 +505,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
                         const SizedBox(height: 16),
 
-                        // النص التوضيحي
+                        // Ø§Ù„Ù†Øµ Ø§Ù„ØªÙˆØ¶ÙŠØ­ÙŠ
                         Text(
                           _currentStep == 1
                               ? 'Enter your email address and we\'ll send you a verification code.'
@@ -500,7 +521,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
                         const SizedBox(height: 40),
 
-                        // ========== المرحلة 1: إدخال الإيميل ==========
+                        // ========== Ø§Ù„Ù…Ø±Ø­Ù„Ø© 1: Ø¥Ø¯Ø®Ø§Ù„ Ø§Ù„Ø¥ÙŠÙ…ÙŠÙ„ ==========
                         if (_currentStep == 1) ...[
                           TextFormField(
                             controller: _emailController,
@@ -588,7 +609,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           ),
                         ],
 
-                        // ========== المرحلة 2: إدخال OTP ==========
+                        // ========== Ø§Ù„Ù…Ø±Ø­Ù„Ø© 2: Ø¥Ø¯Ø®Ø§Ù„ OTP ==========
                         if (_currentStep == 2) ...[
                           TextFormField(
                             controller: _otpController,
@@ -741,7 +762,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           ),
                         ],
 
-                        // ========== المرحلة 3: إدخال كلمة السر الجديدة ==========
+                        // ========== Ø§Ù„Ù…Ø±Ø­Ù„Ø© 3: Ø¥Ø¯Ø®Ø§Ù„ ÙƒÙ„Ù…Ø© Ø§Ù„Ø³Ø± Ø§Ù„Ø¬Ø¯ÙŠØ¯Ø© ==========
                         if (_currentStep == 3) ...[
                           TextFormField(
                             controller: _newPasswordController,
@@ -918,7 +939,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ),
               ),
             ),
-            // ✅ إضافة سهم الرجوع للخلف في أعلى اليسار - آخر عنصر في Stack
+            // ✅ سهم الرجوع في أعلى اليسار
             Positioned(
               top: 50,
               left: 30,
