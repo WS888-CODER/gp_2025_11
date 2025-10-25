@@ -622,9 +622,9 @@ class _CompanyProfileState extends State<CompanyProfile> {
                       companyName.isEmpty ? 'Company' : companyName,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF4A5FBC),
                       ),
                     ),
 
@@ -637,7 +637,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
                           const Icon(
                             Icons.location_on_outlined,
                             size: 16,
-                            color: Colors.black54,
+                            color: Color(0xFF4A5FBC),
                           ),
                           const SizedBox(width: 4),
                           Flexible(
@@ -645,7 +645,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
                               location,
                               style: const TextStyle(
                                 fontSize: 13,
-                                color: Colors.black87,
+                                color: Color(0xFF4A5FBC),
                                 fontWeight: FontWeight.w500,
                               ),
                               textAlign: TextAlign.center,
