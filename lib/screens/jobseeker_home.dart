@@ -495,7 +495,7 @@ class _JobsPreviewState extends State<_JobsPreview> {
         stream: FirebaseFirestore.instance
             .collection('Jobs')
             .orderBy('StartDate', descending: true)
-            .limit(widget.limit)
+            .limit(widget.limit * 5)
             .snapshots(),
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
