@@ -17,7 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
 
-  // 🔒 ONLY ADDITION 1: Error message variable
+  // 🔒 Error message variable
   String? _loginError;
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -28,29 +28,6 @@ class _LoginScreenState extends State<LoginScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
-  }
-
-  void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: const [
-            Icon(Icons.error_outline, color: Colors.red, size: 28),
-            SizedBox(width: 10),
-            Text('Error', style: TextStyle(color: Colors.red)),
-          ],
-        ),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('OK', style: TextStyle(color: Color(0xFF4A5FBC))),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showSuccessSnackBar(String message) {
@@ -73,7 +50,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // 🔒 ONLY ADDITION 2: Dialog for locked accounts
+  // 🔒 Dialog for locked accounts
   void _showPasswordResetRequiredDialog(String userType) {
     showDialog(
       context: context,
@@ -81,19 +58,22 @@ class _LoginScreenState extends State<LoginScreen> {
       builder: (ctx) => WillPopScope(
         onWillPop: () async => false,
         child: AlertDialog(
+          backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
           title: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: const [
-              Icon(Icons.lock_outline, color: Color(0xFFFF7B7B), size: 28),
+              Icon(Icons.lock_outline, color: Colors.white, size: 28),
               SizedBox(width: 10),
               Expanded(
                 child: Text(
                   'Account Locked',
                   style: TextStyle(
-                    color: Color(0xFFFF7B7B),
+                    color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
+                  textAlign: TextAlign.center,
                 ),
               ),
             ],
@@ -104,8 +84,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     'For security reasons, please contact the system administrator to unlock your account.'
                 : 'You have entered an incorrect password 5 times today. '
                     'For security reasons, you must reset your password before you can access your account again.',
-            style: TextStyle(fontSize: 15),
+            style: const TextStyle(color: Colors.white, fontSize: 15),
+            textAlign: TextAlign.center,
           ),
+          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+          actionsPadding:
+              const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          actionsAlignment: MainAxisAlignment.center,
           actions: [
             if (userType == 'Admin')
               TextButton(
@@ -113,13 +98,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   Navigator.of(ctx).pop();
                   Navigator.of(context).pop();
                 },
-                child: const Text(
-                  'OK',
-                  style: TextStyle(
-                    color: Color(0xFF4A5FBC),
-                    fontWeight: FontWeight.bold,
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.white.withOpacity(0.9),
+                  foregroundColor: const Color(0xFF4A5FBC),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
                   ),
                 ),
+                child: const Text('OK'),
               )
             else
               TextButton(
@@ -131,13 +119,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     arguments: {'email': _emailController.text.trim()},
                   );
                 },
-                child: const Text(
-                  'Reset Password',
-                  style: TextStyle(
-                    color: Color(0xFF4A5FBC),
-                    fontWeight: FontWeight.bold,
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.white.withOpacity(0.9),
+                  foregroundColor: const Color(0xFF4A5FBC),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
                   ),
                 ),
+                child: const Text('Reset Password'),
               ),
           ],
         ),
@@ -178,7 +169,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // 🔒 ONLY ADDITION 3: Check account lock status
+  // 🔒 Check account lock status
   Future<Map<String, dynamic>?> _checkAccountLockStatus(String email) async {
     try {
       final querySnapshot = await _firestore
@@ -240,12 +231,12 @@ class _LoginScreenState extends State<LoginScreen> {
         'failedAttempts': failedAttempts,
       };
     } catch (e) {
-      print('Error checking account lock status: $e');
+      print('❌ Error checking account lock status: $e');
       return null;
     }
   }
 
-  // 🔒 ONLY ADDITION 4: Record failed login attempt
+  // 🔒 Record failed login attempt
   Future<void> _recordFailedLoginAttempt(String email) async {
     try {
       final querySnapshot = await _firestore
@@ -254,7 +245,15 @@ class _LoginScreenState extends State<LoginScreen> {
           .limit(1)
           .get();
 
-      if (querySnapshot.docs.isEmpty) return;
+      if (querySnapshot.docs.isEmpty) {
+        // ✅ الإيميل مو موجود، بس نعرض رسالة عامة
+        if (mounted) {
+          setState(() {
+            _loginError = 'Invalid credentials. Please try again.';
+          });
+        }
+        return;
+      }
 
       final userId = querySnapshot.docs.first.id;
       final data = querySnapshot.docs.first.data();
@@ -276,6 +275,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final newFailedAttempts = resetCounter ? 1 : failedAttempts + 1;
 
+      // ✅ Update Firestore أولاً
       await _firestore.collection('Users').doc(userId).update({
         'failedLoginAttempts': newFailedAttempts,
         'lastFailedLoginDate': FieldValue.serverTimestamp(),
@@ -283,27 +283,46 @@ class _LoginScreenState extends State<LoginScreen> {
         'mustResetPassword': newFailedAttempts >= 5,
       });
 
-      if (newFailedAttempts == 3 || newFailedAttempts == 4) {
-        final remaining = 5 - newFailedAttempts;
-        setState(() {
-          _loginError =
-              'Invalid credentials. You have $remaining attempt${remaining > 1 ? 's' : ''} remaining before your account is locked.';
-        });
-      } else if (newFailedAttempts >= 5) {
-        setState(() {
-          _loginError = 'Account locked due to multiple failed attempts.';
-        });
-      } else {
-        setState(() {
-          _loginError = 'Invalid credentials. Please try again.';
-        });
+      print(
+          '✅ Updated failedLoginAttempts to: $newFailedAttempts for user: $userId');
+
+      // ✅ Update UI بعدين
+      if (mounted) {
+        if (newFailedAttempts == 3 || newFailedAttempts == 4) {
+          final remaining = 5 - newFailedAttempts;
+          setState(() {
+            _loginError =
+                'Invalid credentials. You have $remaining attempt${remaining > 1 ? 's' : ''} remaining before your account is locked.';
+          });
+        } else if (newFailedAttempts >= 5) {
+          setState(() {
+            _loginError = 'Account locked due to multiple failed attempts.';
+          });
+
+          // ✅ Show dialog for locked account
+          final userType = data['UserType'] ?? data['userType'] ?? '';
+          Future.delayed(Duration(milliseconds: 100), () {
+            if (mounted) {
+              _showPasswordResetRequiredDialog(userType);
+            }
+          });
+        } else {
+          setState(() {
+            _loginError = 'Invalid credentials. Please try again.';
+          });
+        }
       }
     } catch (e) {
-      print('Error recording failed login: $e');
+      print('❌ Error recording failed login: $e');
+      if (mounted) {
+        setState(() {
+          _loginError = 'An error occurred. Please try again.';
+        });
+      }
     }
   }
 
-  // 🔒 ONLY ADDITION 5: Reset failed login attempts
+  // 🔒 Reset failed login attempts
   Future<void> _resetFailedLoginAttempts(String userId) async {
     try {
       await _firestore.collection('Users').doc(userId).update({
@@ -313,7 +332,7 @@ class _LoginScreenState extends State<LoginScreen> {
         'mustResetPassword': false,
       });
     } catch (e) {
-      print('Error resetting failed attempts: $e');
+      print('❌ Error resetting failed attempts: $e');
     }
   }
 
@@ -440,30 +459,40 @@ class _LoginScreenState extends State<LoginScreen> {
         _loginError = 'Unknown user type: "$userType"';
       });
     } on FirebaseAuthException catch (e) {
+      print('🔴 FirebaseAuthException: ${e.code} - ${e.message}');
+
       // 🔒 Handle different error types
       if (e.code == 'user-not-found') {
         // Email doesn't exist - show error but DON'T record attempt
-        setState(() {
-          _loginError = 'Invalid credentials. Please try again.';
-        });
+        if (mounted) {
+          setState(() {
+            _loginError = 'Invalid credentials. Please try again.';
+          });
+        }
       } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
         // Wrong password - record the failed attempt
+        print('🔴 Wrong password detected, recording attempt...');
         await _recordFailedLoginAttempt(_emailController.text.trim());
       } else {
-        setState(() {
-          if (e.code == 'invalid-email') {
-            _loginError = 'Invalid email format';
-          } else if (e.code == 'user-disabled') {
-            _loginError = 'This account has been disabled';
-          } else {
-            _loginError = 'An error occurred during login';
-          }
-        });
+        if (mounted) {
+          setState(() {
+            if (e.code == 'invalid-email') {
+              _loginError = 'Invalid email format';
+            } else if (e.code == 'user-disabled') {
+              _loginError = 'This account has been disabled';
+            } else {
+              _loginError = 'An error occurred during login';
+            }
+          });
+        }
       }
     } catch (e) {
-      setState(() {
-        _loginError = 'Unexpected error: $e';
-      });
+      print('❌ Unexpected error: $e');
+      if (mounted) {
+        setState(() {
+          _loginError = 'Unexpected error. Please try again.';
+        });
+      }
     } finally {
       setState(() => _isLoading = false);
     }
@@ -624,7 +653,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             }
                           },
                         ),
-                        // 🔒 ONLY ADDITION 6: Show error under password field
+                        // 🔒 Show error under password field
                         if (_loginError != null)
                           Padding(
                             padding: const EdgeInsets.only(top: 8),

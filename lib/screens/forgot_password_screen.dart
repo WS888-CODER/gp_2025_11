@@ -323,27 +323,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       });
 
       if (result.data != null && result.data['success'] == true) {
-        // 🔒 Reset account lock status after successful password reset
-        QuerySnapshot userSnapshot = await _firestore
-            .collection('Users')
-            .where('Email', isEqualTo: _userEmail)
-            .limit(1)
-            .get();
-
-        if (userSnapshot.docs.isNotEmpty) {
-          String userId = userSnapshot.docs.first.id;
-
-          // Reset all security counters and unlock the account
-          await _firestore.collection('Users').doc(userId).update({
-            'failedLoginAttempts': 0,
-            'lastFailedLoginDate': null,
-            'accountLocked': false,
-            'mustResetPassword': false,
-          });
-
-          print('✅ Account unlocked successfully for user: $userId');
-        }
-
+        // ✅ Delete OTP document
         await _firestore
             .collection('PasswordResetOTPs')
             .doc(_userEmail)
@@ -358,7 +338,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         });
       }
     } catch (e) {
-      print('âŒ Error: $e');
+      print('❌ Error: $e');
       setState(() {
         _passwordError = 'An error occurred: ${e.toString()}';
       });
@@ -367,29 +347,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         _isLoading = false;
       });
     }
-  }
-
-  void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.error_outline, color: Colors.red, size: 28),
-            SizedBox(width: 10),
-            Text('Error', style: TextStyle(color: Colors.red)),
-          ],
-        ),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('OK', style: TextStyle(color: Color(0xFF4A5FBC))),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showSuccessSnackBar(String message) {
@@ -418,22 +375,42 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
         title: Row(
-          children: [
-            Icon(Icons.check_circle_outline, color: Colors.green, size: 28),
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: const [
+            Icon(Icons.check_circle_outline, color: Colors.white, size: 28),
             SizedBox(width: 10),
-            Text('Success', style: TextStyle(color: Colors.green)),
+            Text('Success',
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold)),
           ],
         ),
-        content: Text(message),
+        content: Text(
+          message,
+          style: const TextStyle(color: Colors.white),
+          textAlign: TextAlign.center,
+        ),
+        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+        actionsPadding:
+            const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        actionsAlignment: MainAxisAlignment.center,
         actions: [
           TextButton(
             onPressed: () {
               Navigator.of(ctx).pop();
               Navigator.of(context).pop();
             },
-            child: Text('OK', style: TextStyle(color: Color(0xFF4A5FBC))),
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.white.withOpacity(0.9),
+              foregroundColor: const Color(0xFF4A5FBC),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            child: const Text('OK'),
           ),
         ],
       ),
