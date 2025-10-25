@@ -24,7 +24,6 @@ class JobFields {
   static const userId = 'UserID';
   static const company =
       'Company'; // not in schema but kept for backward-safety
-  static const applyUrl = 'ApplyURL'; // optional
 }
 
 class UserDocFields {
@@ -75,7 +74,6 @@ class Job {
   final List<String> requirements;
   final String specialty;
   final String userId;
-  final String? applyUrl;
 
   const Job({
     required this.id,
@@ -90,7 +88,6 @@ class Job {
     required this.requirements,
     required this.specialty,
     required this.userId,
-    this.applyUrl,
   });
 
   factory Job.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -115,7 +112,6 @@ class Job {
       requirements: asStringList(d[JobFields.requirements]),
       specialty: (d[JobFields.specialty] ?? '').toString(),
       userId: (d[JobFields.userId] ?? '').toString(),
-      applyUrl: (d[JobFields.applyUrl] as String?)?.toString(),
     );
   }
 }
@@ -225,9 +221,6 @@ class _JobsPageState extends State<JobsPage> {
 
   UserProfile get _profile => _liveProfile ?? widget.profile;
 
-  String _fmtDate(DateTime d) =>
-      '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
-
   bool _matchesSpecialty(Job j, String specialty) {
     final m = specialty.toLowerCase().trim();
     final spec = j.specialty.toLowerCase().trim();
@@ -289,20 +282,6 @@ class _JobsPageState extends State<JobsPage> {
           : a.postedAt.compareTo(b.postedAt),
     );
     return list;
-  }
-
-  void _toggleSave(Job job) {
-    setState(() {
-      if (_saved.contains(job.id)) {
-        _saved.remove(job.id);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Removed from saved')));
-      } else {
-        _saved.add(job.id);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Saved for later')));
-      }
-    });
   }
 
   void _maybeShowProfileBanner() {
@@ -439,21 +418,50 @@ class _JobsPageState extends State<JobsPage> {
     final jobs = _applyFilters(_allJobs);
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF7F6FC),
       appBar: AppBar(
-        title: const Text('Jobs'),
+        backgroundColor: const Color(0xFF4A5FBC),
+        title: const Text(
+          'Jobs',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(64),
           child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search company, title, position or keyword…',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.07),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              onChanged: (v) => setState(() => _search = v),
+              child: TextField(
+                style: const TextStyle(fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'Search company, title, position or keyword…',
+                  hintStyle: TextStyle(
+                    color: Colors.grey[500],
+                    fontSize: 14,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    color: Colors.grey[600],
+                  ),
+                  border: InputBorder.none,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                ),
+                onChanged: (v) => setState(() => _search = v),
+              ),
             ),
           ),
         ),
@@ -462,59 +470,197 @@ class _JobsPageState extends State<JobsPage> {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Column(
-              children: [
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    DropdownButton<String>(
-                      value: _selectedSpecialty,
-                      items: _specialties
-                          .map((m) => DropdownMenuItem(value: m, child: Text(m)))
-                          .toList(),
-                      onChanged: (val) =>
-                          setState(() => _selectedSpecialty = val ?? 'All'),
-                    ),
-                    DropdownButton<SortOrder>(
-                      value: _sort,
-                      items: const [
-                        DropdownMenuItem(
-                          value: SortOrder.newestFirst,
-                          child: Text('Newest first'),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ================= ROW 1: specialty + sort =================
+                  Row(
+                    children: [
+                      // specialty
+                      Expanded(
+                        child: _FilterBox(
+                          borderColor: const Color(0xFF4A5FBC),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              isDense: true,
+                              isExpanded: true,
+                              value: _selectedSpecialty,
+                              icon: const Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                                color: Color(0xFF4A5FBC), // لون السهم بنفسجي
+                              ),
+                              // ⬇️ لون النص داخل القائمة
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.black,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              // ⬇️ النص المختار بلون بنفسجي واضح
+                              selectedItemBuilder: (context) {
+                                return _specialties.map((m) {
+                                  return Text(
+                                    m,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Color(
+                                          0xFF4A5FBC), // ← اللون البنفسجي للنص المختار
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
+                                  );
+                                }).toList();
+                              },
+                              items: _specialties
+                                  .map(
+                                    (m) => DropdownMenuItem(
+                                      value: m,
+                                      child: Text(
+                                        m,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (val) {
+                                setState(
+                                    () => _selectedSpecialty = val ?? 'All');
+                              },
+                            ),
+                          ),
                         ),
-                        DropdownMenuItem(
-                          value: SortOrder.oldestFirst,
-                          child: Text('Oldest first'),
+                      ),
+
+                      const SizedBox(width: 8),
+
+                      // sort
+                      Expanded(
+                        child: _FilterBox(
+                          borderColor: const Color(0xFF4A5FBC),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<SortOrder>(
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF4A5FBC),
+                                fontWeight: FontWeight.w600,
+                              ),
+                              isDense: true,
+                              isExpanded: true,
+                              value: _sort,
+                              icon:
+                                  const Icon(Icons.keyboard_arrow_down_rounded),
+                              items: const [
+                                DropdownMenuItem(
+                                  value: SortOrder.newestFirst,
+                                  child: Text('Newest first'),
+                                ),
+                                DropdownMenuItem(
+                                  value: SortOrder.oldestFirst,
+                                  child: Text('Oldest first'),
+                                ),
+                              ],
+                              onChanged: (val) {
+                                setState(() => _sort = val!);
+                              },
+                            ),
+                          ),
                         ),
-                      ],
-                      onChanged: (val) => setState(() => _sort = val!),
-                    ),
-                    FilterChip(
-                      selected: _forYou,
-                      label: const Text('For You'),
-                      onSelected: (v) {
-                        setState(() => _forYou = v);
-                        _maybeShowCvBanner();
-                      },
-                    ),
-                  ],
-                ),
-                // Toggle for showing closed jobs
-                Row(
-                  children: [
-                    Checkbox(
-                      value: _showClosedJobs,
-                      onChanged: (val) => setState(() => _showClosedJobs = val ?? false),
-                    ),
-                    const Text('Show closed jobs'),
-                  ],
-                ),
-              ],
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // ================= ROW 2: For You + Show closed =================
+                  Row(
+                    children: [
+                      // For You chip
+                      _ForYouChip(
+                        selected: _forYou,
+                        onTap: (v) {
+                          setState(() => _forYou = v);
+                          _maybeShowCvBanner();
+                        },
+                      ),
+
+                      const Spacer(),
+
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'Show closed',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF4A5FBC),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Theme(
+                            data: Theme.of(context).copyWith(
+                              switchTheme: SwitchThemeData(
+                                trackColor:
+                                    WidgetStateProperty.resolveWith((states) {
+                                  if (states.contains(WidgetState.selected)) {
+                                    // 🧡 لما يكون مفعل → السلموني
+                                    return const Color(0xFFFD6C67);
+                                  } else {
+                                    // ⚪️ لما يكون طافي → أبيض
+                                    return Colors.white;
+                                  }
+                                }),
+                                thumbColor:
+                                    WidgetStateProperty.resolveWith((states) {
+                                  if (states.contains(WidgetState.selected)) {
+                                    // 🔘 الدائرة بيضاء لما يكون On
+                                    return Colors.white;
+                                  } else {
+                                    // 🔘 الدائرة بنفسجية لما يكون Off
+                                    return const Color(0xFF4A5FBC);
+                                  }
+                                }),
+                                trackOutlineColor:
+                                    WidgetStateProperty.resolveWith((states) {
+                                  // 🎨 لما يكون On يصير البوردر سلموني، لما Off يصير بنفسجي
+                                  if (states.contains(WidgetState.selected)) {
+                                    return const Color(0xFFFD6C67);
+                                  } else {
+                                    return const Color(0xFF4A5FBC);
+                                  }
+                                }),
+                              ),
+                            ),
+                            child: Transform.scale(
+                              scale: 0.9,
+                              child: Switch.adaptive(
+                                value: _showClosedJobs,
+                                onChanged: (val) {
+                                  setState(() => _showClosedJobs = val);
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
-          const Divider(height: 1),
           Expanded(
             child: Builder(
               builder: (_) {
@@ -546,193 +692,8 @@ class _JobsPageState extends State<JobsPage> {
                   separatorBuilder: (_, __) => const SizedBox(height: 10),
                   itemBuilder: (context, i) {
                     final j = jobs[i];
-                    final info = _company[j.userId]; // CompanyInfo?
-                    final isClosed = j.status == 'Closed';
-
-                    return Card(
-                      elevation: 0.5,
-                      color: isClosed ? Colors.grey[300] : null,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16)),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(16),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => JobDetailsPage(
-                                job: j,
-                                company: info, // <-- نمرر CompanyInfo
-                              ),
-                            ),
-                          );
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.all(14),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Header: logo + company name + save
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  CircleAvatar(
-                                    radius: 20,
-                                    backgroundImage:
-                                        (info?.logoUrl ?? '').isNotEmpty
-                                            ? NetworkImage(info!.logoUrl)
-                                            : null,
-                                    child: (info?.logoUrl ?? '').isEmpty
-                                        ? const Icon(Icons.business, size: 20)
-                                        : null,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      (info?.name ?? 'Company'),
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(
-                                            color: isClosed ? Colors.grey[600] : null,
-                                          ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  IconButton(
-                                    tooltip: _saved.contains(j.id)
-                                        ? 'Remove from saved'
-                                        : 'Save for later',
-                                    icon: Icon(_saved.contains(j.id)
-                                        ? Icons.favorite
-                                        : Icons.favorite_border),
-                                    onPressed: () => _toggleSave(j),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-
-                              // Title + position + posted date  (REPLACED)
-                              Text(
-                                j.title,
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
-                                  color: isClosed ? Colors.grey[600] : null,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  Icon(Icons.work_outline,
-                                      size: 16,
-                                      color: isClosed ? Colors.grey[500] : null),
-                                  const SizedBox(width: 6),
-                                  Expanded(
-                                    child: Text(
-                                      j.position.isEmpty
-                                          ? 'Position'
-                                          : j.position,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w600,
-                                            color: isClosed ? Colors.grey[500] : null,
-                                          ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                'Posted: ${_fmtDate(j.postedAt)}',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: isClosed ? Colors.grey[500] : null,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-
-                              // Specialty + Apply (or Closed badge + Closed button)
-                              Row(
-                                children: [
-                                  if (j.specialty.isNotEmpty && !isClosed)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(8),
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary
-                                            .withOpacity(.08),
-                                      ),
-                                      child: Text(
-                                        j.specialty,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .primary,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  // Closed badge at bottom left for closed jobs
-                                  if (isClosed)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: Colors.grey[500],
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: const Text(
-                                        'Closed',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  const Spacer(),
-                                  // Apply button or Closed button
-                                  FilledButton(
-                                    onPressed: isClosed
-                                        ? null
-                                        : (j.applyUrl != null &&
-                                                j.applyUrl!.trim().isNotEmpty)
-                                            ? () async {
-                                                final uri =
-                                                    Uri.parse(j.applyUrl!.trim());
-                                                if (await canLaunchUrl(uri)) {
-                                                  await launchUrl(uri,
-                                                      mode: LaunchMode
-                                                          .externalApplication);
-                                                }
-                                              }
-                                            : null,
-                                    style: isClosed
-                                        ? FilledButton.styleFrom(
-                                            backgroundColor: Colors.grey[400],
-                                            disabledBackgroundColor: Colors.grey[400],
-                                          )
-                                        : null,
-                                    child: Text(isClosed ? 'Closed' : 'Apply'),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
+                    final info = _company[j.userId] ?? const CompanyInfo();
+                    return JobCard(job: j, company: info);
                   },
                 );
               },
@@ -860,29 +821,38 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
   Widget build(BuildContext context) {
     final job = widget.job;
     final company = widget.company;
-    final isClosed = job.status == 'Closed';
-    final canApply = !isClosed && job.applyUrl != null && job.applyUrl!.trim().isNotEmpty;
+    final isClosed = job.status.trim().toLowerCase() == 'closed';
 
     return Scaffold(
       appBar: AppBar(title: const Text('Job Details')),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.all(12),
         child: FilledButton(
-          onPressed: canApply
-              ? () async {
-                  final uri = Uri.parse(job.applyUrl!.trim());
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }
-                }
-              : null,
-          style: isClosed
-              ? FilledButton.styleFrom(
-                  backgroundColor: Colors.grey[400],
-                  disabledBackgroundColor: Colors.grey[400],
-                )
-              : null,
-          child: Text(isClosed ? 'Closed' : 'Apply'),
+          onPressed: isClosed
+              ? null
+              : () {
+                  // لما يضغط Apply (شغال فقط لو مو Closed)
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Coming soon')),
+                  );
+                },
+          style: FilledButton.styleFrom(
+            backgroundColor:
+                isClosed ? Colors.grey[400] : const Color(0xFF4A5FBC),
+            disabledBackgroundColor: Colors.grey[400],
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          child: Text(
+            isClosed ? 'Closed' : 'Apply',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ),
       ),
       body: ListView(
@@ -1152,6 +1122,288 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/* ========================== JOB CARD WIDGET ========================== */
+
+class JobCard extends StatefulWidget {
+  final Job job;
+  final CompanyInfo company;
+
+  const JobCard({
+    super.key,
+    required this.job,
+    required this.company,
+  });
+
+  @override
+  State<JobCard> createState() => _JobCardState();
+}
+
+class _JobCardState extends State<JobCard> {
+  bool _saved = false;
+
+  String _fmtDate(DateTime d) =>
+      '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
+
+  @override
+  Widget build(BuildContext context) {
+    final job = widget.job;
+    final company = widget.company;
+    final isClosed = job.status.trim().toLowerCase() == 'closed';
+
+    return Card(
+      elevation: 0.5,
+      color: isClosed ? Colors.grey[200] : null,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () {
+          // فتح صفحة التفاصيل لما يضغط على الكارد
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => JobDetailsPage(
+                job: job,
+                company: company,
+              ),
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ===== Header: Logo + Company name + Favorite =====
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundImage: company.logoUrl.isNotEmpty
+                        ? NetworkImage(company.logoUrl)
+                        : null,
+                    child: company.logoUrl.isEmpty
+                        ? const Icon(Icons.business, size: 20)
+                        : null,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      company.name,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isClosed
+                            ? Colors.grey[600]
+                            : const Color(0xFF4A5FBC),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+
+                  // زر المفضلة (قلب)
+                  IconButton(
+                    tooltip: isClosed
+                        ? 'Closed job'
+                        : (_saved ? 'Saved' : 'Save for later'),
+                    onPressed: isClosed
+                        ? null // ❌ ما يشتغل إذا الوظيفة Closed
+                        : () {
+                            setState(() {
+                              _saved = !_saved;
+                            });
+                          },
+                    icon: Icon(
+                      _saved ? Icons.favorite : Icons.favorite_border,
+                      color: isClosed
+                          ? Colors.grey // القلب رمادي ومقفل
+                          : (_saved ? Colors.red : Colors.grey[600]),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 8),
+
+              // ===== Job title =====
+              Text(
+                job.title.isEmpty ? 'Untitled Job' : job.title,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: isClosed ? Colors.grey[600] : null,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+
+              const SizedBox(height: 6),
+
+              // ===== Posted date =====
+              Text(
+                'Posted: ${_fmtDate(job.postedAt)}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: isClosed ? Colors.grey[600] : null,
+                    ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // ===== Bottom row: Specialty or Closed badge =====
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  if (job.specialty.isNotEmpty && !isClosed)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        color: const Color(0xFF4A5FBC).withOpacity(.08),
+                      ),
+                      child: Text(
+                        job.specialty,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF4A5FBC),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  if (isClosed)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[500],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        'Closed',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  const Spacer(),
+                  FilledButton(
+                    onPressed: isClosed
+                        ? null
+                        : () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Coming soon'),
+                              ),
+                            );
+                          },
+                    style: FilledButton.styleFrom(
+                      backgroundColor:
+                          isClosed ? Colors.grey[400] : const Color(0xFF4A5FBC),
+                      disabledBackgroundColor: Colors.grey[400],
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                    ),
+                    child: Text(
+                      isClosed ? 'Closed' : 'Apply',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// صندوق الفلتر (البوردر البنفسجي والـ padding)
+class _FilterBox extends StatelessWidget {
+  final Widget child;
+  final Color borderColor;
+  const _FilterBox({
+    required this.child,
+    required this.borderColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 8,
+      ),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: borderColor,
+          width: 1,
+        ),
+      ),
+      child: child,
+    );
+  }
+}
+
+// زر الـ For You كـ chip بشكل ثابت نفس الستايل اللي اتفقنا عليه
+class _ForYouChip extends StatelessWidget {
+  final bool selected;
+  final ValueChanged<bool> onTap;
+  const _ForYouChip({
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isOn = selected;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () => onTap(!isOn),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isOn ? const Color(0xFFFD6C67) : const Color(0xFFFAFAFA),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isOn ? const Color(0xFFFD6C67) : const Color(0xFF4A5FBC),
+            width: 1.3,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Text(
+          'For You',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: isOn ? Colors.white : const Color(0xFF4A5FBC),
+          ),
+        ),
       ),
     );
   }
