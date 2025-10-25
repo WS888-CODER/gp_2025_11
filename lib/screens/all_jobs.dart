@@ -148,6 +148,7 @@ class _JobsPageState extends State<JobsPage> {
   SortOrder _sort = SortOrder.newestFirst;
   bool _forYou = false;
   bool _showClosedJobs = false; // Toggle for showing closed jobs
+  bool _showProfileReminder = false;
 
   late Set<String> _saved;
   List<String> _specialties = ['All'];
@@ -202,11 +203,6 @@ class _JobsPageState extends State<JobsPage> {
             hasMinimumInfo: complete,
             savedJobIds: _saved,
           );
-        });
-
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          _maybeShowProfileBanner();
         });
       });
     }
@@ -590,8 +586,15 @@ class _JobsPageState extends State<JobsPage> {
                       _ForYouChip(
                         selected: _forYou,
                         onTap: (v) {
-                          setState(() => _forYou = v);
-                          _maybeShowCvBanner();
+                          setState(() {
+                            _forYou = v;
+
+                            // لو شغّل For You وحسابه مو كامل -> ورّيه الرسالة
+                            _showProfileReminder = v && !_isProfileComplete;
+
+                            // لو شغّل For You بدون CV -> نبي بنفس الوقت نذكره بالCV بنفس الفكرة قدام
+                            // (تقدر تخلي هذا لاحق نفس المبدأ)
+                          });
                         },
                       ),
 
@@ -657,6 +660,69 @@ class _JobsPageState extends State<JobsPage> {
                       ),
                     ],
                   ),
+                  if (_showProfileReminder) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(
+                            0xFFFFF3F2), // خلفية خفيفة تميل للسلموني
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: const Color(0xFFFD6C67), // نفس لون For You
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.info_outline,
+                            size: 20,
+                            color: Color(0xFFFD6C67),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Complete your profile to get better matches.',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey[900],
+                                height: 1.3,
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              minimumSize: const Size(0, 0),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            onPressed: () {
+                              // نفس اللي كنت تسويه في البانر الأصلي
+                              if (_userType == 'Company') {
+                                Navigator.pushNamed(
+                                    context, '/profile/company');
+                              } else {
+                                Navigator.pushNamed(
+                                    context, '/profile/jobseeker');
+                              }
+                            },
+                            child: const Text(
+                              'Open',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF4A5FBC),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
