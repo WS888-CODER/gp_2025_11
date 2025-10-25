@@ -157,7 +157,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
       if (userType == 'Admin') {
         setState(() {
-          _emailError = 'Cannot reset password.';
+          _emailError = 'Cannot reset password for Admin accounts.';
           _isLoading = false;
         });
         return;
