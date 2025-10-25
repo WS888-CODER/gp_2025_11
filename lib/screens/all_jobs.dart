@@ -169,7 +169,6 @@ class _JobsPageState extends State<JobsPage> {
     _saved = {...widget.profile.savedJobIds};
 
     _jobsSub = _jobsStream().listen((jobs) {
-      _updateSpecialtiesFrom(jobs);
       _ensureCompanyNames(jobs.map((j) => j.userId).toSet());
       if (!mounted) return;
       setState(() {
@@ -278,87 +277,6 @@ class _JobsPageState extends State<JobsPage> {
           : a.postedAt.compareTo(b.postedAt),
     );
     return list;
-  }
-
-  void _maybeShowProfileBanner() {
-    final need = !_isProfileComplete;
-    if (!need) {
-      ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showMaterialBanner(
-      MaterialBanner(
-        content: const Text('Complete your profile to get better matches.'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
-              if (_userType == 'Company') {
-                Navigator.pushNamed(context, '/profile/company');
-              } else {
-                Navigator.pushNamed(context, '/profile/jobseeker');
-              }
-            },
-            child: const Text('Open Profile'),
-          ),
-          TextButton(
-            onPressed: () =>
-                ScaffoldMessenger.of(context).hideCurrentMaterialBanner(),
-            child: const Text('Later'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _maybeShowCvBanner() {
-    if (_forYou && _profile.cvUrl == null) {
-      ScaffoldMessenger.of(context).showMaterialBanner(
-        MaterialBanner(
-          content: const Text(
-            'Upload your CV to enable "For You" recommendations.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
-                Navigator.pushNamed(context, '/profile/jobseeker');
-              },
-              child: const Text('Open Profile'),
-            ),
-            TextButton(
-              onPressed: () {
-                setState(() => _forYou = false);
-                ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
-              },
-              child: const Text('Later'),
-            ),
-          ],
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
-    }
-  }
-
-  void _updateSpecialtiesFrom(List<Job> jobs) {
-    final set = <String>{'All'};
-    for (final j in jobs) {
-      final s = j.specialty.trim();
-      if (s.isNotEmpty) set.add(s);
-    }
-    final next = set.toList();
-
-    if (!listEquals(next, _specialties)) {
-      if (!mounted) return;
-      setState(() {
-        _specialties = next;
-        if (!_specialties.contains(_selectedSpecialty)) {
-          _selectedSpecialty = 'All';
-        }
-      });
-    }
   }
 
   Future<void> _ensureCompanyNames(Set<String> uids) async {
