@@ -578,61 +578,114 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                       children: [
                         // <-- كل الباقي هنا
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
+                            // ==== الصورة مع البوردر ====
                             Hero(
                               tag: 'profileAvatar',
-                              child: CircleAvatar(
-                                radius: 54,
-                                backgroundColor: const Color(0xFFE8E8FF),
-                                backgroundImage: _pendingPhotoFile != null
-                                    ? FileImage(_pendingPhotoFile!)
-                                        as ImageProvider
-                                    : ((_photoUrl ??
-                                                    data[
-                                                        UserFields.photoUrl]) !=
-                                                null &&
-                                            (_photoUrl ??
-                                                    data[UserFields.photoUrl])
-                                                .toString()
-                                                .isNotEmpty)
-                                        ? NetworkImage((_photoUrl ??
-                                                data[UserFields.photoUrl])
-                                            .toString())
-                                        : null,
-                                child: (_pendingPhotoFile == null &&
-                                        ((_photoUrl ??
-                                                    data[
-                                                        UserFields.photoUrl]) ==
-                                                null ||
-                                            (_photoUrl ??
-                                                    data[UserFields.photoUrl])
-                                                .toString()
-                                                .isEmpty))
-                                    ? const Icon(Icons.person)
-                                    : null,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: const Color(
+                                        0xFF4A5FBC), // بنفسجي البراند
+                                    width: 3,
+                                  ),
+                                  color: Colors.white,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF4A5FBC)
+                                          .withOpacity(0.15),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: CircleAvatar(
+                                  radius: 54,
+                                  backgroundColor: const Color(0xFFF3F3FF),
+                                  backgroundImage: _pendingPhotoFile != null
+                                      ? FileImage(_pendingPhotoFile!)
+                                          as ImageProvider
+                                      : ((_photoUrl ??
+                                                      data[UserFields
+                                                          .photoUrl]) !=
+                                                  null &&
+                                              (_photoUrl ??
+                                                      data[UserFields.photoUrl])
+                                                  .toString()
+                                                  .isNotEmpty)
+                                          ? NetworkImage((_photoUrl ??
+                                                  data[UserFields.photoUrl])
+                                              .toString())
+                                          : null,
+                                  child: (_pendingPhotoFile == null &&
+                                          ((_photoUrl ??
+                                                      data[UserFields
+                                                          .photoUrl]) ==
+                                                  null ||
+                                              (_photoUrl ??
+                                                      data[UserFields.photoUrl])
+                                                  .toString()
+                                                  .isEmpty))
+                                      ? const Icon(
+                                          Icons.person,
+                                          size: 40,
+                                          color: Color(0xFF4A5FBC),
+                                        )
+                                      : null,
+                                ),
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            const Spacer(),
-                            FilledButton.tonal(
-                              onPressed: (_saving || _progress != null)
-                                  ? null
-                                  : _pickPhoto,
-                              child: const Text('Upload Photo'),
-                            ),
-                            const SizedBox(width: 8),
-                            if (_pendingPhotoFile != null || hasPhoto)
-                              TextButton(
-                                onPressed: (_saving || _progress != null)
-                                    ? null
-                                    : () {
-                                        setState(() {
-                                          _pendingPhotoFile = null;
-                                          _photoUrl = '';
-                                        });
-                                      },
-                                child: const Text('Remove'),
+
+                            const SizedBox(width: 16),
+
+                            // ==== الزر ====
+                            Expanded(
+                              child: Align(
+                                alignment: Alignment.centerRight,
+                                child: (hasPhoto || _pendingPhotoFile != null)
+                                    ? TextButton(
+                                        onPressed:
+                                            (_saving || _progress != null)
+                                                ? null
+                                                : () {
+                                                    setState(() {
+                                                      _pendingPhotoFile = null;
+                                                      _photoUrl = '';
+                                                    });
+                                                  },
+                                        child: const Text(
+                                          'Remove Photo',
+                                          style: TextStyle(
+                                              color: Colors.red,
+                                              fontWeight: FontWeight.w500),
+                                        ),
+                                      )
+                                    : FilledButton.tonal(
+                                        onPressed:
+                                            (_saving || _progress != null)
+                                                ? null
+                                                : _pickPhoto,
+                                        style: FilledButton.styleFrom(
+                                          backgroundColor:
+                                              const Color(0xFFFD6C67),
+                                          foregroundColor: Colors.black,
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 20, vertical: 12),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(24),
+                                          ),
+                                          textStyle: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        child: const Text('Upload Photo'),
+                                      ),
                               ),
+                            ),
                           ],
                         ),
 
@@ -650,21 +703,17 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                                                 ?.toString()
                                                 .isNotEmpty ??
                                             false))
-                                ? 'File selected'
+                                ? 'File uploaded'
                                 : 'No file',
                             style: const TextStyle(color: Colors.black54),
                           ),
-                          trailing: Wrap(
-                            spacing: 8,
-                            children: [
-                              FilledButton.tonal(
-                                onPressed: (_saving || _progress != null)
-                                    ? null
-                                    : _pickCV,
-                                child: const Text('Upload CV'),
-                              ),
-                              if (hasCV)
-                                TextButton(
+                          trailing: (_pendingCvFile != null ||
+                                  (_cvUrl != '' &&
+                                      (data[UserFields.cvUrl]
+                                              ?.toString()
+                                              .isNotEmpty ??
+                                          false)))
+                              ? TextButton(
                                   onPressed: (_saving || _progress != null)
                                       ? null
                                       : () {
@@ -673,10 +722,23 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                                             _cvUrl = '';
                                           });
                                         },
-                                  child: const Text('Remove'),
+                                  child: const Text(
+                                    'Remove CV',
+                                    style: TextStyle(
+                                        color: Colors.red,
+                                        fontWeight: FontWeight.w500),
+                                  ),
+                                )
+                              : FilledButton.tonal(
+                                  onPressed: (_saving || _progress != null)
+                                      ? null
+                                      : _pickCV,
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: const Color(0xFFFD6C67),
+                                    foregroundColor: Colors.black,
+                                  ),
+                                  child: const Text('Upload CV'),
                                 ),
-                            ],
-                          ),
                         ),
 
                         const SizedBox(height: 16),
