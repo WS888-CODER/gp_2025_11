@@ -1191,7 +1191,7 @@ class _EditCompanySheetState extends State<_EditCompanySheet>
                               LengthLimitingTextInputFormatter(40),
                             ],
                             decoration: const InputDecoration(
-                              hintText: 'e.g., Riyadh / جدة / Al Khobar',
+                              hintText: 'e.g., Riyadh / Jeddah / Al Khobar',
                               border: OutlineInputBorder(),
                             ),
                             validator: (v) {
