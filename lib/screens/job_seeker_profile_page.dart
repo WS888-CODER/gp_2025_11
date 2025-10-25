@@ -459,8 +459,17 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                     true) &&
                 phoneValid);
         return Scaffold(
+          backgroundColor: const Color(0xFFF7F6FC),
           appBar: AppBar(
-            title: const Text('Profile'),
+            backgroundColor: const Color(0xFF4A5FBC),
+            iconTheme: const IconThemeData(color: Colors.white),
+            title: const Text(
+              'Profile',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
             actions: [
               Padding(
                 padding: const EdgeInsets.only(right: 12, top: 12, bottom: 12),
@@ -502,17 +511,48 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
               ),
             ],
           ),
-          bottomNavigationBar: SafeArea(
-            minimum: const EdgeInsets.all(12),
-            child: FilledButton(
-              onPressed:
-                  (_saving || _progress != null) ? null : () => _save(data),
-              child: _saving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Update Profile'),
+          bottomNavigationBar: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.07),
+                  blurRadius: 10,
+                  offset: const Offset(0, -2),
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: SafeArea(
+              top: false,
+              minimum: const EdgeInsets.only(bottom: 8),
+              child: FilledButton(
+                onPressed:
+                    (_saving || _progress != null) ? null : () => _save(data),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF4A5FBC),
+                  disabledBackgroundColor: Colors.grey[400],
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                child: _saving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('Update Profile'),
+              ),
             ),
           ),
           body: Form(
@@ -526,168 +566,217 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                     padding: const EdgeInsets.only(bottom: 12),
                     child: LinearProgressIndicator(value: _progress),
                   ),
-                Row(
-                  children: [
-                    Hero(
-                      tag: 'profileAvatar',
-                      child: CircleAvatar(
-                        radius: 54,
-                        backgroundImage: _pendingPhotoFile != null
-                            ? FileImage(_pendingPhotoFile!) as ImageProvider
-                            : ((_photoUrl ?? data[UserFields.photoUrl]) !=
-                                        null &&
-                                    (_photoUrl ?? data[UserFields.photoUrl])
-                                        .toString()
-                                        .isNotEmpty)
-                                ? NetworkImage(
-                                    (_photoUrl ?? data[UserFields.photoUrl])
-                                        .toString())
-                                : null,
-                        child: (_pendingPhotoFile == null &&
-                                ((_photoUrl ?? data[UserFields.photoUrl]) ==
-                                        null ||
-                                    (_photoUrl ?? data[UserFields.photoUrl])
-                                        .toString()
-                                        .isEmpty))
-                            ? const Icon(Icons.person)
-                            : null,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Spacer(),
-                    FilledButton.tonal(
-                      onPressed:
-                          (_saving || _progress != null) ? null : _pickPhoto,
-                      child: const Text('Upload Photo'),
-                    ),
-                    const SizedBox(width: 8),
-                    if (_pendingPhotoFile != null || hasPhoto)
-                      TextButton(
-                        onPressed: (_saving || _progress != null)
-                            ? null
-                            : () {
-                                setState(() {
-                                  _pendingPhotoFile = null;
-                                  _photoUrl = '';
-                                });
-                              },
-                        child: const Text('Remove'),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('CV File'),
-                  subtitle: Text(
-                    _pendingCvFile != null ||
-                            (_cvUrl != '' &&
-                                (data[UserFields.cvUrl]
-                                        ?.toString()
-                                        .isNotEmpty ??
-                                    false))
-                        ? 'File selected'
-                        : 'No file',
-                    style: const TextStyle(color: Colors.black54),
+                Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  trailing: Wrap(
-                    spacing: 8,
-                    children: [
-                      FilledButton.tonal(
-                        onPressed:
-                            (_saving || _progress != null) ? null : _pickCV,
-                        child: const Text('Upload CV'),
-                      ),
-                      if (hasCV)
-                        TextButton(
-                          onPressed: (_saving || _progress != null)
-                              ? null
-                              : () {
-                                  setState(() {
-                                    _pendingCvFile = null;
-                                    _cvUrl = '';
-                                  });
-                                },
-                          child: const Text('Remove'),
+                  elevation: 2,
+                  shadowColor: Colors.black.withOpacity(0.05),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        // <-- كل الباقي هنا
+                        Row(
+                          children: [
+                            Hero(
+                              tag: 'profileAvatar',
+                              child: CircleAvatar(
+                                radius: 54,
+                                backgroundColor: const Color(0xFFE8E8FF),
+                                backgroundImage: _pendingPhotoFile != null
+                                    ? FileImage(_pendingPhotoFile!)
+                                        as ImageProvider
+                                    : ((_photoUrl ??
+                                                    data[
+                                                        UserFields.photoUrl]) !=
+                                                null &&
+                                            (_photoUrl ??
+                                                    data[UserFields.photoUrl])
+                                                .toString()
+                                                .isNotEmpty)
+                                        ? NetworkImage((_photoUrl ??
+                                                data[UserFields.photoUrl])
+                                            .toString())
+                                        : null,
+                                child: (_pendingPhotoFile == null &&
+                                        ((_photoUrl ??
+                                                    data[
+                                                        UserFields.photoUrl]) ==
+                                                null ||
+                                            (_photoUrl ??
+                                                    data[UserFields.photoUrl])
+                                                .toString()
+                                                .isEmpty))
+                                    ? const Icon(Icons.person)
+                                    : null,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            const Spacer(),
+                            FilledButton.tonal(
+                              onPressed: (_saving || _progress != null)
+                                  ? null
+                                  : _pickPhoto,
+                              child: const Text('Upload Photo'),
+                            ),
+                            const SizedBox(width: 8),
+                            if (_pendingPhotoFile != null || hasPhoto)
+                              TextButton(
+                                onPressed: (_saving || _progress != null)
+                                    ? null
+                                    : () {
+                                        setState(() {
+                                          _pendingPhotoFile = null;
+                                          _photoUrl = '';
+                                        });
+                                      },
+                                child: const Text('Remove'),
+                              ),
+                          ],
                         ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Date of Birth'),
-                  subtitle: Text(dobText),
-                  trailing: FilledButton.tonal(
-                    onPressed: (_saving || _progress != null)
-                        ? null
-                        : () async {
-                            final now = DateTime.now();
-                            final initial = _dob ??
-                                dobCurrent ??
-                                DateTime(now.year - 20, now.month, now.day);
-                            final first = DateTime(now.year - 80, 1, 1);
-                            final last =
-                                DateTime(now.year - 18, now.month, now.day);
-                            final picked = await showDatePicker(
-                              context: context,
-                              initialDate: initial,
-                              firstDate: first,
-                              lastDate: last,
-                            );
-                            if (picked != null) setState(() => _dob = picked);
+
+                        const SizedBox(height: 16),
+                        Divider(color: Colors.grey[300]),
+
+                        const SizedBox(height: 16),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('CV File'),
+                          subtitle: Text(
+                            _pendingCvFile != null ||
+                                    (_cvUrl != '' &&
+                                        (data[UserFields.cvUrl]
+                                                ?.toString()
+                                                .isNotEmpty ??
+                                            false))
+                                ? 'File selected'
+                                : 'No file',
+                            style: const TextStyle(color: Colors.black54),
+                          ),
+                          trailing: Wrap(
+                            spacing: 8,
+                            children: [
+                              FilledButton.tonal(
+                                onPressed: (_saving || _progress != null)
+                                    ? null
+                                    : _pickCV,
+                                child: const Text('Upload CV'),
+                              ),
+                              if (hasCV)
+                                TextButton(
+                                  onPressed: (_saving || _progress != null)
+                                      ? null
+                                      : () {
+                                          setState(() {
+                                            _pendingCvFile = null;
+                                            _cvUrl = '';
+                                          });
+                                        },
+                                  child: const Text('Remove'),
+                                ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+                        Divider(color: Colors.grey[300]),
+                        const SizedBox(height: 16),
+
+                        // DOB
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Date of Birth'),
+                          subtitle: Text(dobText),
+                          trailing: FilledButton.tonal(
+                            onPressed: (_saving || _progress != null)
+                                ? null
+                                : () async {
+                                    final now = DateTime.now();
+                                    final initial = _dob ??
+                                        dobCurrent ??
+                                        DateTime(
+                                            now.year - 20, now.month, now.day);
+                                    final first = DateTime(now.year - 80, 1, 1);
+                                    final last = DateTime(
+                                        now.year - 18, now.month, now.day);
+                                    final picked = await showDatePicker(
+                                      context: context,
+                                      initialDate: initial,
+                                      firstDate: first,
+                                      lastDate: last,
+                                    );
+                                    if (picked != null) {
+                                      setState(() => _dob = picked);
+                                    }
+                                  },
+                            child: const Text('Pick'),
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        DropdownButtonFormField<String>(
+                          value: _countries.contains(
+                                  _nationality ?? data[UserFields.nationality])
+                              ? (_nationality ?? data[UserFields.nationality])
+                              : null,
+                          items: _countries
+                              .map((c) =>
+                                  DropdownMenuItem(value: c, child: Text(c)))
+                              .toList(),
+                          onChanged: (_saving || _progress != null)
+                              ? null
+                              : (v) => setState(() => _nationality = v),
+                          decoration: const InputDecoration(
+                            labelText: 'Nationality',
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (v) {
+                            final hasServerNat =
+                                (data[UserFields.nationality] ?? '')
+                                    .toString()
+                                    .isNotEmpty;
+                            if (hasServerNat) return null;
+                            return (v == null || v.isEmpty)
+                                ? 'Select nationality'
+                                : null;
                           },
-                    child: const Text('Pick'),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        TextFormField(
+                          controller: _phone,
+                          keyboardType: TextInputType.phone,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(9),
+                          ],
+                          decoration: const InputDecoration(
+                            labelText: 'Phone',
+                            hintText: '5XXXXXXXX',
+                            prefixText: '+966 ',
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (v) {
+                            final t = v?.trim() ?? '';
+                            final hasServerPhone =
+                                (data[UserFields.phone] ?? '')
+                                    .toString()
+                                    .isNotEmpty;
+                            if (t.isEmpty) {
+                              return hasServerPhone ? null : 'Enter phone';
+                            }
+                            if (!_localSaPhone.hasMatch(t)) {
+                              return 'Must start with 5 and be 9 digits';
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  value: _countries.contains(
-                          _nationality ?? data[UserFields.nationality])
-                      ? (_nationality ?? data[UserFields.nationality])
-                      : null,
-                  items: _countries
-                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                      .toList(),
-                  onChanged: (_saving || _progress != null)
-                      ? null
-                      : (v) => setState(() => _nationality = v),
-                  decoration: const InputDecoration(
-                      labelText: 'Nationality', border: OutlineInputBorder()),
-                  validator: (v) {
-                    final hasServerNat = (data[UserFields.nationality] ?? '')
-                        .toString()
-                        .isNotEmpty;
-                    if (hasServerNat) return null;
-                    return (v == null || v.isEmpty)
-                        ? 'Select nationality'
-                        : null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _phone,
-                  keyboardType: TextInputType.phone,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(9), // 5XXXXXXXX (9 digits)
-                  ],
-                  decoration: const InputDecoration(
-                    labelText: 'Phone',
-                    hintText: '5XXXXXXXX',
-                    prefixText: '+966 ',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (v) {
-                    final t = v?.trim() ?? '';
-                    final hasServerPhone =
-                        (data[UserFields.phone] ?? '').toString().isNotEmpty;
-                    if (t.isEmpty) return hasServerPhone ? null : 'Enter phone';
-                    if (!_localSaPhone.hasMatch(t)) {
-                      return 'Must start with 5 and be 9 digits';
-                    }
-                    return null;
-                  },
                 ),
               ],
             ),

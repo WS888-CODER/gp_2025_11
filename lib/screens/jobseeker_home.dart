@@ -489,183 +489,96 @@ class _JobsPreviewState extends State<_JobsPreview> {
     return info;
   }
 
-  String _fmtDate(DateTime d) =>
-      '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
-
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance
-          .collection('Jobs')
-          .orderBy('StartDate', descending: true)
-          .limit(widget.limit)
-          .snapshots(),
-      builder: (context, snap) {
-        if (snap.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: CircularProgressIndicator(),
-            ),
-          );
-        }
-        if (snap.hasError) {
-          return Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text('Error: ${snap.error}'),
-          );
-        }
-
-        final docs = snap.data?.docs ?? [];
-        if (docs.isEmpty) {
-          return Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text('No jobs yet',
-                style: Theme.of(context).textTheme.bodyMedium),
-          );
-        }
-
-        // Filter out closed jobs on client side
-        final jobs = docs
-            .map((d) => Job.fromDoc(d))
-            .where((j) => j.status != 'Closed')
-            .toList();
-
-        return Column(
-          children: jobs.map((j) {
-            return FutureBuilder<CompanyInfo>(
-              future: _companyInfo(j.userId),
-              builder: (context, companySnap) {
-                final info = companySnap.data ?? const CompanyInfo();
-                final hasKeywords = j.keywords.isNotEmpty;
-                final canApply =
-                    j.applyUrl != null && j.applyUrl!.trim().isNotEmpty;
-
-                return Card(
-                  elevation: 0.5,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16)),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => JobDetailsPage(
-                            job: j,
-                            company: info,
-                          ),
-                        ),
-                      );
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      j.title,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      info.name,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium,
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Posted: ${_fmtDate(j.postedAt)}',
-                                      style:
-                                          Theme.of(context).textTheme.bodySmall,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          if (hasKeywords)
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: -8,
-                              children: j.keywords.take(3).map((k) {
-                                return Chip(
-                                  label: Text(k),
-                                  visualDensity: VisualDensity.compact,
-                                  materialTapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                );
-                              }).toList(),
-                            ),
-                          const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              if (j.specialty.isNotEmpty)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(8),
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .primary
-                                        .withOpacity(.08),
-                                  ),
-                                  child: Text(
-                                    j.specialty,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              const Spacer(),
-                              FilledButton(
-                                onPressed: canApply
-                                    ? () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => JobDetailsPage(
-                                              job: j,
-                                              company: info,
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    : null,
-                                child: const Text('Apply'),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
+        stream: FirebaseFirestore.instance
+            .collection('Jobs')
+            .orderBy('StartDate', descending: true)
+            .limit(widget.limit * 5)
+            .snapshots(),
+        builder: (context, snap) {
+          if (snap.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: CircularProgressIndicator(),
+              ),
             );
-          }).toList(),
-        );
-      },
-    );
+          }
+          if (snap.hasError) {
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text('Error: ${snap.error}'),
+            );
+          }
+
+          final docs = snap.data?.docs ?? [];
+          if (docs.isEmpty) {
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text('No jobs yet',
+                  style: Theme.of(context).textTheme.bodyMedium),
+            );
+          }
+
+          final jobs = docs
+              .map((d) => Job.fromDoc(d))
+              .where((j) => j.status.trim().toLowerCase() != 'closed')
+              .toList();
+
+          if (jobs.isEmpty) {
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'No open jobs',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            );
+          }
+
+          return Column(
+            children: jobs.map((j) {
+              return FutureBuilder<CompanyInfo>(
+                future: _companyInfo(j.userId),
+                builder: (context, companySnap) {
+                  // حالة التحميل على مستوى كل كارد
+                  if (companySnap.connectionState == ConnectionState.waiting) {
+                    return Card(
+                      elevation: 0.5,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            SizedBox(width: 12),
+                            Text('Loading...'),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  final info = companySnap.data ?? const CompanyInfo();
+
+                  // هنا نعيد استخدام نفس الكارد اللي عرفتيه في الصفحة الثانية (JobsPage)
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: JobCard(job: j, company: info),
+                  );
+                },
+              );
+            }).toList(),
+          );
+        });
   }
 }
 
