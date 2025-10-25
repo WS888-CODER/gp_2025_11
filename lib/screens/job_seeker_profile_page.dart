@@ -682,7 +682,9 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                                             fontWeight: FontWeight.w600,
                                           ),
                                         ),
-                                        child: const Text('Upload Photo'),
+                                        child: const Text('Upload Photo',
+                                            style:
+                                                TextStyle(color: Colors.white)),
                                       ),
                               ),
                             ),
@@ -695,7 +697,10 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                         const SizedBox(height: 16),
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          title: const Text('CV File'),
+                          title: const Text('CV File',
+                              style: TextStyle(
+                                  color: Color(0xFF4A5FBC),
+                                  fontWeight: FontWeight.w800)),
                           subtitle: Text(
                             _pendingCvFile != null ||
                                     (_cvUrl != '' &&
@@ -737,7 +742,8 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                                     backgroundColor: const Color(0xFFFD6C67),
                                     foregroundColor: Colors.black,
                                   ),
-                                  child: const Text('Upload CV'),
+                                  child: const Text('Upload CV',
+                                      style: TextStyle(color: Colors.white)),
                                 ),
                         ),
 
@@ -748,7 +754,10 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                         // DOB
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          title: const Text('Date of Birth'),
+                          title: const Text('Date of Birth',
+                              style: TextStyle(
+                                  color: Color(0xFF4A5FBC),
+                                  fontWeight: FontWeight.w800)),
                           subtitle: Text(dobText),
                           trailing: FilledButton.tonal(
                             onPressed: (_saving || _progress != null)
@@ -772,7 +781,8 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                                       setState(() => _dob = picked);
                                     }
                                   },
-                            child: const Text('Pick'),
+                            child: const Text('Pick',
+                                style: TextStyle(color: Colors.white)),
                           ),
                         ),
 
@@ -784,15 +794,34 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                               ? (_nationality ?? data[UserFields.nationality])
                               : null,
                           items: _countries
-                              .map((c) =>
-                                  DropdownMenuItem(value: c, child: Text(c)))
+                              .map((c) => DropdownMenuItem(
+                                    value: c,
+                                    child: Text(
+                                      c,
+                                      style: TextStyle(
+                                          color: Color(
+                                              0xFF4A5FBC)), // 🔹 لون النص داخل القائمة
+                                    ),
+                                  ))
                               .toList(),
                           onChanged: (_saving || _progress != null)
                               ? null
                               : (v) => setState(() => _nationality = v),
+                          style: const TextStyle(
+                              color: Color(0xFF4A5FBC)), // 🔹 لون النص المختار
                           decoration: const InputDecoration(
                             labelText: 'Nationality',
-                            border: OutlineInputBorder(),
+                            labelStyle: TextStyle(
+                                color: Color(0xFF4A5FBC),
+                                fontWeight: FontWeight.w800,
+                                fontSize: 16),
+                            enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(color: Color(0xFF4A5FBC)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                  color: Color(0xFF2E3A8C), width: 2),
+                            ),
                           ),
                           validator: (v) {
                             final hasServerNat =
@@ -817,6 +846,13 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                           ],
                           decoration: const InputDecoration(
                             labelText: 'Phone',
+                            labelStyle: TextStyle(
+                                color: Color(0xFF4A5FBC),
+                                fontWeight: FontWeight.w800,
+                                fontSize: 16),
+                            enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(color: Color(0xFF4A5FBC)),
+                            ),
                             hintText: '5XXXXXXXX',
                             prefixText: '+966 ',
                             border: OutlineInputBorder(),
