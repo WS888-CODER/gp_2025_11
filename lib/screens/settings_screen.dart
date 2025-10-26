@@ -108,23 +108,61 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final targetLangName =
         settings.currentLanguageName == 'English' ? 'Arabic' : 'English';
 
+    const Color dialogBaseColor = Color(0xFF4A5FBC);
+    const Color cancelBgColor = Color(0xFFE5E7EB);
+    const Color cancelTextColor = Color(0xFF4B5563);
+    const Color confirmBgColor = Color(0xFFFC686A);
+
     bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(l10n.languageOption, textAlign: TextAlign.center),
+        backgroundColor: dialogBaseColor.withOpacity(0.7),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+        title: const Text(
+          'Confirm Language',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
         content: Text(
           'Are you sure you want to switch to $targetLangName?',
           textAlign: TextAlign.center,
+          style: const TextStyle(color: Colors.white70),
         ),
+        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         actionsAlignment: MainAxisAlignment.center,
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+          Expanded(
+            child: TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              style: TextButton.styleFrom(
+                backgroundColor: cancelBgColor,
+                foregroundColor: cancelTextColor,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(25),
+                ),
+              ),
+              child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Confirm'),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: TextButton.styleFrom(
+                backgroundColor: confirmBgColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(25),
+                ),
+              ),
+              child: const Text('Confirm', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
           ),
         ],
       ),

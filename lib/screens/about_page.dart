@@ -36,99 +36,97 @@ class AboutPage extends StatelessWidget {
       ),
       body: CustomScrollView(
         slivers: [
-// Gradient header section
-SliverToBoxAdapter(
-  child: Container(
-    width: double.infinity,
-    padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
-    decoration: const BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          Color(0xFF4A5FBC),
-          Color(0xFF6B7EF3),
-        ],
-      ),
-    ),
-    child: Column(
-      children: [
-        // ✅ Logo badge with subtle elevation + glow
-        Container(
-          width: 95,
-          height: 95,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white.withOpacity(.15),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+          // Gradient header section
+          SliverToBoxAdapter(
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF4A5FBC),
+                    Color(0xFF6B7EF3),
+                  ],
+                ),
               ),
-              BoxShadow(
-                color: Colors.white.withOpacity(0.15),
-                blurRadius: 20,
-                spreadRadius: 2,
+              child: Column(
+                children: [
+                  // ✅ Logo badge with subtle elevation + glow
+                  Container(
+                    width: 95,
+                    height: 95,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withOpacity(.15),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                        BoxShadow(
+                          color: Colors.white.withOpacity(0.15),
+                          blurRadius: 20,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                      image: const DecorationImage(
+                        image: AssetImage('assets/images/logo.jpg'),
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  Text(
+                    'Jadeer',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.3,
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+
+                  Text(
+                    'Smart Recruitment Platform',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.white.withOpacity(.85),
+                          fontSize: 15,
+                        ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(.15),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.white.withOpacity(.15),
+                          blurRadius: 10,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: const Text(
+                      'Version 1.0.0',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-            image: const DecorationImage(
-              image: AssetImage('assets/images/logo.jpg'),
-              fit: BoxFit.contain, // ensures the whole logo shows clearly
             ),
           ),
-        ),
-
-        const SizedBox(height: 16),
-
-        Text(
-          'Jadeer',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.3,
-              ),
-        ),
-        const SizedBox(height: 4),
-
-        Text(
-          'Smart Recruitment Platform',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.white.withOpacity(.85),
-                fontSize: 15,
-              ),
-        ),
-
-        const SizedBox(height: 12),
-
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(.15),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.white.withOpacity(.15),
-                blurRadius: 10,
-                spreadRadius: 1,
-              ),
-            ],
-          ),
-          child: const Text(
-            'Version 1.0.0',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.2,
-            ),
-          ),
-        ),
-      ],
-    ),
-  ),
-),
-
-
 
           // Body content
           SliverPadding(
@@ -142,7 +140,9 @@ SliverToBoxAdapter(
                   child: Text(
                     'Jadeer is a smart recruitment platform designed to seamlessly connect companies with qualified job seekers. '
                     'It aims to simplify the hiring process and empower individuals to find opportunities that match their skills and ambitions.',
-                    style: text.bodyMedium,
+                    style: text.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -156,13 +156,15 @@ SliverToBoxAdapter(
                       Text(
                         'King Saud University – IT Students (Class of 2026)',
                         style: text.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 6),
                       Text(
                         'Under the supervision of the College of Computer and Information Sciences.',
-                        style: text.bodyMedium,
+                        style: text.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -179,7 +181,9 @@ SliverToBoxAdapter(
                     children: [
                       Text(
                         'For inquiries or feedback, reach out to us at:',
-                        style: text.bodyMedium,
+                        style: text.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       InkWell(
