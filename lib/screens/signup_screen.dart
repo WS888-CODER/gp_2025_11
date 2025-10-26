@@ -33,8 +33,10 @@ class _SignupScreenState extends State<SignupScreen> {
   String? _companyNameError;
   String? _companyFullNameError;
   String? _companyEmailError;
+  String? _companyPasswordError;
   String? _seekerNameError;
   String? _seekerEmailError;
+  String? _seekerPasswordError;
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -198,8 +200,10 @@ class _SignupScreenState extends State<SignupScreen> {
       _companyNameError = null;
       _companyFullNameError = null;
       _companyEmailError = null;
+      _companyPasswordError = null;
       _seekerNameError = null;
       _seekerEmailError = null;
+      _seekerPasswordError = null;
     });
 
     if (_selectedTab == 0) {
@@ -238,18 +242,18 @@ class _SignupScreenState extends State<SignupScreen> {
       } else if (_currentStep == 2) {
         // Step 3: Password validation
         if (_companyPasswordController.text.isEmpty) {
-          _showErrorDialog('Please enter a password');
+          setState(() => _companyPasswordError = 'Please enter a password');
           return false;
         }
         if (!_isStrongPassword(_companyPasswordController.text)) {
           String req =
               _getPasswordRequirements(_companyPasswordController.text);
-          _showErrorDialog(req);
+          setState(() => _companyPasswordError = req);
           return false;
         }
         if (_companyPasswordController.text !=
             _companyConfirmPasswordController.text) {
-          _showErrorDialog('Passwords do not match');
+          setState(() => _companyPasswordError = 'Passwords do not match');
           return false;
         }
       }
@@ -280,17 +284,17 @@ class _SignupScreenState extends State<SignupScreen> {
         }
       } else if (_currentStep == 1) {
         if (_seekerPasswordController.text.isEmpty) {
-          _showErrorDialog('Please enter a password');
+          setState(() => _seekerPasswordError = 'Please enter a password');
           return false;
         }
         if (!_isStrongPassword(_seekerPasswordController.text)) {
           String req = _getPasswordRequirements(_seekerPasswordController.text);
-          _showErrorDialog(req);
+          setState(() => _seekerPasswordError = req);
           return false;
         }
         if (_seekerPasswordController.text !=
             _seekerConfirmPasswordController.text) {
-          _showErrorDialog('Passwords do not match');
+          setState(() => _seekerPasswordError = 'Passwords do not match');
           return false;
         }
       }
@@ -588,10 +592,16 @@ class _SignupScreenState extends State<SignupScreen> {
             hintText: 'Enter your password',
             hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
             enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.5)),
+              borderSide: BorderSide(
+                  color: _companyPasswordError != null
+                      ? Colors.red
+                      : Colors.white.withOpacity(0.5)),
             ),
-            focusedBorder: const UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.white)),
+            focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(
+                    color: _companyPasswordError != null
+                        ? Colors.red
+                        : Colors.white)),
             errorBorder: const UnderlineInputBorder(
                 borderSide: BorderSide(color: Colors.red)),
             focusedErrorBorder: const UnderlineInputBorder(
@@ -604,7 +614,20 @@ class _SignupScreenState extends State<SignupScreen> {
                   setState(() => _obscurePassword = !_obscurePassword),
             ),
           ),
+          onChanged: (value) {
+            if (_companyPasswordError != null) {
+              setState(() {
+                _companyPasswordError = null;
+              });
+            }
+          },
         ),
+        if (_companyPasswordError != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(_companyPasswordError!,
+                style: const TextStyle(color: Colors.red, fontSize: 12)),
+          ),
         const SizedBox(height: 30),
         const Text('Confirm Password',
             style: TextStyle(
@@ -620,10 +643,16 @@ class _SignupScreenState extends State<SignupScreen> {
             hintText: 'Re-enter your password',
             hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
             enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.5)),
+              borderSide: BorderSide(
+                  color: _companyPasswordError != null
+                      ? Colors.red
+                      : Colors.white.withOpacity(0.5)),
             ),
-            focusedBorder: const UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.white)),
+            focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(
+                    color: _companyPasswordError != null
+                        ? Colors.red
+                        : Colors.white)),
             errorBorder: const UnderlineInputBorder(
                 borderSide: BorderSide(color: Colors.red)),
             focusedErrorBorder: const UnderlineInputBorder(
@@ -638,6 +667,13 @@ class _SignupScreenState extends State<SignupScreen> {
                   () => _obscureConfirmPassword = !_obscureConfirmPassword),
             ),
           ),
+          onChanged: (value) {
+            if (_companyPasswordError != null) {
+              setState(() {
+                _companyPasswordError = null;
+              });
+            }
+          },
         ),
       ],
     );
@@ -753,10 +789,16 @@ class _SignupScreenState extends State<SignupScreen> {
             hintText: 'Enter your password',
             hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
             enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.5)),
+              borderSide: BorderSide(
+                  color: _seekerPasswordError != null
+                      ? Colors.red
+                      : Colors.white.withOpacity(0.5)),
             ),
-            focusedBorder: const UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.white)),
+            focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(
+                    color: _seekerPasswordError != null
+                        ? Colors.red
+                        : Colors.white)),
             errorBorder: const UnderlineInputBorder(
                 borderSide: BorderSide(color: Colors.red)),
             focusedErrorBorder: const UnderlineInputBorder(
@@ -769,7 +811,20 @@ class _SignupScreenState extends State<SignupScreen> {
                   setState(() => _obscurePassword = !_obscurePassword),
             ),
           ),
+          onChanged: (value) {
+            if (_seekerPasswordError != null) {
+              setState(() {
+                _seekerPasswordError = null;
+              });
+            }
+          },
         ),
+        if (_seekerPasswordError != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(_seekerPasswordError!,
+                style: const TextStyle(color: Colors.red, fontSize: 12)),
+          ),
         const SizedBox(height: 30),
         const Text('Confirm Password',
             style: TextStyle(
@@ -785,10 +840,16 @@ class _SignupScreenState extends State<SignupScreen> {
             hintText: 'Re-enter your password',
             hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
             enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.5)),
+              borderSide: BorderSide(
+                  color: _seekerPasswordError != null
+                      ? Colors.red
+                      : Colors.white.withOpacity(0.5)),
             ),
-            focusedBorder: const UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.white)),
+            focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(
+                    color: _seekerPasswordError != null
+                        ? Colors.red
+                        : Colors.white)),
             errorBorder: const UnderlineInputBorder(
                 borderSide: BorderSide(color: Colors.red)),
             focusedErrorBorder: const UnderlineInputBorder(
@@ -803,6 +864,13 @@ class _SignupScreenState extends State<SignupScreen> {
                   () => _obscureConfirmPassword = !_obscureConfirmPassword),
             ),
           ),
+          onChanged: (value) {
+            if (_seekerPasswordError != null) {
+              setState(() {
+                _seekerPasswordError = null;
+              });
+            }
+          },
         ),
       ],
     );
