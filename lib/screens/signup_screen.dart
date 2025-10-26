@@ -57,19 +57,39 @@ class _SignupScreenState extends State<SignupScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
         title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: const [
-            Icon(Icons.error_outline, color: Colors.red, size: 28),
+            Icon(Icons.error_outline, color: Colors.white, size: 28),
             SizedBox(width: 10),
-            Text('Error', style: TextStyle(color: Colors.red)),
+            Text('Error',
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold)),
           ],
         ),
-        content: Text(message),
+        content: Text(
+          message,
+          style: const TextStyle(color: Colors.white),
+          textAlign: TextAlign.center,
+        ),
+        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+        actionsPadding:
+            const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        actionsAlignment: MainAxisAlignment.center,
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('OK', style: TextStyle(color: Color(0xFF4A5FBC))),
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.white.withOpacity(0.9),
+              foregroundColor: const Color(0xFF4A5FBC),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            child: const Text('OK'),
           ),
         ],
       ),
@@ -288,13 +308,30 @@ class _SignupScreenState extends State<SignupScreen> {
       String userId = userCredential.user!.uid;
       String email = _companyEmailController.text.trim().toLowerCase();
       await _firestore.collection('Users').doc(userId).set({
-        'CompanyName': _companyNameController.text.trim(),
-        'Name': _companyFullNameController.text.trim(),
-        'Email': email,
+        'UserID': userId,
         'UserType': 'Company',
+        'Email':
+            _companyEmailController.text.trim().toLowerCase(), // ✅ lowercase
+        'Name': _companyFullNameController.text.trim(),
+        'CompanyName': _companyNameController.text.trim(),
+        'Phone': null,
+        'PhotoURL': null,
+        'IsProfileComplete': false,
+        'ContactEmail': null,
+        'Location': null,
+        'Description': null,
         'AccountStatus': 'Pending',
         'IsEmailVerified': false,
-        'CreatedAt': FieldValue.serverTimestamp(),
+        'PhotoPath': null,
+        'failedLoginAttempts': 0,
+        'lastFailedLoginDate': null,
+        'accountLocked': false,
+        'mustResetPassword': false,
+        'Date': FieldValue.serverTimestamp(),
+        'AiUsage': {
+          'LastReset': FieldValue.serverTimestamp(),
+          'JobPosting': 2,
+        },
       });
       String otp = _generateOTP();
       bool otpSent = await _sendOTPEmail(email, otp, 'Company');
@@ -337,11 +374,32 @@ class _SignupScreenState extends State<SignupScreen> {
       String userId = userCredential.user!.uid;
       String email = _seekerEmailController.text.trim().toLowerCase();
       await _firestore.collection('Users').doc(userId).set({
-        'Name': _seekerNameController.text.trim(),
-        'Email': email,
+        'UserID': userId,
         'UserType': 'JobSeeker',
+        'Email':
+            _seekerEmailController.text.trim().toLowerCase(), // ✅ lowercase
+        'Name': _seekerNameController.text.trim(),
+        'DoB': null,
+        'Nationality': null,
+        'Phone': null,
+        'PhotoURL': null,
+        'CVURL': null,
+        'IsProfileComplete': false,
+        'CVKeywords': null,
+        'ContactEmail': null,
         'IsEmailVerified': false,
-        'CreatedAt': FieldValue.serverTimestamp(),
+        'PhotoPath': null,
+        'CVPath': null,
+        'failedLoginAttempts': 0,
+        'lastFailedLoginDate': null,
+        'accountLocked': false,
+        'mustResetPassword': false,
+        'Date': FieldValue.serverTimestamp(),
+        'AiUsage': {
+          'LastReset': FieldValue.serverTimestamp(),
+          'CvEnhancement': 2,
+          'MockInterview': 2,
+        },
       });
       String otp = _generateOTP();
       bool otpSent = await _sendOTPEmail(email, otp, 'JobSeeker');

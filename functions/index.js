@@ -385,7 +385,7 @@ export const sendPasswordResetOtp = functions.https.onCall(async (data, context)
   }
 });
 /**
- * 6️⃣ Reset User Password (Admin SDK)
+ * 6️⃣ Reset User Password + Unlock Account (Admin SDK)
  */
 export const resetUserPassword = functions.https.onCall(async (data, context) => {
   console.log("📥 Reset password - Full data:", data);
@@ -402,17 +402,25 @@ export const resetUserPassword = functions.https.onCall(async (data, context) =>
   }
 
   try {
-    // الحصول على UID من الإيميل
+    // 1️⃣ الحصول على UID من الإيميل
     const userRecord = await admin.auth().getUserByEmail(email.toLowerCase());
     
-    // تحديث الباسورد باستخدام Admin SDK
+    // 2️⃣ تحديث الباسورد باستخدام Admin SDK
     await admin.auth().updateUser(userRecord.uid, {
       password: newPassword,
     });
 
-    console.log(`✅ Password updated successfully for: ${email}`);
+    // 3️⃣ ✅ إلغاء قفل الحساب في Firestore
+    await admin.firestore().collection("Users").doc(userRecord.uid).update({
+      failedLoginAttempts: 0,
+      lastFailedLoginDate: null,
+      accountLocked: false,
+      mustResetPassword: false,
+    });
 
-    return { success: true, message: "Password updated successfully" };
+    console.log(`✅ Password updated and account unlocked for: ${email}`);
+
+    return { success: true, message: "Password reset and account unlocked successfully" };
   } catch (error) {
     console.error("❌ Error resetting password:", error);
     throw new functions.https.HttpsError(
@@ -422,8 +430,3 @@ export const resetUserPassword = functions.https.onCall(async (data, context) =>
   }
 });
 
-// ---- merge: TS functions (keep teammate code above unchanged) ----
-import * as cvFns from "./jadeer-cv/lib/index.js";
-
-// صدّري وظائفك من مشروع TypeScript بعد البناء
-export const extractCVKeywords = cvFns.extractCVKeywords; // غيّري الاسم لو عندك export مختلف
