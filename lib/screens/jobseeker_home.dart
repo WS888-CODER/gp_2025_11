@@ -2,10 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:gp_2025_11/screens/all_jobs.dart'; // نفترض وجود Job, JobDetailsPage, JobCard هنا
+import 'package:gp_2025_11/screens/all_jobs.dart';
 import 'package:gp_2025_11/screens/job_seeker_profile_page.dart';
-
-// 💡 يجب التأكد أن Job, JobDetailsPage, JobCard, و CompanyInfo مُعرفة ومُستوردة بشكل صحيح
 
 class JobSeekerHome extends StatefulWidget {
   const JobSeekerHome({super.key, this.userId});
@@ -16,7 +14,6 @@ class JobSeekerHome extends StatefulWidget {
 }
 
 class _JobSeekerHomeState extends State<JobSeekerHome> {
-  // 0 = Reports, 1 = Home, 2 = Wishlist
   int _tab = 1;
   final _homeScroll = ScrollController();
 
@@ -57,33 +54,27 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
             Stack(
               alignment: Alignment.center,
               children: [
-                // Outer layer for bold outline (coral orange)
                 if (isSelected)
                   Icon(
                     filledIcon,
                     size: 34,
                     color: const Color(0xFFFC686A),
                   ),
-                // Middle layer filled icon (light coral)
                 if (isSelected)
                   Icon(
                     filledIcon,
                     size: 32,
                     color: const Color(0xFFFFDADD),
                   ),
-                // Foreground outlined icon (coral orange or lighter grey)
                 Icon(
                   icon,
                   size: 32,
-                  // ⬇️ استخدام لون النص الديناميكي للثيم
                   color: isSelected 
                     ? const Color(0xFFFC686A) 
                     : Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.6), 
                 ),
               ],
             ),
-            // Text label (اختياري)
-            // Text(label, style: TextStyle(fontSize: 10, color: isSelected ? _brand : Colors.grey)),
           ],
         ),
       ),
@@ -92,7 +83,6 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
 
   @override
   Widget build(BuildContext context) {
-    // hide any previous MaterialBanner
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
@@ -151,7 +141,6 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
         ),
         const SizedBox(height: 8),
 
-        // Preview section now styled like All Jobs cards
         const _JobsPreview(limit: 3),
 
         const SizedBox(height: 16),
@@ -161,11 +150,9 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
     final userId = _effectiveUserId;
 
     return Scaffold(
-      // ⬇️ تم حذف: backgroundColor: const Color(0xFFF7F6FC),
       appBar: AppBar(
         backgroundColor: _brand,
         elevation: 0,
-        // ⬇️ زر البروفايل فوق يسار
         leadingWidth: 56,
         leading: Padding(
           padding: const EdgeInsets.only(left: 8),
@@ -180,7 +167,6 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
               const SnackBar(content: Text('Notifications – قريبًا')),
             ),
           ),
-          // ⬇️ ربط زر الإعدادات بصفحة الإعدادات
           IconButton(
             tooltip: 'Settings',
             icon: const Icon(Icons.settings_outlined, color: Colors.white),
@@ -208,7 +194,6 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
           const _WishlistPlaceholder(),
         ],
       ),
-      // ⬇️ الآن يعتمد على لون السطح الديناميكي للـ Bottom Nav Bar
       bottomNavigationBar: Container(
         height: 70,
         color: Theme.of(context).colorScheme.surface, 
@@ -266,7 +251,6 @@ class _WelcomeTitle extends StatelessWidget {
         .snapshots()
         .map((snap) {
       final data = snap.data() ?? {};
-      // New schema: CompanyName / Name / Email
       final companyName = (data['CompanyName'] ?? '').toString();
       final name = (data['Name'] ?? '').toString();
       if (companyName.trim().isNotEmpty) return companyName.trim();
@@ -291,6 +275,7 @@ class _WelcomeTitle extends StatelessWidget {
             color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
+          overflow: TextOverflow.ellipsis,
         );
       },
     );
@@ -422,7 +407,6 @@ class _BigTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // استخدام لون السطح الديناميكي
     final dynamicCardColor = Theme.of(context).colorScheme.surface;
     final dynamicTextColor = Theme.of(context).textTheme.bodyLarge?.color;
 
@@ -437,22 +421,25 @@ class _BigTile extends StatelessWidget {
         child: Container(
           height: 90,
           padding: const EdgeInsets.all(12),
-          child: Center(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon, color: color, size: 28),
-                const SizedBox(width: 10),
-                Text(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: color, size: 28),
+              const SizedBox(height: 8),
+              Flexible(
+                child: Text(
                   label,
                   style: TextStyle(
                     color: dynamicTextColor,
                     fontWeight: FontWeight.w700,
-                    fontSize: 15,
+                    fontSize: 13,
                   ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -551,7 +538,6 @@ class _JobsPreviewState extends State<_JobsPreview> {
               return FutureBuilder<CompanyInfo>(
                 future: _companyInfo(j.userId),
                 builder: (context, companySnap) {
-                  // حالة التحميل على مستوى كل كارد
                   if (companySnap.connectionState == ConnectionState.waiting) {
                     return Card(
                       elevation: 0.5,
@@ -578,7 +564,6 @@ class _JobsPreviewState extends State<_JobsPreview> {
 
                   final info = companySnap.data ?? const CompanyInfo();
 
-                  // ⬇️ هنا نعيد استخدام نفس الكارد
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: JobCard(job: j, company: info),
