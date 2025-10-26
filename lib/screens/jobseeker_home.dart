@@ -2,8 +2,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:gp_2025_11/screens/all_jobs.dart';
+import 'package:gp_2025_11/screens/all_jobs.dart'; // نفترض وجود Job, JobDetailsPage, JobCard هنا
 import 'package:gp_2025_11/screens/job_seeker_profile_page.dart';
+
+// 💡 يجب التأكد أن Job, JobDetailsPage, JobCard, و CompanyInfo مُعرفة ومُستوردة بشكل صحيح
 
 class JobSeekerHome extends StatefulWidget {
   const JobSeekerHome({super.key, this.userId});
@@ -47,30 +49,43 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Outer layer for bold outline (coral orange)
-          if (isSelected)
-            Icon(
-              filledIcon,
-              size: 34,
-              color: const Color(0xFFFC686A),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                // Outer layer for bold outline (coral orange)
+                if (isSelected)
+                  Icon(
+                    filledIcon,
+                    size: 34,
+                    color: const Color(0xFFFC686A),
+                  ),
+                // Middle layer filled icon (light coral)
+                if (isSelected)
+                  Icon(
+                    filledIcon,
+                    size: 32,
+                    color: const Color(0xFFFFDADD),
+                  ),
+                // Foreground outlined icon (coral orange or lighter grey)
+                Icon(
+                  icon,
+                  size: 32,
+                  // ⬇️ استخدام لون النص الديناميكي للثيم
+                  color: isSelected 
+                    ? const Color(0xFFFC686A) 
+                    : Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.6), 
+                ),
+              ],
             ),
-          // Middle layer filled icon (light coral)
-          if (isSelected)
-            Icon(
-              filledIcon,
-              size: 32,
-              color: const Color(0xFFFFDADD),
-            ),
-          // Foreground outlined icon (coral orange or lighter grey)
-          Icon(
-            icon,
-            size: 32,
-            color: isSelected ? const Color(0xFFFC686A) : Colors.grey[400],
-          ),
-        ],
+            // Text label (اختياري)
+            // Text(label, style: TextStyle(fontSize: 10, color: isSelected ? _brand : Colors.grey)),
+          ],
+        ),
       ),
     );
   }
@@ -93,7 +108,7 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
             Expanded(
               child: _BigTile(
                 label: 'Mock Interviews',
-                icon: Icons.quiz_outlined,
+                icon: Icons.mic_none,
                 color: _brand,
                 onTap: () => ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Mock Interviews – قريبًا')),
@@ -137,7 +152,7 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
         const SizedBox(height: 8),
 
         // Preview section now styled like All Jobs cards
-        const _JobsPreview(limit: 2),
+        const _JobsPreview(limit: 3),
 
         const SizedBox(height: 16),
       ],
@@ -146,7 +161,7 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
     final userId = _effectiveUserId;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6FC),
+      // ⬇️ تم حذف: backgroundColor: const Color(0xFFF7F6FC),
       appBar: AppBar(
         backgroundColor: _brand,
         elevation: 0,
@@ -193,33 +208,21 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
           const _WishlistPlaceholder(),
         ],
       ),
+      // ⬇️ الآن يعتمد على لون السطح الديناميكي للـ Bottom Nav Bar
       bottomNavigationBar: Container(
         height: 70,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(15),
-            topRight: Radius.circular(15),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
+        color: Theme.of(context).colorScheme.surface, 
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _buildNavItem(
-              icon: Icons.assessment_outlined,
-              filledIcon: Icons.assessment,
+              icon: Icons.bar_chart_outlined,
+              filledIcon: Icons.bar_chart,
               label: 'Reports',
               isSelected: _tab == 0,
               onTap: () => setState(() => _tab = 0),
             ),
-            const SizedBox(width: 80),
+            const SizedBox(width: 60),
             _buildNavItem(
               icon: Icons.home_outlined,
               filledIcon: Icons.home,
@@ -235,7 +238,7 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
                 }
               },
             ),
-            const SizedBox(width: 80),
+            const SizedBox(width: 60),
             _buildNavItem(
               icon: Icons.favorite_border,
               filledIcon: Icons.favorite,
@@ -363,6 +366,7 @@ class _ProfileButton extends StatelessWidget {
                       )
                     : null,
                 backgroundColor: const Color(0xFFFF7B7B),
+                foregroundColor: Colors.white,
               ),
               Positioned(
                 right: -1,
@@ -418,8 +422,12 @@ class _BigTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // استخدام لون السطح الديناميكي
+    final dynamicCardColor = Theme.of(context).colorScheme.surface;
+    final dynamicTextColor = Theme.of(context).textTheme.bodyLarge?.color;
+
     return Material(
-      color: Colors.white,
+      color: dynamicCardColor,
       borderRadius: BorderRadius.circular(16),
       elevation: 4,
       shadowColor: Colors.black.withOpacity(0.2),
@@ -428,6 +436,7 @@ class _BigTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: Container(
           height: 90,
+          padding: const EdgeInsets.all(12),
           child: Center(
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -437,7 +446,7 @@ class _BigTile extends StatelessWidget {
                 Text(
                   label,
                   style: TextStyle(
-                    color: color,
+                    color: dynamicTextColor,
                     fontWeight: FontWeight.w700,
                     fontSize: 15,
                   ),
@@ -453,7 +462,7 @@ class _BigTile extends StatelessWidget {
 
 class _JobsPreview extends StatefulWidget {
   final int limit;
-  const _JobsPreview({this.limit = 2});
+  const _JobsPreview({this.limit = 3});
 
   @override
   State<_JobsPreview> createState() => _JobsPreviewState();
@@ -569,7 +578,7 @@ class _JobsPreviewState extends State<_JobsPreview> {
 
                   final info = companySnap.data ?? const CompanyInfo();
 
-                  // هنا نعيد استخدام نفس الكارد اللي عرفتيه في الصفحة الثانية (JobsPage)
+                  // ⬇️ هنا نعيد استخدام نفس الكارد
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: JobCard(job: j, company: info),

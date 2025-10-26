@@ -302,7 +302,7 @@ class _CompanyHomeState extends State<CompanyHome> {
           Icon(
             icon,
             size: 32,
-            color: isSelected ? const Color(0xFFFC686A) : Colors.grey[400],
+            color: isSelected ? const Color(0xFFFC686A) : Theme.of(context).textTheme.bodySmall?.color, // Use theme color for better dark mode support
           ),
         ],
       ),
@@ -326,53 +326,59 @@ class _CompanyHomeState extends State<CompanyHome> {
     });
   }
 
-  /// وظائف الشركة (Jobs). لو companyId فاضي، نعرض كل الوظائف (للتجربة).
+  /// وظائف الشركة (Jobs).
   Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>> _jobsStream(
       String companyId) {
-    Query<Map<String, dynamic>> q =
-        FirebaseFirestore.instance.collection('Jobs');
-    if (companyId.isNotEmpty) {
-      q = q.where('UserID', isEqualTo: companyId);
-    }
-    return q.snapshots().map((snap) {
-      final docs = snap.docs.toList();
-      final now = DateTime.now();
-
-      // Auto-close expired jobs only (no auto-reopening)
-      for (final doc in docs) {
-        final data = doc.data();
-        final endDateField = data['EndDate'];
-        final currentStatus = data['JobStatus'] ?? 'Open';
-
-        if (endDateField is Timestamp) {
-          final endDate = endDateField.toDate();
-
-          // If job is past end date and still Open, close it automatically
-          if (endDate.isBefore(now) && currentStatus == 'Open') {
-            FirebaseFirestore.instance
-                .collection('Jobs')
-                .doc(doc.id)
-                .update({'JobStatus': 'Closed'});
-          }
-          // Note: We don't auto-reopen closed jobs, even if date is extended
-          // Company can manually reopen using "Reopen Job" option
-        }
+    try {
+      Query<Map<String, dynamic>> q =
+          FirebaseFirestore.instance.collection('Jobs');
+      if (companyId.isNotEmpty) {
+        q = q.where('UserID', isEqualTo: companyId);
       }
+      return q.snapshots().map((snap) {
+        final docs = snap.docs.toList();
+        final now = DateTime.now();
 
-      // ترتيب محلي حسب StartDate (الأحدث أولًا)
-      docs.sort((a, b) {
-        final sa = a.data()['StartDate'];
-        final sb = b.data()['StartDate'];
-        final da = sa is Timestamp
-            ? sa.toDate()
-            : DateTime.fromMillisecondsSinceEpoch(0);
-        final db = sb is Timestamp
-            ? sb.toDate()
-            : DateTime.fromMillisecondsSinceEpoch(0);
-        return db.compareTo(da);
+        // Auto-close expired jobs only (no auto-reopening)
+        for (final doc in docs) {
+          final data = doc.data();
+          final endDateField = data['EndDate'];
+          final currentStatus = data['JobStatus'] ?? 'Open';
+
+          if (endDateField is Timestamp) {
+            final endDate = endDateField.toDate();
+
+            // If job is past end date and still Open, close it automatically
+            if (endDate.isBefore(now) && currentStatus == 'Open') {
+              FirebaseFirestore.instance
+                  .collection('Jobs')
+                  .doc(doc.id)
+                  .update({'JobStatus': 'Closed'});
+            }
+            // Note: We don't auto-reopen closed jobs, even if date is extended
+            // Company can manually reopen using "Reopen Job" option
+          }
+        }
+
+        // ترتيب محلي حسب StartDate (الأحدث أولًا)
+        docs.sort((a, b) {
+          final sa = a.data()['StartDate'];
+          final sb = b.data()['StartDate'];
+          final da = sa is Timestamp
+              ? sa.toDate()
+              : DateTime.fromMillisecondsSinceEpoch(0);
+          final db = sb is Timestamp
+              ? sb.toDate()
+              : DateTime.fromMillisecondsSinceEpoch(0);
+          return db.compareTo(da);
+        });
+        return docs;
       });
-      return docs;
-    });
+    } catch (e) {
+      // الحل الدفاعي لخطأ 'is not a subtype of JavaScriptObject' على الويب
+      print("Error in _jobsStream: $e");
+      return Stream.error(e);
+    }
   }
 
   @override
@@ -456,12 +462,18 @@ class _CompanyHomeState extends State<CompanyHome> {
                 final jobStatus = (data['JobStatus'] ?? 'Open').toString();
                 final isClosed = jobStatus == 'Closed';
 
+                // ⬇️ تحديد لون الخلفية الديناميكي للعنصر
+                final cardBackgroundColor = isClosed 
+                  ? Theme.of(context).colorScheme.surface.withOpacity(0.5) 
+                  : Theme.of(context).colorScheme.surface;
+
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
                   padding:
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  // ⬇️ تم وضع اللون الآن داخل BoxDecoration (لحظ التضارب)
                   decoration: BoxDecoration(
-                    color: isClosed ? Colors.grey[300] : Colors.white,
+                    color: cardBackgroundColor, 
                     borderRadius: BorderRadius.circular(14),
                     boxShadow: [
                       BoxShadow(
@@ -483,7 +495,10 @@ class _CompanyHomeState extends State<CompanyHome> {
                               style: TextStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 16,
-                                color: isClosed ? Colors.grey[600] : Colors.black,
+                                // ⬇️ ألوان النصوص تصبح ديناميكية وتتبع الثيم
+                                color: isClosed 
+                                  ? Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7) 
+                                  : Theme.of(context).textTheme.bodyLarge?.color,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -492,7 +507,9 @@ class _CompanyHomeState extends State<CompanyHome> {
                                   .where((e) => e.isNotEmpty)
                                   .join(' • '),
                               style: TextStyle(
-                                color: isClosed ? Colors.grey[500] : Colors.black54,
+                                color: isClosed 
+                                  ? Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7)
+                                  : Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7),
                               ),
                             ),
                             // Closed badge at bottom left
@@ -502,13 +519,13 @@ class _CompanyHomeState extends State<CompanyHome> {
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: Colors.grey[500],
+                                  color: Theme.of(context).colorScheme.error.withOpacity(0.2),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: const Text(
+                                child: Text(
                                   'Closed',
                                   style: TextStyle(
-                                    color: Colors.white,
+                                    color: Theme.of(context).colorScheme.error,
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -565,15 +582,16 @@ class _CompanyHomeState extends State<CompanyHome> {
 
                       // More options menu (using IconButton + Dialog)
                       IconButton(
-                        icon: const Icon(Icons.more_vert, color: _brand),
+                        icon: Icon(Icons.more_vert, color: Theme.of(context).textTheme.bodyLarge?.color),
                         onPressed: () {
                           final safeCtx = _scaffoldKey.currentContext;
                           if (safeCtx == null) return;
 
                           showDialog(
                             context: safeCtx,
+                            // ⬇️ الآن يعتمد على لون السطح الديناميكي
                             builder: (dialogContext) => AlertDialog(
-                              backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
+                              backgroundColor: Theme.of(context).colorScheme.surface,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(20),
                               ),
@@ -581,16 +599,17 @@ class _CompanyHomeState extends State<CompanyHome> {
                               content: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
+                                  // Close/Reopen Option
                                   ListTile(
                                     leading: Icon(
                                       isClosed ? Icons.lock_open_outlined : Icons.lock_outline,
-                                      color: Colors.white,
+                                      color: isClosed ? Colors.green : Theme.of(context).textTheme.bodySmall?.color, // ديناميكي
                                       size: 20,
                                     ),
                                     title: Text(
                                       isClosed ? 'Reopen Job' : 'Close Job',
-                                      style: const TextStyle(
-                                        color: Colors.white,
+                                      style: TextStyle(
+                                        color: isClosed ? Colors.green : Theme.of(context).textTheme.bodyLarge?.color, // ديناميكي
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
@@ -599,6 +618,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                                       _closeJob(doc.id, isClosed, safeCtx);
                                     },
                                   ),
+                                  // Delete Option
                                   ListTile(
                                     leading: const Icon(
                                       Icons.delete_outline,
@@ -623,7 +643,6 @@ class _CompanyHomeState extends State<CompanyHome> {
                           );
                         },
                       ),
-
                     ],
                   ),
                 );
@@ -638,7 +657,7 @@ class _CompanyHomeState extends State<CompanyHome> {
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: const Color(0xFFF7F6FC),
+      // ⬇️ تم حذف: backgroundColor: const Color(0xFFF7F6FC), والاعتماد على الثيم
       appBar: AppBar(
         backgroundColor: _brand,
         elevation: 0,
@@ -702,20 +721,8 @@ class _CompanyHomeState extends State<CompanyHome> {
       ),
       bottomNavigationBar: Container(
         height: 70,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(15),
-            topRight: Radius.circular(15),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
+        // ⬇️ إزالة لون الخلفية الثابت والاعتماد على الثيم
+        color: Theme.of(context).colorScheme.surface, 
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -759,7 +766,7 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-// ⬇️ زر الملف الشخصي الموحد (يعرض الأحرف الأولى بلون أحمر إذا لم تكن هناك صورة)
+// ⬇️ زر الملف الشخصي الموحد للشركات
 class _ProfileButton extends StatelessWidget {
   const _ProfileButton({required this.userId});
   final String userId;
@@ -799,11 +806,10 @@ class _ProfileButton extends StatelessWidget {
         if (name.isNotEmpty) {
           final parts = name.split(' ').where((s) => s.isNotEmpty).toList();
           if (parts.length >= 2) {
-            initials = parts[0][0] + parts[1][0];
+            initials = (parts[0][0] + parts[1][0]).toUpperCase();
           } else if (parts.isNotEmpty) {
-            initials = name.substring(0, 1);
+            initials = name.substring(0, name.length > 1 ? 2 : 1).toUpperCase();
           }
-          initials = initials.toUpperCase();
         }
 
         final avatar = Hero(
@@ -818,8 +824,8 @@ class _ProfileButton extends StatelessWidget {
                     ? Text(
                         initials,
                         style: const TextStyle(
-                          color: Colors.white,
                           fontWeight: FontWeight.bold,
+                          color: Colors.white,
                           fontSize: 16,
                         ),
                       )
