@@ -16,5 +16,18 @@
     "companyNameLabel": "اسم الشركة",
     "registeredEmailLabel": "البريد الإلكتروني المسجل",
     "contactPhoneLabel": "رقم الاتصال",
-    "logoutOption": "تسجيل الخروج"
+    "logoutOption": "تسجيل الخروج",
+
+    "switchLanguage": "تبديل اللغة إلى {targetLang}",
+    "@@switchLanguage": {
+        "placeholders": {
+            "targetLang": {}
+        }
+    },
+    "currentLanguage": "الحالية: {langName}",
+    "@@currentLanguage": {
+        "placeholders": {
+            "langName": {}
+        }
+    }
 }

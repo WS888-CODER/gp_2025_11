@@ -58,4 +58,14 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get logoutOption => 'تسجيل الخروج';
+
+  @override
+  String switchLanguage(Object targetLang) {
+    return 'تبديل اللغة إلى $targetLang';
+  }
+
+  @override
+  String currentLanguage(Object langName) {
+    return 'الحالية: $langName';
+  }
 }

@@ -1,4 +1,3 @@
-// lib/screens/settings_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -24,7 +23,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isNotificationsEnabled = false;
   static const Color _brandColor = Color(0xFF4A5FBC);
 
+  // 💡 تم تعديل وظيفة تسجيل الخروج لاستخدام Localizations.localeOf(context) وتعريب نصوص الحوار
   Future<void> _handleLogout(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    final currentLangCode = Localizations.localeOf(context).languageCode;
+
     const Color dialogBaseColor = Color(0xFF4A5FBC);
     const Color cancelBgColor = Color(0xFFE5E7EB);
     const Color cancelTextColor = Color(0xFF4B5563);
@@ -35,18 +38,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: dialogBaseColor.withOpacity(0.7),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-        title: const Text(
-          'Confirm Logout',
+        title: Text(
+          // 🟢 تم تعريب العنوان
+          currentLangCode == 'ar' ? 'تأكيد تسجيل الخروج' : 'Confirm Logout',
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: const TextStyle(
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
         ),
-        content: const Text(
-          'Are you sure you want to log out?',
+        content: Text(
+          // 🟢 تم تعريب محتوى الحوار
+          currentLangCode == 'ar' ? 'هل أنت متأكد أنك تريد تسجيل الخروج؟' : 'Are you sure you want to log out?',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white70),
+          style: const TextStyle(color: Colors.white70),
         ),
         contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
         actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -63,7 +68,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   borderRadius: BorderRadius.circular(25),
                 ),
               ),
-              child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.bold)),
+              // 🟢 تم تعريب الزر
+              child: Text(currentLangCode == 'ar' ? 'إلغاء' : 'Cancel', style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
           ),
           const SizedBox(width: 10),
@@ -78,7 +84,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   borderRadius: BorderRadius.circular(25),
                 ),
               ),
-              child: const Text('Logout', style: TextStyle(fontWeight: FontWeight.bold)),
+              // 🟢 تم استخدام مفتاح التعريب
+              child: Text(l10n.logoutOption, style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
           ),
         ],
@@ -94,20 +101,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  // 💡 تم تعديل وظيفة الثيم لتعريب نصوص الـ SnackBar
   void _toggleTheme(AppSettingsNotifier settings, bool value) {
     final newMode = value ? ThemeMode.dark : ThemeMode.light;
+    final currentLangCode = Localizations.localeOf(context).languageCode;
     settings.toggleTheme(newMode);
+
+    final themeName = newMode == ThemeMode.light 
+        ? (currentLangCode == 'ar' ? 'الوضع الفاتح' : 'Light Mode')
+        : (currentLangCode == 'ar' ? 'الوضع الداكن' : 'Dark Mode');
+        
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Theme changed to ${newMode == ThemeMode.light ? "Light Mode" : "Dark Mode"}'),
+        content: Text(currentLangCode == 'ar' ? 'تم تغيير السمة إلى $themeName' : 'Theme changed to $themeName'),
       ),
     );
   }
 
+  // 💡 وظيفة تغيير اللغة - تم تحديث تصميم الحوار ليتطابق مع حوار تسجيل الخروج
   void _changeLanguage(AppSettingsNotifier settings, AppLocalizations l10n) async {
-    final targetLangName =
-        settings.currentLanguageName == 'English' ? 'Arabic' : 'English';
-
+    final targetLangName = settings.currentLanguageName == 'English' ? 'العربية' : 'English';
+    final currentLangCode = Localizations.localeOf(context).languageCode;
+    
+    // الألوان - مطابقة لحوار تسجيل الخروج
     const Color dialogBaseColor = Color(0xFF4A5FBC);
     const Color cancelBgColor = Color(0xFFE5E7EB);
     const Color cancelTextColor = Color(0xFF4B5563);
@@ -116,18 +132,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        // 🟢 تصميم جديد لحوار اللغة
         backgroundColor: dialogBaseColor.withOpacity(0.7),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-        title: const Text(
-          'Confirm Language',
+        title: Text(
+          currentLangCode == 'ar' ? 'تأكيد تغيير اللغة' : 'Confirm Language',
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: const TextStyle(
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
         ),
         content: Text(
-          'Are you sure you want to switch to $targetLangName?',
+          currentLangCode == 'ar' ? 'هل أنت متأكد من التبديل إلى $targetLangName؟' : 'Are you sure you want to switch to $targetLangName?',
           textAlign: TextAlign.center,
           style: const TextStyle(color: Colors.white70),
         ),
@@ -146,7 +163,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   borderRadius: BorderRadius.circular(25),
                 ),
               ),
-              child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: Text(currentLangCode == 'ar' ? 'إلغاء' : 'Cancel', style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
           ),
           const SizedBox(width: 10),
@@ -161,7 +178,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   borderRadius: BorderRadius.circular(25),
                 ),
               ),
-              child: const Text('Confirm', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: Text(currentLangCode == 'ar' ? 'تأكيد' : 'Confirm', style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
           ),
         ],
@@ -170,17 +187,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (confirmed == true) {
       settings.toggleLanguage();
+      // 🟢 FIX: هذا السطر يجبر الشاشة على إعادة التحميل بالـ Locale الجديد
+      if (context.mounted) {
+        Navigator.of(context).pushReplacementNamed('/settings', arguments: {'userType': widget.userType, 'userId': widget.userId});
+      }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Language switched to ${settings.currentLanguageName}')),
+        SnackBar(content: Text(currentLangCode == 'ar' ? 'تم التبديل إلى $targetLangName' : 'Language switched to $targetLangName')),
       );
     }
   }
 
+  // 💡 تم تعديل وظيفة الإشعارات لتعريب نصوص الـ SnackBar
   void _toggleNotifications(bool value) {
     setState(() => _isNotificationsEnabled = value);
+    final currentLangCode = Localizations.localeOf(context).languageCode;
+
+    final statusText = _isNotificationsEnabled 
+        ? (currentLangCode == 'ar' ? 'قيد التشغيل' : 'ON')
+        : (currentLangCode == 'ar' ? 'متوقفة' : 'OFF');
+        
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Notifications are ${_isNotificationsEnabled ? "ON" : "OFF"}'),
+        content: Text(currentLangCode == 'ar' 
+            ? 'الإشعارات الآن $statusText'
+            : 'Notifications are $statusText'),
       ),
     );
   }
@@ -198,9 +228,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final settings = Provider.of<AppSettingsNotifier>(context);
     final l10n = AppLocalizations.of(context)!;
-    final currentLangIsArabic = settings.currentLanguageName == 'Arabic';
-    final targetLang =
-        settings.currentLanguageName == 'English' ? 'Arabic' : 'English';
+    // 🟢 FIX: استخدام السياق للحصول على الـ Locale
+    final currentLangIsArabic = Localizations.localeOf(context).languageCode == 'ar';
+    
+    // 🟢 تم تغيير طريقة حساب targetLang/currentLang لتعرض الأسماء المعربة
+    final targetLangName = currentLangIsArabic ? 'English' : 'العربية';
+    final currentLangName = currentLangIsArabic ? 'العربية' : 'English';
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -228,23 +261,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _SettingsSwitchItem(
                     icon: Icons.language,
                     iconColor: Colors.blue,
-                    title: 'Switch Language to $targetLang',
-                    value: currentLangIsArabic,
+                    // 🟢 FIX 1: استخدام الدالة switchLanguage
+                    title: l10n.switchLanguage(targetLangName),
+                    value: settings.locale.languageCode == 'ar',
                     onChanged: (value) => _changeLanguage(settings, l10n),
                     switchColor: _brandColor,
-                    subtitle: Text('Current: ${settings.currentLanguageName}'),
+                    // 🟢 FIX 2: استخدام الدالة currentLanguage
+                    subtitle: Text(l10n.currentLanguage(currentLangName)),
                     isTitleBold: true,
                   ),
                   _SettingsSwitchItem(
-                    title: settings.themeMode == ThemeMode.dark
-                        ? 'Dark Mode'
-                        : 'Light Mode',
+                    // 🟢 FIX 3: استخدام مفتاح themeOption
+                    title: l10n.themeOption,
                     icon: Icons.light_mode,
                     iconColor: Colors.orange,
                     value: settings.themeMode == ThemeMode.dark,
                     onChanged: (value) => _toggleTheme(settings, value),
                     switchColor: _brandColor,
                     isTitleBold: true,
+                    // 🟢 FIX 4: تعريب subtitle الوضع الفاتح/الداكن
+                    subtitle: Text(settings.themeMode == ThemeMode.dark
+                        ? (currentLangIsArabic ? 'الوضع الداكن' : 'Dark Mode')
+                        : (currentLangIsArabic ? 'الوضع الفاتح' : 'Light Mode')),
                   ),
                   _SettingsSwitchItem(
                     title: l10n.notificationsOption,
@@ -267,7 +305,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     isTitleBold: true,
                   ),
                   _SettingsItem(
-                    title: 'Account',
+                    // 🟢 FIX 5: استخدام مفتاح myAccountDetailsSection بدلاً من 'Account'
+                    title: l10n.myAccountDetailsSection,
                     icon: Icons.account_circle,
                     iconColor: Colors.teal,
                     trailing: const Icon(Icons.chevron_right),
@@ -281,16 +320,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         },
                       );
                     },
-                    subtitle: const Text('View your registered details'),
+                    // 🟢 FIX 6: استخدام مفتاح viewOnlyText بدلاً من 'View your registered details'
+                    subtitle: Text(l10n.viewOnlyText),
                     isTitleBold: true,
                   ),
                   _SettingsItem(
-                    title: 'About',
+                    // 🟢 استرجاع الـ About الأصلي
+                    title: currentLangIsArabic ? 'حول التطبيق' : 'About',
                     icon: Icons.info_outline,
                     iconColor: Colors.lightGreen,
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => Navigator.pushNamed(context, '/about'),
-                    subtitle: const Text('App version and information'),
+                    // 🟢 استرجاع الوصف الأصلي (مع تعريب يدوي بسيط لعدم وجود المفتاح)
+                    subtitle: Text(currentLangIsArabic ? 'إصدار التطبيق والمعلومات' : 'App version and information'),
                     isTitleBold: true,
                   ),
                   _SettingsItem(
@@ -312,8 +354,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 }
 
 /* -------------------- Helper Widgets -------------------- */
-
+// تم ترك هذه الـ Widgets كما هي في الكود الأصلي
 class _SettingsItem extends StatelessWidget {
+// ... (بقية الكود) ...
   final String title;
   final IconData icon;
   final Color iconColor;
@@ -358,6 +401,7 @@ class _SettingsItem extends StatelessWidget {
 }
 
 class _SettingsSwitchItem extends StatelessWidget {
+// ... (بقية الكود) ...
   final String title;
   final IconData icon;
   final Color iconColor;
