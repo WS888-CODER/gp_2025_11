@@ -267,10 +267,63 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
             userData['Name'] ?? 'N/A',
           );
 
-          _showSuccessSnackBar(
-              'Your email has been verified successfully! Please check your email for instructions on submitting company verification documents.');
-          await Future.delayed(Duration(seconds: 3));
-          Navigator.pushReplacementNamed(context, '/login');
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => WillPopScope(
+              onWillPop: () async => false,
+              child: AlertDialog(
+                backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30)),
+                title: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.check_circle_outline,
+                        color: Colors.white, size: 28),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Email Verified',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
+                content: Text(
+                  'Your email has been verified successfully! Please check your email for instructions on submitting company verification documents.',
+                  style: const TextStyle(color: Colors.white, fontSize: 15),
+                  textAlign: TextAlign.center,
+                ),
+                contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                actionsPadding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                actionsAlignment: MainAxisAlignment.center,
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      Navigator.pushReplacementNamed(context, '/login');
+                    },
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.white.withOpacity(0.9),
+                      foregroundColor: const Color(0xFF4A5FBC),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+            ),
+          );
         } else if (userType == 'JobSeeker') {
           _showSuccessSnackBar('Verification successful!');
           await Future.delayed(Duration(milliseconds: 500));
