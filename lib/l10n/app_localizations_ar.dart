@@ -39,7 +39,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get accountVerificationStatus => 'حالة توثيق الحساب';
 
   @override
-  String get viewOnlyText => 'للعرض فقط';
+  String get viewOnlyText => 'تعديل بيانات الحساب';
 
   @override
   String get myAccountDetailsSection => 'تفاصيل حسابي';

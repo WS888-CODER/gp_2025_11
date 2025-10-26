@@ -39,7 +39,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountVerificationStatus => 'Account Verification Status';
 
   @override
-  String get viewOnlyText => 'View Only';
+  String get viewOnlyText => 'Edits Account Information';
 
   @override
   String get myAccountDetailsSection => 'My Account Details';
