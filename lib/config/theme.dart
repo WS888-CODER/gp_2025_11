@@ -3,14 +3,30 @@ import 'package:flutter/material.dart';
 
 class AppTheme {
   // Brand Colors
-  static const Color primaryPurple = Color(0xFF4A5FBC);
+  static const Color primaryPurple = Color(0xFF49469F);
   static const Color accentCoral = Color(0xFFFD6C67);
+  
+  // إعدادات الـ Switch المشتركة (لتصحيح مظهر الـ ON/OFF)
+  static final SwitchThemeData baseSwitchTheme = SwitchThemeData(
+    thumbColor: MaterialStateProperty.resolveWith((states) {
+      return Colors.white; 
+    }),
+    trackColor: MaterialStateProperty.resolveWith((states) {
+      if (states.contains(MaterialState.selected)) {
+        return primaryPurple; // اللون البنفسجي عندما يكون ON
+      }
+      return Colors.grey.shade400; // اللون الرمادي الفاتح عندما يكون OFF
+    }),
+    trackOutlineColor: MaterialStateProperty.all(Colors.transparent), 
+  );
+
 
   // 1. الوضع الفاتح (Light Theme)
   static ThemeData get lightTheme {
     return ThemeData(
       primaryColor: primaryPurple,
-      scaffoldBackgroundColor: Colors.white,
+      // ⬇️ تحديد خلفية Scaffold في الوضع الفاتح
+      scaffoldBackgroundColor: Colors.white, 
       colorScheme: ColorScheme.light(
         primary: primaryPurple,
         secondary: accentCoral,
@@ -40,27 +56,28 @@ class AppTheme {
         ),
       ),
       useMaterial3: true,
+      switchTheme: baseSwitchTheme,
     );
   }
 
-  // 2. الوضع الداكن (Dark Theme) - NEW
+  // 2. الوضع الداكن (Dark Theme)
   static ThemeData get darkTheme {
     return ThemeData(
       primaryColor: primaryPurple,
-      scaffoldBackgroundColor: const Color(0xFF121212), // خلفية داكنة جداً
-      // تحديد السطوع (Brightness) لضمان أن كل الويدجت تعمل بالوضع الداكن
+      // ⬇️ تحديد خلفية Scaffold باللون الداكن المناسب (لون أسود ناعم)
+      scaffoldBackgroundColor: const Color(0xFF121212), 
       brightness: Brightness.dark,
       colorScheme: ColorScheme.dark(
         primary: primaryPurple,
         secondary: accentCoral,
         background: const Color(0xFF121212),
-        surface: const Color(0xFF1E1E1E), // لون السطح (surface) للبطاقات
+        surface: const Color(0xFF1E1E1E), 
         onSurface: Colors.white70,
       ),
       appBarTheme: const AppBarTheme(
         elevation: 0,
         centerTitle: true,
-        backgroundColor: Color(0xFF212121), // لون أغمق لشريط التطبيق
+        backgroundColor: Color(0xFF212121),
         foregroundColor: Colors.white,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -81,6 +98,14 @@ class AppTheme {
         ),
       ),
       useMaterial3: true,
+      switchTheme: baseSwitchTheme.copyWith( 
+         trackColor: MaterialStateProperty.resolveWith((states) {
+            if (states.contains(MaterialState.selected)) {
+              return primaryPurple;
+            }
+            return Colors.grey.shade600;
+          }),
+      ), 
     );
   }
 }

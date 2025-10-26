@@ -39,7 +39,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountVerificationStatus => 'Account Verification Status';
 
   @override
-  String get viewOnlyText => 'View Only';
+  String get viewOnlyText => 'Edits Account Information';
 
   @override
   String get myAccountDetailsSection => 'My Account Details';
@@ -58,4 +58,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get logoutOption => 'Logout';
+
+  @override
+  String switchLanguage(Object targetLang) {
+    return 'Switch Language to $targetLang';
+  }
+
+  @override
+  String currentLanguage(Object langName) {
+    return 'Current: $langName';
+  }
 }

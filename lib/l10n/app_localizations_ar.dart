@@ -39,7 +39,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get accountVerificationStatus => 'حالة توثيق الحساب';
 
   @override
-  String get viewOnlyText => 'للعرض فقط';
+  String get viewOnlyText => 'تعديل بيانات الحساب';
 
   @override
   String get myAccountDetailsSection => 'تفاصيل حسابي';
@@ -58,4 +58,14 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get logoutOption => 'تسجيل الخروج';
+
+  @override
+  String switchLanguage(Object targetLang) {
+    return 'تبديل اللغة إلى $targetLang';
+  }
+
+  @override
+  String currentLanguage(Object langName) {
+    return 'الحالية: $langName';
+  }
 }
