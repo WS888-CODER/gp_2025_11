@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:gp_2025_11/screens/company_profile_page.dart';
 import 'dart:async';
 
@@ -56,11 +57,13 @@ class _CompanyHomeState extends State<CompanyHome> {
           context: context,
           builder: (context) => AlertDialog(
             backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
             title: const Text(
               'Profile Incomplete',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style:
+                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
             content: const Text(
               'Please complete your company profile before creating or editing job postings.',
@@ -68,7 +71,8 @@ class _CompanyHomeState extends State<CompanyHome> {
               style: TextStyle(color: Colors.white),
             ),
             contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-            actionsPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            actionsPadding:
+                const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             actionsAlignment: MainAxisAlignment.center,
             actions: [
               TextButton(
@@ -76,12 +80,14 @@ class _CompanyHomeState extends State<CompanyHome> {
                 style: TextButton.styleFrom(
                   backgroundColor: Colors.white.withOpacity(0.9),
                   foregroundColor: const Color(0xFF4A5FBC),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
                 ),
-                child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: const Text('OK',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -120,47 +126,48 @@ class _CompanyHomeState extends State<CompanyHome> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(ctx).showSnackBar(
-          SnackBar(
-            content: Text(
-              isClosed ? 'Job reopened successfully' : 'Job closed successfully',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
+        SnackBar(
+          content: Text(
+            isClosed ? 'Job reopened successfully' : 'Job closed successfully',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
             ),
-            backgroundColor: const Color(0xFF4CAF50).withOpacity(0.8),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
+            textAlign: TextAlign.center,
           ),
-        );
+          backgroundColor: const Color(0xFF4CAF50).withOpacity(0.8),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(ctx).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Error: $e',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
+        SnackBar(
+          content: Text(
+            'Error: $e',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
             ),
-            backgroundColor: const Color(0xFFFF7B7B).withOpacity(0.8),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
+            textAlign: TextAlign.center,
           ),
-        );
+          backgroundColor: const Color(0xFFFF7B7B).withOpacity(0.8),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
     }
   }
 
   /// Delete a job with confirmation
-  Future<void> _deleteJob(String jobId, String jobTitle, BuildContext ctx) async {
+  Future<void> _deleteJob(
+      String jobId, String jobTitle, BuildContext ctx) async {
     if (!mounted) return;
 
     final shouldDelete = await showDialog<bool>(
@@ -179,7 +186,8 @@ class _CompanyHomeState extends State<CompanyHome> {
           style: const TextStyle(color: Colors.white),
         ),
         contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-        actionsPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        actionsPadding:
+            const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
         actionsAlignment: MainAxisAlignment.center,
         actions: [
           TextButton(
@@ -192,7 +200,8 @@ class _CompanyHomeState extends State<CompanyHome> {
                 borderRadius: BorderRadius.circular(20),
               ),
             ),
-            child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text('Cancel',
+                style: TextStyle(fontWeight: FontWeight.bold)),
           ),
           const SizedBox(width: 12),
           TextButton(
@@ -205,7 +214,8 @@ class _CompanyHomeState extends State<CompanyHome> {
                 borderRadius: BorderRadius.circular(20),
               ),
             ),
-            child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text('Delete',
+                style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -222,42 +232,42 @@ class _CompanyHomeState extends State<CompanyHome> {
         if (!mounted) return;
 
         ScaffoldMessenger.of(ctx).showSnackBar(
-            SnackBar(
-              content: const Text(
-                'Job deleted successfully',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
+          SnackBar(
+            content: const Text(
+              'Job deleted successfully',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
               ),
-              backgroundColor: const Color(0xFF4CAF50).withOpacity(0.8),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
+              textAlign: TextAlign.center,
             ),
-          );
+            backgroundColor: const Color(0xFF4CAF50).withOpacity(0.8),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
       } catch (e) {
         if (!mounted) return;
 
         ScaffoldMessenger.of(ctx).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Error: $e',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
+          SnackBar(
+            content: Text(
+              'Error: $e',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
               ),
-              backgroundColor: const Color(0xFFFF7B7B).withOpacity(0.8),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
+              textAlign: TextAlign.center,
             ),
-          );
+            backgroundColor: const Color(0xFFFF7B7B).withOpacity(0.8),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
       }
     }
   }
@@ -302,7 +312,12 @@ class _CompanyHomeState extends State<CompanyHome> {
           Icon(
             icon,
             size: 32,
-            color: isSelected ? const Color(0xFFFC686A) : Theme.of(context).textTheme.bodySmall?.color, // Use theme color for better dark mode support
+            color: isSelected
+                ? const Color(0xFFFC686A)
+                : Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.color, // Use theme color for better dark mode support
           ),
         ],
       ),
@@ -319,9 +334,8 @@ class _CompanyHomeState extends State<CompanyHome> {
         .snapshots()
         .map((snap) {
       final data = snap.data() ?? {};
-      final name = (data['CompanyName'] ?? data['companyName'] ?? '')
-          .toString()
-          .trim();
+      final name =
+          (data['CompanyName'] ?? data['companyName'] ?? '').toString().trim();
       return name.isEmpty ? widget.fallbackCompanyName : name;
     });
   }
@@ -463,9 +477,9 @@ class _CompanyHomeState extends State<CompanyHome> {
                 final isClosed = jobStatus == 'Closed';
 
                 // ⬇️ تحديد لون الخلفية الديناميكي للعنصر
-                final cardBackgroundColor = isClosed 
-                  ? Theme.of(context).colorScheme.surface.withOpacity(0.5) 
-                  : Theme.of(context).colorScheme.surface;
+                final cardBackgroundColor = isClosed
+                    ? Theme.of(context).colorScheme.surface.withOpacity(0.5)
+                    : Theme.of(context).colorScheme.surface;
 
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
@@ -473,7 +487,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   // ⬇️ تم وضع اللون الآن داخل BoxDecoration (لحظ التضارب)
                   decoration: BoxDecoration(
-                    color: cardBackgroundColor, 
+                    color: cardBackgroundColor,
                     borderRadius: BorderRadius.circular(14),
                     boxShadow: [
                       BoxShadow(
@@ -496,9 +510,16 @@ class _CompanyHomeState extends State<CompanyHome> {
                                 fontWeight: FontWeight.w700,
                                 fontSize: 16,
                                 // ⬇️ ألوان النصوص تصبح ديناميكية وتتبع الثيم
-                                color: isClosed 
-                                  ? Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7) 
-                                  : Theme.of(context).textTheme.bodyLarge?.color,
+                                color: isClosed
+                                    ? Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.color
+                                        ?.withOpacity(0.7)
+                                    : Theme.of(context)
+                                        .textTheme
+                                        .bodyLarge
+                                        ?.color,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -507,9 +528,17 @@ class _CompanyHomeState extends State<CompanyHome> {
                                   .where((e) => e.isNotEmpty)
                                   .join(' • '),
                               style: TextStyle(
-                                color: isClosed 
-                                  ? Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7)
-                                  : Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7),
+                                color: isClosed
+                                    ? Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.color
+                                        ?.withOpacity(0.7)
+                                    : Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.color
+                                        ?.withOpacity(0.7),
                               ),
                             ),
                             // Closed badge at bottom left
@@ -519,7 +548,10 @@ class _CompanyHomeState extends State<CompanyHome> {
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.error.withOpacity(0.2),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .error
+                                      .withOpacity(0.2),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
@@ -546,9 +578,8 @@ class _CompanyHomeState extends State<CompanyHome> {
                           final desc = data['JobDescription'] ??
                               data['Description'] ??
                               '';
-                          final req = data['Requirements'] ??
-                              data['Requirments'] ??
-                              [];
+                          final req =
+                              data['Requirements'] ?? data['Requirments'] ?? [];
                           final start = data['StartDate'];
                           final end = data['EndDate'];
 
@@ -561,8 +592,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                               'position': position,
                               'specialty': specialty,
                               'description': desc,
-                              'requirements':
-                                  req is List ? req : <String>[],
+                              'requirements': req is List ? req : <String>[],
                               'startDate': start,
                               'endDate': end,
                             },
@@ -582,7 +612,9 @@ class _CompanyHomeState extends State<CompanyHome> {
 
                       // More options menu (using IconButton + Dialog)
                       IconButton(
-                        icon: Icon(Icons.more_vert, color: Theme.of(context).textTheme.bodyLarge?.color),
+                        icon: Icon(Icons.more_vert,
+                            color:
+                                Theme.of(context).textTheme.bodyLarge?.color),
                         onPressed: () {
                           final safeCtx = _scaffoldKey.currentContext;
                           if (safeCtx == null) return;
@@ -591,25 +623,39 @@ class _CompanyHomeState extends State<CompanyHome> {
                             context: safeCtx,
                             // ⬇️ الآن يعتمد على لون السطح الديناميكي
                             builder: (dialogContext) => AlertDialog(
-                              backgroundColor: Theme.of(context).colorScheme.surface,
+                              backgroundColor:
+                                  Theme.of(context).colorScheme.surface,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(20),
                               ),
-                              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                              contentPadding:
+                                  const EdgeInsets.symmetric(vertical: 10),
                               content: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   // Close/Reopen Option
                                   ListTile(
                                     leading: Icon(
-                                      isClosed ? Icons.lock_open_outlined : Icons.lock_outline,
-                                      color: isClosed ? Colors.green : Theme.of(context).textTheme.bodySmall?.color, // ديناميكي
+                                      isClosed
+                                          ? Icons.lock_open_outlined
+                                          : Icons.lock_outline,
+                                      color: isClosed
+                                          ? Colors.green
+                                          : Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.color, // ديناميكي
                                       size: 20,
                                     ),
                                     title: Text(
                                       isClosed ? 'Reopen Job' : 'Close Job',
                                       style: TextStyle(
-                                        color: isClosed ? Colors.green : Theme.of(context).textTheme.bodyLarge?.color, // ديناميكي
+                                        color: isClosed
+                                            ? Colors.green
+                                            : Theme.of(context)
+                                                .textTheme
+                                                .bodyLarge
+                                                ?.color, // ديناميكي
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
@@ -655,7 +701,7 @@ class _CompanyHomeState extends State<CompanyHome> {
       ],
     );
 
-    return Scaffold(
+    return ThemedScaffold(
       key: _scaffoldKey,
       // ⬇️ تم حذف: backgroundColor: const Color(0xFFF7F6FC), والاعتماد على الثيم
       appBar: AppBar(
@@ -722,7 +768,7 @@ class _CompanyHomeState extends State<CompanyHome> {
       bottomNavigationBar: Container(
         height: 70,
         // ⬇️ إزالة لون الخلفية الثابت والاعتماد على الثيم
-        color: Theme.of(context).colorScheme.surface, 
+        color: Theme.of(context).colorScheme.surface,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

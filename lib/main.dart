@@ -52,7 +52,6 @@ class Jadeer extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: settings.themeMode,
-
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
@@ -61,7 +60,6 @@ class Jadeer extends StatelessWidget {
       ],
       locale: settings.locale,
       supportedLocales: AppLocalizations.supportedLocales,
-
       debugShowCheckedModeBanner: false,
       home: StartScreen(),
       routes: {

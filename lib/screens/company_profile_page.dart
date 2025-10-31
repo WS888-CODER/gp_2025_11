@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
 
@@ -446,7 +447,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      return const Scaffold(body: Center(child: Text('Not signed in')));
+      return const ThemedScaffold(body: Center(child: Text('Not signed in')));
     }
 
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
@@ -456,7 +457,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
           .snapshots(),
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
+          return const ThemedScaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
@@ -508,8 +509,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
           });
         }
 
-        return Scaffold(
-          backgroundColor: const Color(0xFFF7F6FC),
+        return ThemedScaffold(
           appBar: AppBar(
             backgroundColor: const Color(0xFF4A5FBC),
             elevation: 0,
@@ -938,8 +938,7 @@ class _EditCompanyPageState extends State<EditCompanyPage>
         final shouldLeave = await _showLeaveConfirmDialogStyled(context);
         return shouldLeave ?? false;
       },
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF7F6FC),
+      child: ThemedScaffold(
         appBar: AppBar(
           backgroundColor: brand,
           title: const Text(

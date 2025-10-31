@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:gp_2025_11/screens/all_jobs.dart';
 import 'package:gp_2025_11/screens/job_seeker_profile_page.dart';
 
@@ -149,7 +150,7 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
 
     final userId = _effectiveUserId;
 
-    return Scaffold(
+    return ThemedScaffold(
       appBar: AppBar(
         backgroundColor: _brand,
         elevation: 0,

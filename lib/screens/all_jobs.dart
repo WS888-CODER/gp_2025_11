@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /* ========================== FIRESTORE CONSTANTS ========================== */
@@ -340,8 +341,7 @@ class _JobsPageState extends State<JobsPage> {
   Widget build(BuildContext context) {
     final jobs = _applyFilters(_allJobs);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF7F6FC),
+    return ThemedScaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF4A5FBC),
         title: const Text(
@@ -817,8 +817,7 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
     final company = widget.company;
     final isClosed = job.status.trim().toLowerCase() == 'closed';
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF7F6FC), // نفس صفحة Jobs
+    return ThemedScaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF4A5FBC),
         title: const Text(
@@ -851,7 +850,6 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
           const SizedBox(width: 4),
         ],
       ),
-
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,

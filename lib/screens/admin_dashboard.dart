@@ -1,10 +1,9 @@
-// lib/screens/admin_dashboard.dart
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:gp_2025_11/config/theme.dart';
-import 'dart:async';
-
+import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 class AdminDashboard extends StatefulWidget {
@@ -15,32 +14,31 @@ class AdminDashboard extends StatefulWidget {
 }
 
 class _AdminDashboardState extends State<AdminDashboard> {
+  String selectedStatus = 'All';
+  bool isLoading = false;
+  List<QueryDocumentSnapshot>? companies;
+
   @override
   void initState() {
     super.initState();
     loadCompanies();
   }
 
-  String selectedStatus = 'All';
-  bool isLoading = false;
-  List<QueryDocumentSnapshot>? companies;
-
-  // ✅ جلب الشركات من Firestore
+  // == Firestore logic ==
   Future<QuerySnapshot> getCompanies() async {
-    final collection = FirebaseFirestore.instance
+    final baseQuery = FirebaseFirestore.instance
         .collection('Users')
         .where('UserType', isEqualTo: 'Company');
 
     if (selectedStatus == 'All') {
-      return await collection.get();
+      return await baseQuery.get();
     } else {
-      return await collection
+      return await baseQuery
           .where('AccountStatus', isEqualTo: selectedStatus)
           .get();
     }
   }
 
-  // ✅ تحديث حالة الشركة
   Future<void> updateCompanyStatus(String id, String newStatus) async {
     await FirebaseFirestore.instance
         .collection('Users')
@@ -48,7 +46,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
         .update({'AccountStatus': newStatus});
   }
 
-  // ✅ تحميل الشركات
   Future<void> loadCompanies() async {
     setState(() => isLoading = true);
     try {
@@ -59,75 +56,78 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
   }
 
+  ChoiceChip _buildStatusChip(String value) {
+    final bool isSelected = selectedStatus == value;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final Color selectedBg = theme.colorScheme.secondary;
+    final Color borderColor = theme.colorScheme.secondary;
+    final Color unselectedText =
+        isDark ? Colors.white70 : theme.colorScheme.primary;
+
+    return ChoiceChip(
+      label: Text(
+        value,
+        style: TextStyle(
+          color: isSelected ? Colors.white : unselectedText,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      selected: isSelected,
+      selectedColor: selectedBg,
+      side: BorderSide(
+        color: borderColor,
+        width: 1.2,
+      ),
+      showCheckmark: false,
+      onSelected: (sel) async {
+        selectedStatus = value;
+        await loadCompanies();
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF7F6FC),
+    final theme = Theme.of(context); // عشان ما نكرر Theme.of(context) مليون مرة
+    final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black87;
+
+    return ThemedScaffold(
       appBar: const _AdminDashboardAppBar(),
       body: Column(
         children: [
+          // ======== Filter chips row (All / Pending / ...) ========
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(8.0),
-            // decoration: const BoxDecoration(
-            //   color: AppTheme.primaryPurple,
-            //   borderRadius: BorderRadius.only(
-            //     bottomLeft: Radius.circular(14),
-            //     bottomRight: Radius.circular(14),
-            //   ),
-            //   boxShadow: [
-            //     BoxShadow(
-            //       color: Colors.black12,
-            //       blurRadius: 4,
-            //       offset: Offset(0, 2),
-            //     ),
-            //   ],
-            // ),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               physics: const ClampingScrollPhysics(),
-              child: Row(
+              child: Wrap(
                 spacing: 8,
                 children: [
-                  _getChoiceChip('All'),
-                  _getChoiceChip('Pending'),
-                  _getChoiceChip('Verified'),
-                  _getChoiceChip('Rejected'),
+                  _buildStatusChip('All'),
+                  _buildStatusChip('Pending'),
+                  _buildStatusChip('Verified'),
+                  _buildStatusChip('Rejected'),
                 ],
               ),
             ),
           ),
-          // 🔹 فلتر الحالات
-          // Padding(
-          //   padding: const EdgeInsets.all(8.0),
-          //   child: DropdownButtonFormField<String>(
-          //     value: selectedStatus,
-          //     decoration: const InputDecoration(
-          //       labelText: 'Filter by status',
-          //       border: OutlineInputBorder(),
-          //     ),
-          //     items: const [
-          //       DropdownMenuItem(value: 'All', child: Text('All')),
-          //       DropdownMenuItem(value: 'Pending', child: Text('Pending')),
-          //       DropdownMenuItem(value: 'Verified', child: Text('Verified')),
-          //       DropdownMenuItem(value: 'Rejected', child: Text('Rejected')),
-          //     ],
-          //     onChanged: (value) async {
-          //       selectedStatus = value!;
-          //       await loadCompanies();
-          //     },
-          //   ),
-          // ),
 
-          // 🔹 عرض القائمة
+          // ======== Companies list ========
           Expanded(
             child: isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : (companies == null || companies!.isEmpty)
-                    ? const Center(
+                    ? Center(
                         child: Text(
                           'No companies found',
-                          style: TextStyle(fontSize: 18, color: Colors.grey),
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: textColor.withOpacity(0.6),
+                          ),
                         ),
                       )
                     : RefreshIndicator(
@@ -138,19 +138,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             final doc = companies![index];
                             final data = doc.data() as Map<String, dynamic>;
 
-                            return _CardCompanyWidget(
-                                data: data,
-                                doc: doc,
-                                onSelected: (value) async {
-                                  await updateCompanyStatus(doc.id, value);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content:
-                                          Text('Status updated to "$value"'),
+                            return _CompanyCard(
+                              data: data,
+                              onSelected: (newStatus) async {
+                                await updateCompanyStatus(doc.id, newStatus);
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Status updated to "$newStatus"',
                                     ),
-                                  );
-                                  await loadCompanies(); // تحديث البيانات
-                                });
+                                  ),
+                                );
+
+                                await loadCompanies();
+                              },
+                            );
                           },
                         ),
                       ),
@@ -159,27 +162,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
     );
   }
-
-  ChoiceChip _getChoiceChip(String value) => ChoiceChip(
-        label: Text(value),
-        selected: selectedStatus == value,
-        // side: const BorderSide(color: AppTheme.primaryPurple, width: 1.2),
-        // selectedColor: AppTheme.primaryPurple,
-        side: const BorderSide(color: AppTheme.accentCoral, width: 1.2),
-        selectedColor: AppTheme.accentCoral,
-
-        shadowColor: Colors.transparent,
-        labelStyle: TextStyle(
-          color:
-              selectedStatus == value ? Colors.white : AppTheme.primaryPurple,
-        ),
-        onSelected: (selected) async {
-          selectedStatus = value;
-          await loadCompanies();
-        },
-      );
 }
 
+// ================== APP BAR ==================
 class _AdminDashboardAppBar extends StatefulWidget
     implements PreferredSizeWidget {
   const _AdminDashboardAppBar();
@@ -193,7 +178,7 @@ class _AdminDashboardAppBar extends StatefulWidget
 
 class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
   Timer? _sessionTimer;
-  int _remainingSeconds = 3600; // 1 hour = 3600 seconds
+  int _remainingSeconds = 3600; // 1h
 
   @override
   void initState() {
@@ -229,8 +214,9 @@ class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
         barrierDismissible: false,
         builder: (ctx) => AlertDialog(
           title: const Text('Session Expired'),
-          content:
-              const Text('You have been automatically logged out after 1 hour'),
+          content: const Text(
+            'You have been automatically logged out after 1 hour',
+          ),
           actions: [
             TextButton(
               onPressed: () {
@@ -246,22 +232,31 @@ class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
   }
 
   String _formatTime(int seconds) {
-    int hours = seconds ~/ 3600;
-    int minutes = (seconds % 3600) ~/ 60;
-    int secs = seconds % 60;
-    return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+    final hours = seconds ~/ 3600;
+    final minutes = (seconds % 3600) ~/ 60;
+    final secs = seconds % 60;
+    return '${hours.toString().padLeft(2, '0')}:'
+        '${minutes.toString().padLeft(2, '0')}:'
+        '${secs.toString().padLeft(2, '0')}';
   }
 
   Future<void> _handleLogout() async {
+    final theme = Theme.of(context);
+
     bool? confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        backgroundColor: theme.colorScheme.primary.withOpacity(0.7),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(30),
+        ),
         title: const Text(
           'Confirm Logout',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         content: const Text(
           'Are you sure you want to log out?',
@@ -277,8 +272,11 @@ class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
             onPressed: () => Navigator.of(ctx).pop(false),
             style: TextButton.styleFrom(
               backgroundColor: Colors.white.withOpacity(0.9),
-              foregroundColor: const Color(0xFF4A5FBC),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              foregroundColor: theme.colorScheme.primary,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 12,
+              ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
@@ -290,7 +288,10 @@ class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
             style: TextButton.styleFrom(
               backgroundColor: Colors.redAccent,
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 12,
+              ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
@@ -304,14 +305,19 @@ class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
     if (confirm == true) {
       _sessionTimer?.cancel();
       await FirebaseAuth.instance.signOut();
-      Navigator.pushReplacementNamed(context, '/login');
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/login');
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final bool isLowTime = _remainingSeconds < 300;
+
     return AppBar(
-      backgroundColor: AppTheme.primaryPurple,
+      backgroundColor: theme.colorScheme.primary,
       elevation: 0,
       leadingWidth: 0,
       leading: const SizedBox(),
@@ -324,32 +330,32 @@ class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
         ),
       ),
       actions: [
-        // Timer Display
+        // Timer bubble
         Center(
           child: Container(
             margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 6,
+            ),
             decoration: BoxDecoration(
-              color: _remainingSeconds < 300 // Last 5 minutes
-                  ? Colors.red[100]
-                  : Colors.white.withOpacity(0.2),
+              color:
+                  isLowTime ? Colors.red[100] : Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
                   Icons.timer,
-                  color:
-                      _remainingSeconds < 300 ? Colors.red[700] : Colors.white,
+                  color: isLowTime ? Colors.red[700] : Colors.white,
                   size: 18,
                 ),
                 const SizedBox(width: 6),
                 Text(
                   _formatTime(_remainingSeconds),
                   style: TextStyle(
-                    color: _remainingSeconds < 300
-                        ? Colors.red[700]
-                        : Colors.white,
+                    color: isLowTime ? Colors.red[700] : Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
@@ -368,110 +374,17 @@ class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
   }
 }
 
-class _CardCompanyWidget extends StatelessWidget {
-  const _CardCompanyWidget(
-      {required this.data, required this.doc, required this.onSelected});
+// ================== COMPANY CARD ==================
+class _CompanyCard extends StatelessWidget {
+  const _CompanyCard({
+    required this.data,
+    required this.onSelected,
+  });
 
   final Map<String, dynamic> data;
-  final QueryDocumentSnapshot doc;
   final void Function(String) onSelected;
 
-  @override
-  Widget build(BuildContext context) {
-    final companyName = data['CompanyName'] ?? 'Unnamed';
-    final email = data['Email'] ?? 'No email';
-    final accountStatus = data['AccountStatus'] ?? 'Pending';
-    final isEmailVerified = data['IsEmailVerified'] ?? false;
-    final createdAt = (data['Date'] as Timestamp?)?.toDate();
-
-    return Card(
-        elevation: 0.2,
-        //color: AppTheme.primaryPurple.withAlpha(50),
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      companyName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          color: AppTheme.primaryPurple,
-                          //color: Color(0xFFF7F6FC),
-                          fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: statusColor(accountStatus).withAlpha(30),
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                    child: Text(
-                      accountStatus.toUpperCase(),
-                      style: TextStyle(
-                        color: statusColor(accountStatus),
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              //   const Divider(thickness: 0.5, color: Colors.grey),
-              _InfoWidget(
-                icon: Iconsax.sms_copy,
-                label: email,
-                trailing: Icon(
-                  isEmailVerified ? Icons.verified : Iconsax.close_circle,
-                  color: isEmailVerified ? Colors.green : AppTheme.accentCoral,
-                  size: 16,
-                ),
-              ),
-              const SizedBox(height: 5),
-              _InfoWidget(
-                icon: Iconsax.calendar_1_copy,
-                label: (createdAt == null)
-                    ? "---"
-                    : 'Registered: ${createdAt.toLocal().toString().split(' ')[0]}',
-              ),
-              //  const Divider(thickness: 0.5, color: Colors.grey),
-              PopupMenuButton<String>(
-                padding: EdgeInsets.zero,
-                icon: TextButton.icon(
-                  onPressed: null,
-                  icon: const Icon(Iconsax.edit,
-                      color: AppTheme.primaryPurple, size: 16),
-                  label: const Text('Change Status',
-                      style: TextStyle(
-                          color: AppTheme.primaryPurple, fontSize: 12)),
-                ),
-                onSelected: onSelected,
-                itemBuilder: (context) => const [
-                  PopupMenuItem(
-                      value: 'Pending', child: Text('Set as Pending')),
-                  PopupMenuItem(
-                      value: 'Verified', child: Text('Set as Verified')),
-                  PopupMenuItem(
-                      value: 'Rejected', child: Text('Set as Rejected')),
-                ],
-              ),
-            ],
-          ),
-        ));
-  }
-
-  // 🎨 لون الحالة
-  Color statusColor(String status) {
+  Color _statusColor(String status) {
     switch (status) {
       case 'Verified':
         return Colors.green;
@@ -483,25 +396,188 @@ class _CardCompanyWidget extends StatelessWidget {
         return Colors.grey;
     }
   }
-}
-
-class _InfoWidget extends StatelessWidget {
-  const _InfoWidget({required this.icon, required this.label, this.trailing});
-  final IconData icon;
-  final String label;
-  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final companyName = data['CompanyName'] ?? 'Unnamed';
+    final email = data['Email'] ?? 'No email';
+    final accountStatus = data['AccountStatus'] ?? 'Pending';
+    final isEmailVerified = data['IsEmailVerified'] ?? false;
+    final createdAt = (data['Date'] as Timestamp?)?.toDate();
+
+    final bgColor = theme.colorScheme.surface;
+    final borderColor = isDark
+        ? Colors.white.withOpacity(0.06)
+        : theme.colorScheme.primary.withOpacity(0.15);
+
+    final primaryColor = theme.colorScheme.primary;
+    final secondaryColor = theme.colorScheme.secondary;
+    final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black87;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.5 : 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          children: [
+            // name + status
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    companyName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: primaryColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _statusColor(accountStatus).withAlpha(30),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: Text(
+                    accountStatus.toUpperCase(),
+                    style: TextStyle(
+                      color: _statusColor(accountStatus),
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 8),
+
+            // email row
+            _InfoRow(
+              icon: Iconsax.sms_copy,
+              label: email,
+              labelColor: textColor,
+              trailing: Icon(
+                isEmailVerified ? Icons.verified : Iconsax.close_circle,
+                color: isEmailVerified ? Colors.green : secondaryColor,
+                size: 16,
+              ),
+            ),
+
+            const SizedBox(height: 5),
+
+            // created date row
+            _InfoRow(
+              icon: Iconsax.calendar_1_copy,
+              label: (createdAt == null)
+                  ? '---'
+                  : 'Registered: ${createdAt.toLocal().toString().split(' ')[0]}',
+              labelColor: textColor,
+            ),
+
+            const SizedBox(height: 8),
+
+            // status action menu
+            PopupMenuButton<String>(
+              padding: EdgeInsets.zero,
+              icon: TextButton.icon(
+                onPressed: null,
+                icon: Icon(
+                  Iconsax.edit,
+                  color: primaryColor,
+                  size: 16,
+                ),
+                label: Text(
+                  'Change Status',
+                  style: TextStyle(
+                    color: primaryColor,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+              onSelected: onSelected,
+              itemBuilder: (context) => const [
+                PopupMenuItem(
+                  value: 'Pending',
+                  child: Text('Set as Pending'),
+                ),
+                PopupMenuItem(
+                  value: 'Verified',
+                  child: Text('Set as Verified'),
+                ),
+                PopupMenuItem(
+                  value: 'Rejected',
+                  child: Text('Set as Rejected'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// row for email/date
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    this.trailing,
+    this.labelColor,
+  });
+
+  final IconData icon;
+  final String label;
+  final Widget? trailing;
+  final Color? labelColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Row(
-      spacing: 5,
       children: [
-        Icon(icon, size: 16, color: AppTheme.accentCoral),
+        Icon(
+          icon,
+          size: 16,
+          color: theme.colorScheme.secondary,
+        ),
+        const SizedBox(width: 5),
         Expanded(
-          child: Text(label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.black87, fontSize: 12)),
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: labelColor ??
+                  theme.textTheme.bodyLarge?.color ??
+                  Colors.black87,
+              fontSize: 12,
+            ),
+          ),
         ),
         trailing ?? const SizedBox(),
       ],

@@ -1,32 +1,31 @@
-// lib/config/theme.dart
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // Brand Colors
-  static const Color primaryPurple = Color(0xFF49469F);
-  static const Color accentCoral = Color(0xFFFD6C67);
-  
-  // إعدادات الـ Switch المشتركة (لتصحيح مظهر الـ ON/OFF)
+  // ألوان البراند اللي نبغى نكررها
+  static const Color primaryPurple = Color(0xFF49469F); // البنفسجي حقكم
+  static const Color accentCoral = Color(0xFFFD6C67); // الكورال حقكم
+
+  // Switch theme الأساسي
   static final SwitchThemeData baseSwitchTheme = SwitchThemeData(
     thumbColor: MaterialStateProperty.resolveWith((states) {
-      return Colors.white; 
+      return Colors.white;
     }),
     trackColor: MaterialStateProperty.resolveWith((states) {
       if (states.contains(MaterialState.selected)) {
-        return primaryPurple; // اللون البنفسجي عندما يكون ON
+        return primaryPurple; // لما يكون ON
       }
-      return Colors.grey.shade400; // اللون الرمادي الفاتح عندما يكون OFF
+      return Colors.grey; // لما يكون OFF
     }),
-    trackOutlineColor: MaterialStateProperty.all(Colors.transparent), 
+    trackOutlineColor: MaterialStateProperty.all(Colors.transparent),
   );
 
-
-  // 1. الوضع الفاتح (Light Theme)
+  // الوضع الفاتح
   static ThemeData get lightTheme {
     return ThemeData(
+      brightness: Brightness.light,
+      useMaterial3: true,
       primaryColor: primaryPurple,
-      // ⬇️ تحديد خلفية Scaffold في الوضع الفاتح
-      scaffoldBackgroundColor: Colors.white, 
+      scaffoldBackgroundColor: Colors.white,
       colorScheme: ColorScheme.light(
         primary: primaryPurple,
         secondary: accentCoral,
@@ -55,23 +54,22 @@ class AppTheme {
           color: Colors.black87,
         ),
       ),
-      useMaterial3: true,
       switchTheme: baseSwitchTheme,
     );
   }
 
-  // 2. الوضع الداكن (Dark Theme)
+  // الوضع الداكن
   static ThemeData get darkTheme {
     return ThemeData(
-      primaryColor: primaryPurple,
-      // ⬇️ تحديد خلفية Scaffold باللون الداكن المناسب (لون أسود ناعم)
-      scaffoldBackgroundColor: const Color(0xFF121212), 
       brightness: Brightness.dark,
+      useMaterial3: true,
+      primaryColor: primaryPurple,
+      scaffoldBackgroundColor: const Color(0xFF121212),
       colorScheme: ColorScheme.dark(
         primary: primaryPurple,
         secondary: accentCoral,
         background: const Color(0xFF121212),
-        surface: const Color(0xFF1E1E1E), 
+        surface: const Color(0xFF1E1E1E),
         onSurface: Colors.white70,
       ),
       appBarTheme: const AppBarTheme(
@@ -97,15 +95,14 @@ class AppTheme {
           color: Colors.white70,
         ),
       ),
-      useMaterial3: true,
-      switchTheme: baseSwitchTheme.copyWith( 
-         trackColor: MaterialStateProperty.resolveWith((states) {
-            if (states.contains(MaterialState.selected)) {
-              return primaryPurple;
-            }
-            return Colors.grey.shade600;
-          }),
-      ), 
+      switchTheme: baseSwitchTheme.copyWith(
+        trackColor: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) {
+            return primaryPurple;
+          }
+          return Colors.grey;
+        }),
+      ),
     );
   }
 }
