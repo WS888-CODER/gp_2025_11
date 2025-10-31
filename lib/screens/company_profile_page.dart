@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -22,18 +23,15 @@ final _email =
     RegExp(r"^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$", caseSensitive: false);
 final _localSaPhone = RegExp(r'^(5\d{8}|01[1-7]\d{6,7})$');
 const _saPrefix = '+966';
+
 String _toLocal(String e164) {
   final t = e164.trim();
   if (!t.startsWith(_saPrefix)) return t;
 
   final rest = t.substring(_saPrefix.length); // بعد +966
-  // موبايل: يبدأ بـ 5 → عرض محلي كما هو (5XXXXXXXXX)
-  if (rest.startsWith('5')) return rest;
+  if (rest.startsWith('5')) return rest; // موبايل
+  if (RegExp(r'^1[1-7]\d{6,7}$').hasMatch(rest)) return '0$rest'; // أرضي
 
-  // أرضي: يبدأ بـ 1X… → نرجع له الصفر: 0 + الباقي (011, 012, ...)
-  if (RegExp(r'^1[1-7]\d{6,7}$').hasMatch(rest)) return '0$rest';
-
-  // fallback
   return rest;
 }
 
@@ -45,36 +43,40 @@ class CompanyProfile extends StatefulWidget {
 }
 
 class _CompanyProfileState extends State<CompanyProfile> {
+  StreamSubscription<TaskSnapshot>? _uploadSub;
   final _form = GlobalKey<FormState>();
   final _desc = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _phone = TextEditingController();
+  final _locCtrl = TextEditingController();
+
+  final _descKey = GlobalKey<FormFieldState>();
+  final _emailKey = GlobalKey<FormFieldState>();
+  final _phoneKey = GlobalKey<FormFieldState>();
+  final _locKey = GlobalKey<FormFieldState>();
+
+  final _descFocus = FocusNode();
+  final _emailFocus = FocusNode();
+  final _phoneFocus = FocusNode();
+  final _locFocus = FocusNode();
+
   File? _pendingLogoFile;
   static const int _kMaxImageBytes = 5 * 1024 * 1024; // 5MB
   String? _logoUrl;
   bool _saving = false;
   double? _progress;
-  final _descKey = GlobalKey<FormFieldState>();
-  final _emailKey = GlobalKey<FormFieldState>();
-  final _phoneKey = GlobalKey<FormFieldState>();
-  final _descFocus = FocusNode();
-  final _emailFocus = FocusNode();
-  final _phoneFocus = FocusNode();
-  final _locCtrl = TextEditingController();
-  final _locKey = GlobalKey<FormFieldState>();
-  final _locFocus = FocusNode();
   bool _filledFromServer = false;
 
   final _locAllowed =
       RegExp(r"^[A-Za-z\u0600-\u06FF][A-Za-z\u0600-\u06FF\s\.'-]{1,39}$");
   String _cleanLoc(String raw) => raw.trim().replaceAll(RegExp(r'\s+'), ' ');
-  // 1) تحقق صارم: الحجم + الامتداد + ترويسة الملف (PNG/JPG فقط)
+
+  // تحقق صارم للصورة
   String? _validateImageFile(File f) {
     final len = f.lengthSync();
     if (len > _kMaxImageBytes) return 'Image too large (max 5 MB)';
 
     final ext = f.path.split('.').last.toLowerCase();
-    // نرفض jpeg صراحةً
     if (!(ext == 'png' || ext == 'jpg')) {
       return 'Unsupported image type. Use PNG or JPG (JPEG is not allowed).';
     }
@@ -84,17 +86,17 @@ class _CompanyProfileState extends State<CompanyProfile> {
       final header = bytes.readSync(12);
       bytes.closeSync();
 
-      bool isPng = header.length >= 8 &&
+      final isPng = header.length >= 8 &&
           header[0] == 0x89 &&
-          header[1] == 0x50 && // 'P'
-          header[2] == 0x4E && // 'N'
-          header[3] == 0x47 && // 'G'
+          header[1] == 0x50 &&
+          header[2] == 0x4E &&
+          header[3] == 0x47 &&
           header[4] == 0x0D &&
           header[5] == 0x0A &&
           header[6] == 0x1A &&
           header[7] == 0x0A;
 
-      bool isJpeg = header.length >= 3 &&
+      final isJpeg = header.length >= 3 &&
           header[0] == 0xFF &&
           header[1] == 0xD8 &&
           header[2] == 0xFF;
@@ -136,19 +138,19 @@ class _CompanyProfileState extends State<CompanyProfile> {
     );
   }
 
-  // ==================================================================
-
   @override
   void dispose() {
     _desc.dispose();
     _emailCtrl.dispose();
     _phone.dispose();
+    _locCtrl.dispose();
 
     _descFocus.dispose();
     _emailFocus.dispose();
     _phoneFocus.dispose();
-    _locCtrl.dispose();
     _locFocus.dispose();
+
+    _uploadSub?.cancel();
 
     super.dispose();
   }
@@ -163,27 +165,27 @@ class _CompanyProfileState extends State<CompanyProfile> {
           : FirebaseStorage.instance.ref(pathOrUrl);
       await ref.delete();
     } catch (_) {
-      // تجاهل الأخطاء (الملف قد يكون محذوف مسبقاً أو لا صلاحية)
+      // ignore
     }
   }
 
-  // 2) الرفع: نفس القيود تمامًا (بدون أي تطبيع لـ jpeg)
   Future<Map<String, String>> _uploadLogoWithProgress(File file) async {
     final len = await file.length();
-    if (len > 5 * 1024 * 1024) throw Exception('Image too large');
+    if (len > 5 * 1024 * 1024) {
+      throw Exception('Image too large (max 5 MB)');
+    }
 
     final ext = file.path.split('.').last.toLowerCase();
     if (!(ext == 'png' || ext == 'jpg')) {
       throw Exception('Unsupported image type. Use PNG or JPG only.');
     }
 
-    // فحص ترويسة سريع قبل الرفع (دفاع مزدوج)
     try {
       final raf = file.openSync(mode: FileMode.read)..setPositionSync(0);
       final header = raf.readSync(12);
       raf.closeSync();
 
-      bool isPng = header.length >= 8 &&
+      final isPng = header.length >= 8 &&
           header[0] == 0x89 &&
           header[1] == 0x50 &&
           header[2] == 0x4E &&
@@ -193,7 +195,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
           header[6] == 0x1A &&
           header[7] == 0x0A;
 
-      bool isJpeg = header.length >= 3 &&
+      final isJpeg = header.length >= 3 &&
           header[0] == 0xFF &&
           header[1] == 0xD8 &&
           header[2] == 0xFF;
@@ -201,7 +203,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
       if ((ext == 'png' && !isPng) || (ext == 'jpg' && !isJpeg)) {
         throw Exception('File content does not match extension.');
       }
-    } catch (e) {
+    } catch (_) {
       throw Exception('Corrupted or unreadable image.');
     }
 
@@ -211,24 +213,53 @@ class _CompanyProfileState extends State<CompanyProfile> {
       'logos/$uid/${DateTime.now().millisecondsSinceEpoch}_$name',
     );
 
+    if (!mounted) {
+      throw Exception('Screen closed');
+    }
+
+    setState(() {
+      _progress = 0;
+    });
+
     final task = ref.putFile(file);
-    task.snapshotEvents.listen((s) {
+
+    _uploadSub = task.snapshotEvents.listen((s) {
+      if (!mounted) return;
       final total = s.totalBytes;
-      if (total > 0 && mounted) {
-        setState(() => _progress = s.bytesTransferred / total);
+      if (total > 0) {
+        setState(() {
+          _progress = s.bytesTransferred / total;
+        });
       }
     });
 
     try {
-      final snap = await task;
+      final snap = await task; // no timeout here (you CAN add one if you want)
       final url = await snap.ref.getDownloadURL();
       final path = snap.ref.fullPath;
-      if (mounted) setState(() => _progress = null);
+
+      if (mounted) {
+        setState(() {
+          _progress = null;
+        });
+      }
+
       return {'url': url, 'path': path};
     } on FirebaseException catch (e) {
       if (mounted) {
-        _showSnackError('Upload failed: ${e.message ?? e.code}');
-        setState(() => _progress = null);
+        setState(() {
+          _progress = null;
+        });
+        _showSnackError(
+          'Upload failed: ${e.message ?? e.code}',
+        );
+      }
+      rethrow;
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _progress = null;
+        });
       }
       rethrow;
     }
@@ -240,10 +271,9 @@ class _CompanyProfileState extends State<CompanyProfile> {
     if (img == null) return;
 
     setState(() {
-      _pendingLogoFile = File(img.path); // نخزن محلي فقط
+      _pendingLogoFile = File(img.path);
     });
 
-    // معاينة فورية + تذكير بالتحديث
     _showSnackSuccess('Logo selected.');
   }
 
@@ -252,26 +282,21 @@ class _CompanyProfileState extends State<CompanyProfile> {
     final hasExisting =
         ((_logoUrl ?? current[UserFields.photoUrl])?.toString().isNotEmpty ??
             false);
-    // لو المستخدم ضغط "Remove" نخزن _logoUrl = '' (يعني حذف)، فـ hasExisting تصير false
     return hasPending || hasExisting;
   }
 
   Future<bool> _save(Map<String, dynamic> current,
       {BuildContext? inContext}) async {
-    // 1) فعّل الفالديت على كل الحقول (يظهر الأحمر لو فيه غلط)
     final formOk = _form.currentState?.validate() ?? false;
 
-    // بنفس منطقك: لازم يكون فيه لوقو
     final hasLogoNow = _hasAnyLogo(current);
 
-    // لازم (ايميل صحيح OR رقم صحيح)
     final email = _emailCtrl.text.trim();
     final phoneLocal = _phone.text.trim();
     final hasEmailValid = email.isNotEmpty && _email.hasMatch(email);
     final hasPhoneValid =
         phoneLocal.isNotEmpty && _localSaPhone.hasMatch(phoneLocal);
 
-    // لو أي شرط أساسي ناقص -> لا نبدأ أبداً عملية الحفظ ولا نظهر progress
     if (!formOk) {
       _showSnackError('Please fix the highlighted fields',
           inContext: inContext ?? context);
@@ -288,15 +313,12 @@ class _CompanyProfileState extends State<CompanyProfile> {
       return false;
     }
 
-    // وصلنا هنا؟ يعني جاهزين نحفظ فعلاً ✅
-    // الآن فقط نولّع الـsaving والـprogress
     setState(() {
       _saving = true;
-      _progress = 0; // يخلي الشريط يطلع
+      _progress = 0;
     });
 
     try {
-      // 2) جهّز رقم الهاتف بصيغة E.164
       String normalizePhoneToE164(String local) {
         final s = local.trim();
         if (RegExp(r'^5\d{8}$').hasMatch(s)) return '+966$s'; // mobile
@@ -318,7 +340,6 @@ class _CompanyProfileState extends State<CompanyProfile> {
         }
       }
 
-      // 3) ارفعي اللوقو لو فيه pending
       String? newLogoUrl;
       String? newLogoPath;
 
@@ -334,13 +355,13 @@ class _CompanyProfileState extends State<CompanyProfile> {
         _pendingLogoFile = null;
       }
 
-      // 4) جهّزي باقي القيم للتحديث
       final desc = _desc.text.trim();
       final loc = _cleanLoc(_locCtrl.text);
 
       final complete = desc.length >= 100 &&
           loc.isNotEmpty &&
-          (hasEmailValid || hasPhoneValid);
+          (hasEmailValid || hasPhoneValid) &&
+          _hasAnyLogo(current);
 
       final updates = <String, dynamic>{
         UserFields.description: desc,
@@ -368,7 +389,6 @@ class _CompanyProfileState extends State<CompanyProfile> {
         }
         _logoUrl = newLogoUrl;
       } else if (_logoUrl == '') {
-        // user pressed Remove
         updates[UserFields.photoUrl] = FieldValue.delete();
         updates[UserFields.photoPath] = FieldValue.delete();
       }
@@ -378,14 +398,12 @@ class _CompanyProfileState extends State<CompanyProfile> {
         return false;
       }
 
-      // 5) اكتبي في Firestore
       final uid = FirebaseAuth.instance.currentUser!.uid;
       await FirebaseFirestore.instance
           .collection(kUsersCollection)
           .doc(uid)
           .set(updates, SetOptions(merge: true));
 
-      // 6) تنظيف الشعار القديم لو تبدّل
       if (newLogoUrl != null) {
         final oldPath = (current[UserFields.photoPath] ?? '').toString();
         if (oldPath.isNotEmpty) {
@@ -406,15 +424,14 @@ class _CompanyProfileState extends State<CompanyProfile> {
         await _deleteStorageFile(current[UserFields.photoUrl]?.toString());
       }
 
-      // كل شي تمام 🎉
       _showSnackSuccess('✅ Profile updated successfully',
           inContext: inContext ?? context);
 
-      return true; // <--- نجاح
+      return true;
     } catch (e) {
       _showSnackError('❌ Failed to update profile',
           inContext: inContext ?? context);
-      return false; // <--- فشل
+      return false;
     } finally {
       if (mounted) {
         setState(() {
@@ -446,9 +463,8 @@ class _CompanyProfileState extends State<CompanyProfile> {
 
         final data = snap.data?.data() ?? {};
 
-        // نحسب أشياء جاهزة للعرض
         final logoUrlLocal = _pendingLogoFile != null
-            ? null // لو فيه pending local بنعرضها تحت
+            ? null
             : (_logoUrl ?? data[UserFields.photoUrl])?.toString();
 
         final companyName =
@@ -465,7 +481,6 @@ class _CompanyProfileState extends State<CompanyProfile> {
 
         final profileComplete = data[UserFields.isProfileComplete] == true;
         if (!_filledFromServer) {
-          // نعبيه في next frame عشان ما نصطدم مع setState داخل build
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
 
@@ -507,9 +522,6 @@ class _CompanyProfileState extends State<CompanyProfile> {
             ),
             iconTheme: const IconThemeData(color: Colors.white),
           ),
-
-          // زر حفظ ما نحتاجه هنا لأن هذي شاشة عرض مو تعديل.
-          // نخلي زر تسجيل خروج / أو ما نخلي شي أبداً.
           bottomNavigationBar: SafeArea(
             minimum: const EdgeInsets.all(16),
             child: FilledButton(
@@ -517,7 +529,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
                 backgroundColor: const Color(0xFF4A5FBC),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(28),
                 ),
                 textStyle: const TextStyle(
                   fontSize: 16,
@@ -525,15 +537,24 @@ class _CompanyProfileState extends State<CompanyProfile> {
                 ),
                 foregroundColor: Colors.white,
               ),
-              onPressed: () => _openEditSheet(context, data),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => EditCompanyPage(
+                      data: data,
+                      parentState: this,
+                      initialTabIndex: 0,
+                    ),
+                  ),
+                );
+              },
               child: const Text('Edit Company Info'),
             ),
           ),
-
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              // ====== CARD العلوية: الهيدر (يشبه الصورة) ======
+              // card header
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -552,13 +573,11 @@ class _CompanyProfileState extends State<CompanyProfile> {
                 ),
                 child: Column(
                   children: [
-                    // الصورة (اللوقو)
                     Stack(
                       clipBehavior: Clip.none,
                       children: [
                         Container(
-                          padding:
-                              const EdgeInsets.all(3), // مساحة جوّا البوردر
+                          padding: const EdgeInsets.all(3),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
@@ -586,8 +605,6 @@ class _CompanyProfileState extends State<CompanyProfile> {
                                 : null,
                           ),
                         ),
-
-                        // حالة الاكتمال (زي البادج الأزرق بالصورة)
                         Positioned(
                           bottom: -2,
                           right: -2,
@@ -614,10 +631,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 12),
-
-                    // اسم الشركة
                     Text(
                       companyName.isEmpty ? 'Company' : companyName,
                       textAlign: TextAlign.center,
@@ -627,9 +641,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
                         color: Color(0xFF4A5FBC),
                       ),
                     ),
-
                     const SizedBox(height: 6),
-// موقع الشركة (location)
                     if (location.isNotEmpty)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -654,8 +666,6 @@ class _CompanyProfileState extends State<CompanyProfile> {
                         ],
                       ),
                     const SizedBox(height: 12),
-
-                    // "بادج" فيها تواصل أساسي: إيميل أو رقم
                     if (contactEmail.isNotEmpty || prettyPhone.isNotEmpty)
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -682,7 +692,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
                             if (contactEmail.isNotEmpty &&
                                 prettyPhone.isNotEmpty)
                               const Text(
-                                '  |  ', // فاصل بين الإيميل والرقم
+                                '  |  ',
                                 style: TextStyle(
                                   color: Color(0xFF4A5FBC),
                                   fontWeight: FontWeight.bold,
@@ -700,18 +710,12 @@ class _CompanyProfileState extends State<CompanyProfile> {
                           ],
                         ),
                       ),
-
                     const SizedBox(height: 16),
-
-                    // وصف الشركة (مقتطع سطرين)
                     if (desc.isNotEmpty) _ExpandableDescription(text: desc),
                   ],
                 ),
               ),
-
               const SizedBox(height: 24),
-
-// ====== CARD الخيارات (زي اللستة في الصورة) ======
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -731,8 +735,17 @@ class _CompanyProfileState extends State<CompanyProfile> {
                       color: const Color(0xFF4A5FBC),
                       title: 'Company Info',
                       subtitle: 'Description, logo, location',
-                      onTap: () =>
-                          _openEditSheet(context, data, initialTab: 'company'),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => EditCompanyPage(
+                              data: data,
+                              parentState: this,
+                              initialTabIndex: 0,
+                            ),
+                          ),
+                        );
+                      },
                     ),
                     const Divider(height: 1),
                     _SettingsRow(
@@ -740,46 +753,24 @@ class _CompanyProfileState extends State<CompanyProfile> {
                       color: const Color(0xFF4A5FBC),
                       title: 'Contact Details',
                       subtitle: 'Email / phone for applicants',
-                      onTap: () =>
-                          _openEditSheet(context, data, initialTab: 'contact'),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => EditCompanyPage(
+                              data: data,
+                              parentState: this,
+                              initialTabIndex: 1,
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
               ),
-
               const SizedBox(height: 32),
             ],
           ),
-        );
-      },
-    );
-  }
-
-  void _openEditSheet(
-    BuildContext context,
-    Map<String, dynamic> data, {
-    String initialTab = 'company', // 'company' أو 'contact'
-  }) {
-    final int initialIndex = initialTab == 'contact' ? 1 : 0;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.9,
-          minChildSize: 0.5,
-          maxChildSize: 0.95,
-          builder: (ctx, scrollController) {
-            return _EditCompanySheet(
-              data: data,
-              scrollController: scrollController,
-              initialTabIndex: initialIndex,
-              // نبغى نوصل له state حقتنا عشان يستدعي _save ويستخدم الكونترولرز
-              parentState: this,
-            );
-          },
         );
       },
     );
@@ -809,7 +800,7 @@ class _ExpandableDescriptionState extends State<_ExpandableDescription> {
           text,
           maxLines: maxLines,
           overflow: _expanded ? TextOverflow.visible : TextOverflow.ellipsis,
-          textAlign: TextAlign.justify, // 👈 ضبط النص
+          textAlign: TextAlign.justify,
           style: const TextStyle(
             fontSize: 13.5,
             height: 1.5,
@@ -898,24 +889,23 @@ class _SettingsRow extends StatelessWidget {
   }
 }
 
-class _EditCompanySheet extends StatefulWidget {
+class EditCompanyPage extends StatefulWidget {
   final Map<String, dynamic> data;
-  final ScrollController scrollController;
-  final int initialTabIndex;
   final _CompanyProfileState parentState;
+  final int initialTabIndex;
 
-  const _EditCompanySheet({
+  const EditCompanyPage({
+    super.key,
     required this.data,
-    required this.scrollController,
-    required this.initialTabIndex,
     required this.parentState,
+    this.initialTabIndex = 0,
   });
 
   @override
-  State<_EditCompanySheet> createState() => _EditCompanySheetState();
+  State<EditCompanyPage> createState() => _EditCompanyPageState();
 }
 
-class _EditCompanySheetState extends State<_EditCompanySheet>
+class _EditCompanyPageState extends State<EditCompanyPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabCtrl;
 
@@ -940,394 +930,579 @@ class _EditCompanySheetState extends State<_EditCompanySheet>
     const brand = Color(0xFF4A5FBC);
     final parent = widget.parentState;
 
-    return Scaffold(
-      // هذا السكافولد خاص بالـsheet
-      backgroundColor: Colors.transparent,
-      body: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          children: [
-            if (parent._progress != null)
-              LinearProgressIndicator(
-                value: parent._progress == 0 ? null : parent._progress,
-                minHeight: 4,
-                backgroundColor: Colors.black12,
-                color: const Color(0xFF4A5FBC),
-              ),
-            const SizedBox(height: 12),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.black12,
-                borderRadius: BorderRadius.circular(2),
-              ),
+    return WillPopScope(
+      onWillPop: () async {
+        final hasChanges = _hasUnsavedChanges();
+        if (!hasChanges) return true;
+
+        final shouldLeave = await _showLeaveConfirmDialogStyled(context);
+        return shouldLeave ?? false;
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF7F6FC),
+        appBar: AppBar(
+          backgroundColor: brand,
+          title: const Text(
+            'Edit Company Info',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'Edit Company Info',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Container(
-                height: 44,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF3F3FF),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: TabBar(
-                  controller: _tabCtrl,
-                  isScrollable: false,
-                  dividerColor: Colors.transparent,
-                  indicator: BoxDecoration(
-                    color: brand,
+          ),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () async {
+              final hasChanges = _hasUnsavedChanges();
+              if (!hasChanges) {
+                Navigator.of(context).pop();
+                return;
+              }
+
+              final shouldLeave = await _showLeaveConfirmDialogStyled(context);
+              if (shouldLeave == true && mounted) {
+                Navigator.of(context).pop();
+              }
+            },
+          ),
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(48 + 4),
+            child: Column(
+              children: [
+                if (parent._progress != null)
+                  LinearProgressIndicator(
+                    value: parent._progress == 0 ? null : parent._progress,
+                    minHeight: 4,
+                    backgroundColor: Colors.black12,
+                    color: Colors.white,
+                  ),
+                const SizedBox(height: 8),
+                Container(
+                  height: 44,
+                  margin: const EdgeInsets.symmetric(horizontal: 16)
+                      .copyWith(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3F3FF),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  labelColor: Colors.white,
-                  unselectedLabelColor: brand,
-                  labelPadding: EdgeInsets.zero,
-                  tabs: const [
-                    Tab(
-                      child: SizedBox.expand(
-                        child: Center(
-                          child: Text(
-                            'Company Info',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13.5,
+                  child: TabBar(
+                    controller: _tabCtrl,
+                    isScrollable: false,
+                    dividerColor: Colors.transparent,
+                    indicator: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    labelColor: brand,
+                    unselectedLabelColor: brand,
+                    labelPadding: EdgeInsets.zero,
+                    tabs: const [
+                      Tab(
+                        child: SizedBox.expand(
+                          child: Center(
+                            child: Text(
+                              'Company Info',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13.5,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    Tab(
-                      child: SizedBox.expand(
-                        child: Center(
-                          child: Text(
-                            'Contact Details',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13.5,
+                      Tab(
+                        child: SizedBox.expand(
+                          child: Center(
+                            child: Text(
+                              'Contact Details',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13.5,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: Form(
-                key: parent._form,
-                child: TabBarView(
-                  controller: _tabCtrl,
-                  children: [
-                    // ---------------- TAB 0 ----------------
-                    SingleChildScrollView(
-                      controller: widget.scrollController,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Logo',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            ),
+          ),
+        ),
+        body: Form(
+          key: parent._form,
+          child: TabBarView(
+            controller: _tabCtrl,
+            children: [
+              // TAB 0: Company Info
+              ListView(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                children: [
+                  const Text(
+                    'Logo',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: brand,
+                            width: 2,
                           ),
-                          const SizedBox(height: 8),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(
-                                    2), // سمك البوردر من داخل
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color:
-                                        const Color(0xFF4A5FBC), // لون البوردر
-                                    width: 2, // سماكة البوردر
-                                  ),
-                                ),
-                                child: CircleAvatar(
-                                  radius: 32,
-                                  backgroundColor: Colors.white, // داخل الدائرة
-                                  backgroundImage: parent._pendingLogoFile !=
-                                          null
-                                      ? FileImage(parent._pendingLogoFile!)
-                                          as ImageProvider
-                                      : ((parent._logoUrl ??
-                                                      widget.data[
-                                                          UserFields.photoUrl])
-                                                  ?.toString()
-                                                  .isNotEmpty ==
-                                              true
-                                          ? NetworkImage(
-                                              (parent._logoUrl ??
-                                                      widget.data[
-                                                          UserFields.photoUrl])
-                                                  .toString(),
-                                            )
-                                          : null),
-                                  child: (parent._pendingLogoFile == null &&
-                                          !((parent._logoUrl ??
-                                                      widget.data[
-                                                          UserFields.photoUrl])
-                                                  ?.toString()
-                                                  .isNotEmpty ==
-                                              true))
-                                      ? const Icon(
-                                          Icons.business,
-                                          color: Color(0xFF4A5FBC),
-                                          size: 28,
-                                        )
-                                      : null,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              FilledButton(
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: const Color(0xFFFD6C67),
-                                  foregroundColor: Colors.black,
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(24),
-                                  ),
-                                ),
-                                onPressed:
-                                    parent._saving || parent._progress != null
-                                        ? null
-                                        : () async {
-                                            await parent._pickLogo();
-                                            if (mounted) setState(() {});
-                                          },
-                                child: const Text(
-                                  'Upload Logo',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              if (parent._pendingLogoFile != null ||
-                                  ((parent._logoUrl ??
+                        ),
+                        child: CircleAvatar(
+                          radius: 32,
+                          backgroundColor: Colors.white,
+                          backgroundImage: parent._pendingLogoFile != null
+                              ? FileImage(parent._pendingLogoFile!)
+                                  as ImageProvider
+                              : ((parent._logoUrl ??
+                                              widget.data[UserFields.photoUrl])
+                                          ?.toString()
+                                          .isNotEmpty ==
+                                      true
+                                  ? NetworkImage(
+                                      (parent._logoUrl ??
+                                              widget.data[UserFields.photoUrl])
+                                          .toString(),
+                                    )
+                                  : null),
+                          child: (parent._pendingLogoFile == null &&
+                                  !((parent._logoUrl ??
                                               widget.data[UserFields.photoUrl])
                                           ?.toString()
                                           .isNotEmpty ==
                                       true))
-                                TextButton(
-                                  onPressed:
-                                      parent._saving || parent._progress != null
-                                          ? null
-                                          : () {
-                                              parent.setState(() {
-                                                parent._pendingLogoFile = null;
-                                                parent._logoUrl = '';
-                                              });
-                                              if (mounted) setState(() {});
-                                            },
-                                  child: const Text('Remove'),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-                          const Text(
-                            'Description (min 100 chars)',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          TextFormField(
-                            key: parent._descKey,
-                            controller: parent._desc,
-                            maxLines: 4,
-                            maxLength: 600,
-                            decoration: const InputDecoration(
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (v) {
-                              final t = v?.trim() ?? '';
-                              if (t.isEmpty) return 'Enter description';
-                              if (t.length < 100) return 'Too short';
-                              if (t.length > 600) {
-                                return 'Too long (max 600)';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 24),
-                          const Text(
-                            'Location',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          TextFormField(
-                            key: parent._locKey,
-                            controller: parent._locCtrl,
-                            textCapitalization: TextCapitalization.words,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.allow(
-                                RegExp(r"[A-Za-z\u0600-\u06FF\s\.'-]"),
-                              ),
-                              LengthLimitingTextInputFormatter(40),
-                            ],
-                            decoration: const InputDecoration(
-                              hintText: 'e.g., Riyadh / Jeddah / Al Khobar',
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (v) {
-                              final t = parent._cleanLoc(v ?? '');
-                              if (t.isEmpty) return 'Enter location';
-                              if (!parent._locAllowed.hasMatch(t)) {
-                                return '2–40 letters only (Arabic/English), no numbers';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 120),
-                        ],
+                              ? Icon(
+                                  Icons.business,
+                                  color: brand,
+                                  size: 28,
+                                )
+                              : null,
+                        ),
                       ),
-                    ),
-
-                    // ---------------- TAB 1 ----------------
-                    SingleChildScrollView(
-                      controller: widget.scrollController,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Contact Email',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            ),
+                      const SizedBox(width: 16),
+                      FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFFD6C67),
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24),
                           ),
-                          const SizedBox(height: 8),
-                          TextFormField(
-                            key: parent._emailKey,
-                            controller: parent._emailCtrl,
-                            keyboardType: TextInputType.emailAddress,
-                            decoration: const InputDecoration(
-                              border: OutlineInputBorder(),
-                              helperText:
-                                  'Provide email OR phone (one is enough)',
-                            ),
-                            validator: (v) {
-                              final t = v?.trim() ?? '';
-                              if (t.isEmpty) return null;
-                              if (!_email.hasMatch(t)) return 'Invalid email';
-                              return null;
-                            },
+                        ),
+                        onPressed: parent._saving || parent._progress != null
+                            ? null
+                            : () async {
+                                await parent._pickLogo();
+                                if (mounted) setState(() {});
+                              },
+                        child: const Text(
+                          'Upload Logo',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
                           ),
-                          const SizedBox(height: 24),
-                          const Text(
-                            'Contact Phone',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          ValueListenableBuilder<TextEditingValue>(
-                            valueListenable: parent._phone,
-                            builder: (context, value, _) {
-                              final t = value.text.trim();
-                              final isMobile = t.startsWith('5');
-                              return TextFormField(
-                                key: parent._phoneKey,
-                                controller: parent._phone,
-                                keyboardType: TextInputType.phone,
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.digitsOnly,
-                                  LengthLimitingTextInputFormatter(10),
-                                ],
-                                decoration: InputDecoration(
-                                  hintText: '5XXXXXXXX or 01XXXXXXXX',
-                                  prefixText: isMobile ? '+966 ' : '',
-                                  border: const OutlineInputBorder(),
-                                ),
-                                validator: (v) {
-                                  final s = v?.trim() ?? '';
-                                  if (s.isEmpty) return null;
-                                  final reg =
-                                      RegExp(r'^(5\d{8}|01[1-7]\d{6,7})$');
-                                  if (!reg.hasMatch(s)) {
-                                    return 'Enter a valid Saudi mobile or landline number';
-                                  }
-                                  return null;
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      if (parent._pendingLogoFile != null ||
+                          ((parent._logoUrl ?? widget.data[UserFields.photoUrl])
+                                  ?.toString()
+                                  .isNotEmpty ==
+                              true))
+                        TextButton(
+                          onPressed: parent._saving || parent._progress != null
+                              ? null
+                              : () {
+                                  parent.setState(() {
+                                    parent._pendingLogoFile = null;
+                                    parent._logoUrl = '';
+                                  });
+                                  if (mounted) setState(() {});
                                 },
-                              );
-                            },
+                          child: const Text(
+                            'Remove',
+                            style: TextStyle(color: Colors.red),
                           ),
-                          const SizedBox(height: 120),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            SafeArea(
-              top: false,
-              minimum: const EdgeInsets.symmetric(horizontal: 16)
-                  .copyWith(bottom: 16),
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: brand,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    textStyle: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Description (min 100 chars)',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
                     ),
                   ),
-                  onPressed: parent._saving || parent._progress != null
-                      ? null
-                      : () async {
-                          final ok = await parent._save(
-                            widget.data,
-                            inContext: context, // Snack هنا
-                          );
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    key: parent._descKey,
+                    controller: parent._desc,
+                    maxLines: 4,
+                    maxLength: 600,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (v) {
+                      final t = v?.trim() ?? '';
+                      if (t.isEmpty) return 'Enter description';
+                      if (t.length < 100) return 'Too short';
+                      if (t.length > 600) {
+                        return 'Too long (max 600)';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Location',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    key: parent._locKey,
+                    controller: parent._locCtrl,
+                    textCapitalization: TextCapitalization.words,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r"[A-Za-z\u0600-\u06FF\s\.'-]"),
+                      ),
+                      LengthLimitingTextInputFormatter(40),
+                    ],
+                    decoration: const InputDecoration(
+                      hintText: 'e.g., Riyadh / Jeddah / Al Khobar',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (v) {
+                      final t = parent._cleanLoc(v ?? '');
+                      if (t.isEmpty) return 'Enter location';
+                      if (!parent._locAllowed.hasMatch(t)) {
+                        return '2–40 letters only (Arabic/English), no numbers';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 120),
+                ],
+              ),
 
-                          if (!mounted) return;
-
-                          if (ok) {
-                            Navigator.of(context).pop();
+              // TAB 1: Contact
+              ListView(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                children: [
+                  const Text(
+                    'Contact Email',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    key: parent._emailKey,
+                    controller: parent._emailCtrl,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      helperText: 'Provide email OR phone (one is enough)',
+                    ),
+                    validator: (v) {
+                      final t = v?.trim() ?? '';
+                      if (t.isEmpty) return null;
+                      if (!_email.hasMatch(t)) return 'Invalid email';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Contact Phone',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: parent._phone,
+                    builder: (context, value, _) {
+                      final t = value.text.trim();
+                      final isMobile = t.startsWith('5');
+                      return TextFormField(
+                        key: parent._phoneKey,
+                        controller: parent._phone,
+                        keyboardType: TextInputType.phone,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(10),
+                        ],
+                        decoration: InputDecoration(
+                          hintText: '5XXXXXXXX or 01XXXXXXXX',
+                          prefixText: isMobile ? '+966 ' : '',
+                          border: const OutlineInputBorder(),
+                        ),
+                        validator: (v) {
+                          final s = v?.trim() ?? '';
+                          if (s.isEmpty) return null;
+                          final reg = RegExp(r'^(5\d{8}|01[1-7]\d{6,7})$');
+                          if (!reg.hasMatch(s)) {
+                            return 'Enter a valid Saudi mobile or landline number';
                           }
+                          return null;
                         },
-                  child: const Text('Save changes'),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 120),
+                ],
+              ),
+            ],
+          ),
+        ),
+        bottomNavigationBar: SafeArea(
+          minimum:
+              const EdgeInsets.symmetric(horizontal: 16).copyWith(bottom: 16),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: brand,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
+              onPressed: parent._saving || parent._progress != null
+                  ? null
+                  : () async {
+                      final ok = await parent._save(
+                        widget.data,
+                        inContext: context,
+                      );
+
+                      if (!mounted) return;
+                      if (ok) {
+                        Navigator.of(context).pop();
+                      }
+                    },
+              child: const Text('Save changes'),
             ),
-          ],
+          ),
         ),
       ),
     );
+  }
+
+  bool _hasUnsavedChanges() {
+    final parent = widget.parentState;
+    final original = widget.data;
+
+    final origDesc = (original[UserFields.description] ?? '').toString().trim();
+    final currDesc = parent._desc.text.trim();
+    if (currDesc != origDesc) return true;
+
+    final origLoc = (original[UserFields.location] ?? '').toString().trim();
+    final currLoc = parent._locCtrl.text.trim();
+    if (currLoc != origLoc) return true;
+
+    final origEmail =
+        (original[UserFields.contactEmail] ?? '').toString().trim();
+    final currEmail = parent._emailCtrl.text.trim();
+    if (currEmail != origEmail) return true;
+
+    final origPhoneE164 = (original[UserFields.phone] ?? '').toString().trim();
+    final currPhoneLocal = parent._phone.text.trim();
+
+    String _toComparableLocal(String e164) {
+      if (e164.isEmpty) return '';
+      final t = e164.trim();
+      if (!t.startsWith(_saPrefix)) return t;
+
+      final rest = t.substring(_saPrefix.length);
+
+      if (rest.startsWith('5')) {
+        return rest;
+      }
+
+      if (RegExp(r'^1[1-7]\d{6,7}$').hasMatch(rest)) {
+        return '0$rest';
+      }
+
+      return rest;
+    }
+
+    final origPhoneLocal = _toComparableLocal(origPhoneE164);
+    if (currPhoneLocal != origPhoneLocal) return true;
+
+    final origLogoUrl = (original[UserFields.photoUrl] ?? '').toString().trim();
+
+    if (parent._pendingLogoFile != null) {
+      return true;
+    }
+
+    if (parent._logoUrl == '') {
+      if (origLogoUrl.isNotEmpty) {
+        return true;
+      }
+    }
+
+    if (parent._logoUrl != null &&
+        parent._logoUrl!.isNotEmpty &&
+        parent._logoUrl!.trim() != origLogoUrl) {
+      return true;
+    }
+
+    return false;
+  }
+
+  Future<bool?> _showLeaveConfirmDialogStyled(BuildContext context) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(30),
+        ),
+        title: const Text(
+          'Discard changes?',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: const Text(
+          'You have unsaved changes. Are you sure you want to leave without saving?',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Colors.white,
+          ),
+        ),
+        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+        actionsPadding:
+            const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          // زر Cancel (أبغى أكمل تعديل، لا تطلعني)
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.white.withOpacity(0.9),
+              foregroundColor: const Color(0xFF4A5FBC),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+
+          const SizedBox(width: 12),
+
+          // زر Discard (اخرج وامسح التعديلات)
+          TextButton(
+            onPressed: () {
+              // نرجع القيم الأصلية قبل ما نطلع
+              _restoreParentFromOriginal();
+              Navigator.pop(context, true);
+            },
+            style: TextButton.styleFrom(
+              backgroundColor: const Color(0xFFFC686A),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            child: const Text(
+              'Discard',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _restoreParentFromOriginal() {
+    final parent = widget.parentState;
+    final original = widget.data;
+
+    parent.setState(() {
+      // رجّعي الوصف
+      parent._desc.text =
+          (original[UserFields.description] ?? '').toString().trim();
+
+      // رجّعي الموقع
+      parent._locCtrl.text =
+          (original[UserFields.location] ?? '').toString().trim();
+
+      // رجّعي الإيميل
+      parent._emailCtrl.text =
+          (original[UserFields.contactEmail] ?? '').toString().trim();
+
+      // رجّعي الرقم (حوّلي من E.164 للعرض المحلي)
+      final origPhoneE164 =
+          (original[UserFields.phone] ?? '').toString().trim();
+
+      String _toComparableLocal(String e164) {
+        if (e164.isEmpty) return '';
+        final t = e164.trim();
+        if (!t.startsWith(_saPrefix)) return t;
+
+        final rest = t.substring(_saPrefix.length);
+
+        if (rest.startsWith('5')) {
+          // جوال: نخليه 5XXXXXXXX
+          return rest;
+        }
+
+        if (RegExp(r'^1[1-7]\d{6,7}$').hasMatch(rest)) {
+          // أرضي: 011 ... -> نرجع له الصفر
+          return '0$rest';
+        }
+
+        return rest;
+      }
+
+      parent._phone.text = _toComparableLocal(origPhoneE164);
+
+      // رجّعي حالة اللوقو:
+      // 1. ما عاد فيه ملف pending
+      parent._pendingLogoFile = null;
+
+      // 2. لو كانت _logoUrl = '' لأن المستخدم ضغط Remove
+      //    نرجعها للي في الداتا الأصلية
+      final origLogoUrl =
+          (original[UserFields.photoUrl] ?? '').toString().trim();
+      parent._logoUrl = origLogoUrl.isEmpty ? null : origLogoUrl;
+
+      // reset حالات ui
+      parent._saving = false;
+      parent._progress = null;
+    });
   }
 }

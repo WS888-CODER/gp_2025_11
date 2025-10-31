@@ -69,9 +69,13 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
                 Icon(
                   icon,
                   size: 32,
-                  color: isSelected 
-                    ? const Color(0xFFFC686A) 
-                    : Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.6), 
+                  color: isSelected
+                      ? const Color(0xFFFC686A)
+                      : Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.color
+                          ?.withOpacity(0.6),
                 ),
               ],
             ),
@@ -118,9 +122,7 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
             ),
           ],
         ),
-
         const SizedBox(height: 24),
-
         Row(
           children: [
             const Text('Jobs',
@@ -140,9 +142,7 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
           ],
         ),
         const SizedBox(height: 8),
-
         const _JobsPreview(limit: 3),
-
         const SizedBox(height: 16),
       ],
     );
@@ -196,7 +196,7 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
       ),
       bottomNavigationBar: Container(
         height: 70,
-        color: Theme.of(context).colorScheme.surface, 
+        color: Theme.of(context).colorScheme.surface,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

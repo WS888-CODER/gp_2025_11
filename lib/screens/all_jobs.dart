@@ -170,9 +170,18 @@ class _JobsPageState extends State<JobsPage> {
 
     _jobsSub = _jobsStream().listen((jobs) {
       _ensureCompanyNames(jobs.map((j) => j.userId).toSet());
+
       if (!mounted) return;
       setState(() {
         _allJobs = jobs;
+
+        _specialties = [
+          'All',
+          ...{
+            for (final j in jobs)
+              j.specialty.trim().isEmpty ? null : j.specialty.trim(),
+          }.whereType<String>().toList()
+        ];
       });
     });
 

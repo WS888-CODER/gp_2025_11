@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // <-- NEW for input formatters
@@ -64,6 +65,7 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
   File? _pendingCvFile;
   static const int _kMaxImageBytes = 5 * 1024 * 1024; // 5MB
   static const int _kMaxCvBytes = 10 * 1024 * 1024; // 10MB
+  StreamSubscription<TaskSnapshot>? _uploadSub;
 
   String? _validateImageFile(File f) {
     final len = f.lengthSync();
@@ -111,6 +113,7 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
 
   @override
   void dispose() {
+    _uploadSub?.cancel();
     _phone.dispose();
     super.dispose();
   }
@@ -131,19 +134,32 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
       'photos/$uid/${DateTime.now().millisecondsSinceEpoch}_$name',
     );
 
+    if (!mounted) {
+      throw Exception('Screen closed');
+    }
+
     setState(() => _progress = 0);
+
     final task = ref.putFile(file);
-    task.snapshotEvents.listen((s) {
+    _uploadSub = task.snapshotEvents.listen((s) {
       if (!mounted) return;
       final total = s.totalBytes;
-      if (total > 0) setState(() => _progress = s.bytesTransferred / total);
+      if (total > 0) {
+        setState(() => _progress = s.bytesTransferred / total);
+      }
     });
 
-    final snap = await task;
-    final url = await snap.ref.getDownloadURL();
-    final path = snap.ref.fullPath;
-    if (mounted) setState(() => _progress = null);
-    return {'url': url, 'path': path};
+    try {
+      final snap = await task.timeout(const Duration(seconds: 15));
+      final url = await snap.ref.getDownloadURL();
+      final path = snap.ref.fullPath;
+      if (mounted) setState(() => _progress = null);
+      return {'url': url, 'path': path};
+    } on TimeoutException {
+      if (mounted) setState(() => _progress = null);
+      throw Exception(
+          'Upload timed out. Check network / permissions / App Check.');
+    }
   }
 
   Future<Map<String, String>> _uploadCv(File file) async {
@@ -156,19 +172,32 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
       'cv/$uid/${DateTime.now().millisecondsSinceEpoch}_$name',
     );
 
+    if (!mounted) {
+      throw Exception('Screen closed');
+    }
+
     setState(() => _progress = 0);
+
     final task = ref.putFile(file);
-    task.snapshotEvents.listen((s) {
+    _uploadSub = task.snapshotEvents.listen((s) {
       if (!mounted) return;
       final total = s.totalBytes;
-      if (total > 0) setState(() => _progress = s.bytesTransferred / total);
+      if (total > 0) {
+        setState(() => _progress = s.bytesTransferred / total);
+      }
     });
 
-    final snap = await task;
-    final url = await snap.ref.getDownloadURL();
-    final path = snap.ref.fullPath;
-    if (mounted) setState(() => _progress = null);
-    return {'url': url, 'path': path};
+    try {
+      final snap = await task.timeout(const Duration(seconds: 15));
+      final url = await snap.ref.getDownloadURL();
+      final path = snap.ref.fullPath;
+      if (mounted) setState(() => _progress = null);
+      return {'url': url, 'path': path};
+    } on TimeoutException {
+      if (mounted) setState(() => _progress = null);
+      throw Exception(
+          'Upload timed out. Check network / permissions / App Check.');
+    }
   }
 
   Future<void> _deleteStorageFile(String? pathOrUrl) async {
@@ -278,7 +307,10 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
         _pendingCvFile = null;
       }
     } catch (e) {
-      _showSnackError(e.toString());
+      final msg = e.toString().contains('Unsupported image')
+          ? '❌ Only JPG or PNG images are supported.'
+          : '❌ Failed to upload file: ${e.toString()}';
+      _showSnackError(msg);
       return;
     }
 
@@ -390,8 +422,8 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
       }
 
       if (!mounted) return;
-      _showSnackSuccess('✅ Profile updated successfully');
       Navigator.pop(context);
+      _showSnackSuccess('✅ Profile updated successfully');
     } catch (e) {
       if (!mounted) return;
       _showSnackError('❌ Failed to update profile');
@@ -535,7 +567,7 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(28),
                   ),
                   textStyle: const TextStyle(
                     fontSize: 16,
