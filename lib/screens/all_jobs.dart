@@ -235,17 +235,33 @@ class _JobsPageState extends State<JobsPage> {
   }
 
   bool _matchesCvKeywords(Job j, Set<String> userCvKeywords) {
-    if (userCvKeywords.isEmpty) return true;
-    final jobBag = {
+    if (userCvKeywords.isEmpty) return false;
+
+    final jobBagRaw = {
       j.specialty.toLowerCase().trim(),
       ...j.keywords.map((k) => k.toLowerCase().trim()),
     };
+
+    final Set<String> jobTokens = {
+      for (final chunk in jobBagRaw)
+        ...chunk.split(RegExp(r'[^a-z0-9+#]+')).where((t) => t.isNotEmpty)
+    };
+
+    int matchCount = 0;
+
     for (final kw in userCvKeywords) {
-      if (kw.toLowerCase().trim().isEmpty) continue;
-      if (jobBag.any((token) => token.contains(kw.toLowerCase().trim()))) {
-        return true;
+      final cleanKw = kw.toLowerCase().trim();
+      if (cleanKw.isEmpty) continue;
+
+      if (jobTokens.contains(cleanKw)) {
+        matchCount += 1;
+
+        if (matchCount >= 2) {
+          return true;
+        }
       }
     }
+
     return false;
   }
 
@@ -545,26 +561,21 @@ class _JobsPageState extends State<JobsPage> {
                                 trackColor:
                                     WidgetStateProperty.resolveWith((states) {
                                   if (states.contains(WidgetState.selected)) {
-                                    // 🧡 لما يكون مفعل → السلموني
                                     return const Color(0xFFFD6C67);
                                   } else {
-                                    // ⚪️ لما يكون طافي → أبيض
                                     return Colors.white;
                                   }
                                 }),
                                 thumbColor:
                                     WidgetStateProperty.resolveWith((states) {
                                   if (states.contains(WidgetState.selected)) {
-                                    // 🔘 الدائرة بيضاء لما يكون On
                                     return Colors.white;
                                   } else {
-                                    // 🔘 الدائرة بنفسجية لما يكون Off
                                     return const Color(0xFF4A5FBC);
                                   }
                                 }),
                                 trackOutlineColor:
                                     WidgetStateProperty.resolveWith((states) {
-                                  // 🎨 لما يكون On يصير البوردر سلموني، لما Off يصير بنفسجي
                                   if (states.contains(WidgetState.selected)) {
                                     return const Color(0xFFFD6C67);
                                   } else {
@@ -592,11 +603,10 @@ class _JobsPageState extends State<JobsPage> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: const Color(
-                            0xFFFFF3F2), // خلفية خفيفة تميل للسلموني
+                        color: const Color(0xFFFFF3F2),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: const Color(0xFFFD6C67), // نفس لون For You
+                          color: const Color(0xFFFD6C67),
                           width: 1,
                         ),
                       ),
@@ -628,7 +638,6 @@ class _JobsPageState extends State<JobsPage> {
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
                             onPressed: () {
-                              // نفس اللي كنت تسويه في البانر الأصلي
                               if (_userType == 'Company') {
                                 Navigator.pushNamed(
                                     context, '/profile/company');
@@ -779,8 +788,9 @@ class _ExpandableTextState extends State<_ExpandableText> {
   bool _expanded = false;
   @override
   Widget build(BuildContext context) {
-    if (widget.text.trim().isEmpty)
+    if (widget.text.trim().isEmpty) {
       return const Text('No description provided.');
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -828,7 +838,7 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
           ),
         ),
         iconTheme: const IconThemeData(
-          color: Colors.white, // back arrow يصير أبيض
+          color: Colors.white,
         ),
         actions: [
           IconButton(
@@ -911,17 +921,16 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                     backgroundImage: (company?.logoUrl ?? '').isNotEmpty
                         ? NetworkImage(company!.logoUrl)
                         : null,
+                    backgroundColor: const Color(0xFFE8E8FF),
                     child: (company?.logoUrl ?? '').isEmpty
                         ? const Icon(Icons.business, size: 28)
                         : null,
-                    backgroundColor: const Color(0xFFE8E8FF),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // اسم الشركة + بادج Closed
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -958,7 +967,6 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                               ),
                           ],
                         ),
-
                         if ((company?.location ?? '').isNotEmpty) ...[
                           const SizedBox(height: 4),
                           Row(
@@ -979,7 +987,6 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                             ],
                           ),
                         ],
-
                         if ((company?.description ?? '').isNotEmpty) ...[
                           const SizedBox(height: 8),
                           AnimatedCrossFade(
@@ -1023,7 +1030,6 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                             ),
                           ),
                         ],
-
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 12,
@@ -1240,7 +1246,6 @@ class _JobCardState extends State<JobCard> {
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: () {
-          // فتح صفحة التفاصيل لما يضغط على الكارد
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -1291,7 +1296,7 @@ class _JobCardState extends State<JobCard> {
                         ? 'Closed job'
                         : (_saved ? 'Saved' : 'Save for later'),
                     onPressed: isClosed
-                        ? null // ❌ ما يشتغل إذا الوظيفة Closed
+                        ? null
                         : () {
                             setState(() {
                               _saved = !_saved;
@@ -1300,7 +1305,7 @@ class _JobCardState extends State<JobCard> {
                     icon: Icon(
                       _saved ? Icons.favorite : Icons.favorite_border,
                       color: isClosed
-                          ? Colors.grey // القلب رمادي ومقفل
+                          ? Colors.grey
                           : (_saved ? Colors.red : Colors.grey[600]),
                     ),
                   ),
@@ -1413,7 +1418,6 @@ class _JobCardState extends State<JobCard> {
   }
 }
 
-// صندوق الفلتر (البوردر البنفسجي والـ padding)
 class _FilterBox extends StatelessWidget {
   final Widget child;
   final Color borderColor;
@@ -1441,7 +1445,6 @@ class _FilterBox extends StatelessWidget {
   }
 }
 
-// زر الـ For You كـ chip بشكل ثابت نفس الستايل اللي اتفقنا عليه
 class _ForYouChip extends StatelessWidget {
   final bool selected;
   final ValueChanged<bool> onTap;

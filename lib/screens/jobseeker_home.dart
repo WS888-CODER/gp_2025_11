@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:gp_2025_11/screens/all_jobs.dart';
-import 'package:gp_2025_11/screens/job_seeker_profile_page.dart';
+import 'package:gp_2025_11/screens/jobseeker_profile.dart';
 
 class JobSeekerHome extends StatefulWidget {
   const JobSeekerHome({super.key, this.userId});
@@ -143,7 +143,7 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
           ],
         ),
         const SizedBox(height: 8),
-        const _JobsPreview(limit: 3),
+        const _JobsPreviewCompact(limit: 2),
         const SizedBox(height: 16),
       ],
     );
@@ -448,132 +448,188 @@ class _BigTile extends StatelessWidget {
   }
 }
 
-class _JobsPreview extends StatefulWidget {
+class _JobsPreviewCompact extends StatefulWidget {
   final int limit;
-  const _JobsPreview({this.limit = 3});
+  const _JobsPreviewCompact({this.limit = 2});
 
   @override
-  State<_JobsPreview> createState() => _JobsPreviewState();
+  State<_JobsPreviewCompact> createState() => _JobsPreviewCompactState();
 }
 
-class _JobsPreviewState extends State<_JobsPreview> {
-  final Map<String, CompanyInfo> _companyCache = {};
+class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
+  List<Job> _finalJobs = [];
+  Map<String, CompanyInfo> _companyByUserId = {};
+  bool _loadingCompanies = false;
+  String? _error;
 
-  Future<CompanyInfo> _companyInfo(String userId) async {
-    if (userId.isEmpty) return const CompanyInfo();
-    if (_companyCache.containsKey(userId)) return _companyCache[userId]!;
+  Stream<QuerySnapshot<Map<String, dynamic>>> _jobsStream() {
+    return FirebaseFirestore.instance
+        .collection('Jobs')
+        .orderBy('StartDate', descending: true)
+        .limit(widget.limit * 5)
+        .snapshots();
+  }
 
-    final doc =
-        await FirebaseFirestore.instance.collection('Users').doc(userId).get();
-    final data = doc.data() ?? {};
+  Future<Map<String, CompanyInfo>> _fetchCompaniesForJobs(
+      List<Job> jobs) async {
+    final ownerIds = jobs.map((j) => j.userId).toSet().toList();
+    final Map<String, CompanyInfo> result = {};
 
-    final rawCompany = (data['CompanyName'] ?? '').toString().trim();
-    final rawName = (data['Name'] ?? '').toString().trim();
-    final display = rawCompany.isNotEmpty
-        ? rawCompany
-        : (rawName.isNotEmpty ? rawName : 'Company');
+    for (var i = 0; i < ownerIds.length; i += 10) {
+      final chunk = ownerIds.sublist(
+          i, (i + 10 > ownerIds.length) ? ownerIds.length : i + 10);
 
-    final info = CompanyInfo(
-      name: display,
-      logoUrl: (data['PhotoURL'] ?? '').toString().trim(),
-      location: (data['Location'] ?? '').toString().trim(),
-      description: (data['Description'] ?? '').toString().trim(),
-      contactEmail: (data['ContactEmail'] ?? '').toString().trim(),
-      phone: (data['Phone'] ?? '').toString().trim(),
-    );
+      final usersSnap = await FirebaseFirestore.instance
+          .collection('Users')
+          .where(FieldPath.documentId, whereIn: chunk)
+          .get();
 
-    _companyCache[userId] = info;
-    return info;
+      for (final doc in usersSnap.docs) {
+        final data = doc.data();
+        final rawCompany = (data['CompanyName'] ?? '').toString().trim();
+        final rawName = (data['Name'] ?? '').toString().trim();
+        final display = rawCompany.isNotEmpty
+            ? rawCompany
+            : (rawName.isNotEmpty ? rawName : 'Company');
+
+        result[doc.id] = CompanyInfo(
+          name: display,
+          logoUrl: (data['PhotoURL'] ?? '').toString().trim(),
+          location: (data['Location'] ?? '').toString().trim(),
+          description: (data['Description'] ?? '').toString().trim(),
+          contactEmail: (data['ContactEmail'] ?? '').toString().trim(),
+          phone: (data['Phone'] ?? '').toString().trim(),
+        );
+      }
+
+      for (final uid in chunk) {
+        result.putIfAbsent(uid, () => const CompanyInfo());
+      }
+    }
+
+    return result;
   }
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: FirebaseFirestore.instance
-            .collection('Jobs')
-            .orderBy('StartDate', descending: true)
-            .limit(widget.limit * 5)
-            .snapshots(),
-        builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: CircularProgressIndicator(),
-              ),
-            );
-          }
-          if (snap.hasError) {
-            return Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text('Error: ${snap.error}'),
-            );
-          }
-
-          final docs = snap.data?.docs ?? [];
-          if (docs.isEmpty) {
-            return Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text('No jobs yet',
-                  style: Theme.of(context).textTheme.bodyMedium),
-            );
-          }
-
-          final jobs = docs
-              .map((d) => Job.fromDoc(d))
-              .where((j) => j.status.trim().toLowerCase() != 'closed')
-              .toList();
-
-          if (jobs.isEmpty) {
-            return Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'No open jobs',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            );
-          }
-
-          return Column(
-            children: jobs.map((j) {
-              return FutureBuilder<CompanyInfo>(
-                future: _companyInfo(j.userId),
-                builder: (context, companySnap) {
-                  if (companySnap.connectionState == ConnectionState.waiting) {
-                    return Card(
-                      elevation: 0.5,
-                      margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Row(
-                          children: [
-                            SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                            SizedBox(width: 12),
-                            Text('Loading...'),
-                          ],
-                        ),
-                      ),
-                    );
-                  }
-
-                  final info = companySnap.data ?? const CompanyInfo();
-
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: JobCard(job: j, company: info),
-                  );
-                },
-              );
-            }).toList(),
+      stream: _jobsStream(),
+      builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: CircularProgressIndicator(),
+            ),
           );
-        });
+        }
+
+        if (snap.hasError) {
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              'Error: ${snap.error}',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+              ),
+            ),
+          );
+        }
+
+        final docs = snap.data?.docs ?? [];
+        if (docs.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              'No jobs yet',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          );
+        }
+
+        final allJobs = docs.map((d) => Job.fromDoc(d)).toList();
+
+        final openJobs = allJobs
+            .where((j) => j.status.trim().toLowerCase() != 'closed')
+            .toList();
+
+        final limitedJobs = openJobs.take(widget.limit).toList();
+
+        final needToFetchCompanies = () {
+          if (_loadingCompanies) return false;
+          if (limitedJobs.length != _finalJobs.length) return true;
+
+          for (var i = 0; i < limitedJobs.length; i++) {
+            if (limitedJobs[i].userId != _finalJobs[i].userId ||
+                limitedJobs[i].id != _finalJobs[i].id) {
+              return true;
+            }
+          }
+          return false;
+        }();
+
+        if (needToFetchCompanies) {
+          _loadingCompanies = true;
+          _error = null;
+          _fetchCompaniesForJobs(limitedJobs).then((map) {
+            if (!mounted) return;
+            setState(() {
+              _finalJobs = limitedJobs;
+              _companyByUserId = map;
+              _loadingCompanies = false;
+              _error = null;
+            });
+          }).catchError((e) {
+            if (!mounted) return;
+            setState(() {
+              _loadingCompanies = false;
+              _error = e.toString();
+            });
+          });
+        }
+
+        if (_loadingCompanies && _finalJobs.isEmpty) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
+        if (_error != null) {
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              'Error: $_error',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+              ),
+            ),
+          );
+        }
+
+        if (_finalJobs.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              'No open jobs',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          );
+        }
+
+        return Column(
+          children: _finalJobs.map((job) {
+            final company = _companyByUserId[job.userId] ?? const CompanyInfo();
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: JobCard(job: job, company: company),
+            );
+          }).toList(),
+        );
+      },
+    );
   }
 }
 

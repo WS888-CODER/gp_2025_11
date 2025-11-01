@@ -211,7 +211,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
     final uid = FirebaseAuth.instance.currentUser!.uid;
     final name = file.path.split('/').last;
     final ref = FirebaseStorage.instance.ref(
-      'logos/$uid/${DateTime.now().millisecondsSinceEpoch}_$name',
+      'photos/$uid/${DateTime.now().millisecondsSinceEpoch}_$name',
     );
 
     if (!mounted) {

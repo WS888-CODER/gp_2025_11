@@ -13,18 +13,34 @@ if (!admin.apps || admin.apps.length === 0) {
   admin.initializeApp();
 }
 
-/** English stopwords (lowercase) */
+/** Extended English stopwords (balanced size) */
 const EN_STOP = new Set<string>([
-  "the", "a", "an", "and", "or", "but", "if",
-  "in", "on", "at", "to", "from", "for", "by",
-  "of", "with", "is", "are", "was", "were", "be",
-  "been", "being", "this", "that", "these", "those",
-  "it", "its", "as", "than", "then", "so", "such",
-  "very", "more", "most", "much", "many", "any",
-  "some", "each", "every", "you", "your", "we",
-  "our", "they", "their", "he", "his", "she",
-  "her", "i", "me", "my",
+  // Articles & Conjunctions
+  "the","a","an","and","or","but","if","because","while","although","however",
+
+  // Prepositions
+  "in","on","at","to","from","for","by","of","with","about","between",
+  "into","through","over","under","up","down","off","out","around",
+
+  // Verbs (common auxiliaries)
+  "is","am","are","was","were","be","been","being","have","has","had",
+  "do","does","did","will","would","shall","should","can","could","may","might","must",
+
+  // Pronouns
+  "i","me","my","mine","you","your","yours","he","him","his",
+  "she","her","hers","it","its","we","us","our","ours","they","them","their","theirs",
+  "myself","yourself","himself","herself","ourselves","themselves",
+
+  // Determiners & Quantifiers
+  "this","that","these","those","any","some","each","every","no","not","none","few","many","much","more","most","such","very",
+
+  // Adverbs / connectors
+  "as","than","then","so","also","just","only","too","once","ever","never","again","yet","still","here","there","when","where","why","how",
+
+  // Misc
+  "etc","etc.","&","–","—","•"
 ]);
+
 
 /** tech terms allowlist (short/symbolic allowed) */
 const TECH_TERMS = [

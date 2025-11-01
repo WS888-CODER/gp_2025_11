@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
-import 'package:gp_2025_11/screens/company_profile_page.dart';
+import 'package:gp_2025_11/screens/company_profile.dart';
 import 'dart:async';
 
 class CompanyHome extends StatefulWidget {

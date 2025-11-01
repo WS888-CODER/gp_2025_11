@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:provider/provider.dart';
 import 'package:gp_2025_11/config/app_settings_notifier.dart';
 import 'package:gp_2025_11/l10n/app_localizations.dart';
@@ -249,17 +250,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final settings = Provider.of<AppSettingsNotifier>(context);
     final l10n = AppLocalizations.of(context)!;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final currentLangIsArabic =
         Localizations.localeOf(context).languageCode == 'ar';
 
     final targetLangName = currentLangIsArabic ? 'English' : 'العربية';
     final currentLangName = currentLangIsArabic ? 'العربية' : 'English';
-    final Color pageBgColor = isDark
-        ? const Color(0xFF0F0F12) // خلفية داكنة ناعمة
-        : const Color(0xFFF7F6FC); // الخلفية الفاتحة اللي تبينها
-    return Scaffold(
-      backgroundColor: pageBgColor,
+
+    return ThemedScaffold(
       appBar: AppBar(
         title: Text(l10n.settingsTitle),
         backgroundColor: _brandColor,
@@ -510,10 +507,47 @@ class _SettingsSwitchItem extends StatelessWidget {
           ),
         ),
         subtitle: subtitle,
-        trailing: Switch(
-          value: value,
-          onChanged: onChanged,
-          activeColor: switchColor,
+        trailing: Theme(
+          // نفس الثيم المخصص اللي استعملناه في JobsPage للـ Switch "Show closed"
+          data: Theme.of(context).copyWith(
+            switchTheme: SwitchThemeData(
+              trackColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) {
+                  // لو شغال (ON) -> السلموني
+                  return const Color(0xFFFD6C67);
+                } else {
+                  // لو طافي (OFF) -> أبيض
+                  return Colors.white;
+                }
+              }),
+              thumbColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) {
+                  // الدائرة لما يكون ON -> أبيض
+                  return Colors.white;
+                } else {
+                  // الدائرة لما يكون OFF -> بنفسجي
+                  return const Color(0xFF4A5FBC);
+                }
+              }),
+              trackOutlineColor: WidgetStateProperty.resolveWith((states) {
+                // إطار الخلفية حق السويتش
+                if (states.contains(WidgetState.selected)) {
+                  // وهو شغال -> سلموني
+                  return const Color(0xFFFD6C67);
+                } else {
+                  // وهو طافي -> بنفسجي
+                  return const Color(0xFF4A5FBC);
+                }
+              }),
+            ),
+          ),
+          child: Transform.scale(
+            scale: 0.9,
+            child: Switch.adaptive(
+              value: value,
+              onChanged: onChanged,
+            ),
+          ),
         ),
       ),
     );

@@ -12,8 +12,8 @@ import 'package:gp_2025_11/l10n/app_localizations.dart';
 // screens
 import 'package:gp_2025_11/screens/account_details_page.dart';
 import 'package:gp_2025_11/screens/settings_screen.dart';
-import 'package:gp_2025_11/screens/company_profile_page.dart';
-import 'package:gp_2025_11/screens/job_seeker_profile_page.dart';
+import 'package:gp_2025_11/screens/company_profile.dart';
+import 'package:gp_2025_11/screens/jobseeker_profile.dart';
 import 'package:gp_2025_11/screens/about_page.dart';
 import 'firebase_options.dart';
 import 'config/theme.dart';
