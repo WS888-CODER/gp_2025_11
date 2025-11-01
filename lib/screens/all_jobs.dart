@@ -148,8 +148,9 @@ class _JobsPageState extends State<JobsPage> {
   String _selectedSpecialty = 'All';
   SortOrder _sort = SortOrder.newestFirst;
   bool _forYou = false;
-  bool _showClosedJobs = false; // Toggle for showing closed jobs
+  bool _showClosedJobs = false;
   bool _showProfileReminder = false;
+  final TextEditingController _searchController = TextEditingController();
 
   late Set<String> _saved;
   List<String> _specialties = ['All'];
@@ -221,6 +222,7 @@ class _JobsPageState extends State<JobsPage> {
   void dispose() {
     _jobsSub?.cancel();
     _userSub?.cancel();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -268,24 +270,8 @@ class _JobsPageState extends State<JobsPage> {
   List<Job> _applyFilters(List<Job> jobs) {
     Iterable<Job> res = jobs;
 
-    // Filter by job status (hide closed jobs by default)
     if (!_showClosedJobs) {
       res = res.where((j) => j.status != 'Closed');
-    }
-
-    if (_search.trim().isNotEmpty) {
-      final q = _search.toLowerCase();
-      res = res.where(
-        (j) =>
-            j.title.toLowerCase().contains(q) ||
-            j.position.toLowerCase().contains(q) ||
-            j.specialty.toLowerCase().contains(q) ||
-            j.keywords.any((k) => k.toLowerCase().contains(q)),
-      );
-    }
-
-    if (_selectedSpecialty != 'All') {
-      res = res.where((j) => _matchesSpecialty(j, _selectedSpecialty));
     }
 
     if (_forYou) {
@@ -294,6 +280,27 @@ class _JobsPageState extends State<JobsPage> {
       } else {
         res = res.where((j) => _matchesCvKeywords(j, _profile.cvKeywords));
       }
+
+      return res.toList()
+        ..sort(
+          (a, b) => b.postedAt.compareTo(a.postedAt),
+        );
+    }
+
+    if (_search.trim().isNotEmpty) {
+      final q = _search.toLowerCase();
+      res = res.where((j) {
+        final compName = _company[j.userId]?.name.toLowerCase() ?? '';
+        return j.title.toLowerCase().contains(q) ||
+            j.position.toLowerCase().contains(q) ||
+            j.specialty.toLowerCase().contains(q) ||
+            compName.contains(q) ||
+            j.keywords.any((k) => k.toLowerCase().contains(q));
+      });
+    }
+
+    if (_selectedSpecialty != 'All') {
+      res = res.where((j) => _matchesSpecialty(j, _selectedSpecialty));
     }
 
     final list = res.toList();
@@ -302,6 +309,7 @@ class _JobsPageState extends State<JobsPage> {
           ? b.postedAt.compareTo(a.postedAt)
           : a.postedAt.compareTo(b.postedAt),
     );
+
     return list;
   }
 
@@ -384,6 +392,7 @@ class _JobsPageState extends State<JobsPage> {
                 ],
               ),
               child: TextField(
+                controller: _searchController,
                 style: const TextStyle(fontSize: 14),
                 decoration: InputDecoration(
                   hintText: 'Search company, title, position or keyword…',
@@ -399,7 +408,11 @@ class _JobsPageState extends State<JobsPage> {
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                 ),
-                onChanged: (v) => setState(() => _search = v),
+                onChanged: (v) {
+                  setState(() {
+                    _search = v;
+                  });
+                },
               ),
             ),
           ),
@@ -532,11 +545,18 @@ class _JobsPageState extends State<JobsPage> {
                           setState(() {
                             _forYou = v;
 
-                            // لو شغّل For You وحسابه مو كامل -> ورّيه الرسالة
-                            _showProfileReminder = v && !_isProfileComplete;
+                            if (v) {
+                              _selectedSpecialty = 'All';
 
-                            // لو شغّل For You بدون CV -> نبي بنفس الوقت نذكره بالCV بنفس الفكرة قدام
-                            // (تقدر تخلي هذا لاحق نفس المبدأ)
+                              _sort = SortOrder.newestFirst;
+
+                              _search = '';
+                              _searchController.text = '';
+
+                              _showClosedJobs = false;
+                            }
+
+                            _showProfileReminder = v && !_isProfileComplete;
                           });
                         },
                       ),
