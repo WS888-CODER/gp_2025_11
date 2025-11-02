@@ -124,101 +124,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _changeLanguage(
-      AppSettingsNotifier settings, AppLocalizations l10n) async {
-    final targetLangName =
-        settings.currentLanguageName == 'English' ? 'العربية' : 'English';
-    final currentLangCode = Localizations.localeOf(context).languageCode;
+  void _changeLanguage(AppSettingsNotifier settings, AppLocalizations l10n) {
+  final targetLangName =
+      settings.currentLanguageName == 'English' ? 'العربية' : 'English';
+  final currentLangCode = Localizations.localeOf(context).languageCode;
 
-    const Color dialogBaseColor = Color(0xFF4A5FBC);
-    const Color cancelBgColor = Color(0xFFE5E7EB);
-    const Color cancelTextColor = Color(0xFF4B5563);
-    const Color confirmBgColor = Color(0xFFFC686A);
-
-    bool? confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: dialogBaseColor.withOpacity(0.7),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-        title: Text(
-          currentLangCode == 'ar' ? 'تأكيد تغيير اللغة' : 'Confirm Language',
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        content: Text(
-          currentLangCode == 'ar'
-              ? 'هل أنت متأكد من التبديل إلى $targetLangName؟'
-              : 'Are you sure you want to switch to $targetLangName?',
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.white70),
-        ),
-        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-        actionsPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          Expanded(
-            child: TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              style: TextButton.styleFrom(
-                backgroundColor: cancelBgColor,
-                foregroundColor: cancelTextColor,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25),
-                ),
-              ),
-              child: Text(
-                currentLangCode == 'ar' ? 'إلغاء' : 'Cancel',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: TextButton.styleFrom(
-                backgroundColor: confirmBgColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25),
-                ),
-              ),
-              child: Text(
-                currentLangCode == 'ar' ? 'تأكيد' : 'Confirm',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-        ],
-      ),
+  settings.toggleLanguage();
+  
+  if (context.mounted) {
+    Navigator.of(context).pushReplacementNamed(
+      '/settings',
+      arguments: {
+        'userType': widget.userType,
+        'userId': widget.userId,
+      },
     );
-
-    if (confirmed == true) {
-      settings.toggleLanguage();
-      if (context.mounted) {
-        Navigator.of(context).pushReplacementNamed(
-          '/settings',
-          arguments: {
-            'userType': widget.userType,
-            'userId': widget.userId,
-          },
-        );
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(currentLangCode == 'ar'
-              ? 'تم التبديل إلى $targetLangName'
-              : 'Language switched to $targetLangName'),
-        ),
-      );
-    }
   }
+  
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(currentLangCode == 'ar'
+          ? 'تم التبديل إلى $targetLangName'
+          : 'Language switched to $targetLangName'),
+    ),
+  );
+}
 
   void _toggleNotifications(bool value) {
     setState(() => _isNotificationsEnabled = value);
