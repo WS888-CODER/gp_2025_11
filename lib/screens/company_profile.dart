@@ -211,7 +211,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
     final uid = FirebaseAuth.instance.currentUser!.uid;
     final name = file.path.split('/').last;
     final ref = FirebaseStorage.instance.ref(
-      'photos/$uid/${DateTime.now().millisecondsSinceEpoch}_$name',
+      'logos/$uid/${DateTime.now().millisecondsSinceEpoch}_$name',
     );
 
     if (!mounted) {
@@ -449,7 +449,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
     if (user == null) {
       return const ThemedScaffold(body: Center(child: Text('Not signed in')));
     }
-
+    final scheme = Theme.of(context).colorScheme;
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance
           .collection(kUsersCollection)
@@ -557,11 +557,15 @@ class _CompanyProfileState extends State<CompanyProfile> {
               // card header
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: scheme.surface,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withOpacity(
+                        Theme.of(context).brightness == Brightness.dark
+                            ? 0.6
+                            : 0.05,
+                      ),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
@@ -718,7 +722,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
               const SizedBox(height: 24),
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: scheme.surface,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
@@ -804,7 +808,6 @@ class _ExpandableDescriptionState extends State<_ExpandableDescription> {
           style: const TextStyle(
             fontSize: 13.5,
             height: 1.5,
-            color: Colors.black87,
           ),
         ),
         const SizedBox(height: 4),
@@ -866,7 +869,6 @@ class _SettingsRow extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: Colors.black,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -1042,12 +1044,12 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                     'Logo',
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      color: Colors.black87,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Container(
                         padding: const EdgeInsets.all(2),
@@ -1081,7 +1083,7 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                                           ?.toString()
                                           .isNotEmpty ==
                                       true))
-                              ? Icon(
+                              ? const Icon(
                                   Icons.business,
                                   color: brand,
                                   size: 28,
@@ -1090,51 +1092,58 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                         ),
                       ),
                       const SizedBox(width: 16),
-                      FilledButton(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFFFD6C67),
-                          foregroundColor: Colors.black,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24),
+                      Row(
+                        children: [
+                          FilledButton(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFFFD6C67),
+                              foregroundColor: Colors.black,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                            ),
+                            onPressed:
+                                parent._saving || parent._progress != null
+                                    ? null
+                                    : () async {
+                                        await parent._pickLogo();
+                                        if (mounted) setState(() {});
+                                      },
+                            child: const Text(
+                              'Upload Logo',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
-                        ),
-                        onPressed: parent._saving || parent._progress != null
-                            ? null
-                            : () async {
-                                await parent._pickLogo();
-                                if (mounted) setState(() {});
-                              },
-                        child: const Text(
-                          'Upload Logo',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
+                          const SizedBox(width: 12),
+                          if (parent._pendingLogoFile != null ||
+                              ((parent._logoUrl ??
+                                          widget.data[UserFields.photoUrl])
+                                      ?.toString()
+                                      .isNotEmpty ==
+                                  true))
+                            TextButton(
+                              onPressed:
+                                  parent._saving || parent._progress != null
+                                      ? null
+                                      : () {
+                                          parent.setState(() {
+                                            parent._pendingLogoFile = null;
+                                            parent._logoUrl = '';
+                                          });
+                                          if (mounted) setState(() {});
+                                        },
+                              child: const Text(
+                                'Remove',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      if (parent._pendingLogoFile != null ||
-                          ((parent._logoUrl ?? widget.data[UserFields.photoUrl])
-                                  ?.toString()
-                                  .isNotEmpty ==
-                              true))
-                        TextButton(
-                          onPressed: parent._saving || parent._progress != null
-                              ? null
-                              : () {
-                                  parent.setState(() {
-                                    parent._pendingLogoFile = null;
-                                    parent._logoUrl = '';
-                                  });
-                                  if (mounted) setState(() {});
-                                },
-                          child: const Text(
-                            'Remove',
-                            style: TextStyle(color: Colors.red),
-                          ),
-                        ),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -1142,7 +1151,6 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                     'Description (min 100 chars)',
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      color: Colors.black87,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -1169,7 +1177,6 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                     'Location',
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      color: Colors.black87,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -1209,7 +1216,6 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                     'Contact Email',
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      color: Colors.black87,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -1233,7 +1239,6 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                     'Contact Phone',
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      color: Colors.black87,
                     ),
                   ),
                   const SizedBox(height: 8),

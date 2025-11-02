@@ -545,7 +545,6 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
           ),
           bottomNavigationBar: Container(
             decoration: BoxDecoration(
-              color: Colors.white,
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.07),

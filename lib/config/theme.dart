@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class AppTheme {
   // ألوان البراند اللي نبغى نكررها
-  static const Color primaryPurple = Color(0xFF49469F); // البنفسجي حقكم
+  static const Color primaryPurple = Color(0xFF4A5FBC); // البنفسجي حقكم
   static const Color accentCoral = Color(0xFFFD6C67); // الكورال حقكم
 
   // Switch theme الأساسي

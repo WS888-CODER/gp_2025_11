@@ -379,41 +379,57 @@ class _JobsPageState extends State<JobsPage> {
           preferredSize: const Size.fromHeight(64),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.07),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+            child: Builder(
+              builder: (context) {
+                final scheme = Theme.of(context).colorScheme;
+                final isDark = Theme.of(context).brightness == Brightness.dark;
+
+                final shadowColor = isDark
+                    ? Colors.black.withOpacity(0.6)
+                    : Colors.black.withOpacity(0.07);
+
+                return Container(
+                  decoration: BoxDecoration(
+                    color: scheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: shadowColor,
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: TextField(
-                controller: _searchController,
-                style: const TextStyle(fontSize: 14),
-                decoration: InputDecoration(
-                  hintText: 'Search company, title, position or keyword…',
-                  hintStyle: TextStyle(
-                    color: Colors.grey[500],
-                    fontSize: 14,
+                  child: TextField(
+                    controller: _searchController,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: scheme.onSurface,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Search company, title, position or keyword…',
+                      hintStyle: TextStyle(
+                        color: isDark ? Colors.grey[500] : Colors.grey[500],
+                        fontSize: 14,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.search,
+                        color: isDark ? Colors.grey[400] : Colors.grey[600],
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 14,
+                      ),
+                    ),
+                    onChanged: (v) {
+                      setState(() {
+                        _search = v;
+                      });
+                    },
                   ),
-                  prefixIcon: Icon(
-                    Icons.search,
-                    color: Colors.grey[600],
-                  ),
-                  border: InputBorder.none,
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                ),
-                onChanged: (v) {
-                  setState(() {
-                    _search = v;
-                  });
-                },
-              ),
+                );
+              },
             ),
           ),
         ),
@@ -422,267 +438,296 @@ class _JobsPageState extends State<JobsPage> {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+            child: Builder(
+              builder: (context) {
+                final scheme = Theme.of(context).colorScheme;
+                final isDark = Theme.of(context).brightness == Brightness.dark;
+
+                final cardShadowColor = isDark
+                    ? Colors.black.withOpacity(0.5)
+                    : Colors.black.withOpacity(0.03);
+
+                return Container(
+                  decoration: BoxDecoration(
+                    color: scheme.surface, // أبيض في لايت، غامق في دارك
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: cardShadowColor,
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ================= ROW 1: specialty + sort =================
-                  Row(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // specialty
-                      Expanded(
-                        child: _FilterBox(
-                          borderColor: const Color(0xFF4A5FBC),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              isDense: true,
-                              isExpanded: true,
-                              value: _selectedSpecialty,
-                              icon: const Icon(
-                                Icons.keyboard_arrow_down_rounded,
-                                color: Color(0xFF4A5FBC), // لون السهم بنفسجي
-                              ),
-                              // ⬇️ لون النص داخل القائمة
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Colors.black,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              // ⬇️ النص المختار بلون بنفسجي واضح
-                              selectedItemBuilder: (context) {
-                                return _specialties.map((m) {
-                                  return Text(
-                                    m,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Color(
-                                          0xFF4A5FBC), // ← اللون البنفسجي للنص المختار
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14,
-                                    ),
-                                  );
-                                }).toList();
-                              },
-                              items: _specialties
-                                  .map(
-                                    (m) => DropdownMenuItem(
+                      // ================= ROW 1: specialty + sort =================
+                      Row(
+                        children: [
+                          // specialty
+                          Expanded(
+                            child: _FilterBox(
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  isDense: true,
+                                  isExpanded: true,
+                                  value: _selectedSpecialty,
+                                  icon: Icon(
+                                    Icons.keyboard_arrow_down_rounded,
+                                    color: scheme.primary, // البنفسجي من الثيم
+                                  ),
+                                  // لون الآيتمز داخل القائمة لما تفتح
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: scheme.onSurface,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  // النص المختار المعروض بعد الإغلاق
+                                  selectedItemBuilder: (context) {
+                                    return _specialties.map((m) {
+                                      return Text(
+                                        m,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: scheme.primary,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14,
+                                        ),
+                                      );
+                                    }).toList();
+                                  },
+                                  items: _specialties.map((m) {
+                                    return DropdownMenuItem(
                                       value: m,
                                       child: Text(
                                         m,
                                         overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: scheme.onSurface,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                  onChanged: (val) {
+                                    setState(() =>
+                                        _selectedSpecialty = val ?? 'All');
+                                  },
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(width: 8),
+
+                          // sort
+                          Expanded(
+                            child: _FilterBox(
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<SortOrder>(
+                                  isDense: true,
+                                  isExpanded: true,
+                                  value: _sort,
+                                  icon: Icon(
+                                    Icons.keyboard_arrow_down_rounded,
+                                    color: scheme.primary,
+                                  ),
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: scheme.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  items: const [
+                                    DropdownMenuItem(
+                                      value: SortOrder.newestFirst,
+                                      child: Text('Newest first'),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: SortOrder.oldestFirst,
+                                      child: Text('Oldest first'),
+                                    ),
+                                  ],
+                                  onChanged: (val) {
+                                    setState(() => _sort = val!);
+                                  },
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // ================= ROW 2: For You + Show closed =================
+                      Row(
+                        children: [
+                          // For You chip
+                          _ForYouChip(
+                            selected: _forYou,
+                            onTap: (v) {
+                              setState(() {
+                                _forYou = v;
+
+                                if (v) {
+                                  _selectedSpecialty = 'All';
+                                  _sort = SortOrder.newestFirst;
+                                  _search = '';
+                                  _searchController.text = '';
+                                  _showClosedJobs = false;
+                                }
+
+                                _showProfileReminder = v && !_isProfileComplete;
+                              });
+                            },
+                          ),
+
+                          const Spacer(),
+
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Show closed',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: scheme.primary,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+
+                              // السويتش
+                              Theme(
+                                data: Theme.of(context).copyWith(
+                                  switchTheme: SwitchThemeData(
+                                    trackColor:
+                                        MaterialStateProperty.resolveWith(
+                                            (states) {
+                                      if (states
+                                          .contains(MaterialState.selected)) {
+                                        return scheme.secondary;
+                                      } else {
+                                        return scheme.surface;
+                                      }
+                                    }),
+                                    thumbColor:
+                                        MaterialStateProperty.resolveWith(
+                                            (states) {
+                                      if (states
+                                          .contains(MaterialState.selected)) {
+                                        return Colors.white;
+                                      } else {
+                                        return scheme.primary;
+                                      }
+                                    }),
+                                    trackOutlineColor:
+                                        MaterialStateProperty.resolveWith(
+                                            (states) {
+                                      if (states
+                                          .contains(MaterialState.selected)) {
+                                        return scheme.secondary;
+                                      } else {
+                                        return scheme.primary;
+                                      }
+                                    }),
+                                  ),
+                                ),
+                                child: Transform.scale(
+                                  scale: 0.9,
+                                  child: Switch.adaptive(
+                                    value: _showClosedJobs,
+                                    onChanged: (val) {
+                                      setState(() => _showClosedJobs = val);
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+
+                      if (_showProfileReminder) ...[
+                        const SizedBox(height: 12),
+                        // alert box
+                        Builder(
+                          builder: (context) {
+                            final danger = scheme.secondary; // الكورال
+                            final bgSoft = danger.withOpacity(0.08);
+
+                            return Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: bgSoft,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: danger,
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(
+                                    Icons.info_outline,
+                                    size: 20,
+                                    color: danger,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Complete your profile to get better matches.',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                        color: scheme.onSurface,
+                                        height: 1.3,
                                       ),
                                     ),
-                                  )
-                                  .toList(),
-                              onChanged: (val) {
-                                setState(
-                                    () => _selectedSpecialty = val ?? 'All');
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(width: 8),
-
-                      // sort
-                      Expanded(
-                        child: _FilterBox(
-                          borderColor: const Color(0xFF4A5FBC),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<SortOrder>(
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFF4A5FBC),
-                                fontWeight: FontWeight.w600,
+                                  ),
+                                  TextButton(
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                      minimumSize: const Size(0, 0),
+                                      tapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                    ),
+                                    onPressed: () {
+                                      if (_userType == 'Company') {
+                                        Navigator.pushNamed(
+                                            context, '/profile/company');
+                                      } else {
+                                        Navigator.pushNamed(
+                                            context, '/profile/jobseeker');
+                                      }
+                                    },
+                                    child: Text(
+                                      'Open',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: scheme.primary,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              isDense: true,
-                              isExpanded: true,
-                              value: _sort,
-                              icon:
-                                  const Icon(Icons.keyboard_arrow_down_rounded),
-                              items: const [
-                                DropdownMenuItem(
-                                  value: SortOrder.newestFirst,
-                                  child: Text('Newest first'),
-                                ),
-                                DropdownMenuItem(
-                                  value: SortOrder.oldestFirst,
-                                  child: Text('Oldest first'),
-                                ),
-                              ],
-                              onChanged: (val) {
-                                setState(() => _sort = val!);
-                              },
-                            ),
-                          ),
+                            );
+                          },
                         ),
-                      ),
+                      ],
                     ],
                   ),
-
-                  const SizedBox(height: 12),
-
-                  // ================= ROW 2: For You + Show closed =================
-                  Row(
-                    children: [
-                      // For You chip
-                      _ForYouChip(
-                        selected: _forYou,
-                        onTap: (v) {
-                          setState(() {
-                            _forYou = v;
-
-                            if (v) {
-                              _selectedSpecialty = 'All';
-
-                              _sort = SortOrder.newestFirst;
-
-                              _search = '';
-                              _searchController.text = '';
-
-                              _showClosedJobs = false;
-                            }
-
-                            _showProfileReminder = v && !_isProfileComplete;
-                          });
-                        },
-                      ),
-
-                      const Spacer(),
-
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text(
-                            'Show closed',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF4A5FBC),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Theme(
-                            data: Theme.of(context).copyWith(
-                              switchTheme: SwitchThemeData(
-                                trackColor:
-                                    WidgetStateProperty.resolveWith((states) {
-                                  if (states.contains(WidgetState.selected)) {
-                                    return const Color(0xFFFD6C67);
-                                  } else {
-                                    return Colors.white;
-                                  }
-                                }),
-                                thumbColor:
-                                    WidgetStateProperty.resolveWith((states) {
-                                  if (states.contains(WidgetState.selected)) {
-                                    return Colors.white;
-                                  } else {
-                                    return const Color(0xFF4A5FBC);
-                                  }
-                                }),
-                                trackOutlineColor:
-                                    WidgetStateProperty.resolveWith((states) {
-                                  if (states.contains(WidgetState.selected)) {
-                                    return const Color(0xFFFD6C67);
-                                  } else {
-                                    return const Color(0xFF4A5FBC);
-                                  }
-                                }),
-                              ),
-                            ),
-                            child: Transform.scale(
-                              scale: 0.9,
-                              child: Switch.adaptive(
-                                value: _showClosedJobs,
-                                onChanged: (val) {
-                                  setState(() => _showClosedJobs = val);
-                                },
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  if (_showProfileReminder) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF3F2),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: const Color(0xFFFD6C67),
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Icon(
-                            Icons.info_outline,
-                            size: 20,
-                            color: Color(0xFFFD6C67),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Complete your profile to get better matches.',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.grey[900],
-                                height: 1.3,
-                              ),
-                            ),
-                          ),
-                          TextButton(
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              minimumSize: const Size(0, 0),
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            onPressed: () {
-                              if (_userType == 'Company') {
-                                Navigator.pushNamed(
-                                    context, '/profile/company');
-                              } else {
-                                Navigator.pushNamed(
-                                    context, '/profile/jobseeker');
-                              }
-                            },
-                            child: const Text(
-                              'Open',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF4A5FBC),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
+                );
+              },
             ),
           ),
+          // الباقي (Expanded ...) يكمّل زي ما هو
           Expanded(
             child: Builder(
               builder: (_) {
@@ -768,14 +813,13 @@ Widget _infoRow(
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 16, color: Colors.grey[700]),
+        Icon(icon, size: 16),
         const SizedBox(width: 8),
         Expanded(
           child: RichText(
             text: TextSpan(
               style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
                     fontSize: 13.5,
-                    color: Colors.grey[900],
                     height: 1.3,
                   ),
               children: [
@@ -783,7 +827,6 @@ Widget _infoRow(
                   text: '$label: ',
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
-                    color: Colors.black87,
                   ),
                 ),
                 TextSpan(text: value),
@@ -882,7 +925,6 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.07),
@@ -910,7 +952,7 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(28),
               ),
               textStyle: const TextStyle(
                 fontSize: 16,
@@ -1126,7 +1168,9 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
-                      color: isClosed ? Colors.grey[700] : Colors.black,
+                      color: isClosed
+                          ? Colors.grey[700]
+                          : Theme.of(context).primaryColor,
                       height: 1.2,
                     ),
                     maxLines: 3,
@@ -1259,9 +1303,16 @@ class _JobCardState extends State<JobCard> {
     final company = widget.company;
     final isClosed = job.status.trim().toLowerCase() == 'closed';
 
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final Color cardBgColor = isClosed
+        ? scheme.surface.withOpacity(isDark ? 0.5 : 0.6)
+        : scheme.surface;
+
     return Card(
       elevation: 0.5,
-      color: isClosed ? Colors.grey[200] : null,
+      color: cardBgColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -1440,25 +1491,34 @@ class _JobCardState extends State<JobCard> {
 
 class _FilterBox extends StatelessWidget {
   final Widget child;
-  final Color borderColor;
   const _FilterBox({
     required this.child,
-    required this.borderColor,
   });
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: 12,
         vertical: 8,
       ),
       decoration: BoxDecoration(
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: borderColor,
+          color: scheme.primary, // لو تبين outline أهدى استخدمي scheme.outline
           width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.5 : 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: child,
     );
@@ -1475,7 +1535,13 @@ class _ForYouChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isOn = selected;
+
+    final Color bgColor = isOn ? scheme.secondary : scheme.surface;
+    final Color borderColor = isOn ? scheme.secondary : scheme.primary;
+    final Color textColor = isOn ? Colors.white : scheme.primary;
 
     return InkWell(
       borderRadius: BorderRadius.circular(8),
@@ -1483,15 +1549,15 @@ class _ForYouChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isOn ? const Color(0xFFFD6C67) : const Color(0xFFFAFAFA),
+          color: bgColor,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isOn ? const Color(0xFFFD6C67) : const Color(0xFF4A5FBC),
+            color: borderColor,
             width: 1.3,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withOpacity(isDark ? 0.6 : 0.04),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
@@ -1502,7 +1568,7 @@ class _ForYouChip extends StatelessWidget {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: isOn ? Colors.white : const Color(0xFF4A5FBC),
+            color: textColor,
           ),
         ),
       ),

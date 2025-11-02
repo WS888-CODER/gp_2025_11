@@ -125,30 +125,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _changeLanguage(AppSettingsNotifier settings, AppLocalizations l10n) {
-  final targetLangName =
-      settings.currentLanguageName == 'English' ? 'العربية' : 'English';
-  final currentLangCode = Localizations.localeOf(context).languageCode;
+    final targetLangName =
+        settings.currentLanguageName == 'English' ? 'العربية' : 'English';
+    final currentLangCode = Localizations.localeOf(context).languageCode;
 
-  settings.toggleLanguage();
-  
-  if (context.mounted) {
-    Navigator.of(context).pushReplacementNamed(
-      '/settings',
-      arguments: {
-        'userType': widget.userType,
-        'userId': widget.userId,
-      },
+    settings.toggleLanguage();
+
+    if (context.mounted) {
+      Navigator.of(context).pushReplacementNamed(
+        '/settings',
+        arguments: {
+          'userType': widget.userType,
+          'userId': widget.userId,
+        },
+      );
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(currentLangCode == 'ar'
+            ? 'تم التبديل إلى $targetLangName'
+            : 'Language switched to $targetLangName'),
+      ),
     );
   }
-  
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(currentLangCode == 'ar'
-          ? 'تم التبديل إلى $targetLangName'
-          : 'Language switched to $targetLangName'),
-    ),
-  );
-}
 
   void _toggleNotifications(bool value) {
     setState(() => _isNotificationsEnabled = value);
@@ -421,6 +421,8 @@ class _SettingsSwitchItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       onTap: () => onChanged(!value),
@@ -438,35 +440,27 @@ class _SettingsSwitchItem extends StatelessWidget {
         ),
         subtitle: subtitle,
         trailing: Theme(
-          // نفس الثيم المخصص اللي استعملناه في JobsPage للـ Switch "Show closed"
           data: Theme.of(context).copyWith(
             switchTheme: SwitchThemeData(
-              trackColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.selected)) {
-                  // لو شغال (ON) -> السلموني
-                  return const Color(0xFFFD6C67);
+              trackColor: MaterialStateProperty.resolveWith((states) {
+                if (states.contains(MaterialState.selected)) {
+                  return scheme.secondary;
                 } else {
-                  // لو طافي (OFF) -> أبيض
-                  return Colors.white;
+                  return scheme.surface;
                 }
               }),
-              thumbColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.selected)) {
-                  // الدائرة لما يكون ON -> أبيض
+              thumbColor: MaterialStateProperty.resolveWith((states) {
+                if (states.contains(MaterialState.selected)) {
                   return Colors.white;
                 } else {
-                  // الدائرة لما يكون OFF -> بنفسجي
-                  return const Color(0xFF4A5FBC);
+                  return scheme.primary;
                 }
               }),
-              trackOutlineColor: WidgetStateProperty.resolveWith((states) {
-                // إطار الخلفية حق السويتش
-                if (states.contains(WidgetState.selected)) {
-                  // وهو شغال -> سلموني
-                  return const Color(0xFFFD6C67);
+              trackOutlineColor: MaterialStateProperty.resolveWith((states) {
+                if (states.contains(MaterialState.selected)) {
+                  return scheme.secondary;
                 } else {
-                  // وهو طافي -> بنفسجي
-                  return const Color(0xFF4A5FBC);
+                  return scheme.primary;
                 }
               }),
             ),

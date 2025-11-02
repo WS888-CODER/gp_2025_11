@@ -836,546 +836,538 @@ class _JobPostingPageState extends State<JobPostingPage> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return WillPopScope(
       onWillPop: _onWillPop,
-      child: Theme(
-        data: Theme.of(context).copyWith(
-          textTheme: Theme.of(context).textTheme.apply(
-                fontFamily: 'Poppins',
-              ),
+      child: ThemedScaffold(
+        appBar: AppBar(
+          backgroundColor: Color(0xFF4A5FBC),
+          foregroundColor: Colors.white,
+          title: Text(_isEdit ? 'Edit Job' : 'Create Job Posting'),
         ),
-        child: ThemedScaffold(
-          appBar: AppBar(
-            backgroundColor: const Color(0xFF4A5FBC),
-            foregroundColor: Colors.white,
-            title: Text(_isEdit ? 'Edit Job' : 'Create Job Posting'),
-          ),
-          body: Form(
-            key: _formKey,
-            child: ListView(
-              padding: const EdgeInsets.all(16.0),
-              children: [
-                // Job Title
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: TextFormField(
-                    controller: _jobTitleController,
-                    enabled: !_isEdit,
-                    maxLength: 100,
-                    decoration: InputDecoration(
-                      label: _buildLabel(
-                          'Job Title', _jobTitleController.text.isEmpty),
-                      filled: true,
-                      fillColor: Colors.transparent,
-                      border: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                        borderSide: BorderSide.none,
-                      ),
-                      errorBorder: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedErrorBorder: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                        borderSide: BorderSide.none,
-                      ),
-                      errorStyle: const TextStyle(height: 0, fontSize: 0),
-                      errorMaxLines: 1,
-                      counterText: '',
+        body: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.all(16.0),
+            children: [
+              // Job Title
+              Container(
+                decoration: BoxDecoration(
+                  color: scheme.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
-                    validator: (v) => (v == null || v.isEmpty) ? '' : null,
-                  ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-
-                // Position
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: TextFormField(
-                    controller: _positionController,
-                    enabled: !_isEdit,
-                    maxLength: 100,
-                    decoration: InputDecoration(
-                      label: _buildLabel(
-                          'Position', _positionController.text.isEmpty),
-                      filled: true,
-                      fillColor: Colors.transparent,
-                      border: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                        borderSide: BorderSide.none,
-                      ),
-                      errorBorder: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedErrorBorder: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                        borderSide: BorderSide.none,
-                      ),
-                      errorStyle: const TextStyle(height: 0, fontSize: 0),
-                      errorMaxLines: 1,
-                      counterText: '',
+                child: TextFormField(
+                  controller: _jobTitleController,
+                  enabled: !_isEdit,
+                  maxLength: 100,
+                  decoration: InputDecoration(
+                    label: _buildLabel(
+                        'Job Title', _jobTitleController.text.isEmpty),
+                    filled: true,
+                    fillColor: Colors.transparent,
+                    border: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                      borderSide: BorderSide.none,
                     ),
-                    validator: (v) => (v == null || v.isEmpty) ? '' : null,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Speciality
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: TextFormField(
-                    controller: _specialityController,
-                    enabled: !_isEdit,
-                    maxLength: 100,
-                    decoration: InputDecoration(
-                      label: _buildLabel(
-                          'Speciality', _specialityController.text.isEmpty),
-                      filled: true,
-                      fillColor: Colors.transparent,
-                      border: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                        borderSide: BorderSide.none,
-                      ),
-                      errorBorder: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedErrorBorder: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                        borderSide: BorderSide.none,
-                      ),
-                      errorStyle: const TextStyle(height: 0, fontSize: 0),
-                      errorMaxLines: 1,
-                      counterText: '',
+                    errorBorder: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                      borderSide: BorderSide.none,
                     ),
-                    validator: (v) => (v == null || v.isEmpty) ? '' : null,
+                    focusedErrorBorder: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                      borderSide: BorderSide.none,
+                    ),
+                    errorStyle: const TextStyle(height: 0, fontSize: 0),
+                    errorMaxLines: 1,
+                    counterText: '',
                   ),
+                  validator: (v) => (v == null || v.isEmpty) ? '' : null,
                 ),
-                const SizedBox(height: 16),
+              ),
+              const SizedBox(height: 16),
 
-                // AI Generate Button (only show in create mode)
-                if (!_isEdit) ...[
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      if (_loadingCredits)
-                        const Padding(
-                          padding: EdgeInsets.only(right: 12),
-                          child: Text(
-                            'Loading credits...',
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                        )
-                      else
-                        Padding(
-                          padding: const EdgeInsets.only(right: 12),
-                          child: Text(
-                            '$_aiCreditsRemaining credits remaining (resets daily)',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[700],
-                              fontWeight: FontWeight.w500,
-                            ),
+              // Position
+              Container(
+                decoration: BoxDecoration(
+                  color: scheme.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: TextFormField(
+                  controller: _positionController,
+                  enabled: !_isEdit,
+                  maxLength: 100,
+                  decoration: InputDecoration(
+                    label: _buildLabel(
+                        'Position', _positionController.text.isEmpty),
+                    filled: true,
+                    fillColor: Colors.transparent,
+                    border: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                      borderSide: BorderSide.none,
+                    ),
+                    errorBorder: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedErrorBorder: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                      borderSide: BorderSide.none,
+                    ),
+                    errorStyle: const TextStyle(height: 0, fontSize: 0),
+                    errorMaxLines: 1,
+                    counterText: '',
+                  ),
+                  validator: (v) => (v == null || v.isEmpty) ? '' : null,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Speciality
+              Container(
+                decoration: BoxDecoration(
+                  color: scheme.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: TextFormField(
+                  controller: _specialityController,
+                  enabled: !_isEdit,
+                  maxLength: 100,
+                  decoration: InputDecoration(
+                    label: _buildLabel(
+                        'Speciality', _specialityController.text.isEmpty),
+                    filled: true,
+                    fillColor: Colors.transparent,
+                    border: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                      borderSide: BorderSide.none,
+                    ),
+                    errorBorder: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedErrorBorder: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                      borderSide: BorderSide.none,
+                    ),
+                    errorStyle: const TextStyle(height: 0, fontSize: 0),
+                    errorMaxLines: 1,
+                    counterText: '',
+                  ),
+                  validator: (v) => (v == null || v.isEmpty) ? '' : null,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // AI Generate Button (only show in create mode)
+              if (!_isEdit) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (_loadingCredits)
+                      const Padding(
+                        padding: EdgeInsets.only(right: 12),
+                        child: Text(
+                          'Loading credits...',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      )
+                    else
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: Text(
+                          '$_aiCreditsRemaining credits remaining (resets daily)',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[700],
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: _aiCreditsRemaining > 0
-                        ? Container(
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [
-                                  Color(0xFF6B4CE6), // Vibrant purple
-                                  Color(0xFF4A5FBC), // Brand purple
-                                  Color(0xFF3B8FD9), // Blue accent
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(30),
-                              boxShadow: [
-                                BoxShadow(
-                                  color:
-                                      const Color(0xFF6B4CE6).withOpacity(0.3),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 3),
-                                ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: _aiCreditsRemaining > 0
+                      ? Container(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [
+                                Color(0xFF6B4CE6), // Vibrant purple
+                                Color(0xFF4A5FBC), // Brand purple
+                                Color(0xFF3B8FD9), // Blue accent
                               ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
-                            child: TextButton.icon(
-                              onPressed: _generateJobPost,
-                              icon: const Icon(Icons.auto_awesome,
-                                  size: 20, color: Colors.white),
-                              label: const Text(
-                                'Generate with AI',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                  letterSpacing: 0.5,
-                                ),
+                            borderRadius: BorderRadius.circular(30),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF6B4CE6).withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
                               ),
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 24, vertical: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(30),
-                                ),
-                              ),
-                            ),
-                          )
-                        : TextButton.icon(
-                            onPressed: null,
-                            icon: const Icon(Icons.auto_awesome, size: 18),
+                            ],
+                          ),
+                          child: TextButton.icon(
+                            onPressed: _generateJobPost,
+                            icon: const Icon(Icons.auto_awesome,
+                                size: 20, color: Colors.white),
                             label: const Text(
                               'Generate with AI',
                               style: TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.w600),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                                letterSpacing: 0.5,
+                              ),
                             ),
                             style: TextButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              backgroundColor: Colors.grey,
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 8),
+                                  horizontal: 24, vertical: 12),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(30),
                               ),
                             ),
                           ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
+                        )
+                      : TextButton.icon(
+                          onPressed: null,
+                          icon: const Icon(Icons.auto_awesome, size: 18),
+                          label: const Text(
+                            'Generate with AI',
+                            style: TextStyle(
+                                fontSize: 14, fontWeight: FontWeight.w600),
+                          ),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: Colors.grey,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                          ),
+                        ),
+                ),
+                const SizedBox(height: 12),
+              ],
 
-                // Job Description
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+              // Job Description
+              Container(
+                decoration: BoxDecoration(
+                  color: scheme.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: TextFormField(
+                  controller: _jobDescriptionController,
+                  enabled: !_isEdit,
+                  maxLength: 2000,
+                  decoration: InputDecoration(
+                    label: _buildLabel('Job Description',
+                        _jobDescriptionController.text.isEmpty),
+                    filled: true,
+                    fillColor: Colors.transparent,
+                    border: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                      borderSide: BorderSide.none,
+                    ),
+                    errorBorder: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedErrorBorder: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                      borderSide: BorderSide.none,
+                    ),
+                    errorStyle: const TextStyle(height: 0, fontSize: 0),
+                    errorMaxLines: 1,
+                    alignLabelWithHint: true,
+                    counterText: '',
+                    helperText: '${_jobDescriptionController.text.length}/2000',
+                    helperStyle: const TextStyle(fontSize: 12),
                   ),
-                  child: TextFormField(
-                    controller: _jobDescriptionController,
-                    enabled: !_isEdit,
-                    maxLength: 2000,
+                  minLines: 6,
+                  maxLines: null,
+                  keyboardType: TextInputType.multiline,
+                  validator: (v) => (v == null || v.isEmpty) ? '' : null,
+                  onChanged: (value) => setState(() {}),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Requirements (only show in create mode, display read-only in edit mode)
+              if (!_isEdit)
+                Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildLabel('Requirements', _requirements.isEmpty,
+                                isBold: true),
+                            Text(
+                              '${_requirements.length}/15',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _requirements.length >= 15
+                                    ? Colors.red
+                                    : Colors.grey[700],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: scheme.surface,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.08),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: TextField(
+                                  controller: _requirementController,
+                                  maxLength: 200,
+                                  decoration: InputDecoration(
+                                    hintText: 'Enter requirement',
+                                    filled: true,
+                                    fillColor: Colors.transparent,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    counterText: '',
+                                  ),
+                                  onSubmitted: (_) => _addRequirement(),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton(
+                              onPressed: _requirements.length >= 15
+                                  ? null
+                                  : _addRequirement,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF4A5FBC),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                              ),
+                              child: const Text('Add'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        if (_requirements.isEmpty)
+                          const Text('No requirements added yet',
+                              style: TextStyle(color: Colors.grey))
+                        else
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: _requirements.length,
+                            itemBuilder: (context, index) {
+                              return Card(
+                                child: ListTile(
+                                  title: Text(_requirements[index]),
+                                  trailing: IconButton(
+                                    icon: const Icon(Icons.delete,
+                                        color: Colors.red),
+                                    onPressed: () => _removeRequirement(index),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                // Read-only requirements display in edit mode
+                Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Requirements',
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey),
+                        ),
+                        const SizedBox(height: 12),
+                        if (_requirements.isEmpty)
+                          const Text('No requirements',
+                              style: TextStyle(color: Colors.grey))
+                        else
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: _requirements.length,
+                            itemBuilder: (context, index) {
+                              return Card(
+                                color: Colors.grey[100],
+                                child: ListTile(
+                                  title: Text(
+                                    _requirements[index],
+                                    style:
+                                        const TextStyle(color: Colors.black87),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 16),
+
+              // Start Date
+              Container(
+                decoration: BoxDecoration(
+                  color: scheme.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: InkWell(
+                  onTap: _selectStartDate,
+                  child: InputDecorator(
                     decoration: InputDecoration(
-                      label: _buildLabel('Job Description',
-                          _jobDescriptionController.text.isEmpty),
+                      label: _buildLabel('Start Date', _startDate == null),
                       filled: true,
                       fillColor: Colors.transparent,
-                      border: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
                       ),
-                      errorBorder: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                      suffixIcon: const Icon(Icons.calendar_today),
+                    ),
+                    child: Text(
+                      _startDate != null
+                          ? _fmtDate(_startDate!)
+                          : 'Select date',
+                      style: TextStyle(
+                        color: _startDate != null ? Colors.black : Colors.grey,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // End Date
+              Container(
+                decoration: BoxDecoration(
+                  color: scheme.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: InkWell(
+                  onTap: _selectEndDate,
+                  child: InputDecorator(
+                    decoration: InputDecoration(
+                      label: _buildLabel('End Date', _endDate == null),
+                      filled: true,
+                      fillColor: Colors.transparent,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
                       ),
-                      focusedErrorBorder: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                        borderSide: BorderSide.none,
-                      ),
-                      errorStyle: const TextStyle(height: 0, fontSize: 0),
-                      errorMaxLines: 1,
-                      alignLabelWithHint: true,
-                      counterText: '',
-                      helperText:
-                          '${_jobDescriptionController.text.length}/2000',
-                      helperStyle: const TextStyle(fontSize: 12),
+                      suffixIcon: const Icon(Icons.calendar_today),
                     ),
-                    minLines: 6,
-                    maxLines: null,
-                    keyboardType: TextInputType.multiline,
-                    validator: (v) => (v == null || v.isEmpty) ? '' : null,
-                    onChanged: (value) => setState(() {}),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Requirements (only show in create mode, display read-only in edit mode)
-                if (!_isEdit)
-                  Card(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              _buildLabel('Requirements', _requirements.isEmpty,
-                                  isBold: true),
-                              Text(
-                                '${_requirements.length}/15',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: _requirements.length >= 15
-                                      ? Colors.red
-                                      : Colors.grey[700],
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.08),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: TextField(
-                                    controller: _requirementController,
-                                    maxLength: 200,
-                                    decoration: InputDecoration(
-                                      hintText: 'Enter requirement',
-                                      filled: true,
-                                      fillColor: Colors.transparent,
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      counterText: '',
-                                    ),
-                                    onSubmitted: (_) => _addRequirement(),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              ElevatedButton(
-                                onPressed: _requirements.length >= 15
-                                    ? null
-                                    : _addRequirement,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF4A5FBC),
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(30),
-                                  ),
-                                ),
-                                child: const Text('Add'),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          if (_requirements.isEmpty)
-                            const Text('No requirements added yet',
-                                style: TextStyle(color: Colors.grey))
-                          else
-                            ListView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: _requirements.length,
-                              itemBuilder: (context, index) {
-                                return Card(
-                                  child: ListTile(
-                                    title: Text(_requirements[index]),
-                                    trailing: IconButton(
-                                      icon: const Icon(Icons.delete,
-                                          color: Colors.red),
-                                      onPressed: () =>
-                                          _removeRequirement(index),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                        ],
-                      ),
-                    ),
-                  )
-                else
-                  // Read-only requirements display in edit mode
-                  Card(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Requirements',
-                            style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey),
-                          ),
-                          const SizedBox(height: 12),
-                          if (_requirements.isEmpty)
-                            const Text('No requirements',
-                                style: TextStyle(color: Colors.grey))
-                          else
-                            ListView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: _requirements.length,
-                              itemBuilder: (context, index) {
-                                return Card(
-                                  color: Colors.grey[100],
-                                  child: ListTile(
-                                    title: Text(
-                                      _requirements[index],
-                                      style: const TextStyle(
-                                          color: Colors.black87),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                const SizedBox(height: 16),
-
-                // Start Date
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: InkWell(
-                    onTap: _selectStartDate,
-                    child: InputDecorator(
-                      decoration: InputDecoration(
-                        label: _buildLabel('Start Date', _startDate == null),
-                        filled: true,
-                        fillColor: Colors.transparent,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        suffixIcon: const Icon(Icons.calendar_today),
-                      ),
-                      child: Text(
-                        _startDate != null
-                            ? _fmtDate(_startDate!)
-                            : 'Select date',
-                        style: TextStyle(
-                          color:
-                              _startDate != null ? Colors.black : Colors.grey,
-                        ),
+                    child: Text(
+                      _endDate != null ? _fmtDate(_endDate!) : 'Select date',
+                      style: TextStyle(
+                        color: _endDate != null ? Colors.black : Colors.grey,
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+              ),
+              const SizedBox(height: 24),
 
-                // End Date
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: InkWell(
-                    onTap: _selectEndDate,
-                    child: InputDecorator(
-                      decoration: InputDecoration(
-                        label: _buildLabel('End Date', _endDate == null),
-                        filled: true,
-                        fillColor: Colors.transparent,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        suffixIcon: const Icon(Icons.calendar_today),
-                      ),
-                      child: Text(
-                        _endDate != null ? _fmtDate(_endDate!) : 'Select date',
-                        style: TextStyle(
-                          color: _endDate != null ? Colors.black : Colors.grey,
-                        ),
-                      ),
-                    ),
+              // Submit Button
+              ElevatedButton(
+                onPressed: _submitForm,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4A5FBC),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
                   ),
                 ),
-                const SizedBox(height: 24),
-
-                // Submit Button
-                ElevatedButton(
-                  onPressed: _submitForm,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4A5FBC),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
-                  child: Text(
-                    _isEdit ? 'Save changes' : 'Create Job Posting',
-                    style: const TextStyle(fontSize: 16),
-                  ),
+                child: Text(
+                  _isEdit ? 'Save changes' : 'Create Job Posting',
+                  style: const TextStyle(fontSize: 16),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
