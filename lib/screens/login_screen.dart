@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:gp_2025_11/screens/welcome_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -17,7 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
 
-  // 🔒 Error message variable
+  // ðŸ”’ Error message variable
   String? _loginError;
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -50,7 +51,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // 🔒 Dialog for locked accounts
+  // ðŸ”’ Dialog for locked accounts
   void _showPasswordResetRequiredDialog(String userType) {
     showDialog(
       context: context,
@@ -169,7 +170,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // 🔒 Check account lock status
+  // ðŸ”’ Check account lock status
   Future<Map<String, dynamic>?> _checkAccountLockStatus(String email) async {
     try {
       final querySnapshot = await _firestore
@@ -231,12 +232,12 @@ class _LoginScreenState extends State<LoginScreen> {
         'failedAttempts': failedAttempts,
       };
     } catch (e) {
-      print('❌ Error checking account lock status: $e');
+      print('âŒ Error checking account lock status: $e');
       return null;
     }
   }
 
-  // 🔒 Record failed login attempt
+  // ðŸ”’ Record failed login attempt
   Future<void> _recordFailedLoginAttempt(String email) async {
     try {
       final querySnapshot = await _firestore
@@ -246,7 +247,7 @@ class _LoginScreenState extends State<LoginScreen> {
           .get();
 
       if (querySnapshot.docs.isEmpty) {
-        // ✅ الإيميل مو موجود، بس نعرض رسالة عامة
+        // âœ… Ø§Ù„Ø¥ÙŠÙ…ÙŠÙ„ Ù…Ùˆ Ù…ÙˆØ¬ÙˆØ¯ØŒ Ø¨Ø³ Ù†Ø¹Ø±Ø¶ Ø±Ø³Ø§Ù„Ø© Ø¹Ø§Ù…Ø©
         if (mounted) {
           setState(() {
             _loginError = 'Invalid credentials. Please try again.';
@@ -275,7 +276,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final newFailedAttempts = resetCounter ? 1 : failedAttempts + 1;
 
-      // ✅ Update Firestore أولاً
+      // âœ… Update Firestore Ø£ÙˆÙ„Ø§Ù‹
       await _firestore.collection('Users').doc(userId).update({
         'failedLoginAttempts': newFailedAttempts,
         'lastFailedLoginDate': FieldValue.serverTimestamp(),
@@ -284,9 +285,9 @@ class _LoginScreenState extends State<LoginScreen> {
       });
 
       print(
-          '✅ Updated failedLoginAttempts to: $newFailedAttempts for user: $userId');
+          'âœ… Updated failedLoginAttempts to: $newFailedAttempts for user: $userId');
 
-      // ✅ Update UI بعدين
+      // âœ… Update UI Ø¨Ø¹Ø¯ÙŠÙ†
       if (mounted) {
         if (newFailedAttempts == 3 || newFailedAttempts == 4) {
           final remaining = 5 - newFailedAttempts;
@@ -299,7 +300,7 @@ class _LoginScreenState extends State<LoginScreen> {
             _loginError = 'Account locked due to multiple failed attempts.';
           });
 
-          // ✅ Show dialog for locked account
+          // âœ… Show dialog for locked account
           final userType = data['UserType'] ?? data['userType'] ?? '';
           Future.delayed(Duration(milliseconds: 100), () {
             if (mounted) {
@@ -313,7 +314,7 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     } catch (e) {
-      print('❌ Error recording failed login: $e');
+      print('âŒ Error recording failed login: $e');
       if (mounted) {
         setState(() {
           _loginError = 'An error occurred. Please try again.';
@@ -322,7 +323,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // 🔒 Reset failed login attempts
+  // ðŸ”’ Reset failed login attempts
   Future<void> _resetFailedLoginAttempts(String userId) async {
     try {
       await _firestore.collection('Users').doc(userId).update({
@@ -332,12 +333,12 @@ class _LoginScreenState extends State<LoginScreen> {
         'mustResetPassword': false,
       });
     } catch (e) {
-      print('❌ Error resetting failed attempts: $e');
+      print('âŒ Error resetting failed attempts: $e');
     }
   }
 
   Future<void> _handleLogin() async {
-    // 🔒 Clear previous error
+    // ðŸ”’ Clear previous error
     setState(() {
       _loginError = null;
     });
@@ -347,7 +348,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // 🔒 STEP 1: Check if account is locked
+      // ðŸ”’ STEP 1: Check if account is locked
       final lockStatus =
           await _checkAccountLockStatus(_emailController.text.trim());
 
@@ -357,6 +358,41 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
+      // 🔒 STEP 2: Check if user exists and if Company, check status BEFORE password verification
+      final userQuery = await _firestore
+          .collection('Users')
+          .where('Email', isEqualTo: _emailController.text.trim().toLowerCase())
+          .limit(1)
+          .get();
+
+      if (userQuery.docs.isNotEmpty) {
+        final userData = userQuery.docs.first.data();
+        final userType = userData['UserType'] ?? userData['userType'] ?? '';
+
+        // If Company, check status before attempting password verification
+        if (userType == 'Company') {
+          final accountStatus = userData['AccountStatus'] ??
+              userData['accountStatus'] ??
+              'Pending';
+
+          if (accountStatus == 'Pending') {
+            setState(() {
+              _loginError =
+                  'Your account is pending approval from admin. Please wait.';
+              _isLoading = false;
+            });
+            return;
+          } else if (accountStatus == 'Rejected') {
+            setState(() {
+              _loginError = 'Your account has been rejected. Contact support.';
+              _isLoading = false;
+            });
+            return;
+          }
+        }
+      }
+
+      // 🔒 STEP 3: Now attempt password verification
       final userCredential = await _auth.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
@@ -364,7 +400,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final userId = userCredential.user!.uid;
 
-      // 🔒 Reset failed attempts on successful login
+      // ðŸ”’ Reset failed attempts on successful login
       await _resetFailedLoginAttempts(userId);
 
       final userDoc = await _firestore.collection('Users').doc(userId).get();
@@ -438,18 +474,8 @@ class _LoginScreenState extends State<LoginScreen> {
             '/company-home',
             arguments: {'companyId': userId},
           );
-        } else if (accountStatus == 'Pending') {
-          await _auth.signOut();
-          setState(() {
-            _loginError =
-                'Your account is pending approval from admin. Please wait.';
-          });
-        } else if (accountStatus == 'Rejected') {
-          await _auth.signOut();
-          setState(() {
-            _loginError = 'Your account has been rejected. Contact support.';
-          });
         }
+        // Note: pending/rejected cases are now checked BEFORE password verification
         setState(() => _isLoading = false);
         return;
       }
@@ -459,9 +485,9 @@ class _LoginScreenState extends State<LoginScreen> {
         _loginError = 'Unknown user type: "$userType"';
       });
     } on FirebaseAuthException catch (e) {
-      print('🔴 FirebaseAuthException: ${e.code} - ${e.message}');
+      print('ðŸ”´ FirebaseAuthException: ${e.code} - ${e.message}');
 
-      // 🔒 Handle different error types
+      // ðŸ”’ Handle different error types
       if (e.code == 'user-not-found') {
         // Email doesn't exist - show error but DON'T record attempt
         if (mounted) {
@@ -471,7 +497,7 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
         // Wrong password - record the failed attempt
-        print('🔴 Wrong password detected, recording attempt...');
+        print('ðŸ”´ Wrong password detected, recording attempt...');
         await _recordFailedLoginAttempt(_emailController.text.trim());
       } else {
         if (mounted) {
@@ -487,7 +513,7 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     } catch (e) {
-      print('❌ Unexpected error: $e');
+      print('âŒ Unexpected error: $e');
       if (mounted) {
         setState(() {
           _loginError = 'Unexpected error. Please try again.';
@@ -653,7 +679,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             }
                           },
                         ),
-                        // 🔒 Show error under password field
+                        // ðŸ”’ Show error under password field
                         if (_loginError != null)
                           Padding(
                             padding: const EdgeInsets.only(top: 8),
@@ -724,7 +750,14 @@ class _LoginScreenState extends State<LoginScreen> {
               child: IconButton(
                 padding: EdgeInsets.zero,
                 onPressed: () {
-                  Navigator.of(context).pop();
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  } else {
+                    // If no previous route (e.g., after logout), go to welcome
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(builder: (context) => WelcomeScreen()),
+                    );
+                  }
                 },
                 icon: const Icon(
                   Icons.arrow_back,

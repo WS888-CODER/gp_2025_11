@@ -109,6 +109,30 @@ class _SignupScreenState extends State<SignupScreen> {
     return emailRegex.hasMatch(email.trim());
   }
 
+  // Check if email domain is a public domain (for Company validation only)
+  bool _isPublicEmailDomain(String email) {
+    final publicDomains = [
+      'gmail.com',
+      'yahoo.com',
+      'hotmail.com',
+      'outlook.com',
+      'live.com',
+      'icloud.com',
+      'aol.com',
+      'msn.com',
+      'mail.com',
+      'protonmail.com',
+      'zoho.com',
+      'yandex.com',
+      'gmx.com',
+    ];
+
+    final emailLower = email.trim().toLowerCase();
+    final domain = emailLower.split('@').last;
+
+    return publicDomains.contains(domain);
+  }
+
   bool _isValidFullName(String name) {
     String trimmedName = name.trim();
     final nameRegex = RegExp(r'^[a-zA-Z\s]+$');
@@ -145,27 +169,27 @@ class _SignupScreenState extends State<SignupScreen> {
   Future<bool> _isEmailUnique(String email) async {
     try {
       String trimmedEmail = email.trim().toLowerCase();
-      print('🔵 Checking email: $trimmedEmail');
+      print('ðŸ”µ Checking email: $trimmedEmail');
       final querySnapshot1 = await _firestore
           .collection('Users')
           .where('Email', isEqualTo: trimmedEmail)
           .get();
-      print('🔵 Method 1 (where): ${querySnapshot1.docs.length} docs');
+      print('ðŸ”µ Method 1 (where): ${querySnapshot1.docs.length} docs');
       final allUsers = await _firestore.collection('Users').get();
       final matchingDocs = allUsers.docs.where((doc) {
         final data = doc.data();
         final docEmail = data['Email']?.toString().toLowerCase() ?? '';
         return docEmail == trimmedEmail;
       }).toList();
-      print('🔵 Method 2 (filter): ${matchingDocs.length} docs');
+      print('ðŸ”µ Method 2 (filter): ${matchingDocs.length} docs');
       if (querySnapshot1.docs.isNotEmpty || matchingDocs.isNotEmpty) {
-        print('❌ Email EXISTS!');
+        print('âŒ Email EXISTS!');
         return false;
       }
-      print('✅ Email is UNIQUE');
+      print('âœ… Email is UNIQUE');
       return true;
     } catch (e) {
-      print('❌ ERROR: $e');
+      print('âŒ ERROR: $e');
       return false;
     }
   }
@@ -190,7 +214,7 @@ class _SignupScreenState extends State<SignupScreen> {
       }
       return false;
     } catch (e) {
-      print('❌ Error sending OTP: $e');
+      print('âŒ Error sending OTP: $e');
       return false;
     }
   }
@@ -231,6 +255,11 @@ class _SignupScreenState extends State<SignupScreen> {
         }
         if (!_isValidEmail(_companyEmailController.text.trim())) {
           setState(() => _companyEmailError = 'Invalid email format');
+          return false;
+        }
+        if (_isPublicEmailDomain(_companyEmailController.text.trim())) {
+          setState(() => _companyEmailError =
+              'Please use your company email, not a public domain');
           return false;
         }
         bool isUnique = await _isEmailUnique(_companyEmailController.text);
@@ -315,7 +344,7 @@ class _SignupScreenState extends State<SignupScreen> {
         'UserID': userId,
         'UserType': 'Company',
         'Email':
-            _companyEmailController.text.trim().toLowerCase(), // ✅ lowercase
+            _companyEmailController.text.trim().toLowerCase(), // âœ… lowercase
         'Name': _companyFullNameController.text.trim(),
         'CompanyName': _companyNameController.text.trim(),
         'Phone': null,
@@ -381,7 +410,7 @@ class _SignupScreenState extends State<SignupScreen> {
         'UserID': userId,
         'UserType': 'JobSeeker',
         'Email':
-            _seekerEmailController.text.trim().toLowerCase(), // ✅ lowercase
+            _seekerEmailController.text.trim().toLowerCase(), // âœ… lowercase
         'Name': _seekerNameController.text.trim(),
         'DoB': null,
         'Nationality': null,
@@ -1091,7 +1120,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
               ),
             ),
-            // ✅ إضافة سهم الرجوع للخلف في أعلى اليسار - آخر عنصر في Stack
+            // âœ… Ø¥Ø¶Ø§ÙØ© Ø³Ù‡Ù… Ø§Ù„Ø±Ø¬ÙˆØ¹ Ù„Ù„Ø®Ù„Ù ÙÙŠ Ø£Ø¹Ù„Ù‰ Ø§Ù„ÙŠØ³Ø§Ø± - Ø¢Ø®Ø± Ø¹Ù†ØµØ± ÙÙŠ Stack
             Positioned(
               top: 50,
               left: 30,
