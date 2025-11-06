@@ -379,7 +379,8 @@ Enhance the following CV text to make it:
 - Concise and well-structured
 - Suitable for a job title if provided
 - in the suggestions section, provide the CV owner with suggestions based on the content of the CV
-
+- if important sections are missing (like skills, education, experience), mention them in the suggestions section and don't add them to the enhanced CV
+- there is 5 suggestions maximum but you can provide less if not needed
 Do not invent new information.
 
 ---
@@ -429,7 +430,9 @@ Return ONLY valid JSON in the following structure:
   "suggestions": [
     "Suggestion 1",
     "Suggestion 2",
-    "Suggestion 3"
+    "Suggestion 3",
+    "Suggestion 4",
+    "Suggestion 5"
   ]
 }
 
