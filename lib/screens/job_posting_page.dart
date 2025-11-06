@@ -20,10 +20,37 @@ class _JobPostingPageState extends State<JobPostingPage> {
   final _positionController = TextEditingController();
   final _specialityController = TextEditingController();
   final _requirementController = TextEditingController();
+  final _customSpecialityController = TextEditingController();
 
   DateTime? _startDate;
   DateTime? _endDate;
   final List<String> _requirements = [];
+
+  // Specialty dropdown
+  static const List<String> _specialtyOptions = [
+    'Software Development',
+    'Frontend Development',
+    'Backend Development',
+    'Full Stack Development',
+    'Mobile Development',
+    'Data Science',
+    'Machine Learning/AI',
+    'Cybersecurity',
+    'DevOps',
+    'Cloud Computing',
+    'UI/UX Design',
+    'Graphic Design',
+    'Product Management',
+    'Project Management',
+    'Quality Assurance/Testing',
+    'Network Engineering',
+    'Database Administration',
+    'Business Analysis',
+    'Digital Marketing',
+    'Content Writing',
+    'Other',
+  ];
+  String? _selectedSpecialty;
 
   // ---- وضع تعديل أم إنشاء؟
   bool _isEdit = false;
@@ -55,10 +82,21 @@ class _JobPostingPageState extends State<JobPostingPage> {
             (args['JobTitle'] ?? args['title'] ?? '') as String;
         _positionController.text =
             (args['Position'] ?? args['position'] ?? '') as String;
-        _specialityController.text = (args['Specialty'] ??
+
+        // Handle specialty dropdown
+        final specialty = (args['Specialty'] ??
             args['specialty'] ??
             args['speciality'] ??
             '') as String;
+        if (specialty.isNotEmpty) {
+          if (_specialtyOptions.contains(specialty)) {
+            _selectedSpecialty = specialty;
+          } else {
+            _selectedSpecialty = 'Other';
+            _customSpecialityController.text = specialty;
+          }
+        }
+
         _jobDescriptionController.text =
             (args['JobDescription'] ?? args['description'] ?? '') as String;
 
@@ -309,6 +347,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
     _jobDescriptionController.dispose();
     _positionController.dispose();
     _specialityController.dispose();
+    _customSpecialityController.dispose();
     _requirementController.dispose();
     super.dispose();
   }
@@ -514,7 +553,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
     keywords.addAll(positionWords);
 
     // Extract from specialty
-    final specialtyWords = _specialityController.text
+    final specialtyWords = _getSpecialtyValue()
         .trim()
         .split(RegExp(r'\s+'))
         .where((word) =>
@@ -545,6 +584,13 @@ class _JobPostingPageState extends State<JobPostingPage> {
     return keywords.toList();
   }
 
+  String _getSpecialtyValue() {
+    if (_selectedSpecialty == 'Other') {
+      return _customSpecialityController.text.trim();
+    }
+    return _selectedSpecialty ?? '';
+  }
+
   Future<void> _generateJobPost() async {
     if (_jobTitleController.text.isEmpty) {
       _showWarningSnackBar('Please enter job title first');
@@ -556,8 +602,15 @@ class _JobPostingPageState extends State<JobPostingPage> {
       return;
     }
 
-    if (_specialityController.text.isEmpty) {
-      _showWarningSnackBar('Please enter speciality first');
+    final specialtyValue = _getSpecialtyValue();
+    if (specialtyValue.isEmpty) {
+      _showWarningSnackBar('Please select speciality first');
+      return;
+    }
+
+    if (_selectedSpecialty == 'Other' &&
+        _customSpecialityController.text.trim().isEmpty) {
+      _showWarningSnackBar('Please enter custom speciality');
       return;
     }
 
@@ -635,7 +688,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
         body: jsonEncode({
           'title': _jobTitleController.text,
           'position': _positionController.text,
-          'speciality': _specialityController.text,
+          'speciality': _getSpecialtyValue(),
         }),
       );
 
@@ -722,7 +775,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
           'JobTitle': _jobTitleController.text.trim(),
           'JobDescription': _jobDescriptionController.text.trim(),
           'Position': _positionController.text.trim(),
-          'Specialty': _specialityController.text.trim(),
+          'Specialty': _getSpecialtyValue(),
           'Requirements': _requirements,
           'StartDate': _startDate,
           'EndDate': _endDate,
@@ -776,6 +829,86 @@ class _JobPostingPageState extends State<JobPostingPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildLabelWithInfo(String text, String tooltipMessage) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(text),
+        const SizedBox(width: 4),
+        InkWell(
+          onTap: () {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.95),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                title: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      text,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ],
+                ),
+                content: Text(
+                  tooltipMessage,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    height: 1.5,
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF4A5FBC),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    child: const Text(
+                      'Got it',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+                actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+                actionsAlignment: MainAxisAlignment.center,
+              ),
+            );
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(4.0),
+            child: Icon(
+              Icons.info_outline,
+              size: 18,
+              color: Colors.grey[600],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -853,131 +986,215 @@ class _JobPostingPageState extends State<JobPostingPage> {
             padding: const EdgeInsets.all(16.0),
             children: [
               // Job Title
-              Container(
-                decoration: BoxDecoration(
-                  color: scheme.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: TextFormField(
-                  controller: _jobTitleController,
-                  enabled: !_isEdit,
-                  maxLength: 100,
-                  decoration: InputDecoration(
-                    label: _buildLabel(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4, bottom: 8),
+                    child: _buildLabel(
                         'Job Title', _jobTitleController.text.isEmpty),
-                    filled: true,
-                    fillColor: Colors.transparent,
-                    border: const OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                      borderSide: BorderSide.none,
-                    ),
-                    errorBorder: const OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                      borderSide: BorderSide.none,
-                    ),
-                    focusedErrorBorder: const OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                      borderSide: BorderSide.none,
-                    ),
-                    errorStyle: const TextStyle(height: 0, fontSize: 0),
-                    errorMaxLines: 1,
-                    counterText: '',
                   ),
-                  validator: (v) => (v == null || v.isEmpty) ? '' : null,
-                ),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: scheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: TextFormField(
+                      controller: _jobTitleController,
+                      enabled: !_isEdit,
+                      maxLength: 100,
+                      decoration: const InputDecoration(
+                        filled: true,
+                        fillColor: Colors.transparent,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
+                          borderSide: BorderSide.none,
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedErrorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
+                          borderSide: BorderSide.none,
+                        ),
+                        errorStyle: TextStyle(height: 0, fontSize: 0),
+                        errorMaxLines: 1,
+                        counterText: '',
+                      ),
+                      validator: (v) => (v == null || v.isEmpty) ? '' : null,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
 
               // Position
-              Container(
-                decoration: BoxDecoration(
-                  color: scheme.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4, bottom: 8),
+                    child: _buildLabelWithInfo(
+                      'Position',
+                      'Specify the job\'s level and role e.g., Junior Developer, Senior Designer, Team Lead. \nThis helps show the seniority, scope, and responsibilities of the position.',
                     ),
-                  ],
-                ),
-                child: TextFormField(
-                  controller: _positionController,
-                  enabled: !_isEdit,
-                  maxLength: 100,
-                  decoration: InputDecoration(
-                    label: _buildLabel(
-                        'Position', _positionController.text.isEmpty),
-                    filled: true,
-                    fillColor: Colors.transparent,
-                    border: const OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                      borderSide: BorderSide.none,
-                    ),
-                    errorBorder: const OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                      borderSide: BorderSide.none,
-                    ),
-                    focusedErrorBorder: const OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                      borderSide: BorderSide.none,
-                    ),
-                    errorStyle: const TextStyle(height: 0, fontSize: 0),
-                    errorMaxLines: 1,
-                    counterText: '',
                   ),
-                  validator: (v) => (v == null || v.isEmpty) ? '' : null,
-                ),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: scheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: TextFormField(
+                      controller: _positionController,
+                      enabled: !_isEdit,
+                      maxLength: 100,
+                      decoration: const InputDecoration(
+                        filled: true,
+                        fillColor: Colors.transparent,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
+                          borderSide: BorderSide.none,
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedErrorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
+                          borderSide: BorderSide.none,
+                        ),
+                        errorStyle: TextStyle(height: 0, fontSize: 0),
+                        errorMaxLines: 1,
+                        counterText: '',
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
 
               // Speciality
-              Container(
-                decoration: BoxDecoration(
-                  color: scheme.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4, bottom: 8),
+                    child: _buildLabelWithInfo(
+                      'Speciality',
+                      'Indicate the job\'s main area of expertise e.g., Data Science, Frontend Development, Cybersecurity. \nThis shows the specific field or focus the role specializes in.',
+                    ),
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: scheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: DropdownButtonFormField<String>(
+                      value: _selectedSpecialty,
+                      items: _specialtyOptions.map((String specialty) {
+                        return DropdownMenuItem<String>(
+                          value: specialty,
+                          child: Text(specialty),
+                        );
+                      }).toList(),
+                      onChanged: _isEdit
+                          ? null
+                          : (String? newValue) {
+                              setState(() {
+                                _selectedSpecialty = newValue;
+                                if (newValue != 'Other') {
+                                  _customSpecialityController.clear();
+                                }
+                              });
+                            },
+                      decoration: const InputDecoration(
+                        filled: true,
+                        fillColor: Colors.transparent,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
+                          borderSide: BorderSide.none,
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedErrorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
+                          borderSide: BorderSide.none,
+                        ),
+                        errorStyle: TextStyle(height: 0, fontSize: 0),
+                        errorMaxLines: 1,
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                      isExpanded: true,
+                      icon: const Icon(Icons.arrow_drop_down),
+                    ),
+                  ),
+                  // Custom specialty input when "Other" is selected
+                  if (_selectedSpecialty == 'Other' && !_isEdit) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: scheme.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: TextFormField(
+                        controller: _customSpecialityController,
+                        maxLength: 100,
+                        decoration: const InputDecoration(
+                          hintText: 'Enter custom speciality',
+                          filled: true,
+                          fillColor: Colors.transparent,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(12)),
+                            borderSide: BorderSide.none,
+                          ),
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(12)),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedErrorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(12)),
+                            borderSide: BorderSide.none,
+                          ),
+                          errorStyle: TextStyle(height: 0, fontSize: 0),
+                          errorMaxLines: 1,
+                          counterText: '',
+                        ),
+                      ),
                     ),
                   ],
-                ),
-                child: TextFormField(
-                  controller: _specialityController,
-                  enabled: !_isEdit,
-                  maxLength: 100,
-                  decoration: InputDecoration(
-                    label: _buildLabel(
-                        'Speciality', _specialityController.text.isEmpty),
-                    filled: true,
-                    fillColor: Colors.transparent,
-                    border: const OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                      borderSide: BorderSide.none,
-                    ),
-                    errorBorder: const OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                      borderSide: BorderSide.none,
-                    ),
-                    focusedErrorBorder: const OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                      borderSide: BorderSide.none,
-                    ),
-                    errorStyle: const TextStyle(height: 0, fontSize: 0),
-                    errorMaxLines: 1,
-                    counterText: '',
-                  ),
-                  validator: (v) => (v == null || v.isEmpty) ? '' : null,
-                ),
+                ],
               ),
               const SizedBox(height: 16),
 
@@ -1077,52 +1294,59 @@ class _JobPostingPageState extends State<JobPostingPage> {
               ],
 
               // Job Description
-              Container(
-                decoration: BoxDecoration(
-                  color: scheme.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: TextFormField(
-                  controller: _jobDescriptionController,
-                  enabled: !_isEdit,
-                  maxLength: 2000,
-                  decoration: InputDecoration(
-                    label: _buildLabel('Job Description',
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4, bottom: 8),
+                    child: _buildLabel('Job Description',
                         _jobDescriptionController.text.isEmpty),
-                    filled: true,
-                    fillColor: Colors.transparent,
-                    border: const OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                      borderSide: BorderSide.none,
-                    ),
-                    errorBorder: const OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                      borderSide: BorderSide.none,
-                    ),
-                    focusedErrorBorder: const OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                      borderSide: BorderSide.none,
-                    ),
-                    errorStyle: const TextStyle(height: 0, fontSize: 0),
-                    errorMaxLines: 1,
-                    alignLabelWithHint: true,
-                    counterText: '',
-                    helperText: '${_jobDescriptionController.text.length}/2000',
-                    helperStyle: const TextStyle(fontSize: 12),
                   ),
-                  minLines: 6,
-                  maxLines: null,
-                  keyboardType: TextInputType.multiline,
-                  validator: (v) => (v == null || v.isEmpty) ? '' : null,
-                  onChanged: (value) => setState(() {}),
-                ),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: scheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: TextFormField(
+                      controller: _jobDescriptionController,
+                      enabled: !_isEdit,
+                      maxLength: 2000,
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Colors.transparent,
+                        border: const OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
+                          borderSide: BorderSide.none,
+                        ),
+                        errorBorder: const OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedErrorBorder: const OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
+                          borderSide: BorderSide.none,
+                        ),
+                        errorStyle: const TextStyle(height: 0, fontSize: 0),
+                        errorMaxLines: 1,
+                        counterText: '',
+                        helperText: '${_jobDescriptionController.text.length}/2000',
+                        helperStyle: const TextStyle(fontSize: 12),
+                      ),
+                      minLines: 6,
+                      maxLines: null,
+                      keyboardType: TextInputType.multiline,
+                      validator: (v) => (v == null || v.isEmpty) ? '' : null,
+                      onChanged: (value) => setState(() {}),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
 
