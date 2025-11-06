@@ -253,7 +253,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     iconColor: _brandColor,
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () =>
-                        Navigator.pushNamed(context, '/forgot-password'),
+                        Navigator.pushNamed(context, '/change-password'),
                     subtitle: Text(l10n.resetPasswordSubtitle),
                     isTitleBold: true,
                   ),

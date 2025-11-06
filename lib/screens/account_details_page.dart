@@ -65,7 +65,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
   Future<bool> _sendOTPEmail(String email, String otp, String userType) async {
     try {
       final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
-      final callable = userType == 'Admin' 
+      final callable = userType == 'Admin'
           ? functions.httpsCallable('sendAdminOtp')
           : functions.httpsCallable('sendSignupOtp');
 
@@ -73,7 +73,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
         'email': email.trim(),
         'otp': otp.trim(),
       };
-      
+
       if (userType != 'Admin') {
         params['userType'] = userType;
       }
@@ -81,7 +81,10 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
       final result = await callable.call(params);
 
       if (result.data != null && result.data['success'] == true) {
-        await FirebaseFirestore.instance.collection('AdminOTPs').doc(email).set({
+        await FirebaseFirestore.instance
+            .collection('AdminOTPs')
+            .doc(email)
+            .set({
           'OTP': otp,
           'Email': email,
           'UserType': userType,
@@ -101,7 +104,8 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
   }
 
   // ========== EMAIL CHANGE WARNING DIALOG (FOR COMPANIES) ==========
-  Future<bool> _showEmailChangeWarningForCompany(String oldEmail, String newEmail) async {
+  Future<bool> _showEmailChangeWarningForCompany(
+      String oldEmail, String newEmail) async {
     final confirmed = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -126,7 +130,8 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
               const SizedBox(height: 12),
               const Text('• Your account status will change to "Pending"'),
               const SizedBox(height: 8),
-              const Text('• Admin approval will be required after verification'),
+              const Text(
+                  '• Admin approval will be required after verification'),
               const SizedBox(height: 8),
               const Text('• An OTP will be sent to your new email'),
               const SizedBox(height: 8),
@@ -180,7 +185,8 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
   }
 
   // ========== SIMPLE EMAIL CHANGE CONFIRMATION (FOR JOB SEEKERS) ==========
-  Future<bool> _showEmailChangeConfirmation(String oldEmail, String newEmail) async {
+  Future<bool> _showEmailChangeConfirmation(
+      String oldEmail, String newEmail) async {
     final confirmed = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -197,7 +203,8 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('An OTP will be sent to your new email for verification.'),
+            const Text(
+                'An OTP will be sent to your new email for verification.'),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
@@ -233,7 +240,8 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF4A5FBC)),
+            style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF4A5FBC)),
             child: const Text('Continue'),
           ),
         ],
@@ -253,19 +261,21 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
       return;
     }
 
-    if (newEmail.isEmpty || !RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(newEmail)) {
+    if (newEmail.isEmpty ||
+        !RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(newEmail)) {
       _showSnackError('Please enter a valid email');
       return;
     }
 
     // Check if email changed
     final emailChanged = newEmail != currentEmail;
-    
+
     if (emailChanged) {
       // Show appropriate warning based on user type
       bool confirmed;
       if (widget.userType == 'Company') {
-        confirmed = await _showEmailChangeWarningForCompany(currentEmail, newEmail);
+        confirmed =
+            await _showEmailChangeWarningForCompany(currentEmail, newEmail);
       } else {
         confirmed = await _showEmailChangeConfirmation(currentEmail, newEmail);
       }
@@ -391,7 +401,9 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (snapshot.hasError || !snapshot.hasData || !snapshot.data!.exists) {
+          if (snapshot.hasError ||
+              !snapshot.hasData ||
+              !snapshot.data!.exists) {
             return const Center(child: Text('Failed to load user data.'));
           }
 
@@ -424,7 +436,8 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                   controller: _nameController,
                   decoration: InputDecoration(
                     labelText: l10n.fullNameLabel,
-                    prefixIcon: const Icon(Icons.person, color: Color(0xFF4A5FBC)),
+                    prefixIcon:
+                        const Icon(Icons.person, color: Color(0xFF4A5FBC)),
                     border: const OutlineInputBorder(),
                   ),
                 )
@@ -457,9 +470,11 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                       keyboardType: TextInputType.emailAddress,
                       decoration: InputDecoration(
                         labelText: l10n.registeredEmailLabel,
-                        prefixIcon: const Icon(Icons.email, color: Color(0xFF4A5FBC)),
+                        prefixIcon:
+                            const Icon(Icons.email, color: Color(0xFF4A5FBC)),
                         border: const OutlineInputBorder(),
-                        suffixIcon: _emailController.text.trim() != registeredEmail
+                        suffixIcon: _emailController.text.trim() !=
+                                registeredEmail
                             ? const Tooltip(
                                 message: 'Changing email requires verification',
                                 child: Icon(Icons.warning_amber_rounded,
@@ -494,8 +509,8 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
               if (_isEditing) ...[
                 const SizedBox(height: 30),
                 FilledButton(
-                  onPressed: _isSaving 
-                      ? null 
+                  onPressed: _isSaving
+                      ? null
                       : () => _saveChanges(registeredEmail, registeredFullName),
                   style: FilledButton.styleFrom(
                     backgroundColor: brandColor,
