@@ -1,8 +1,13 @@
 import express from "express";
 import OpenAI from "openai";
 import * as functions from "firebase-functions";
+import * as v2 from "firebase-functions/v2";
 import admin from "firebase-admin";
 import nodemailer from "nodemailer";
+import mammoth from "mammoth";
+import path from "path";
+import os from "os";
+import fs from "fs";
 
 
 // ============================================
@@ -307,8 +312,184 @@ export const generateJobPost = functions.https.onRequest(async (req, res) => {
   }
 });
 
+// ============================================
+// 🤖 CV ENHANCEMENT WITH AI
+// ============================================
+
 /**
- * 6️⃣ Send Password Reset OTP
+ * 6️⃣ Enhance CV with OpenAI GPT-4 Turbo (Gen 2)
+ */
+export const enhanceCV = v2.https.onCall(async (request) => {
+  console.log("📥 CV Enhancement request (Gen 2)");
+  console.log("📋 Auth UID:", request.auth?.uid || "NOT authenticated");
+  console.log("📋 Request data:", request.data);
+
+  // TODO: Fix authentication - temporarily disabled for testing
+  // if (!request.auth) {
+  //   throw new v2.https.HttpsError("unauthenticated", "User must be authenticated");
+  // }
+
+  const cvHistoryId = request.data.cvHistoryId || "";
+
+  console.log("📝 CVHistoryID:", cvHistoryId);
+
+  if (!cvHistoryId || cvHistoryId.trim() === "") {
+    throw new v2.https.HttpsError("invalid-argument", "cvHistoryId is required");
+  }
+
+  if (request.auth) {
+    console.log("✅ User authenticated:", request.auth.uid);
+  } else {
+    console.warn("⚠️ Proceeding without auth (TESTING ONLY)");
+  }
+
+  try {
+    // Get CV data from Firestore
+    const cvDoc = await admin.firestore().collection("CVHistory").doc(cvHistoryId).get();
+
+    if (!cvDoc.exists) {
+      throw new v2.https.HttpsError("not-found", "CV not found");
+    }
+
+    const cvData = cvDoc.data();
+    const oldCVText = cvData.OldCVText || "";
+    const jobTitle = cvData.JobTitle || "";
+
+    if (!oldCVText) {
+      throw new v2.https.HttpsError(
+        "failed-precondition",
+        "CV text not extracted yet"
+      );
+    }
+
+    console.log(`📄 Enhancing CV for job: ${jobTitle}`);
+    console.log(`📊 CV text length: ${oldCVText.length} characters`);
+
+    // Initialize OpenAI
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+
+    // Build the prompt
+    const prompt = `You are an expert career coach and CV optimization assistant.
+
+Enhance the following CV text to make it:
+- Professional and grammatically correct
+- Optimized for ATS (Applicant Tracking Systems)
+- Concise and well-structured
+- Suitable for a job title if provided
+- in the suggestions section, provide the CV owner with suggestions based on the content of the CV
+
+Do not invent new information.
+
+---
+
+Job Title: ${jobTitle || "Not specified"} ${jobTitle ? "" : "(If empty, ignore this field)"}
+Original CV Text:
+${oldCVText}
+
+---
+
+### OUTPUT REQUIREMENTS:
+Return ONLY valid JSON in the following structure:
+
+{
+  "enhanced_cv": [
+    {
+      "section": "PersonalInformation",
+      "content": {
+        "full_name": "...",
+        "email": "...",
+        "phone": "...",
+        "location": "...",
+        "links": ["..."]
+      }
+    },
+    {
+      "section": "ProfessionalSummary",
+      "content": "..."
+    },
+    {
+      "section": "Experience",
+      "content": [
+        {"title": "...", "company": "...", "years": "...", "description": "..."}
+      ]
+    },
+    {
+      "section": "Education",
+      "content": [
+        {"degree": "...", "institution": "...", "years": "..."}
+      ]
+    },
+    {
+      "section": "Skills",
+      "content": ["Skill1", "Skill2", "Skill3"]
+    }
+  ],
+  "suggestions": [
+    "Suggestion 1",
+    "Suggestion 2",
+    "Suggestion 3"
+  ]
+}
+
+Do not include explanations or commentary outside this JSON.`;
+
+    // Call OpenAI
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: "You are a professional CV enhancement assistant. Always return valid JSON."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+      max_tokens: 4000
+    });
+
+    const gptResponse = response.choices[0].message.content;
+    console.log("✅ Got response from OpenAI");
+
+    // Parse JSON response
+    const parsedData = JSON.parse(gptResponse);
+    const enhanced_cv = parsedData.enhanced_cv || [];
+    const suggestions = parsedData.suggestions || [];
+
+    console.log(`📝 Enhanced CV sections: ${enhanced_cv.length}`);
+    console.log(`💡 Suggestions count: ${suggestions.length}`);
+
+    // Update Firestore with native objects/arrays
+    await admin.firestore().collection("CVHistory").doc(cvHistoryId).update({
+      NewCVText: enhanced_cv,      // Native Firestore array
+      Suggestions: suggestions,     // Native Firestore array
+    });
+
+    console.log(`✅ CV enhanced and saved for: ${cvHistoryId}`);
+
+    return {
+      success: true,
+      message: "CV enhanced successfully",
+      sectionsCount: enhanced_cv.length,
+      suggestionsCount: suggestions.length
+    };
+
+  } catch (error) {
+    console.error("❌ Error enhancing CV:", error);
+    throw new v2.https.HttpsError(
+      "internal",
+      `Failed to enhance CV: ${error.message}`
+    );
+  }
+});
+
+/**
+ * 7️⃣ Send Password Reset OTP
  */
 export const sendPasswordResetOtp = functions.https.onCall(async (data, context) => {
   console.log("📥 Password reset OTP - Full data:", data);
@@ -427,6 +608,125 @@ export const resetUserPassword = functions.https.onCall(async (data, context) =>
       "internal",
       "Failed to reset password: " + error.message
     );
+  }
+});
+
+// ============================================
+// 📄 CV TEXT EXTRACTION
+// ============================================
+
+/**
+ * 7️⃣ Extract text from uploaded CV (PDF or DOCX)
+ * Triggers automatically when file is uploaded to temp_cv_extraction/
+ */
+export const extractCVTextEnhancement = v2.storage.onObjectFinalized(async (event) => {
+  const filePath = event.data.name;
+  const contentType = event.data.contentType;
+
+  // Only process files in temp_cv_extraction folder
+  if (!filePath || !filePath.startsWith('temp_cv_extraction/')) {
+    console.log('⏭️ Skipping - not a CV extraction file');
+    return null;
+  }
+
+  console.log(`📄 Processing CV: ${filePath}`);
+  console.log(`📋 Content type: ${contentType}`);
+
+  try {
+    // Get metadata containing cvHistoryId
+    const metadata = event.data.metadata || {};
+    const cvHistoryId = metadata.cvHistoryId;
+    const userId = metadata.userId;
+
+    if (!cvHistoryId) {
+      console.error('❌ No cvHistoryId found in metadata');
+      return null;
+    }
+
+    console.log(`📝 CVHistoryID: ${cvHistoryId}`);
+    console.log(`👤 UserID: ${userId}`);
+
+    // Download file from Storage
+    const bucket = admin.storage().bucket();
+    const file = bucket.file(filePath);
+
+    // Create temp file path
+    const tempFilePath = path.join(os.tmpdir(), path.basename(filePath));
+
+    await file.download({ destination: tempFilePath });
+    console.log(`⬇️ Downloaded to: ${tempFilePath}`);
+
+    let extractedText = '';
+
+    // Extract text based on file type
+    if (contentType === 'application/pdf' || filePath.toLowerCase().endsWith('.pdf')) {
+      console.log('📕 Extracting from PDF...');
+      const dataBuffer = fs.readFileSync(tempFilePath);
+
+      // Dynamic import for pdf-parse - use PDFParse class
+      const { PDFParse } = await import('pdf-parse');
+      console.log('✅ Got PDFParse class');
+
+      const parser = new PDFParse({ data: dataBuffer });
+      const result = await parser.getText();
+      extractedText = (result.text || '').trim();
+      await parser.destroy();
+
+      console.log(`📊 Extracted ${extractedText.length} characters`);
+    } else if (
+      contentType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      contentType === 'application/msword' ||
+      filePath.toLowerCase().endsWith('.docx') ||
+      filePath.toLowerCase().endsWith('.doc')
+    ) {
+      console.log('📘 Extracting from DOCX...');
+      const result = await mammoth.extractRawText({ path: tempFilePath });
+      extractedText = result.value;
+    } else {
+      console.error(`❌ Unsupported file type: ${contentType}`);
+      extractedText = 'Error: Unsupported file format. Please upload PDF or DOCX.';
+    }
+
+    // Clean up temp file
+    fs.unlinkSync(tempFilePath);
+    console.log('🗑️ Temp file deleted');
+
+    // Update Firestore document with extracted text
+    if (extractedText.trim()) {
+      await admin.firestore().collection('CVHistory').doc(cvHistoryId).update({
+        OldCVText: extractedText.trim(),
+      });
+      console.log(`✅ Text extracted and saved to CVHistory/${cvHistoryId}`);
+      console.log(`📊 Extracted ${extractedText.length} characters`);
+    } else {
+      console.warn('⚠️ No text extracted from file');
+      await admin.firestore().collection('CVHistory').doc(cvHistoryId).update({
+        OldCVText: 'Error: No text could be extracted from the file.',
+      });
+    }
+
+    // Delete the temporary file from Storage
+    await file.delete();
+    console.log(`🗑️ Deleted temp file from Storage: ${filePath}`);
+
+    return null;
+  } catch (error) {
+    console.error('❌ Error extracting CV text:', error);
+
+    // Try to update Firestore with error message
+    try {
+      const metadata = event.data.metadata || {};
+      const cvHistoryId = metadata.cvHistoryId;
+      if (cvHistoryId) {
+        await admin.firestore().collection('CVHistory').doc(cvHistoryId).update({
+          OldCVText: `Error extracting text: ${error.message}`,
+        });
+      }
+    } catch (updateError) {
+      console.error('❌ Failed to update Firestore with error:', updateError);
+    }
+
+    return null;
   }
 });
 

@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:gp_2025_11/screens/all_jobs.dart';
 import 'package:gp_2025_11/screens/jobseeker_profile.dart';
+import 'package:gp_2025_11/screens/cv_enhancement.screen.dart';
 
 class JobSeekerHome extends StatefulWidget {
   const JobSeekerHome({super.key, this.userId});
@@ -116,9 +117,14 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
                 label: 'CV Enhancement',
                 icon: Icons.description_outlined,
                 color: _brand,
-                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('CV Enhancement – قريبًا')),
-                ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const CVEnhancementScreen(),
+                    ),
+                  );
+                },
               ),
             ),
           ],
