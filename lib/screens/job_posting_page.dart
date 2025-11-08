@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
 
 class JobPostingPage extends StatefulWidget {
   const JobPostingPage({super.key});
@@ -48,7 +49,6 @@ class _JobPostingPageState extends State<JobPostingPage> {
     'Business Analysis',
     'Digital Marketing',
     'Content Writing',
-    'Other',
   ];
   String? _selectedSpecialty;
 
@@ -89,10 +89,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
             args['speciality'] ??
             '') as String;
         if (specialty.isNotEmpty) {
-          if (_specialtyOptions.contains(specialty)) {
-            _selectedSpecialty = specialty;
-          } else {
-            _selectedSpecialty = 'Other';
+          _selectedSpecialty = specialty;
+          if (!_specialtyOptions.contains(specialty)) {
             _customSpecialityController.text = specialty;
           }
         }
@@ -585,9 +583,6 @@ class _JobPostingPageState extends State<JobPostingPage> {
   }
 
   String _getSpecialtyValue() {
-    if (_selectedSpecialty == 'Other') {
-      return _customSpecialityController.text.trim();
-    }
     return _selectedSpecialty ?? '';
   }
 
@@ -604,13 +599,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
 
     final specialtyValue = _getSpecialtyValue();
     if (specialtyValue.isEmpty) {
-      _showWarningSnackBar('Please select speciality first');
-      return;
-    }
-
-    if (_selectedSpecialty == 'Other' &&
-        _customSpecialityController.text.trim().isEmpty) {
-      _showWarningSnackBar('Please enter custom speciality');
+      _showWarningSnackBar('Please select or enter speciality first');
       return;
     }
 
@@ -975,16 +964,27 @@ class _JobPostingPageState extends State<JobPostingPage> {
     return WillPopScope(
       onWillPop: _onWillPop,
       child: ThemedScaffold(
+        resizeToAvoidBottomInset: false,
         appBar: AppBar(
           backgroundColor: Color(0xFF4A5FBC),
           foregroundColor: Colors.white,
           title: Text(_isEdit ? 'Edit Job' : 'Create Job Posting'),
         ),
-        body: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(16.0),
-            children: [
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight,
+                ),
+                child: IntrinsicHeight(
+                  child: Form(
+                    key: _formKey,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
               // Job Title
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1111,89 +1111,112 @@ class _JobPostingPageState extends State<JobPostingPage> {
                         ),
                       ],
                     ),
-                    child: DropdownButtonFormField<String>(
-                      value: _selectedSpecialty,
-                      items: _specialtyOptions.map((String specialty) {
-                        return DropdownMenuItem<String>(
-                          value: specialty,
-                          child: Text(specialty),
+                    child: Autocomplete<String>(
+                      initialValue: _selectedSpecialty != null
+                          ? TextEditingValue(text: _selectedSpecialty!)
+                          : null,
+                      optionsBuilder: (TextEditingValue textEditingValue) {
+                        if (textEditingValue.text.isEmpty) {
+                          return _specialtyOptions;
+                        }
+                        return _specialtyOptions.where((String option) {
+                          return option
+                              .toLowerCase()
+                              .contains(textEditingValue.text.toLowerCase());
+                        });
+                      },
+                      onSelected: (String selection) {
+                        setState(() {
+                          _selectedSpecialty = selection;
+                        });
+                      },
+                      fieldViewBuilder: (context, textEditingController,
+                          focusNode, onFieldSubmitted) {
+                        if (_selectedSpecialty != null &&
+                            textEditingController.text.isEmpty) {
+                          textEditingController.text = _selectedSpecialty!;
+                        }
+                        return TextFormField(
+                          controller: textEditingController,
+                          focusNode: focusNode,
+                          enabled: !_isEdit,
+                          maxLength: 100,
+                          decoration: const InputDecoration(
+                            hintText: 'Type or select specialty',
+                            hintStyle: TextStyle(
+                              color: Colors.grey,
+                            ),
+                            filled: true,
+                            fillColor: Colors.transparent,
+                            border: const OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(12)),
+                              borderSide: BorderSide.none,
+                            ),
+                            errorBorder: const OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(12)),
+                              borderSide: BorderSide.none,
+                            ),
+                            focusedErrorBorder: const OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(12)),
+                              borderSide: BorderSide.none,
+                            ),
+                            errorStyle: const TextStyle(height: 0, fontSize: 0),
+                            errorMaxLines: 1,
+                            counterText: '',
+                          ),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedSpecialty = value;
+                            });
+                          },
+                          validator: (v) => (v == null || v.isEmpty) ? '' : null,
                         );
-                      }).toList(),
-                      onChanged: _isEdit
-                          ? null
-                          : (String? newValue) {
-                              setState(() {
-                                _selectedSpecialty = newValue;
-                                if (newValue != 'Other') {
-                                  _customSpecialityController.clear();
-                                }
-                              });
-                            },
-                      decoration: const InputDecoration(
-                        filled: true,
-                        fillColor: Colors.transparent,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(12)),
-                          borderSide: BorderSide.none,
-                        ),
-                        errorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(12)),
-                          borderSide: BorderSide.none,
-                        ),
-                        focusedErrorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(12)),
-                          borderSide: BorderSide.none,
-                        ),
-                        errorStyle: TextStyle(height: 0, fontSize: 0),
-                        errorMaxLines: 1,
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      ),
-                      isExpanded: true,
-                      icon: const Icon(Icons.arrow_drop_down),
+                      },
+                      optionsViewBuilder:
+                          (context, onSelected, options) {
+                        return Align(
+                          alignment: Alignment.topLeft,
+                          child: Material(
+                            elevation: 4,
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              constraints: const BoxConstraints(maxHeight: 200),
+                              decoration: BoxDecoration(
+                                color: scheme.surface,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: ListView.builder(
+                                padding: EdgeInsets.zero,
+                                shrinkWrap: true,
+                                itemCount: options.length,
+                                itemBuilder: (context, index) {
+                                  final option = options.elementAt(index);
+                                  return InkWell(
+                                    onTap: () => onSelected(option),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16, vertical: 12),
+                                      child: Text(option),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
-                  // Custom specialty input when "Other" is selected
-                  if (_selectedSpecialty == 'Other' && !_isEdit) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: scheme.surface,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: TextFormField(
-                        controller: _customSpecialityController,
-                        maxLength: 100,
-                        decoration: const InputDecoration(
-                          hintText: 'Enter custom speciality',
-                          filled: true,
-                          fillColor: Colors.transparent,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(12)),
-                            borderSide: BorderSide.none,
-                          ),
-                          errorBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(12)),
-                            borderSide: BorderSide.none,
-                          ),
-                          focusedErrorBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(12)),
-                            borderSide: BorderSide.none,
-                          ),
-                          errorStyle: TextStyle(height: 0, fontSize: 0),
-                          errorMaxLines: 1,
-                          counterText: '',
-                        ),
-                      ),
-                    ),
-                  ],
                 ],
               ),
               const SizedBox(height: 16),
@@ -1591,8 +1614,14 @@ class _JobPostingPageState extends State<JobPostingPage> {
                   style: const TextStyle(fontSize: 16),
                 ),
               ),
-            ],
-          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
