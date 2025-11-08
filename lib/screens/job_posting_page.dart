@@ -77,48 +77,96 @@ class _JobPostingPageState extends State<JobPostingPage> {
         _isEdit = true;
         _jobId = args['jobId'] as String?;
 
-        // Read with correct Firestore field names
-        _jobTitleController.text =
-            (args['JobTitle'] ?? args['title'] ?? '') as String;
-        _positionController.text =
-            (args['Position'] ?? args['position'] ?? '') as String;
+        // Check if coming from questions page - need to fetch job data
+        final fromQuestionsPage = args['fromQuestionsPage'] == true;
 
-        // Handle specialty dropdown
-        final specialty = (args['Specialty'] ??
-            args['specialty'] ??
-            args['speciality'] ??
-            '') as String;
-        if (specialty.isNotEmpty) {
-          _selectedSpecialty = specialty;
-          if (!_specialtyOptions.contains(specialty)) {
-            _customSpecialityController.text = specialty;
+        if (fromQuestionsPage && _jobId != null) {
+          // Fetch job data from Firestore
+          try {
+            final jobDoc = await FirebaseFirestore.instance
+                .collection('Jobs')
+                .doc(_jobId)
+                .get();
+
+            if (jobDoc.exists) {
+              final jobData = jobDoc.data() as Map<String, dynamic>;
+
+              _jobTitleController.text = jobData['JobTitle'] ?? '';
+              _positionController.text = jobData['Position'] ?? '';
+              _selectedSpecialty = jobData['Specialty'] ?? '';
+              if (_selectedSpecialty != null && !_specialtyOptions.contains(_selectedSpecialty)) {
+                _customSpecialityController.text = _selectedSpecialty!;
+              }
+              _jobDescriptionController.text = jobData['JobDescription'] ?? '';
+
+              final req = jobData['Requirements'];
+              if (req is List) {
+                _requirements
+                  ..clear()
+                  ..addAll(req.map((e) => e.toString()));
+              }
+
+              // التواريخ
+              DateTime? _asDate(v) {
+                if (v == null) return null;
+                if (v is Timestamp) return v.toDate();
+                if (v is DateTime) return v;
+                if (v is String && v.isNotEmpty) {
+                  return DateTime.tryParse(v);
+                }
+                return null;
+              }
+
+              _startDate = _asDate(jobData['StartDate']);
+              _endDate = _asDate(jobData['EndDate']);
+            }
+          } catch (e) {
+            _showErrorSnackBar('Error loading job: $e');
           }
-        }
+        } else {
+          // Normal edit mode with all data in args
+          _jobTitleController.text =
+              (args['JobTitle'] ?? args['title'] ?? '') as String;
+          _positionController.text =
+              (args['Position'] ?? args['position'] ?? '') as String;
 
-        _jobDescriptionController.text =
-            (args['JobDescription'] ?? args['description'] ?? '') as String;
-
-        // requirements يمكن تجي List<String> أو List<dynamic>
-        final req = args['Requirements'] ?? args['requirements'];
-        if (req is List) {
-          _requirements
-            ..clear()
-            ..addAll(req.map((e) => e.toString()));
-        }
-
-        // التواريخ (timeStamp/date/string)
-        DateTime? _asDate(v) {
-          if (v == null) return null;
-          if (v is Timestamp) return v.toDate();
-          if (v is DateTime) return v;
-          if (v is String && v.isNotEmpty) {
-            return DateTime.tryParse(v);
+          // Handle specialty dropdown
+          final specialty = (args['Specialty'] ??
+              args['specialty'] ??
+              args['speciality'] ??
+              '') as String;
+          if (specialty.isNotEmpty) {
+            _selectedSpecialty = specialty;
+            if (!_specialtyOptions.contains(specialty)) {
+              _customSpecialityController.text = specialty;
+            }
           }
-          return null;
-        }
 
-        _startDate = _asDate(args['StartDate'] ?? args['startDate']);
-        _endDate = _asDate(args['EndDate'] ?? args['endDate']);
+          _jobDescriptionController.text =
+              (args['JobDescription'] ?? args['description'] ?? '') as String;
+
+          // requirements يمكن تجي List<String> أو List<dynamic>
+          final req = args['Requirements'] ?? args['requirements'];
+          if (req is List) {
+            _requirements
+              ..clear()
+              ..addAll(req.map((e) => e.toString()));
+          }
+
+          // التواريخ (timeStamp/date/string)
+          DateTime? _asDate(v) {
+            if (v == null) return null;
+            if (v is Timestamp) return v.toDate();
+            if (v is DateTime) return v;
+            if (v is String && v.isNotEmpty) {
+              return DateTime.tryParse(v);
+            }
+            return null;
+          }
+
+          _startDate = _asDate(args['StartDate'] ?? args['startDate']);
+          _endDate = _asDate(args['EndDate'] ?? args['endDate']);
+        }
 
         setState(() {});
       }
@@ -782,6 +830,15 @@ class _JobPostingPageState extends State<JobPostingPage> {
           'JobStatus': 'Open',
         });
         _showSuccessSnackBar('Job created successfully');
+
+        // Navigate to questions page after creating job
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(
+          context,
+          '/questions',
+          arguments: {'jobId': jobId},
+        );
+        return;
       }
 
       if (!mounted) return;
@@ -789,6 +846,37 @@ class _JobPostingPageState extends State<JobPostingPage> {
     } catch (e) {
       if (!mounted) return;
       _showErrorSnackBar('Error: $e');
+    }
+  }
+
+  Future<void> _continueToQuestions() async {
+    // Validate dates are selected
+    if (_startDate == null || _endDate == null) {
+      _showWarningSnackBar('Please select start and end dates');
+      return;
+    }
+
+    if (_jobId == null) return;
+
+    try {
+      // Update dates in Firestore
+      await FirebaseFirestore.instance.collection('Jobs').doc(_jobId).update({
+        'StartDate': _startDate,
+        'EndDate': _endDate,
+      });
+
+      _showSuccessSnackBar('Job dates updated successfully');
+
+      // Navigate to questions page
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(
+        context,
+        '/questions',
+        arguments: {'jobId': _jobId},
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _showErrorSnackBar('Error updating dates: $e');
     }
   }
 
@@ -970,21 +1058,14 @@ class _JobPostingPageState extends State<JobPostingPage> {
           foregroundColor: Colors.white,
           title: Text(_isEdit ? 'Edit Job' : 'Create Job Posting'),
         ),
-        body: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight,
-                ),
-                child: IntrinsicHeight(
-                  child: Form(
-                    key: _formKey,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
               // Job Title
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1172,7 +1253,6 @@ class _JobPostingPageState extends State<JobPostingPage> {
                               _selectedSpecialty = value;
                             });
                           },
-                          validator: (v) => (v == null || v.isEmpty) ? '' : null,
                         );
                       },
                       optionsViewBuilder:
@@ -1598,30 +1678,29 @@ class _JobPostingPageState extends State<JobPostingPage> {
               ),
               const SizedBox(height: 24),
 
-              // Submit Button
-              ElevatedButton(
-                onPressed: _submitForm,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4A5FBC),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                ),
-                child: Text(
-                  _isEdit ? 'Save changes' : 'Create Job Posting',
-                  style: const TextStyle(fontSize: 16),
-                ),
-              ),
-                        ],
-                      ),
+              // Submit Button or Continue to Questions
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isEdit ? _continueToQuestions : _submitForm,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4A5FBC),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
                     ),
                   ),
+                  child: Text(
+                    _isEdit ? 'Continue to Questions' : 'Create Job Posting',
+                    style: const TextStyle(fontSize: 16),
+                  ),
                 ),
               ),
-            );
-          },
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
