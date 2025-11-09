@@ -43,7 +43,9 @@ class _PublishScreenState extends State<PublishScreen> {
             const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         actionsAlignment: MainAxisAlignment.center,
         actions: [
-          Expanded(
+          // ✅ Fixed: Removed Expanded from Dialog actions
+          SizedBox(
+            width: 120,
             child: TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
               style: TextButton.styleFrom(
@@ -61,7 +63,8 @@ class _PublishScreenState extends State<PublishScreen> {
             ),
           ),
           const SizedBox(width: 10),
-          Expanded(
+          SizedBox(
+            width: 120,
             child: TextButton(
               onPressed: () => Navigator.of(ctx).pop(true),
               style: TextButton.styleFrom(
@@ -84,16 +87,42 @@ class _PublishScreenState extends State<PublishScreen> {
     return result ?? false;
   }
 
+  // ✅ Fixed: Better PDF opening with fallback
   Future<void> _openPDF(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
+    try {
+      final uri = Uri.parse(url);
+
+      // Try to launch with external application
+      final canLaunch = await canLaunchUrl(uri);
+
+      if (canLaunch) {
+        await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+        );
+      } else {
+        // Fallback: Try platform default
+        await launchUrl(
+          uri,
+          mode: LaunchMode.platformDefault,
+        );
+      }
+    } catch (e) {
+      print('❌ Error opening PDF: $e');
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not open PDF'),
+          SnackBar(
+            content: Text('Could not open PDF: ${e.toString()}'),
             backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'Copy Link',
+              textColor: Colors.white,
+              onPressed: () {
+                // You can add clipboard functionality here
+                print('📋 PDF URL: $url');
+              },
+            ),
           ),
         );
       }
@@ -131,7 +160,8 @@ class _PublishScreenState extends State<PublishScreen> {
             }
 
             final cvData = snapshot.data!.data() as Map<String, dynamic>;
-// ✅ Handle both String and List types for Suggestions
+
+            // ✅ Handle both String and List types for Suggestions
             final suggestionsRaw = cvData['Suggestions'];
             final List<dynamic> suggestions;
 
@@ -144,6 +174,7 @@ class _PublishScreenState extends State<PublishScreen> {
             } else {
               suggestions = [];
             }
+
             final jobTitle = cvData['JobTitle'] as String? ?? 'Not specified';
             final pdfUrl = cvData['NewCVURL'] as String?;
 
@@ -162,7 +193,7 @@ class _PublishScreenState extends State<PublishScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // 📄 PDF Preview Box (NEW!)
+                  // 📄 PDF Preview Box
                   if (pdfUrl == null || pdfUrl.isEmpty)
                     Container(
                       width: double.infinity,
@@ -236,11 +267,13 @@ class _PublishScreenState extends State<PublishScreen> {
                           ),
                           const SizedBox(height: 16),
 
-                          // Action Buttons
+                          // ✅ Fixed: Removed Expanded from Row
                           Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               // View Button
-                              Expanded(
+                              SizedBox(
+                                width: 140,
                                 child: ElevatedButton.icon(
                                   onPressed: () => _openPDF(pdfUrl),
                                   style: ElevatedButton.styleFrom(
@@ -259,7 +292,8 @@ class _PublishScreenState extends State<PublishScreen> {
                               const SizedBox(width: 12),
 
                               // Download Button
-                              Expanded(
+                              SizedBox(
+                                width: 140,
                                 child: ElevatedButton.icon(
                                   onPressed: () => _openPDF(pdfUrl),
                                   style: ElevatedButton.styleFrom(
@@ -277,6 +311,24 @@ class _PublishScreenState extends State<PublishScreen> {
                                 ),
                               ),
                             ],
+                          ),
+
+                          // ✅ NEW: Debug URL button
+                          const SizedBox(height: 8),
+                          TextButton(
+                            onPressed: () {
+                              print('📋 PDF URL: $pdfUrl');
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('URL copied to console'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            },
+                            child: const Text(
+                              'Show URL (Debug)',
+                              style: TextStyle(fontSize: 12),
+                            ),
                           ),
                         ],
                       ),
