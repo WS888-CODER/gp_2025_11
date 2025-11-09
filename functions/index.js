@@ -8,7 +8,7 @@ import mammoth from "mammoth";
 import path from "path";
 import os from "os";
 import fs from "fs";
-
+import PDFDocument from "pdfkit"; 
 
 // ============================================
 // 🔧 Initialize Services
@@ -317,61 +317,59 @@ export const generateJobPost = functions.https.onRequest(async (req, res) => {
 // ============================================
 
 /**
- * 6️⃣ Enhance CV with OpenAI GPT-4 Turbo (Gen 2)
+ * 6️⃣ Enhance CV with OpenAI GPT-4 Turbo (Gen 2) - FIXED VERSION
  */
-export const enhanceCV = v2.https.onCall(async (request) => {
-  console.log("📥 CV Enhancement request (Gen 2)");
-  console.log("📋 Auth UID:", request.auth?.uid || "NOT authenticated");
-  console.log("📋 Request data:", request.data);
+export const enhanceCV = v2.https.onCall(
+  { memory: "1GiB", timeoutSeconds: 540 },
+  async (request) => {
+    console.log("📥 CV Enhancement request (Gen 2)");
+    console.log("📋 Auth UID:", request.auth?.uid || "NOT authenticated");
+    console.log("📋 Request data:", request.data);
 
-  // TODO: Fix authentication - temporarily disabled for testing
-  // if (!request.auth) {
-  //   throw new v2.https.HttpsError("unauthenticated", "User must be authenticated");
-  // }
+    const cvHistoryId = request.data.cvHistoryId || "";
 
-  const cvHistoryId = request.data.cvHistoryId || "";
+    console.log("📝 CVHistoryID:", cvHistoryId);
 
-  console.log("📝 CVHistoryID:", cvHistoryId);
-
-  if (!cvHistoryId || cvHistoryId.trim() === "") {
-    throw new v2.https.HttpsError("invalid-argument", "cvHistoryId is required");
-  }
-
-  if (request.auth) {
-    console.log("✅ User authenticated:", request.auth.uid);
-  } else {
-    console.warn("⚠️ Proceeding without auth (TESTING ONLY)");
-  }
-
-  try {
-    // Get CV data from Firestore
-    const cvDoc = await admin.firestore().collection("CVHistory").doc(cvHistoryId).get();
-
-    if (!cvDoc.exists) {
-      throw new v2.https.HttpsError("not-found", "CV not found");
+    if (!cvHistoryId || cvHistoryId.trim() === "") {
+      throw new v2.https.HttpsError("invalid-argument", "cvHistoryId is required");
     }
 
-    const cvData = cvDoc.data();
-    const oldCVText = cvData.OldCVText || "";
-    const jobTitle = cvData.JobTitle || "";
-
-    if (!oldCVText) {
-      throw new v2.https.HttpsError(
-        "failed-precondition",
-        "CV text not extracted yet"
-      );
+    if (request.auth) {
+      console.log("✅ User authenticated:", request.auth.uid);
+    } else {
+      console.warn("⚠️ Proceeding without auth (TESTING ONLY)");
     }
 
-    console.log(`📄 Enhancing CV for job: ${jobTitle}`);
-    console.log(`📊 CV text length: ${oldCVText.length} characters`);
+    try {
+      // Get CV data from Firestore
+      const cvDoc = await admin.firestore().collection("CVHistory").doc(cvHistoryId).get();
 
-    // Initialize OpenAI
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+      if (!cvDoc.exists) {
+        throw new v2.https.HttpsError("not-found", "CV not found");
+      }
 
-    // Build the prompt
-    const prompt = `You are an expert career coach and CV optimization assistant.
+      const cvData = cvDoc.data();
+      const oldCVText = cvData.OldCVText || "";
+      const jobTitle = cvData.JobTitle || "";
+      const userId = cvData.UserID || request.auth?.uid || "unknown";
+
+      if (!oldCVText) {
+        throw new v2.https.HttpsError(
+          "failed-precondition",
+          "CV text not extracted yet"
+        );
+      }
+
+      console.log(`📄 Enhancing CV for job: ${jobTitle}`);
+      console.log(`📊 CV text length: ${oldCVText.length} characters`);
+
+      // Initialize OpenAI
+      const openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+      });
+
+      // Build the prompt
+      const prompt = `You are an expert career coach and CV optimization assistant.
 
 Enhance the following CV text to make it:
 - Professional and grammatically correct
@@ -438,58 +436,106 @@ Return ONLY valid JSON in the following structure:
 
 Do not include explanations or commentary outside this JSON.`;
 
-    // Call OpenAI
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: "You are a professional CV enhancement assistant. Always return valid JSON."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      response_format: { type: "json_object" },
-      temperature: 0.7,
-      max_tokens: 4000
-    });
+      // Call OpenAI
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: "You are a professional CV enhancement assistant. Always return valid JSON."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.7,
+        max_tokens: 4000
+      });
 
-    const gptResponse = response.choices[0].message.content;
-    console.log("✅ Got response from OpenAI");
+      const gptResponse = response.choices[0].message.content;
+      console.log("✅ Got response from OpenAI");
 
-    // Parse JSON response
-    const parsedData = JSON.parse(gptResponse);
-    const enhanced_cv = parsedData.enhanced_cv || [];
-    const suggestions = parsedData.suggestions || [];
+      // Parse JSON response
+      const parsedData = JSON.parse(gptResponse);
+      const enhanced_cv = parsedData.enhanced_cv || [];
+      const suggestions = parsedData.suggestions || [];
 
-    console.log(`📝 Enhanced CV sections: ${enhanced_cv.length}`);
-    console.log(`💡 Suggestions count: ${suggestions.length}`);
+      console.log(`📝 Enhanced CV sections: ${enhanced_cv.length}`);
+      console.log(`💡 Suggestions count: ${suggestions.length}`);
 
-    // Update Firestore with native objects/arrays
-    await admin.firestore().collection("CVHistory").doc(cvHistoryId).update({
-      NewCVText: enhanced_cv,      // Native Firestore array
-      Suggestions: suggestions,     // Native Firestore array
-    });
+      // Update Firestore with native objects/arrays
+      await admin.firestore().collection("CVHistory").doc(cvHistoryId).update({
+        NewCVText: enhanced_cv,
+        Suggestions: suggestions,
+      });
 
-    console.log(`✅ CV enhanced and saved for: ${cvHistoryId}`);
+      console.log(`✅ CV enhanced and saved for: ${cvHistoryId}`);
 
-    return {
-      success: true,
-      message: "CV enhanced successfully",
-      sectionsCount: enhanced_cv.length,
-      suggestionsCount: suggestions.length
-    };
+      // 🔥 Generate PDF automatically after enhancement
+      console.log(`📄 Starting PDF generation for: ${cvHistoryId}`);
 
-  } catch (error) {
-    console.error("❌ Error enhancing CV:", error);
-    throw new v2.https.HttpsError(
-      "internal",
-      `Failed to enhance CV: ${error.message}`
-    );
+      try {
+        // Create PDF directly
+        const pdfBuffer = await createProfessionalCV(enhanced_cv);
+        console.log(`✅ PDF buffer created, size: ${pdfBuffer.length} bytes`);
+
+        // Upload to Storage
+        const bucket = admin.storage().bucket();
+        const fileName = `${userId}_${cvHistoryId}.pdf`;
+        const filePath = `NewCV/${fileName}`;
+        const file = bucket.file(filePath);
+
+        await file.save(pdfBuffer, {
+          metadata: {
+            contentType: "application/pdf",
+          },
+        });
+        console.log(`✅ PDF uploaded to Storage: ${filePath}`);
+
+        // Make public
+        await file.makePublic();
+        const pdfUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
+        console.log(`✅ PDF URL: ${pdfUrl}`);
+
+        // Update Firestore
+        await admin.firestore().collection("CVHistory").doc(cvHistoryId).update({
+          NewCVURL: pdfUrl,
+          PDFGeneratedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        console.log(`✅ Firestore updated with PDF URL`);
+
+        return {
+          success: true,
+          message: "CV enhanced and PDF generated successfully",
+          sectionsCount: enhanced_cv.length,
+          suggestionsCount: suggestions.length,
+          pdfUrl: pdfUrl
+        };
+
+      } catch (pdfError) {
+        console.error(`❌ PDF generation error:`, pdfError);
+
+        // Still return success for CV enhancement
+        return {
+          success: true,
+          message: "CV enhanced successfully (PDF generation failed)",
+          sectionsCount: enhanced_cv.length,
+          suggestionsCount: suggestions.length,
+          pdfError: pdfError.message
+        };
+      }
+
+    } catch (error) {
+      console.error("❌ Error enhancing CV:", error);
+      throw new v2.https.HttpsError(
+        "internal",
+        `Failed to enhance CV: ${error.message}`
+      );
+    }
   }
-});
+);
 
 /**
  * 7️⃣ Send Password Reset OTP
@@ -509,7 +555,6 @@ export const sendPasswordResetOtp = functions.https.onCall(async (data, context)
   }
 
   try {
-    // التحقق من وجود المستخدم
     const usersSnapshot = await admin
       .firestore()
       .collection("Users")
@@ -568,8 +613,9 @@ export const sendPasswordResetOtp = functions.https.onCall(async (data, context)
     );
   }
 });
+
 /**
- * 6️⃣ Reset User Password + Unlock Account (Admin SDK)
+ * 8️⃣ Reset User Password + Unlock Account (Admin SDK)
  */
 export const resetUserPassword = functions.https.onCall(async (data, context) => {
   console.log("📥 Reset password - Full data:", data);
@@ -586,15 +632,12 @@ export const resetUserPassword = functions.https.onCall(async (data, context) =>
   }
 
   try {
-    // 1️⃣ الحصول على UID من الإيميل
     const userRecord = await admin.auth().getUserByEmail(email.toLowerCase());
     
-    // 2️⃣ تحديث الباسورد باستخدام Admin SDK
     await admin.auth().updateUser(userRecord.uid, {
       password: newPassword,
     });
 
-    // 3️⃣ ✅ إلغاء قفل الحساب في Firestore
     await admin.firestore().collection("Users").doc(userRecord.uid).update({
       failedLoginAttempts: 0,
       lastFailedLoginDate: null,
@@ -615,18 +658,16 @@ export const resetUserPassword = functions.https.onCall(async (data, context) =>
 });
 
 // ============================================
-// 📄 CV TEXT EXTRACTION
+// 📄 CV TEXT EXTRACTION - FIXED VERSION
 // ============================================
 
 /**
- * 7️⃣ Extract text from uploaded CV (PDF or DOCX)
- * Triggers automatically when file is uploaded to temp_cv_extraction/
+ * 9️⃣ Extract text from uploaded CV (PDF or DOCX) - FIXED
  */
 export const extractCVTextEnhancement = v2.storage.onObjectFinalized(async (event) => {
   const filePath = event.data.name;
   const contentType = event.data.contentType;
 
-  // Only process files in temp_cv_extraction folder
   if (!filePath || !filePath.startsWith('temp_cv_extraction/')) {
     console.log('⏭️ Skipping - not a CV extraction file');
     return null;
@@ -636,7 +677,6 @@ export const extractCVTextEnhancement = v2.storage.onObjectFinalized(async (even
   console.log(`📋 Content type: ${contentType}`);
 
   try {
-    // Get metadata containing cvHistoryId
     const metadata = event.data.metadata || {};
     const cvHistoryId = metadata.cvHistoryId;
     const userId = metadata.userId;
@@ -649,11 +689,8 @@ export const extractCVTextEnhancement = v2.storage.onObjectFinalized(async (even
     console.log(`📝 CVHistoryID: ${cvHistoryId}`);
     console.log(`👤 UserID: ${userId}`);
 
-    // Download file from Storage
     const bucket = admin.storage().bucket();
     const file = bucket.file(filePath);
-
-    // Create temp file path
     const tempFilePath = path.join(os.tmpdir(), path.basename(filePath));
 
     await file.download({ destination: tempFilePath });
@@ -666,14 +703,10 @@ export const extractCVTextEnhancement = v2.storage.onObjectFinalized(async (even
       console.log('📕 Extracting from PDF...');
       const dataBuffer = fs.readFileSync(tempFilePath);
 
-      // Dynamic import for pdf-parse - use PDFParse class
-      const { PDFParse } = await import('pdf-parse');
-      console.log('✅ Got PDFParse class');
-
-      const parser = new PDFParse({ data: dataBuffer });
-      const result = await parser.getText();
-      extractedText = (result.text || '').trim();
-      await parser.destroy();
+      // ✅ الطريقة الصحيحة لاستخدام pdf-parse
+      const pdfParse = (await import('pdf-parse')).default;
+      const data = await pdfParse(dataBuffer);
+      extractedText = data.text.trim();
 
       console.log(`📊 Extracted ${extractedText.length} characters`);
     } else if (
@@ -694,7 +727,7 @@ export const extractCVTextEnhancement = v2.storage.onObjectFinalized(async (even
     fs.unlinkSync(tempFilePath);
     console.log('🗑️ Temp file deleted');
 
-    // Update Firestore document with extracted text
+    // Update Firestore
     if (extractedText.trim()) {
       await admin.firestore().collection('CVHistory').doc(cvHistoryId).update({
         OldCVText: extractedText.trim(),
@@ -708,7 +741,7 @@ export const extractCVTextEnhancement = v2.storage.onObjectFinalized(async (even
       });
     }
 
-    // Delete the temporary file from Storage
+    // Delete temp file from Storage
     await file.delete();
     console.log(`🗑️ Deleted temp file from Storage: ${filePath}`);
 
@@ -716,7 +749,6 @@ export const extractCVTextEnhancement = v2.storage.onObjectFinalized(async (even
   } catch (error) {
     console.error('❌ Error extracting CV text:', error);
 
-    // Try to update Firestore with error message
     try {
       const metadata = event.data.metadata || {};
       const cvHistoryId = metadata.cvHistoryId;
@@ -733,3 +765,383 @@ export const extractCVTextEnhancement = v2.storage.onObjectFinalized(async (even
   }
 });
 
+// ============================================
+// 📄 CV PDF GENERATION
+// ============================================
+
+/**
+ * 🔟 Generate Professional PDF from NewCVText (Manual call)
+ */
+export const generateCVPDF = functions.https.onCall(async (data, context) => {
+  console.log("📥 Generate PDF - Full data:", data);
+
+  const actualData = data.data || data;
+  const cvHistoryId = actualData.cvHistoryId || actualData["cvHistoryId"] || "";
+
+  if (!cvHistoryId) {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "cvHistoryId is required"
+    );
+  }
+
+  try {
+    const cvDoc = await admin
+      .firestore()
+      .collection("CVHistory")
+      .doc(cvHistoryId)
+      .get();
+
+    if (!cvDoc.exists) {
+      throw new functions.https.HttpsError(
+        "not-found",
+        "CV document not found"
+      );
+    }
+
+    const cvData = cvDoc.data();
+    const newCVText = cvData.NewCVText;
+    const userId = cvData.UserID;
+
+    if (!newCVText || !Array.isArray(newCVText) || newCVText.length === 0) {
+      throw new functions.https.HttpsError(
+        "failed-precondition",
+        "NewCVText is empty or invalid"
+      );
+    }
+
+    console.log(`📄 Generating PDF for CVHistoryID: ${cvHistoryId}`);
+
+    const pdfBuffer = await createProfessionalCV(newCVText);
+
+    const bucket = admin.storage().bucket();
+    const fileName = `${userId}_${cvHistoryId}.pdf`;
+    const filePath = `NewCV/${fileName}`;
+    const file = bucket.file(filePath);
+
+    await file.save(pdfBuffer, {
+      metadata: {
+        contentType: "application/pdf",
+        metadata: {
+          cvHistoryId: cvHistoryId,
+          userId: userId,
+          generatedAt: new Date().toISOString(),
+        },
+      },
+    });
+
+    await file.makePublic();
+
+    const downloadURL = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
+
+    await admin.firestore().collection("CVHistory").doc(cvHistoryId).update({
+      NewCVURL: downloadURL,
+      PDFGeneratedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    console.log(`✅ PDF generated and saved: ${downloadURL}`);
+
+    return {
+      success: true,
+      message: "PDF generated successfully",
+      pdfUrl: downloadURL,
+    };
+  } catch (error) {
+    console.error("❌ Error generating PDF:", error);
+    throw new functions.https.HttpsError(
+      "internal",
+      "Failed to generate PDF: " + error.message
+    );
+  }
+});
+
+/**
+ * Helper function to create professional CV PDF
+ */
+async function createProfessionalCV(newCVText) {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({
+        size: "A4",
+        margins: { top: 72, bottom: 72, left: 72, right: 72 },
+      });
+
+      const buffers = [];
+      doc.on("data", buffers.push.bind(buffers));
+      doc.on("end", () => {
+        const pdfData = Buffer.concat(buffers);
+        resolve(pdfData);
+      });
+
+      const colors = {
+        primary: "#000000",
+        accent: "#4A5FBC",
+        gray: "#666666",
+        lightGray: "#CCCCCC",
+      };
+
+      const fonts = {
+        regular: "Helvetica",
+        bold: "Helvetica-Bold",
+      };
+
+      let currentY = doc.y;
+
+      for (const section of newCVText) {
+        const sectionName = section.section;
+        const content = section.content;
+
+        if (
+          !content ||
+          (Array.isArray(content) && content.length === 0) ||
+          (typeof content === "string" && content.trim() === "") ||
+          (typeof content === "object" &&
+            !Array.isArray(content) &&
+            Object.keys(content).length === 0)
+        ) {
+          continue;
+        }
+
+        if (sectionName === "PersonalInformation") {
+          currentY = renderPersonalInfo(doc, content, colors, fonts, currentY);
+        } else if (sectionName === "ProfessionalSummary") {
+          currentY = renderSection(
+            doc,
+            "PROFESSIONAL SUMMARY",
+            content,
+            colors,
+            fonts,
+            currentY
+          );
+        } else if (sectionName === "Experience") {
+          currentY = renderExperience(doc, content, colors, fonts, currentY);
+        } else if (sectionName === "Education") {
+          currentY = renderEducation(doc, content, colors, fonts, currentY);
+        } else if (sectionName === "Skills") {
+          currentY = renderSkills(doc, content, colors, fonts, currentY);
+        }
+      }
+
+      doc.end();
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+function renderPersonalInfo(doc, content, colors, fonts, startY) {
+  const fullName = content.full_name || "";
+  const email = content.email || "";
+  const phone = content.phone || "";
+  const location = content.location || "";
+  const links = content.links || [];
+
+  doc
+    .font(fonts.bold)
+    .fontSize(22)
+    .fillColor(colors.primary)
+    .text(fullName.toUpperCase(), 72, startY, {
+      align: "center",
+      width: 450,
+    });
+
+  let y = doc.y + 8;
+
+  const contactInfo = [];
+  if (email) contactInfo.push(email);
+  if (phone) contactInfo.push(phone);
+  if (location) contactInfo.push(location);
+
+  if (contactInfo.length > 0) {
+    doc
+      .font(fonts.regular)
+      .fontSize(10)
+      .fillColor(colors.gray)
+      .text(contactInfo.join("  |  "), 72, y, {
+        align: "center",
+        width: 450,
+      });
+    y = doc.y + 4;
+  }
+
+  if (links.length > 0) {
+    doc
+      .font(fonts.regular)
+      .fontSize(10)
+      .fillColor(colors.gray)
+      .text(links.join("  |  "), 72, y, {
+        align: "center",
+        width: 450,
+      });
+    y = doc.y;
+  }
+
+  y += 16;
+  doc
+    .moveTo(72, y)
+    .lineTo(540, y)
+    .strokeColor(colors.lightGray)
+    .lineWidth(1)
+    .stroke();
+
+  return y + 20;
+}
+
+function renderSection(doc, title, content, colors, fonts, startY) {
+  doc
+    .font(fonts.bold)
+    .fontSize(14)
+    .fillColor(colors.accent)
+    .text(title, 72, startY);
+
+  let y = doc.y + 4;
+
+  doc
+    .moveTo(72, y)
+    .lineTo(300, y)
+    .strokeColor(colors.accent)
+    .lineWidth(1)
+    .stroke();
+
+  y += 12;
+
+  doc
+    .font(fonts.regular)
+    .fontSize(11)
+    .fillColor(colors.primary)
+    .text(content, 72, y, { width: 450, align: "left" });
+
+  return doc.y + 20;
+}
+
+function renderExperience(doc, content, colors, fonts, startY) {
+  doc
+    .font(fonts.bold)
+    .fontSize(14)
+    .fillColor(colors.accent)
+    .text("EXPERIENCE", 72, startY);
+
+  let y = doc.y + 4;
+
+  doc
+    .moveTo(72, y)
+    .lineTo(300, y)
+    .strokeColor(colors.accent)
+    .lineWidth(1)
+    .stroke();
+
+  y += 12;
+
+  for (let i = 0; i < content.length; i++) {
+    const exp = content[i];
+    const title = exp.title || "";
+    const company = exp.company || "";
+    const years = exp.years || "";
+    const description = exp.description || "";
+
+    doc.font(fonts.bold).fontSize(12).fillColor(colors.primary).text(title, 72, y);
+
+    y = doc.y + 4;
+
+    const companyLine = [company, years].filter((x) => x).join("  |  ");
+    doc
+      .font(fonts.regular)
+      .fontSize(10)
+      .fillColor(colors.gray)
+      .text(companyLine, 72, y);
+
+    y = doc.y + 6;
+
+    if (description) {
+      doc
+        .font(fonts.regular)
+        .fontSize(11)
+        .fillColor(colors.primary)
+        .text(`• ${description}`, 82, y, { width: 440, align: "left" });
+
+      y = doc.y + 4;
+    }
+
+    if (i < content.length - 1) {
+      y += 8;
+      doc
+        .moveTo(72, y)
+        .lineTo(250, y)
+        .strokeColor(colors.lightGray)
+        .lineWidth(0.5)
+        .stroke();
+      y += 12;
+    }
+  }
+
+  return y + 20;
+}
+
+function renderEducation(doc, content, colors, fonts, startY) {
+  doc
+    .font(fonts.bold)
+    .fontSize(14)
+    .fillColor(colors.accent)
+    .text("EDUCATION", 72, startY);
+
+  let y = doc.y + 4;
+
+  doc
+    .moveTo(72, y)
+    .lineTo(300, y)
+    .strokeColor(colors.accent)
+    .lineWidth(1)
+    .stroke();
+
+  y += 12;
+
+  for (const edu of content) {
+    const degree = edu.degree || "";
+    const institution = edu.institution || "";
+    const years = edu.years || "";
+
+    doc.font(fonts.bold).fontSize(12).fillColor(colors.primary).text(degree, 72, y);
+
+    y = doc.y + 4;
+
+    const institutionLine = [institution, years].filter((x) => x).join("  |  ");
+    doc
+      .font(fonts.regular)
+      .fontSize(10)
+      .fillColor(colors.gray)
+      .text(institutionLine, 72, y);
+
+    y = doc.y + 12;
+  }
+
+  return y + 8;
+}
+
+function renderSkills(doc, content, colors, fonts, startY) {
+  doc
+    .font(fonts.bold)
+    .fontSize(14)
+    .fillColor(colors.accent)
+    .text("SKILLS", 72, startY);
+
+  let y = doc.y + 4;
+
+  doc
+    .moveTo(72, y)
+    .lineTo(300, y)
+    .strokeColor(colors.accent)
+    .lineWidth(1)
+    .stroke();
+
+  y += 12;
+
+  const skillsText = content.map((skill) => `• ${skill}`).join("    ");
+
+  doc
+    .font(fonts.regular)
+    .fontSize(11)
+    .fillColor(colors.primary)
+    .text(skillsText, 72, y, { width: 450, align: "left" });
+
+  return doc.y + 20;
+}

@@ -23,6 +23,7 @@
     "nodemailer": "^7.0.9",
     "openai": "^6.3.0",
     "pdf-parse": "^2.4.5",
+    "pdfkit": "^0.17.2",
     "textract": "^2.5.0"
   },
   "devDependencies": {
