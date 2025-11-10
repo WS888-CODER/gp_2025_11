@@ -733,3 +733,10 @@ export const extractCVTextEnhancement = v2.storage.onObjectFinalized(async (even
   }
 });
 
+const functions = require("firebase-functions");
+const admin = require("firebase-admin");
+
+try { admin.app(); } catch { admin.initializeApp(); }
+
+// صدّري الفنكشن الجديدة
+exports.generateInterviewQuestions = require("./interview/generateQuestions");

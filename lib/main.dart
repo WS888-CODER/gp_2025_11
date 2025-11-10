@@ -25,6 +25,7 @@ import 'screens/forgot_password_screen.dart';
 import 'screens/change_password.dart';
 import 'screens/admin_dashboard.dart';
 import 'screens/job_posting_page.dart';
+import 'screens/questions_page.dart';
 import 'screens/jobseeker_home.dart';
 import 'screens/company_home.dart';
 
@@ -70,6 +71,8 @@ class Jadeer extends StatelessWidget {
         '/otp-verification': (context) => OTPVerificationScreen(),
         '/admin-dashboard': (context) => AdminDashboard(),
         '/job-posting': (context) => const JobPostingPage(),
+        '/job_posting': (context) => const JobPostingPage(),
+        '/questions': (context) => const QuestionsPage(),
         '/forgot-password': (context) => ForgotPasswordScreen(),
         '/change-password': (context) => ChangePasswordScreen(),
         '/profile/jobseeker': (context) => const JobSeekerProfile(),
