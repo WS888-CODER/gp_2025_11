@@ -9,6 +9,7 @@ import path from "path";
 import os from "os";
 import fs from "fs";
 import PDFDocument from "pdfkit"; 
+import { generateInterviewQuestions } from "./interview/generateQuestions.js";
 
 // ============================================
 // 🔧 Initialize Services
@@ -1145,3 +1146,4 @@ function renderSkills(doc, content, colors, fonts, startY) {
 
   return doc.y + 20;
 }
+export { generateInterviewQuestions };
