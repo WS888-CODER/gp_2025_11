@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../config/theme.dart';
 
@@ -13,7 +14,6 @@ class PublishScreen extends StatefulWidget {
 }
 
 class _PublishScreenState extends State<PublishScreen> {
-
   Future<bool> _onWillPop() async {
     const Color dialogBaseColor = Color(0xFF4A5FBC);
     const Color cancelBgColor = Color(0xFFE5E7EB);
@@ -39,10 +39,13 @@ class _PublishScreenState extends State<PublishScreen> {
           style: TextStyle(color: Colors.white70),
         ),
         contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        actionsPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         actionsAlignment: MainAxisAlignment.center,
         actions: [
-          Expanded(
+          // ✅ Fixed: Removed Expanded from Dialog actions
+          SizedBox(
+            width: 120,
             child: TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
               style: TextButton.styleFrom(
@@ -60,7 +63,8 @@ class _PublishScreenState extends State<PublishScreen> {
             ),
           ),
           const SizedBox(width: 10),
-          Expanded(
+          SizedBox(
+            width: 120,
             child: TextButton(
               onPressed: () => Navigator.of(ctx).pop(true),
               style: TextButton.styleFrom(
@@ -83,6 +87,48 @@ class _PublishScreenState extends State<PublishScreen> {
     return result ?? false;
   }
 
+  // ✅ Fixed: Better PDF opening with fallback
+  Future<void> _openPDF(String url) async {
+    try {
+      final uri = Uri.parse(url);
+
+      // Try to launch with external application
+      final canLaunch = await canLaunchUrl(uri);
+
+      if (canLaunch) {
+        await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+        );
+      } else {
+        // Fallback: Try platform default
+        await launchUrl(
+          uri,
+          mode: LaunchMode.platformDefault,
+        );
+      }
+    } catch (e) {
+      print('❌ Error opening PDF: $e');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open PDF: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'Copy Link',
+              textColor: Colors.white,
+              onPressed: () {
+                // You can add clipboard functionality here
+                print('📋 PDF URL: $url');
+              },
+            ),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -91,63 +137,228 @@ class _PublishScreenState extends State<PublishScreen> {
         appBar: AppBar(
           title: const Text('CV Enhancement Results'),
         ),
-      body: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('CVHistory')
-            .doc(widget.cvUrl) // cvHistoryId
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+        body: StreamBuilder<DocumentSnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('CVHistory')
+              .doc(widget.cvUrl)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          if (snapshot.hasError) {
-            return Center(
-              child: Text('Error: ${snapshot.error}'),
-            );
-          }
+            if (snapshot.hasError) {
+              return Center(
+                child: Text('Error: ${snapshot.error}'),
+              );
+            }
 
-          if (!snapshot.hasData || !snapshot.data!.exists) {
-            return const Center(
-              child: Text('CV data not found'),
-            );
-          }
+            if (!snapshot.hasData || !snapshot.data!.exists) {
+              return const Center(
+                child: Text('CV data not found'),
+              );
+            }
 
-          final cvData = snapshot.data!.data() as Map<String, dynamic>;
-          final suggestions = cvData['Suggestions'] as List<dynamic>? ?? [];
-          final jobTitle = cvData['JobTitle'] as String? ?? 'Not specified';
+            final cvData = snapshot.data!.data() as Map<String, dynamic>;
 
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Job Title
-                Text(
-                  'Job Title: $jobTitle',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+            // ✅ Handle both String and List types for Suggestions
+            final suggestionsRaw = cvData['Suggestions'];
+            final List<dynamic> suggestions;
+
+            if (suggestionsRaw == null) {
+              suggestions = [];
+            } else if (suggestionsRaw is List) {
+              suggestions = suggestionsRaw;
+            } else if (suggestionsRaw is String) {
+              suggestions = [suggestionsRaw];
+            } else {
+              suggestions = [];
+            }
+
+            final jobTitle = cvData['JobTitle'] as String? ?? 'Not specified';
+            final pdfUrl = cvData['NewCVURL'] as String?;
+
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Job Title
+                  Text(
+                    'Job Title: $jobTitle',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-                // CV suggestions section
-                const Text(
-                  'AI Enhancement Suggestions:',
-                  style: TextStyle(
-                    color: AppTheme.primaryPurple,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
+                  // 📄 PDF Preview Box
+                  if (pdfUrl == null || pdfUrl.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: const Column(
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 12),
+                          Text(
+                            'Generating your enhanced CV...',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryPurple.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppTheme.primaryPurple.withOpacity(0.3),
+                          width: 2,
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          // PDF Icon
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryPurple.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Iconsax.document_text,
+                              size: 48,
+                              color: AppTheme.primaryPurple,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+
+                          // PDF Title
+                          const Text(
+                            'Enhanced CV (PDF)',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primaryPurple,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+
+                          const Text(
+                            'Your professionally enhanced CV is ready!',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // ✅ Fixed: Removed Expanded from Row
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              // View Button
+                              SizedBox(
+                                width: 140,
+                                child: ElevatedButton.icon(
+                                  onPressed: () => _openPDF(pdfUrl),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.primaryPurple,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  icon: const Icon(Iconsax.eye, size: 20),
+                                  label: const Text('View'),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+
+                              // Download Button
+                              SizedBox(
+                                width: 140,
+                                child: ElevatedButton.icon(
+                                  onPressed: () => _openPDF(pdfUrl),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.orange,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  icon: const Icon(Iconsax.document_download,
+                                      size: 20),
+                                  label: const Text('Download'),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          // ✅ NEW: Debug URL button
+                          const SizedBox(height: 8),
+                          TextButton(
+                            onPressed: () {
+                              print('📋 PDF URL: $pdfUrl');
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('URL copied to console'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            },
+                            child: const Text(
+                              'Show URL (Debug)',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  const SizedBox(height: 24),
+
+                  // AI Suggestions Section
+                  const Text(
+                    'Suggestions:',
+                    style: TextStyle(
+                      color: AppTheme.primaryPurple,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
+                  const SizedBox(height: 12),
 
-                // Suggestions list
-                Expanded(
-                  child: suggestions.isEmpty
-                      ? const Center(
-                          child: Text('No suggestions available yet.'),
+                  // Suggestions List
+                  suggestions.isEmpty
+                      ? Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: const Center(
+                            child: Text('No suggestions available yet.'),
+                          ),
                         )
                       : Container(
                           padding: const EdgeInsets.all(12),
@@ -157,6 +368,8 @@ class _PublishScreenState extends State<PublishScreen> {
                             border: Border.all(color: Colors.grey.shade300),
                           ),
                           child: ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
                             itemCount: suggestions.length,
                             itemBuilder: (context, index) {
                               return Padding(
@@ -186,30 +399,10 @@ class _PublishScreenState extends State<PublishScreen> {
                             },
                           ),
                         ),
-                ),
-                const SizedBox(height: 16),
-
-                // Download PDF button (placeholder for friend's feature)
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      // TODO: Friend will implement PDF download
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('PDF download feature coming soon!'),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Iconsax.document_download),
-                    label: const Text('Download Enhanced CV (PDF)'),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
+                ],
+              ),
+            );
+          },
         ),
       ),
     );
