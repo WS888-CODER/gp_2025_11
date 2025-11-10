@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:dropdown_button2/dropdown_button2.dart';
 
 class JobPostingPage extends StatefulWidget {
   const JobPostingPage({super.key});
@@ -1039,7 +1038,6 @@ class _JobPostingPageState extends State<JobPostingPage> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return WillPopScope(
       onWillPop: _onWillPop,

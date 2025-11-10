@@ -22,7 +22,6 @@ class _QuestionsPageState extends State<QuestionsPage> {
   bool _locked = false;
   bool _regenUsed = false;
   int _quotaLeft = kEditQuotaInit;
-  static const String _projectId = 'jadeer-b4953';
 
   Uri _fnUrl() {
     return Uri.parse(
@@ -76,7 +75,6 @@ class _QuestionsPageState extends State<QuestionsPage> {
     final controller = TextEditingController();
     String type = 'technical';
     String difficulty = 'medium';
-    String category = 'General';
 
     final ok = await showDialog<bool>(
       context: context,
@@ -114,13 +112,6 @@ class _QuestionsPageState extends State<QuestionsPage> {
                 ],
                 onChanged: (v) => difficulty = v ?? 'medium',
               ),
-              const SizedBox(height: 8),
-              TextFormField(
-                initialValue: category,
-                decoration: const InputDecoration(labelText: 'Category'),
-                onChanged: (v) =>
-                    category = v.trim().isEmpty ? 'General' : v.trim(),
-              ),
             ],
           ),
         ),
@@ -147,26 +138,6 @@ class _QuestionsPageState extends State<QuestionsPage> {
     }
 
     try {
-      // Compute next Order
-      final qCol = FirebaseFirestore.instance
-          .collection('Jobs')
-          .doc(_jobId)
-          .collection('Questions');
-      final last = await qCol.orderBy('Order', descending: true).limit(1).get();
-      int order = 0;
-      if (last.docs.isNotEmpty)
-        order = (last.docs.first['Order'] as int? ?? 0) + 1;
-
-      await qCol.add({
-        'Text': text,
-        'Type': type,
-        'Category': category,
-        'Difficulty': difficulty,
-        'Source': 'Manual',
-        'Order': order,
-        'CreatedAt': FieldValue.serverTimestamp(),
-      });
-
       await _consumeQuota();
       _snack('Added.');
     } catch (e) {
@@ -189,7 +160,6 @@ class _QuestionsPageState extends State<QuestionsPage> {
         TextEditingController(text: (d['Text'] ?? '').toString());
     String type = (d['Type'] ?? 'technical').toString();
     String difficulty = (d['Difficulty'] ?? 'medium').toString();
-    String category = (d['Category'] ?? 'General').toString();
 
     final ok = await showDialog<bool>(
       context: context,
@@ -227,13 +197,6 @@ class _QuestionsPageState extends State<QuestionsPage> {
                 ],
                 onChanged: (v) => difficulty = v ?? 'medium',
               ),
-              const SizedBox(height: 8),
-              TextFormField(
-                initialValue: category,
-                decoration: const InputDecoration(labelText: 'Category'),
-                onChanged: (v) =>
-                    category = v.trim().isEmpty ? 'General' : v.trim(),
-              ),
             ],
           ),
         ),
@@ -267,7 +230,6 @@ class _QuestionsPageState extends State<QuestionsPage> {
       await d.reference.update({
         'Text': text,
         'Type': type,
-        'Category': category,
         'Difficulty': difficulty,
       });
       await _consumeQuota();
@@ -461,18 +423,13 @@ class _QuestionsPageState extends State<QuestionsPage> {
         }
       }
 
-      int order = 0;
       final batch = FirebaseFirestore.instance.batch();
       for (final q in out) {
         final ref = qCol.doc();
         batch.set(ref, {
           'Text': (q['text'] ?? '').toString().trim(),
           'Type': (q['type'] ?? '').toString(),
-          'Category': (q['category'] ?? '').toString(),
           'Difficulty': (q['difficulty'] ?? '').toString(),
-          'Source': 'AI',
-          'Order': order++,
-          'CreatedAt': FieldValue.serverTimestamp(),
         });
       }
       await batch.commit();
@@ -645,7 +602,6 @@ class _QuestionsPageState extends State<QuestionsPage> {
                               .collection('Jobs')
                               .doc(_jobId)
                               .collection('Questions')
-                              .orderBy('Order')
                               .snapshots(),
                           builder: (context, snapshot) {
                             if (snapshot.connectionState ==
@@ -735,12 +691,6 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                           style: const TextStyle(
                                               fontSize: 15, height: 1.4),
                                         ),
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          (d['Category'] ?? '').toString(),
-                                          style: TextStyle(
-                                              color: Colors.grey[700]),
-                                        ),
                                       ],
                                     ),
                                   ),
@@ -796,41 +746,6 @@ class _CenteredInfo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(child: Text(text, style: TextStyle(color: Colors.grey[600])));
-  }
-}
-
-class _JobHeader extends StatelessWidget {
-  final Map<String, dynamic> jobData;
-  const _JobHeader({required this.jobData});
-  @override
-  Widget build(BuildContext context) {
-    final title = (jobData['JobTitle'] ?? '').toString();
-    final pos = (jobData['Position'] ?? '').toString();
-    final spec = (jobData['Specialty'] ?? '').toString();
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          const Icon(Icons.work_outline, size: 28, color: Color(0xFF4A5FBC)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text('$title — $pos\n$spec',
-                style:
-                    const TextStyle(fontWeight: FontWeight.w600, height: 1.3)),
-          ),
-        ],
-      ),
-    );
   }
 }
 
