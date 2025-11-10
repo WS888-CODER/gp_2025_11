@@ -188,7 +188,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     return ThemedScaffold(
       appBar: AppBar(
-        title: Text(l10n.settingsTitle),
+        title: Text(l10n.settingsTitle,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            )),
         backgroundColor: _brandColor,
       ),
       body: FutureBuilder<Map<String, dynamic>?>(

@@ -119,10 +119,19 @@ class _CompanyProfileState extends State<CompanyProfile> {
     final ctx = inContext ?? context;
     ScaffoldMessenger.of(ctx).showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        backgroundColor: const Color(0xFF4CAF50).withOpacity(0.8), // Green
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
       ),
     );
   }
@@ -131,10 +140,19 @@ class _CompanyProfileState extends State<CompanyProfile> {
     final ctx = inContext ?? context;
     ScaffoldMessenger.of(ctx).showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        backgroundColor: const Color(0xFFFF7B7B).withOpacity(0.8), // Red
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
       ),
     );
   }
@@ -522,35 +540,6 @@ class _CompanyProfileState extends State<CompanyProfile> {
             ),
             iconTheme: const IconThemeData(color: Colors.white),
           ),
-          bottomNavigationBar: SafeArea(
-            minimum: const EdgeInsets.all(16),
-            child: FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF4A5FBC),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28),
-                ),
-                textStyle: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => EditCompanyPage(
-                      data: data,
-                      parentState: this,
-                      initialTabIndex: 0,
-                    ),
-                  ),
-                );
-              },
-              child: const Text('Edit Company Info'),
-            ),
-          ),
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
@@ -720,58 +709,84 @@ class _CompanyProfileState extends State<CompanyProfile> {
                 ),
               ),
               const SizedBox(height: 24),
+              // بطاقة 1: Company Info
               Container(
                 decoration: BoxDecoration(
                   color: scheme.surface,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 10,
+                      color: Colors.black.withOpacity(
+                        Theme.of(context).brightness == Brightness.dark
+                            ? 0.12
+                            : 0.04,
+                      ),
+                      blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
                   ],
+                  border: Border.all(
+                      color: const Color(0xFF4A5FBC).withOpacity(0.08)),
                 ),
-                child: Column(
-                  children: [
-                    _SettingsRow(
-                      icon: Icons.info_outline,
-                      color: const Color(0xFF4A5FBC),
-                      title: 'Company Info',
-                      subtitle: 'Description, logo, location',
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => EditCompanyPage(
-                              data: data,
-                              parentState: this,
-                              initialTabIndex: 0,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    const Divider(height: 1),
-                    _SettingsRow(
-                      icon: Icons.mail_outline,
-                      color: const Color(0xFF4A5FBC),
-                      title: 'Contact Details',
-                      subtitle: 'Email / phone for applicants',
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => EditCompanyPage(
-                              data: data,
-                              parentState: this,
-                              initialTabIndex: 1,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
+                child: _SettingsRow(
+                  icon: Icons.info_outline,
+                  color: const Color(0xFF4A5FBC),
+                  title: 'Company Info',
+                  subtitle: 'Description, logo, location',
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => EditCompanyPage(
+                          data: data,
+                          parentState: this,
+                          initialTabIndex: 0,
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
+
+              const SizedBox(height: 12),
+
+// بطاقة 2: Contact Details
+              Container(
+                decoration: BoxDecoration(
+                  color: scheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(
+                        Theme.of(context).brightness == Brightness.dark
+                            ? 0.12
+                            : 0.04,
+                      ),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                  border: Border.all(
+                      color: const Color(0xFF4A5FBC).withOpacity(0.08)),
+                ),
+                child: _SettingsRow(
+                  icon: Icons.mail_outline,
+                  color: const Color(0xFF4A5FBC),
+                  title: 'Contact Details',
+                  subtitle: 'Email / phone for applicants',
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => EditCompanyPage(
+                          data: data,
+                          parentState: this,
+                          initialTabIndex: 1,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
               const SizedBox(height: 32),
             ],
           ),
