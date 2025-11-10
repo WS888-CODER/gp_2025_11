@@ -28,6 +28,7 @@ import 'screens/job_posting_page.dart';
 import 'screens/questions_page.dart';
 import 'screens/jobseeker_home.dart';
 import 'screens/company_home.dart';
+import 'package:gp_2025_11/screens/favorites_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -77,6 +78,7 @@ class Jadeer extends StatelessWidget {
         '/change-password': (context) => ChangePasswordScreen(),
         '/profile/jobseeker': (context) => const JobSeekerProfile(),
         '/profile/company': (context) => const CompanyProfile(),
+        '/favorites': (context) => const FavoritesPage(),
 
         '/jobseeker-home': (context) {
           final args = ModalRoute.of(context)!.settings.arguments

@@ -7,6 +7,7 @@ import 'package:gp_2025_11/screens/all_jobs.dart';
 import 'package:gp_2025_11/screens/jobseeker_profile.dart';
 import 'package:gp_2025_11/screens/cv_enhancement.screen.dart';
 import 'package:gp_2025_11/screens/history_page.dart';
+import 'package:gp_2025_11/screens/favorites_page.dart';
 
 class JobSeekerHome extends StatefulWidget {
   const JobSeekerHome({super.key, this.userId});
@@ -192,53 +193,53 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
         ],
       ),
       body: IndexedStack(
-  index: _tab,
-  children: [
-    const HistoryPage(), // Changed from Reports placeholder
-    homeBody,
-    const _WishlistPlaceholder(),
-  ],
-),
-bottomNavigationBar: Container(
-  height: 70,
-  color: Theme.of(context).colorScheme.surface,
-  child: Row(
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: [
-      _buildNavItem(
-        icon: Icons.history_outlined, // Changed icon
-        filledIcon: Icons.history, // Changed icon
-        label: 'History', // Changed label
-        isSelected: _tab == 0,
-        onTap: () => setState(() => _tab = 0),
+        index: _tab,
+        children: [
+          const HistoryPage(),
+          homeBody,
+          const FavoritesPage(), // Now shows actual favorites page!
+        ],
       ),
-      const SizedBox(width: 60),
-      _buildNavItem(
-        icon: Icons.home_outlined,
-        filledIcon: Icons.home,
-        label: 'Home',
-        isSelected: _tab == 1,
-        onTap: () {
-          if (_tab == 1) {
-            _homeScroll.animateTo(0,
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeOut);
-          } else {
-            setState(() => _tab = 1);
-          }
-        },
+      bottomNavigationBar: Container(
+        height: 70,
+        color: Theme.of(context).colorScheme.surface,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildNavItem(
+              icon: Icons.history_outlined,
+              filledIcon: Icons.history,
+              label: 'History',
+              isSelected: _tab == 0,
+              onTap: () => setState(() => _tab = 0),
+            ),
+            const SizedBox(width: 60),
+            _buildNavItem(
+              icon: Icons.home_outlined,
+              filledIcon: Icons.home,
+              label: 'Home',
+              isSelected: _tab == 1,
+              onTap: () {
+                if (_tab == 1) {
+                  _homeScroll.animateTo(0,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut);
+                } else {
+                  setState(() => _tab = 1);
+                }
+              },
+            ),
+            const SizedBox(width: 60),
+            _buildNavItem(
+              icon: Icons.favorite_border,
+              filledIcon: Icons.favorite,
+              label: 'Wishlist',
+              isSelected: _tab == 2,
+              onTap: () => setState(() => _tab = 2),
+            ),
+          ],
+        ),
       ),
-      const SizedBox(width: 60),
-      _buildNavItem(
-        icon: Icons.favorite_border,
-        filledIcon: Icons.favorite,
-        label: 'Wishlist',
-        isSelected: _tab == 2,
-        onTap: () => setState(() => _tab = 2),
-      ),
-    ],
-  ),
-),
     );
   }
 }
@@ -633,18 +634,6 @@ class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
           }).toList(),
         );
       },
-    );
-  }
-}
-
-class _WishlistPlaceholder extends StatelessWidget {
-  const _WishlistPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text('Wishlist – Soon',
-          style: Theme.of(context).textTheme.titleMedium),
     );
   }
 }
