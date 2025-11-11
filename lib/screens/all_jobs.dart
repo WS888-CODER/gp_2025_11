@@ -270,23 +270,23 @@ class _JobsPageState extends State<JobsPage> {
   List<Job> _applyFilters(List<Job> jobs) {
     Iterable<Job> res = jobs;
 
+    // 1) فلتر الوظائف المقفلة (يقدّر المستخدم يغيّره بعد تفعيل For You)
     if (!_showClosedJobs) {
       res = res.where((j) => j.status != 'Closed');
     }
 
+    // 2) وضع For You: طبّق فلترة الـCV أولاً
     if (_forYou) {
       if (_profile.cvUrl == null) {
-        res = const <Job>[];
+        // ما عنده CV → ما في نتائج
+        return const <Job>[];
       } else {
         res = res.where((j) => _matchesCvKeywords(j, _profile.cvKeywords));
       }
-
-      return res.toList()
-        ..sort(
-          (a, b) => b.postedAt.compareTo(a.postedAt),
-        );
+      // ملاحظة: ما فيه return هنا — نكمّل ونطبّق بقية الفلاتر تحت
     }
 
+    // 3) البحث (ينطبق فوق مجموعة For You لو كان شغّال)
     if (_search.trim().isNotEmpty) {
       final q = _search.toLowerCase();
       res = res.where((j) {
@@ -299,10 +299,12 @@ class _JobsPageState extends State<JobsPage> {
       });
     }
 
+    // 4) تصفية بالسبيشالتي (تنطبق أيضاً فوق For You)
     if (_selectedSpecialty != 'All') {
       res = res.where((j) => _matchesSpecialty(j, _selectedSpecialty));
     }
 
+    // 5) الفرز (إذا For You مفعّل، الافتراضي Newest — لكن اليوزر يقدر يغيّره)
     final list = res.toList();
     list.sort(
       (a, b) => _sort == SortOrder.newestFirst
