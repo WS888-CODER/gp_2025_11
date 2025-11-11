@@ -918,8 +918,7 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
       if (snap.exists) {
         await favRef.delete();
         if (!mounted) return;
-        messenger?.showSnackBar(
-            const SnackBar(content: Text('Removed from favorites')));
+        SnackHelper.success(context, 'Removed from favorites');
       } else {
         await favRef.set({
           'UserID': uid,
@@ -927,12 +926,11 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
           'CreatedAt': FieldValue.serverTimestamp(),
         });
         if (!mounted) return;
-        messenger
-            ?.showSnackBar(const SnackBar(content: Text('Saved to favorites')));
+        SnackHelper.success(context, 'Saved to favorites');
       }
     } catch (e) {
       if (!mounted) return;
-      messenger?.showSnackBar(SnackBar(content: Text('Failed: $e')));
+      SnackHelper.error(context, 'Failed: $e');
     }
   }
 
@@ -1380,18 +1378,16 @@ class _JobCardState extends State<JobCard> {
         }, SetOptions(merge: true));
         if (!mounted) return;
         setState(() => _saved = true);
-        messenger
-            ?.showSnackBar(const SnackBar(content: Text('Saved to favorites')));
+        SnackHelper.success(context, 'Saved to favorites');
       } else {
         await favRef.delete();
         if (!mounted) return;
         setState(() => _saved = false);
-        messenger?.showSnackBar(
-            const SnackBar(content: Text('Removed from favorites')));
+        SnackHelper.success(context, 'Removed from favorites');
       }
     } catch (e) {
       if (!mounted) return;
-      messenger?.showSnackBar(SnackBar(content: Text('Failed: $e')));
+      SnackHelper.error(context, 'Failed: $e');
     }
   }
 
