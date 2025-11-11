@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
+import 'package:gp_2025_11/screens/favorites_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /* ========================== FIRESTORE CONSTANTS ========================== */
@@ -102,7 +103,7 @@ class Job {
 
     return Job(
       id: doc.id,
-      jobId: (d[JobFields.jobId] ?? '').toString(),
+      jobId: doc.id,
       title: (d[JobFields.title] ?? '').toString(),
       position: (d[JobFields.position] ?? '').toString(),
       keywords: asStringList(d[JobFields.keywords]),
@@ -885,6 +886,55 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
 
   String _fmtDate(DateTime d) =>
       '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
+  void initState() {
+    super.initState();
+    _loadSaved();
+  }
+
+  Future<void> _loadSaved() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    final favDocId = '${uid}_${widget.job.jobId}';
+    final snap = await FirebaseFirestore.instance
+        .collection('Favourite')
+        .doc(favDocId)
+        .get();
+    if (mounted) setState(() => _saved = snap.exists);
+  }
+
+  Future<void> _toggleFavorite() async {
+    final messenger = ScaffoldMessenger.maybeOf(context); // خذ المرجع قبل await
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    final docId = '${uid}_${widget.job.jobId}';
+    final favRef =
+        FirebaseFirestore.instance.collection('Favourite').doc(docId);
+
+    try {
+      final snap = await favRef.get();
+      if (!mounted) return; // مهم بعد await
+
+      if (snap.exists) {
+        await favRef.delete();
+        if (!mounted) return;
+        messenger?.showSnackBar(
+            const SnackBar(content: Text('Removed from favorites')));
+      } else {
+        await favRef.set({
+          'UserID': uid,
+          'JobID': widget.job.jobId,
+          'CreatedAt': FieldValue.serverTimestamp(),
+        });
+        if (!mounted) return;
+        messenger
+            ?.showSnackBar(const SnackBar(content: Text('Saved to favorites')));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      messenger?.showSnackBar(SnackBar(content: Text('Failed: $e')));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -909,13 +959,7 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
           IconButton(
             tooltip:
                 isClosed ? 'Closed job' : (_saved ? 'Saved' : 'Save for later'),
-            onPressed: isClosed
-                ? null
-                : () {
-                    setState(() {
-                      _saved = !_saved;
-                    });
-                  },
+            onPressed: isClosed ? null : _toggleFavorite,
             icon: Icon(
               _saved ? Icons.favorite : Icons.favorite_border,
               color:
@@ -1298,6 +1342,58 @@ class _JobCardState extends State<JobCard> {
 
   String _fmtDate(DateTime d) =>
       '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
+  void initState() {
+    super.initState();
+    _loadSaved();
+  }
+
+  Future<void> _loadSaved() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    final favDocId = '${uid}_${widget.job.jobId}';
+    final snap = await FirebaseFirestore.instance
+        .collection('Favourite')
+        .doc(favDocId)
+        .get();
+    if (mounted) {
+      setState(() => _saved = snap.exists);
+    }
+  }
+
+  // داخل _JobCardState
+  Future<void> _toggleFavorite() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    final messenger = ScaffoldMessenger.maybeOf(context); // خذيه قبل await
+    final jobId = widget.job.jobId;
+    final favDocId = '${uid}_$jobId';
+    final favRef =
+        FirebaseFirestore.instance.collection('Favourite').doc(favDocId);
+
+    try {
+      if (!_saved) {
+        await favRef.set({
+          'UserID': uid,
+          'JobID': jobId,
+          'CreatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+        if (!mounted) return;
+        setState(() => _saved = true);
+        messenger
+            ?.showSnackBar(const SnackBar(content: Text('Saved to favorites')));
+      } else {
+        await favRef.delete();
+        if (!mounted) return;
+        setState(() => _saved = false);
+        messenger?.showSnackBar(
+            const SnackBar(content: Text('Removed from favorites')));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      messenger?.showSnackBar(SnackBar(content: Text('Failed: $e')));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1368,13 +1464,7 @@ class _JobCardState extends State<JobCard> {
                     tooltip: isClosed
                         ? 'Closed job'
                         : (_saved ? 'Saved' : 'Save for later'),
-                    onPressed: isClosed
-                        ? null
-                        : () {
-                            setState(() {
-                              _saved = !_saved;
-                            });
-                          },
+                    onPressed: isClosed ? null : _toggleFavorite,
                     icon: Icon(
                       _saved ? Icons.favorite : Icons.favorite_border,
                       color: isClosed

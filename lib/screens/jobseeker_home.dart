@@ -92,9 +92,9 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
   @override
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
-      }
+      if (!mounted) return; // مهم
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      messenger?.hideCurrentMaterialBanner();
     });
 
     final homeBody = ListView(
@@ -108,9 +108,10 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
                 label: 'Mock Interviews',
                 icon: Icons.mic_none,
                 color: _brand,
-                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Mock Interviews – Soon')),
-                ),
+                onTap: () {
+                  ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+                      const SnackBar(content: Text('Mock Interviews – Soon')));
+                },
               ),
             ),
             const SizedBox(width: 12),
@@ -220,7 +221,7 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
               label: 'Home',
               isSelected: _tab == 1,
               onTap: () {
-                if (_tab == 1) {
+                if (_tab == 1 && _homeScroll.hasClients) {
                   _homeScroll.animateTo(0,
                       duration: const Duration(milliseconds: 300),
                       curve: Curves.easeOut);
@@ -475,6 +476,18 @@ class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
         .snapshots();
   }
 
+  Stream<QuerySnapshot<Map<String, dynamic>>> _favStream() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      // يرجّع ستريم فاضي لو مافيه مستخدم
+      return const Stream<QuerySnapshot<Map<String, dynamic>>>.empty();
+    }
+    return FirebaseFirestore.instance
+        .collection('Favourite')
+        .where('UserID', isEqualTo: uid)
+        .snapshots();
+  }
+
   Future<Map<String, CompanyInfo>> _fetchCompaniesForJobs(
       List<Job> jobs) async {
     final ownerIds = jobs.map((j) => j.userId).toSet().toList();
@@ -624,14 +637,44 @@ class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
           );
         }
 
-        return Column(
-          children: _finalJobs.map((job) {
-            final company = _companyByUserId[job.userId] ?? const CompanyInfo();
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: JobCard(job: job, company: company),
+        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: _favStream(),
+          builder: (context, favSnap) {
+            final savedIds = <String>{
+              if (favSnap.hasData)
+                ...favSnap.data!.docs
+                    .map((d) => (d.data()['JobID'] ?? '').toString().trim())
+                    .where((id) => id.isNotEmpty),
+            };
+
+            if (_finalJobs.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  'No open jobs',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              );
+            }
+
+            return Column(
+              children: _finalJobs.map((job) {
+                final company =
+                    _companyByUserId[job.userId] ?? const CompanyInfo();
+                final isSaved = savedIds.contains(job.jobId);
+
+                // المفتاح يتغيّر مع تغيّر حالة الحفظ → يعيد بناء JobCard فورًا
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: JobCard(
+                    key: ValueKey('job-${job.jobId}-${isSaved ? '1' : '0'}'),
+                    job: job,
+                    company: company,
+                  ),
+                );
+              }).toList(),
             );
-          }).toList(),
+          },
         );
       },
     );

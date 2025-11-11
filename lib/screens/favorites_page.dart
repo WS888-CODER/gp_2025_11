@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -15,75 +17,112 @@ class _FavoritesPageState extends State<FavoritesPage> {
   final Map<String, Job> _jobs = {};
   final Map<String, CompanyInfo> _companies = {};
   bool _loading = true;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _favSub;
 
   @override
   void initState() {
     super.initState();
-    _loadFavorites();
+    _listenFavorites();
   }
 
-  Future<void> _loadFavorites() async {
-  final userId = FirebaseAuth.instance.currentUser?.uid;
-  if (userId == null) {
-    setState(() => _loading = false);
-    return;
-  }
+  void _listenFavorites() {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      setState(() => _loading = false);
+      return;
+    }
 
-  try {
-    // Get all favorite documents for this user (no index needed!)
-    final favSnapshot = await FirebaseFirestore.instance
+    _favSub = FirebaseFirestore.instance
         .collection('Favourite')
         .where('UserID', isEqualTo: userId)
-        .get();
+        .snapshots()
+        .listen((favSnapshot) async {
+      try {
+        // لا توجد مفضلات
+        if (favSnapshot.docs.isEmpty) {
+          if (!mounted) return;
+          setState(() {
+            _jobs.clear();
+            _companies.clear();
+            _loading = false;
+          });
+          return;
+        }
 
-    if (favSnapshot.docs.isEmpty) {
-      setState(() => _loading = false);
-      return;
-    }
+        // IDs بدون تكرار
+        // IDs بدون تكرار + trim
+        final favoriteJobIds = favSnapshot.docs
+            .map((d) => (d.data()['JobID'] ?? '').toString().trim())
+            .where((id) => id.isNotEmpty)
+            .toSet()
+            .toList();
 
-    // Extract job IDs
-    final favoriteJobIds = favSnapshot.docs
-        .map((doc) => (doc.data()['JobID'] ?? '').toString())
-        .where((id) => id.isNotEmpty)
-        .toList();
+        final Map<String, Job> newJobs = {};
+        final Map<String, CompanyInfo> newCompanies = {};
 
-    if (favoriteJobIds.isEmpty) {
-      setState(() => _loading = false);
-      return;
-    }
+// ---- الطور الأول: documentId whereIn ----
+        final idsLeft = <String>{...favoriteJobIds}; // سنحذف منها اللي لقيناه
+        for (var i = 0; i < favoriteJobIds.length; i += 10) {
+          final chunk = favoriteJobIds.sublist(
+            i,
+            (i + 10 > favoriteJobIds.length) ? favoriteJobIds.length : i + 10,
+          );
 
-    // Fetch job details in batches
-    for (var i = 0; i < favoriteJobIds.length; i += 10) {
-      final chunk = favoriteJobIds.sublist(
-        i,
-        i + 10 > favoriteJobIds.length ? favoriteJobIds.length : i + 10,
-      );
-
-      final jobDocs = await FirebaseFirestore.instance
-          .collection('Jobs')
-          .where('JobID', whereIn: chunk)
-          .get();
-
-      for (final doc in jobDocs.docs) {
-        final job = Job.fromDoc(doc);
-        _jobs[job.jobId] = job;
-
-        // Fetch company info
-        if (!_companies.containsKey(job.userId)) {
-          final companyDoc = await FirebaseFirestore.instance
-              .collection('Users')
-              .doc(job.userId)
+          final jobDocs = await FirebaseFirestore.instance
+              .collection('Jobs')
+              .where(FieldPath.documentId, whereIn: chunk)
               .get();
 
-          if (companyDoc.exists) {
-            final data = companyDoc.data()!;
+          for (final doc in jobDocs.docs) {
+            final job = Job.fromDoc(doc);
+            newJobs[job.jobId] = job; // مفتاحنا الموحّد = doc.id
+            idsLeft.remove(doc.id); // لقيناه بالـdocId
+          }
+        }
+
+// ---- الطور الثاني (fallback): الحقل JobID whereIn لأي IDs ما رجعت ----
+        final remaining = idsLeft.toList();
+        for (var i = 0; i < remaining.length; i += 10) {
+          final chunk = remaining.sublist(
+            i,
+            (i + 10 > remaining.length) ? remaining.length : i + 10,
+          );
+
+          if (chunk.isEmpty) break;
+
+          final jobDocs = await FirebaseFirestore.instance
+              .collection('Jobs')
+              .where(JobFields.jobId, whereIn: chunk)
+              .get();
+
+          for (final doc in jobDocs.docs) {
+            final job = Job.fromDoc(doc);
+            newJobs[job.jobId] = job; // نفس المفتاح
+          }
+        }
+
+        // حمّل بيانات الشركات لأصحاب هذه الوظائف
+        final ownerIds = newJobs.values.map((j) => j.userId).toSet().toList();
+        for (var i = 0; i < ownerIds.length; i += 10) {
+          final chunk = ownerIds.sublist(
+            i,
+            (i + 10 > ownerIds.length) ? ownerIds.length : i + 10,
+          );
+
+          final usersSnap = await FirebaseFirestore.instance
+              .collection('Users')
+              .where(FieldPath.documentId, whereIn: chunk)
+              .get();
+
+          for (final doc in usersSnap.docs) {
+            final data = doc.data();
             final rawCompany = (data['CompanyName'] ?? '').toString().trim();
             final rawName = (data['Name'] ?? '').toString().trim();
             final displayName = rawCompany.isNotEmpty
                 ? rawCompany
                 : (rawName.isNotEmpty ? rawName : 'Company');
 
-            _companies[job.userId] = CompanyInfo(
+            newCompanies[doc.id] = CompanyInfo(
               name: displayName,
               logoUrl: (data['PhotoURL'] ?? '').toString(),
               location: (data['Location'] ?? '').toString(),
@@ -92,120 +131,124 @@ class _FavoritesPageState extends State<FavoritesPage> {
               phone: (data['Phone'] ?? '').toString(),
             );
           }
-        }
-      }
-    }
 
-    setState(() => _loading = false);
-  } catch (e) {
-    print('❌ ERROR LOADING FAVORITES: $e');
-    setState(() => _loading = false);
-    _showError('Error loading favorites: $e');
+          // ضعي قيَم افتراضية لأي مالك لم يرجع
+          for (final id in chunk) {
+            newCompanies.putIfAbsent(id, () => const CompanyInfo());
+          }
+        }
+
+        if (!mounted) return;
+        setState(() {
+          _jobs
+            ..clear()
+            ..addAll(newJobs);
+          _companies
+            ..clear()
+            ..addAll(newCompanies);
+          _loading = false;
+        });
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _loading = false);
+        SnackHelper.error(context, 'Error loading favorites: $e');
+      }
+    }, onError: (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      SnackHelper.error(context, 'Error listening to favorites: $e');
+    });
   }
-}
 
   Future<void> _removeFromFavorites(String jobId) async {
-  final userId = FirebaseAuth.instance.currentUser?.uid;
-  if (userId == null) return;
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
 
-  try {
-    final docId = '${userId}_$jobId';
-    await FirebaseFirestore.instance.collection('Favourite').doc(docId).delete();
+    try {
+      final docId = '${userId}_$jobId';
+      await FirebaseFirestore.instance
+          .collection('Favourite')
+          .doc(docId)
+          .delete();
 
-    setState(() {
-      _jobs.remove(jobId);
-    });
-
-    _showSuccess('Removed from favorites');
-  } catch (e) {
-    print('❌ ERROR REMOVING: $e');
-    _showError('Failed to remove from favorites');
-  }
-}
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+      if (!mounted) return; // <-- مهم
+      SnackHelper.success(context, 'Removed from favorites');
+    } catch (e) {
+      if (!mounted) return; // <-- مهم
+      SnackHelper.error(context, 'Failed to remove from favorites');
+    }
   }
 
-  void _showSuccess(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+  List<Job> get jobsList =>
+      _jobs.values.toList()..sort((a, b) => b.postedAt.compareTo(a.postedAt));
+
+  @override
+  void dispose() {
+    _favSub?.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return ThemedScaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF4A5FBC),
-        title: const Text(
-          'Favorites',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF4A5FBC),
+          title: const Text(
+            'Favorites',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
           ),
+          iconTheme: const IconThemeData(color: Colors.white),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _jobs.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.favorite_border,
-                        size: 80,
-                        color: Colors.grey[400],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No Favorite Jobs Yet',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[700],
+        body: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _jobs.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.favorite_border,
+                          size: 80,
+                          color: Colors.grey[400],
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Jobs you save will appear here',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
+                        const SizedBox(height: 16),
+                        Text(
+                          'No Favorite Jobs Yet',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[700],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: _jobs.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) {
-                    final job = _jobs.values.elementAt(index);
-                    final company = _companies[job.userId] ?? const CompanyInfo();
-                    return _FavoriteJobCard(
-                      job: job,
-                      company: company,
-                      onRemove: () => _removeFromFavorites(job.jobId),
-                    );
-                  },
-                ),
-    );
+                        const SizedBox(height: 8),
+                        Text(
+                          'Jobs you save will appear here',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: jobsList.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) {
+                      final job = jobsList[index];
+                      final company =
+                          _companies[job.userId] ?? const CompanyInfo();
+                      return _FavoriteJobCard(
+                        job: job,
+                        company: company,
+                        onRemove: () => _removeFromFavorites(job.jobId),
+                      );
+                    },
+                  ));
   }
 }
 
@@ -226,7 +269,6 @@ class _FavoriteJobCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isClosed = job.status.trim().toLowerCase() == 'closed';
-    final scheme = Theme.of(context).colorScheme;
 
     return Card(
       elevation: 0.5,
@@ -374,6 +416,49 @@ class _FavoriteJobCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class SnackHelper {
+  // ✅ Success message
+  static void success(BuildContext context, String message) {
+    _show(
+      context,
+      message,
+      const Color(0xFF4CAF50), // Green
+    );
+  }
+
+  // ✅ Error message
+  static void error(BuildContext context, String message) {
+    _show(
+      context,
+      message,
+      const Color(0xFFFF7B7B), // Red
+    );
+  }
+
+  // ✅ Base snack builder
+  static void _show(BuildContext context, String message, Color color) {
+    if (context.mounted == false) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        backgroundColor: color.withOpacity(0.8),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
         ),
       ),
     );
