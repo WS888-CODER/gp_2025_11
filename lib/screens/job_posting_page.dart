@@ -1005,9 +1005,22 @@ class _JobPostingPageState extends State<JobPostingPage> {
       if (!datesChanged) {
         return true; // Allow back without prompt
       }
+    } else {
+      // In create mode, check if user has entered any data
+      final hasData = _jobTitleController.text.trim().isNotEmpty ||
+                      _positionController.text.trim().isNotEmpty ||
+                      _selectedSpecialty != null ||
+                      _jobDescriptionController.text.trim().isNotEmpty ||
+                      _requirements.isNotEmpty ||
+                      _startDate != null ||
+                      _endDate != null;
+
+      if (!hasData) {
+        return true; // Allow back without prompt if nothing entered
+      }
     }
 
-    // Show confirmation dialog (for create mode or if dates changed in edit mode)
+    // Show confirmation dialog (for create mode with data or if dates changed in edit mode)
     final shouldPop = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
