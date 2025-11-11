@@ -413,7 +413,11 @@ class _CompanyHomeState extends State<CompanyHome> {
                   // Check profile completion first
                   final canProceed = await _checkProfileComplete();
                   if (canProceed && mounted) {
-                    Navigator.pushNamed(context, '/job-posting');
+                    await Navigator.pushNamed(context, '/job-posting');
+                    // Refresh the page after returning
+                    if (mounted) {
+                      setState(() {});
+                    }
                   }
                 },
                 style: ElevatedButton.styleFrom(
@@ -583,7 +587,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                           final start = data['StartDate'];
                           final end = data['EndDate'];
 
-                          Navigator.pushNamed(
+                          await Navigator.pushNamed(
                             context,
                             '/job-posting',
                             arguments: <String, dynamic>{
@@ -597,6 +601,11 @@ class _CompanyHomeState extends State<CompanyHome> {
                               'endDate': end,
                             },
                           );
+
+                          // Refresh the page after returning from edit
+                          if (mounted) {
+                            setState(() {});
+                          }
                         },
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(color: _brand),

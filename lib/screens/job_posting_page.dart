@@ -55,6 +55,10 @@ class _JobPostingPageState extends State<JobPostingPage> {
   bool _isEdit = false;
   String? _jobId; // لو تعديل راح نستعمله
 
+  // Store original dates for comparison (only in edit mode)
+  DateTime? _originalStartDate;
+  DateTime? _originalEndDate;
+
   // AI Credits tracking
   int _aiCreditsRemaining = 2;
   bool _loadingCredits = true;
@@ -119,6 +123,10 @@ class _JobPostingPageState extends State<JobPostingPage> {
 
               _startDate = _asDate(jobData['StartDate']);
               _endDate = _asDate(jobData['EndDate']);
+
+              // Store original dates for comparison
+              _originalStartDate = _startDate;
+              _originalEndDate = _endDate;
             }
           } catch (e) {
             _showErrorSnackBar('Error loading job: $e');
@@ -166,6 +174,10 @@ class _JobPostingPageState extends State<JobPostingPage> {
 
           _startDate = _asDate(args['StartDate'] ?? args['startDate']);
           _endDate = _asDate(args['EndDate'] ?? args['endDate']);
+
+          // Store original dates for comparison
+          _originalStartDate = _startDate;
+          _originalEndDate = _endDate;
         }
 
         setState(() {});
@@ -850,13 +862,18 @@ class _JobPostingPageState extends State<JobPostingPage> {
     if (_jobId == null) return;
 
     try {
-      // Update dates in Firestore
-      await FirebaseFirestore.instance.collection('Jobs').doc(_jobId).update({
-        'StartDate': _startDate,
-        'EndDate': _endDate,
-      });
+      // Check if dates actually changed
+      final datesChanged = _startDate != _originalStartDate ||
+                           _endDate != _originalEndDate;
 
-      _showSuccessSnackBar('Job dates updated successfully');
+      // Only update if dates changed
+      if (datesChanged) {
+        await FirebaseFirestore.instance.collection('Jobs').doc(_jobId).update({
+          'StartDate': _startDate,
+          'EndDate': _endDate,
+        });
+        _showSuccessSnackBar('Job dates updated successfully');
+      }
 
       // Navigate to questions page
       if (!mounted) return;
@@ -981,7 +998,16 @@ class _JobPostingPageState extends State<JobPostingPage> {
   }
 
   Future<bool> _onWillPop() async {
-    // Show confirmation dialog
+    // In edit mode, only show prompt if dates changed
+    if (_isEdit) {
+      final datesChanged = _startDate != _originalStartDate ||
+                           _endDate != _originalEndDate;
+      if (!datesChanged) {
+        return true; // Allow back without prompt
+      }
+    }
+
+    // Show confirmation dialog (for create mode or if dates changed in edit mode)
     final shouldPop = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -1119,7 +1145,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                         padding: const EdgeInsets.only(left: 4, bottom: 8),
                         child: _buildLabelWithInfo(
                           'Position',
-                          'Specify the job\'s level and role e.g., Junior Developer, Senior Designer, Team Lead. \nThis helps show the seniority, scope, and responsibilities of the position.',
+                          'Specify the job\'s level and role\nfor example: Junior Developer, Senior Designer, Team Lead. \nThis helps show the seniority, scope, and responsibilities of the position.',
                         ),
                       ),
                       Container(
@@ -1174,7 +1200,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                         padding: const EdgeInsets.only(left: 4, bottom: 8),
                         child: _buildLabelWithInfo(
                           'Speciality',
-                          'Indicate the job\'s main area of expertise e.g., Data Science, Frontend Development, Cybersecurity. \nThis shows the specific field or focus the role specializes in.',
+                          'Indicate the job\'s main area of expertise\nfor example: Data Science, Frontend Development, Cybersecurity.\nthis field helps job seekers find job posts more easily.',
                         ),
                       ),
                       Container(
@@ -1704,7 +1730,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                       ),
                       child: Text(
                         _isEdit
-                            ? 'Continue to Questions'
+                            ? 'Save & Continue to Questions'
                             : 'Create Job Posting',
                         style: const TextStyle(fontSize: 16),
                       ),

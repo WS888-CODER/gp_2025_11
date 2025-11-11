@@ -466,7 +466,14 @@ class _QuestionsPageState extends State<QuestionsPage> {
 
   void _done() async {
     if (_locked) {
-      Navigator.pushNamedAndRemoveUntil(context, '/company-home', (r) => false);
+      if (!mounted) return;
+      // Get company ID from job data before navigating
+      final companyId = _jobData?['UserID'] as String?;
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/company-home',
+        (route) => false,
+        arguments: companyId != null ? {'companyId': companyId} : null,
+      );
       return;
     }
 
@@ -535,8 +542,15 @@ class _QuestionsPageState extends State<QuestionsPage> {
       return;
     }
 
-    Navigator.pushNamedAndRemoveUntil(
-        context, '/company-home', (route) => false);
+    // Navigate back to company home - clear entire stack
+    if (!mounted) return;
+    // Get company ID from job data before navigating
+    final companyId = _jobData?['UserID'] as String?;
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      '/company-home',
+      (route) => false,
+      arguments: companyId != null ? {'companyId': companyId} : null,
+    );
   }
 
   bool _autoTriggered = false;
