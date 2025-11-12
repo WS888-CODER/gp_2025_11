@@ -16,18 +16,17 @@ class _QuestionsPageState extends State<QuestionsPage> {
   Map<String, dynamic>? _jobData;
   bool _loadingJob = true;
   bool _busy = false;
-  static const int kMaxQuestionLength = 180;
-  static const int kEditQuotaInit = 3;
 
-  bool _locked = false;
-  bool _regenUsed = false;
+  static const int kMaxQuestionLength = 180; // character limit
+  static const int kEditQuotaInit = 3; // add/edit/delete total = 3
+
+  bool _locked = false; // lock after Done
+  bool _regenUsed = false; // regenerate only once
   int _quotaLeft = kEditQuotaInit;
 
-  Uri _fnUrl() {
-    return Uri.parse(
-      'https://us-central1-jadeer-b4953.cloudfunctions.net/generateInterviewQuestions',
-    );
-  }
+  Uri _fnUrl() => Uri.parse(
+        'https://us-central1-jadeer-b4953.cloudfunctions.net/generateInterviewQuestions',
+      );
 
   @override
   void initState() {
@@ -41,24 +40,101 @@ class _QuestionsPageState extends State<QuestionsPage> {
     });
   }
 
+  // ===== Firestore helpers =====
+  DocumentReference<Map<String, dynamic>> get _jobRef =>
+      FirebaseFirestore.instance.collection('Jobs').doc(_jobId);
+
+  Stream<DocumentSnapshot<Map<String, dynamic>>> _jobStream() =>
+      _jobRef.snapshots();
+
+  List<Map<String, dynamic>> _readQuestionsFromJob(Map<String, dynamic>? job) {
+    final List raw = (job?['Questions'] as List?) ?? const [];
+    // ensure well-shaped list of maps
+    return raw
+        .map((e) => (e is Map<String, dynamic>) ? e : <String, dynamic>{})
+        .toList();
+  }
+
+  Future<void> _loadJobMeta() async {
+    if (_jobId == null) {
+      setState(() => _loadingJob = false);
+      return;
+    }
+    try {
+      final doc = await _jobRef.get();
+      if (doc.exists) {
+        _jobData = doc.data();
+        _locked = (_jobData?['QuestionsLocked'] == true);
+        _regenUsed = (_jobData?['QuestionsRegenerated'] == true);
+
+        _quotaLeft =
+            (_jobData?['QuestionsEditQuotaLeft'] as int?) ?? kEditQuotaInit;
+      }
+    } catch (_) {}
+    setState(() => _loadingJob = false);
+    await _autoGenerateIfEmpty();
+  }
+
+  // ===== UX helpers =====
+  void _snack(String msg, {bool error = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          msg,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        backgroundColor: error
+            ? const Color(0xFFFF7B7B).withOpacity(0.8)
+            : const Color(0xFF4CAF50).withOpacity(0.8),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  // ===== Validation helpers (array-based) =====
   Future<bool> _isDuplicateQuestion(String text) async {
-    final snap = await FirebaseFirestore.instance
-        .collection('Jobs')
-        .doc(_jobId)
-        .collection('Questions')
-        .where('Text', isEqualTo: text.trim())
-        .limit(1)
-        .get();
-    return snap.docs.isNotEmpty;
+    final doc = await _jobRef.get();
+    final job = doc.data();
+    final questions = _readQuestionsFromJob(job);
+    final t = text.trim();
+    return questions.any((q) => (q['Text'] ?? '').toString().trim() == t);
   }
 
   Future<void> _consumeQuota() async {
-    // Decrease the per-job edit/add/delete quota by 1
-    final jobRef = FirebaseFirestore.instance.collection('Jobs').doc(_jobId);
-    await jobRef.update({
-      'QuestionsEditQuotaLeft': FieldValue.increment(-1),
-    });
-    _quotaLeft -= 1;
+    try {
+      await FirebaseFirestore.instance.runTransaction((tx) async {
+        final snap = await tx.get(_jobRef);
+        final data = snap.data() as Map<String, dynamic>?;
+
+        final current = (data?['QuestionsEditQuotaLeft'] is int)
+            ? data!['QuestionsEditQuotaLeft'] as int
+            : kEditQuotaInit;
+
+        if (current <= 0) {
+          throw StateError('quota_exhausted');
+        }
+
+        tx.update(_jobRef, {'QuestionsEditQuotaLeft': current - 1});
+      });
+
+      setState(() => _quotaLeft = (_quotaLeft > 0) ? _quotaLeft - 1 : 0);
+    } on StateError catch (e) {
+      if (e.message == 'quota_exhausted') {
+        _snack('You have no remaining edits for this job.', error: true);
+      } else {
+        _snack('Quota logic error.', error: true);
+      }
+    } on FirebaseException catch (e) {
+      _snack('Quota update denied: ${e.code}', error: true);
+    } catch (e) {
+      _snack('Quota update error: $e', error: true);
+    }
   }
 
   Future<void> _addQuestionDialog() async {
@@ -74,12 +150,17 @@ class _QuestionsPageState extends State<QuestionsPage> {
 
     final controller = TextEditingController();
     String type = 'technical';
-    String difficulty = 'medium';
 
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Add Question'),
+        backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        title: const Text(
+          'Add Question',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -87,30 +168,50 @@ class _QuestionsPageState extends State<QuestionsPage> {
               TextField(
                 controller: controller,
                 maxLength: kMaxQuestionLength,
-                decoration: const InputDecoration(labelText: 'Question text'),
+                decoration: const InputDecoration(
+                  labelText: 'Question text',
+                  labelStyle: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 24),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white),
+                  ),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white, width: 2),
+                  ),
+                ),
+                style: TextStyle(color: Colors.white),
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: type,
-                decoration: const InputDecoration(labelText: 'Type'),
+                decoration: const InputDecoration(
+                  labelText: 'Type',
+                  labelStyle: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 24),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white),
+                  ),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white, width: 2),
+                  ),
+                ),
+                dropdownColor: Colors.black,
                 items: const [
                   DropdownMenuItem(
-                      value: 'technical', child: Text('Technical')),
+                      value: 'technical',
+                      child: Text('Technical',
+                          style: TextStyle(color: Colors.white))),
                   DropdownMenuItem(
-                      value: 'behavioral', child: Text('Behavioral')),
+                      value: 'behavioral',
+                      child: Text('Behavioral',
+                          style: TextStyle(color: Colors.white))),
                 ],
                 onChanged: (v) => type = v ?? 'technical',
-              ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                value: difficulty,
-                decoration: const InputDecoration(labelText: 'Difficulty'),
-                items: const [
-                  DropdownMenuItem(value: 'easy', child: Text('Easy')),
-                  DropdownMenuItem(value: 'medium', child: Text('Medium')),
-                  DropdownMenuItem(value: 'hard', child: Text('Hard')),
-                ],
-                onChanged: (v) => difficulty = v ?? 'medium',
+                style: TextStyle(color: Colors.white),
               ),
             ],
           ),
@@ -118,9 +219,27 @@ class _QuestionsPageState extends State<QuestionsPage> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.white.withOpacity(0.9),
+                foregroundColor: const Color(0xFF4A5FBC),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
               child: const Text('Cancel')),
-          ElevatedButton(
+          TextButton(
               onPressed: () => Navigator.pop(ctx, true),
+              style: TextButton.styleFrom(
+                backgroundColor: const Color(0xFFFC686A),
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
               child: const Text('Add')),
         ],
       ),
@@ -138,6 +257,16 @@ class _QuestionsPageState extends State<QuestionsPage> {
     }
 
     try {
+      final doc = await _jobRef.get();
+      final job = doc.data();
+      final questions = _readQuestionsFromJob(job);
+
+      questions.add({
+        'Text': text,
+        'Type': type,
+      });
+
+      await _jobRef.update({'Questions': questions});
       await _consumeQuota();
       _snack('Added.');
     } catch (e) {
@@ -145,7 +274,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
     }
   }
 
-  Future<void> _editQuestion(DocumentSnapshot d) async {
+  Future<void> _editQuestionAt(int index, Map<String, dynamic> q) async {
     if (_locked) {
       _snack('Questions are locked.', error: true);
       return;
@@ -157,14 +286,19 @@ class _QuestionsPageState extends State<QuestionsPage> {
     }
 
     final controller =
-        TextEditingController(text: (d['Text'] ?? '').toString());
-    String type = (d['Type'] ?? 'technical').toString();
-    String difficulty = (d['Difficulty'] ?? 'medium').toString();
+        TextEditingController(text: (q['Text'] ?? '').toString());
+    String type = (q['Type'] ?? 'technical').toString();
 
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Edit Question'),
+        backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        title: const Text(
+          'Edit Question',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -172,66 +306,116 @@ class _QuestionsPageState extends State<QuestionsPage> {
               TextField(
                 controller: controller,
                 maxLength: kMaxQuestionLength,
-                decoration: const InputDecoration(labelText: 'Question text'),
+                decoration: const InputDecoration(
+                  labelText: 'Question text',
+                  labelStyle: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 24),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white),
+                  ),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white, width: 2),
+                  ),
+                ),
+                style: TextStyle(color: Colors.white),
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: type,
-                decoration: const InputDecoration(labelText: 'Type'),
+                decoration: const InputDecoration(
+                  labelText: 'Type',
+                  labelStyle: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 24),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white),
+                  ),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white, width: 2),
+                  ),
+                ),
+                dropdownColor: Colors.black,
                 items: const [
                   DropdownMenuItem(
-                      value: 'technical', child: Text('Technical')),
+                      value: 'technical',
+                      child: Text('Technical',
+                          style: TextStyle(color: Colors.white))),
                   DropdownMenuItem(
-                      value: 'behavioral', child: Text('Behavioral')),
+                      value: 'behavioral',
+                      child: Text('Behavioral',
+                          style: TextStyle(color: Colors.white))),
                 ],
                 onChanged: (v) => type = v ?? 'technical',
-              ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                value: difficulty,
-                decoration: const InputDecoration(labelText: 'Difficulty'),
-                items: const [
-                  DropdownMenuItem(value: 'easy', child: Text('Easy')),
-                  DropdownMenuItem(value: 'medium', child: Text('Medium')),
-                  DropdownMenuItem(value: 'hard', child: Text('Hard')),
-                ],
-                onChanged: (v) => difficulty = v ?? 'medium',
+                style: TextStyle(color: Colors.white),
               ),
             ],
           ),
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
-          ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Save')),
+            onPressed: () => Navigator.pop(ctx, false),
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.white.withOpacity(0.9),
+              foregroundColor: const Color(0xFF4A5FBC),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            child: const Text('Cancel',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(
+              backgroundColor: const Color(0xFFFC686A),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            child: const Text('Save',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
         ],
       ),
     );
 
     if (ok != true) return;
 
-    final text = controller.text.trim();
-    if (text.isEmpty) return _snack('Question cannot be empty.', error: true);
-    if (text.length > kMaxQuestionLength) {
+    final newText = controller.text.trim();
+    if (newText.isEmpty) {
+      return _snack('Question cannot be empty.', error: true);
+    }
+    if (newText.length > kMaxQuestionLength) {
       return _snack('Character limit reached.', error: true);
     }
 
-    // If text changed, ensure it doesn’t duplicate another question
-    if (text != (d['Text'] ?? '')) {
-      if (await _isDuplicateQuestion(text)) {
+    if (newText != (q['Text'] ?? '').toString()) {
+      if (await _isDuplicateQuestion(newText)) {
         return _snack('Duplicate question.', error: true);
       }
     }
 
     try {
-      await d.reference.update({
-        'Text': text,
+      final doc = await _jobRef.get();
+      final job = doc.data();
+      final questions = _readQuestionsFromJob(job);
+
+      if (index < 0 || index >= questions.length) {
+        return _snack('Invalid question.', error: true);
+      }
+
+      questions[index] = {
+        'Text': newText,
         'Type': type,
-        'Difficulty': difficulty,
-      });
+      };
+
+      await _jobRef.update({'Questions': questions});
       await _consumeQuota();
       _snack('Saved.');
     } catch (e) {
@@ -239,7 +423,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
     }
   }
 
-  Future<void> _deleteQuestion(DocumentSnapshot d) async {
+  Future<void> _deleteQuestionAt(int index) async {
     if (_locked) {
       _snack('Questions are locked.', error: true);
       return;
@@ -253,15 +437,42 @@ class _QuestionsPageState extends State<QuestionsPage> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Question'),
+        backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        title: const Text(
+          'Delete Question',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         content: const Text(
-            'Are you sure you want to delete this question? This will consume your quota.'),
+          'Are you sure you want to delete this question? This will consume your quota.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white),
+        ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.white.withOpacity(0.9),
+                foregroundColor: const Color(0xFF4A5FBC),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
               child: const Text('Cancel')),
           ElevatedButton(
               onPressed: () => Navigator.pop(ctx, true),
+              style: TextButton.styleFrom(
+                backgroundColor: const Color(0xFFFC686A),
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
               child: const Text('Delete')),
         ],
       ),
@@ -270,7 +481,16 @@ class _QuestionsPageState extends State<QuestionsPage> {
     if (ok != true) return;
 
     try {
-      await d.reference.delete();
+      final doc = await _jobRef.get();
+      final job = doc.data();
+      final questions = _readQuestionsFromJob(job);
+
+      if (index < 0 || index >= questions.length) {
+        return _snack('Invalid question.', error: true);
+      }
+
+      questions.removeAt(index);
+      await _jobRef.update({'Questions': questions});
       await _consumeQuota();
       _snack('Deleted.');
     } catch (e) {
@@ -278,91 +498,65 @@ class _QuestionsPageState extends State<QuestionsPage> {
     }
   }
 
-  Future<void> _loadJobMeta() async {
-    if (_jobId == null) {
-      setState(() => _loadingJob = false);
-      return;
-    }
-    try {
-      final doc =
-          await FirebaseFirestore.instance.collection('Jobs').doc(_jobId).get();
-      if (doc.exists) {
-        _jobData = doc.data();
-        _locked = (_jobData?['QuestionsLocked'] == true);
-        _regenUsed = (_jobData?['QuestionsRegenerated'] == true);
-
-        // Initialize quota if missing
-        final q = _jobData?['QuestionsEditQuotaLeft'];
-        if (q is! int) {
-          await FirebaseFirestore.instance
-              .collection('Jobs')
-              .doc(_jobId)
-              .update({'QuestionsEditQuotaLeft': kEditQuotaInit});
-          _quotaLeft = kEditQuotaInit;
-        } else {
-          _quotaLeft = q;
-        }
-      }
-    } catch (_) {}
-    setState(() => _loadingJob = false);
-    await _autoGenerateIfEmpty();
-  }
-
-  void _snack(String msg, {bool error = false}) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          msg,
-          textAlign: TextAlign.center,
-          style:
-              const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: error
-            ? const Color(0xFFFF7B7B).withOpacity(0.8)
-            : const Color(0xFF4CAF50).withOpacity(0.8),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-  }
-
+  // ===== Generation (array-based) =====
   Future<void> _generate({required bool overwrite}) async {
     if (_jobId == null || _jobData == null) return;
 
-    // ✅ Block if locked
     if (_locked) {
       _snack('Questions are locked. You can no longer generate or modify.',
           error: true);
       return;
     }
-
-    // ✅ Regenerate once only
     if (overwrite && _regenUsed) {
       _snack('You can only regenerate questions once.', error: true);
       return;
     }
 
     setState(() => _busy = true);
-
     try {
-      // Confirm regenerate
       if (overwrite) {
         final ok = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
-            title: const Text('Regenerate questions?'),
+            backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+            title: const Text(
+              'Regenerate questions?',
+              textAlign: TextAlign.center,
+              style:
+                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
             content: const Text(
-                'This will delete existing questions and generate new ones. Continue?'),
+              'This will delete existing questions and generate new ones. Continue?',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white),
+            ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Cancel'),
-              ),
+                  onPressed: () => Navigator.pop(ctx, false),
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.white.withOpacity(0.9),
+                    foregroundColor: const Color(0xFF4A5FBC),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  child: const Text('Cancel')),
               ElevatedButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Regenerate'),
-              ),
+                  onPressed: () => Navigator.pop(ctx, true),
+                  style: TextButton.styleFrom(
+                    backgroundColor: const Color(0xFFFC686A),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  child: const Text('Regenerate')),
             ],
           ),
         );
@@ -374,7 +568,8 @@ class _QuestionsPageState extends State<QuestionsPage> {
 
       final title = (_jobData?['JobTitle'] ?? '').toString();
       final position = (_jobData?['Position'] ?? '').toString();
-      final specialty = (_jobData?['Specialty'] ?? '').toString();
+      final specialty =
+          (_jobData?['Specialty'] ?? '').toString(); // REQUIRED now
       final requirements =
           (_jobData?['Requirements'] as List?)?.cast<String>() ??
               const <String>[];
@@ -385,12 +580,18 @@ class _QuestionsPageState extends State<QuestionsPage> {
         setState(() => _busy = false);
         return;
       }
+      // specialty is required in your flow
+      if (specialty.isEmpty) {
+        _snack('Missing specialty.', error: true);
+        setState(() => _busy = false);
+        return;
+      }
 
       final payload = {
         'jobId': _jobId,
         'title': title,
+        'specialty': specialty,
         if (position.isNotEmpty) 'position': position,
-        if (specialty.isNotEmpty) 'specialty': specialty,
         if (requirements.isNotEmpty) 'requirements': requirements,
         if (description.isNotEmpty) 'description': description,
       };
@@ -410,35 +611,30 @@ class _QuestionsPageState extends State<QuestionsPage> {
       final data = jsonDecode(resp.body);
       final List out = (data['questions'] as List?) ?? const [];
 
-      final qCol = FirebaseFirestore.instance
-          .collection('Jobs')
-          .doc(_jobId)
-          .collection('Questions');
-
-      // If regenerate → remove all first
-      if (overwrite) {
-        final existing = await qCol.get();
-        for (final d in existing.docs) {
-          await d.reference.delete();
-        }
-      }
-
-      final batch = FirebaseFirestore.instance.batch();
-      for (final q in out) {
-        final ref = qCol.doc();
-        batch.set(ref, {
+      // Convert to array of maps for the job document
+      final generated = out.map((q) {
+        return {
           'Text': (q['text'] ?? '').toString().trim(),
           'Type': (q['type'] ?? '').toString(),
           'Difficulty': (q['difficulty'] ?? '').toString(),
-        });
-      }
-      await batch.commit();
-// Mark regenerate as used if this was a regenerate
+        };
+      }).toList();
+
+      // Write to job doc as array
+      final doc = await _jobRef.get();
+      final job = doc.data();
+      List<Map<String, dynamic>> current = _readQuestionsFromJob(job);
+
       if (overwrite) {
-        await FirebaseFirestore.instance
-            .collection('Jobs')
-            .doc(_jobId)
-            .update({'QuestionsRegenerated': true});
+        current = generated;
+      } else {
+        current.addAll(generated);
+      }
+
+      await _jobRef.update({'Questions': current});
+
+      if (overwrite) {
+        await _jobRef.update({'QuestionsRegenerated': true});
         setState(() => _regenUsed = true);
       }
 
@@ -452,6 +648,22 @@ class _QuestionsPageState extends State<QuestionsPage> {
     }
   }
 
+  // ===== Auto-generate if empty (array-based) =====
+  bool _autoTriggered = false;
+  Future<void> _autoGenerateIfEmpty() async {
+    if (_jobId == null || _autoTriggered) return;
+    _autoTriggered = true;
+
+    final doc = await _jobRef.get();
+    final job = doc.data();
+    final questions = _readQuestionsFromJob(job);
+
+    if (questions.isEmpty) {
+      await _generate(overwrite: false);
+    }
+  }
+
+  // ===== Navigation =====
   void _navigateBackToJobPosting() {
     if (_jobId != null) {
       Navigator.pushReplacementNamed(
@@ -467,7 +679,6 @@ class _QuestionsPageState extends State<QuestionsPage> {
   void _done() async {
     if (_locked) {
       if (!mounted) return;
-      // Get company ID from job data before navigating
       final companyId = _jobData?['UserID'] as String?;
       Navigator.of(context).pushNamedAndRemoveUntil(
         '/company-home',
@@ -506,8 +717,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
               foregroundColor: const Color(0xFF4A5FBC),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
+                  borderRadius: BorderRadius.circular(20)),
             ),
             child: const Text('Cancel'),
           ),
@@ -519,8 +729,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
+                  borderRadius: BorderRadius.circular(20)),
             ),
             child: const Text('Lock & Finish'),
           ),
@@ -531,7 +740,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
     if (ok != true) return;
 
     try {
-      await FirebaseFirestore.instance.collection('Jobs').doc(_jobId).update({
+      await _jobRef.update({
         'QuestionsLocked': true,
         'QuestionsLockedAt': FieldValue.serverTimestamp(),
       });
@@ -542,9 +751,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
       return;
     }
 
-    // Navigate back to company home - clear entire stack
     if (!mounted) return;
-    // Get company ID from job data before navigating
     final companyId = _jobData?['UserID'] as String?;
     Navigator.of(context).pushNamedAndRemoveUntil(
       '/company-home',
@@ -553,24 +760,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
     );
   }
 
-  bool _autoTriggered = false;
-
-  Future<void> _autoGenerateIfEmpty() async {
-    if (_jobId == null || _autoTriggered) return;
-    _autoTriggered = true;
-
-    final snap = await FirebaseFirestore.instance
-        .collection('Jobs')
-        .doc(_jobId)
-        .collection('Questions')
-        .limit(1)
-        .get();
-
-    if (snap.docs.isEmpty) {
-      await _generate(overwrite: false);
-    }
-  }
-
+  // ===== UI =====
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -581,64 +771,64 @@ class _QuestionsPageState extends State<QuestionsPage> {
       child: ThemedScaffold(
         resizeToAvoidBottomInset: false,
         appBar: AppBar(
-          backgroundColor: const Color(0xFF4A5FBC),
-          foregroundColor: Colors.white,
-          title: const Text(
-            'Job Questions',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          title: const Text('Job Questions',
+              style:
+                  TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: _navigateBackToJobPosting,
-          ),
+              icon: const Icon(Icons.arrow_back),
+              onPressed: _navigateBackToJobPosting),
           actions: [
-            if (!_loadingJob && _jobId != null && !_locked && !_regenUsed) ...[
+            if (!_loadingJob && _jobId != null && !_locked && !_regenUsed)
               IconButton(
                 tooltip: 'Regenerate',
                 onPressed: _busy ? null : () => _generate(overwrite: true),
                 icon: const Icon(Icons.restart_alt),
               ),
-            ],
           ],
         ),
         body: _loadingJob
             ? const Center(child: CircularProgressIndicator())
             : (_jobId == null)
                 ? const _CenteredInfo(text: 'Missing Job ID')
-                : Column(
-                    children: [
-                      Expanded(
-                        child: StreamBuilder<QuerySnapshot>(
-                          stream: FirebaseFirestore.instance
-                              .collection('Jobs')
-                              .doc(_jobId)
-                              .collection('Questions')
-                              .snapshots(),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return const Center(
-                                  child: CircularProgressIndicator());
-                            }
-                            if (!snapshot.hasData ||
-                                snapshot.data!.docs.isEmpty) {
-                              return _EmptyState(
-                                onGenerate: _busy
-                                    ? null
-                                    : () => _generate(overwrite: false),
-                              );
-                            }
-                            final docs = snapshot.data!.docs;
-                            return ListView.separated(
+                : StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                    stream: _jobStream(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (!snapshot.hasData || !snapshot.data!.exists) {
+                        return _EmptyState(
+                            onGenerate: _busy
+                                ? null
+                                : () => _generate(overwrite: false));
+                      }
+
+                      final job = snapshot.data!.data();
+                      final questions = _readQuestionsFromJob(job);
+
+                      if (questions.isEmpty) {
+                        return _EmptyState(
+                            onGenerate: _busy
+                                ? null
+                                : () => _generate(overwrite: false));
+                      }
+
+                      // keep local flags updated from the live doc
+                      _locked = (job?['QuestionsLocked'] == true);
+                      _regenUsed = (job?['QuestionsRegenerated'] == true);
+                      _quotaLeft = (job?['QuestionsEditQuotaLeft'] as int?) ??
+                          _quotaLeft;
+
+                      return Column(
+                        children: [
+                          Expanded(
+                            child: ListView.separated(
                               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                              itemCount: docs.length,
+                              itemCount: questions.length,
                               separatorBuilder: (_, __) =>
                                   const SizedBox(height: 12),
                               itemBuilder: (context, i) {
-                                final d = docs[i];
+                                final q = questions[i];
                                 return Card(
                                   elevation: 1.5,
                                   shape: RoundedRectangleBorder(
@@ -655,11 +845,11 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                                 color: Color(0xFF4A5FBC)),
                                             const SizedBox(width: 6),
                                             Text(
-                                              (d['Type'] ?? '')
+                                              (q['Type'] ?? '')
                                                       .toString()
                                                       .isEmpty
                                                   ? 'Question'
-                                                  : (d['Type'] as String)
+                                                  : (q['Type'] as String)
                                                       .toUpperCase(),
                                               style: const TextStyle(
                                                   fontWeight: FontWeight.w600),
@@ -667,10 +857,10 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                             const Spacer(),
                                             IconButton(
                                               tooltip: 'Edit',
-                                              onPressed:
-                                                  (_locked || _quotaLeft <= 0)
-                                                      ? null
-                                                      : () => _editQuestion(d),
+                                              onPressed: (_locked ||
+                                                      _quotaLeft <= 0)
+                                                  ? null
+                                                  : () => _editQuestionAt(i, q),
                                               icon: const Icon(Icons.edit),
                                             ),
                                             IconButton(
@@ -678,30 +868,15 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                               onPressed: (_locked ||
                                                       _quotaLeft <= 0)
                                                   ? null
-                                                  : () => _deleteQuestion(d),
+                                                  : () => _deleteQuestionAt(i),
                                               icon: const Icon(
                                                   Icons.delete_outline),
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 10,
-                                                      vertical: 4),
-                                              decoration: BoxDecoration(
-                                                color: Colors.grey.shade200,
-                                                borderRadius:
-                                                    BorderRadius.circular(20),
-                                              ),
-                                              child: Text(
-                                                  (d['Difficulty'] ?? 'medium')
-                                                      .toString()),
                                             ),
                                           ],
                                         ),
                                         const SizedBox(height: 10),
                                         Text(
-                                          (d['Text'] ?? '').toString(),
+                                          (q['Text'] ?? '').toString(),
                                           style: const TextStyle(
                                               fontSize: 15, height: 1.4),
                                         ),
@@ -710,49 +885,80 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                   ),
                                 );
                               },
-                            );
-                          },
-                        ),
-                      ),
-                      if (!_locked)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                          child: SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
-                              onPressed:
-                                  (_quotaLeft > 0) ? _addQuestionDialog : null,
-                              icon: const Icon(Icons.add),
-                              label: Text('Add question (${_quotaLeft} left)'),
                             ),
                           ),
-                        ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _done,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF4A5FBC),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(30)),
+                          if (!_locked)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                              child: SizedBox(
+                                width: double.infinity,
+                                child: OutlinedButton.icon(
+                                  onPressed: (_quotaLeft > 0)
+                                      ? _addQuestionDialog
+                                      : null,
+                                  icon: const Icon(Icons.add),
+                                  label: Text(
+                                    'Add question ($_quotaLeft left)',
+                                    style: const TextStyle(
+                                        color: Color(0xFF4A5FBC)),
+                                  ),
+                                  style: ButtonStyle(
+                                    side: MaterialStateProperty.resolveWith<
+                                        BorderSide?>((states) {
+                                      final color = states
+                                              .contains(MaterialState.disabled)
+                                          ? Colors.white54
+                                          : const Color(0xFF4A5FBC);
+                                      return BorderSide(color: color, width: 3);
+                                    }),
+                                    foregroundColor: MaterialStateProperty
+                                        .resolveWith<Color?>((states) {
+                                      return states
+                                              .contains(MaterialState.disabled)
+                                          ? Colors.white54
+                                          : const Color(0xFF4A5FBC);
+                                    }),
+                                    shape: MaterialStateProperty.all(
+                                      RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(30)),
+                                    ),
+                                    padding: MaterialStateProperty.all(
+                                      const EdgeInsets.symmetric(vertical: 16),
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
-                            child: const Text('Done',
-                                style: TextStyle(fontSize: 16)),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: _done,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF4A5FBC),
+                                  foregroundColor: Colors.white,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(30)),
+                                ),
+                                child: const Text('Done',
+                                    style: TextStyle(fontSize: 16)),
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                    ],
+                        ],
+                      );
+                    },
                   ),
       ),
     );
   }
 }
 
-/* =========== صغار UI =========== */
+/* =========== small UI =========== */
 
 class _CenteredInfo extends StatelessWidget {
   final String text;

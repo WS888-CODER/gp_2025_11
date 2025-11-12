@@ -318,7 +318,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
           ),
           textAlign: TextAlign.center,
         ),
-        backgroundColor: const Color(0xFF4CAF50).withOpacity(0.8), // Green
+        backgroundColor: const Color(0xFF4CAF50).withOpacity(0.8),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
@@ -339,7 +339,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
           ),
           textAlign: TextAlign.center,
         ),
-        backgroundColor: const Color(0xFFFF7B7B).withOpacity(0.8), // Red
+        backgroundColor: const Color(0xFFFF7B7B).withOpacity(0.8),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
@@ -831,6 +831,11 @@ class _JobPostingPageState extends State<JobPostingPage> {
           ...data,
           'JobID': jobId,
           'JobStatus': 'Open',
+          'Questions': <Map<String, dynamic>>[],
+          'QuestionsEditQuotaLeft': 3,
+          'QuestionsRegenerated': false,
+          'QuestionsLocked': false,
+          'QuestionsLockedAt': null,
         });
         _showSuccessSnackBar('Job created successfully');
 
@@ -863,8 +868,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
 
     try {
       // Check if dates actually changed
-      final datesChanged = _startDate != _originalStartDate ||
-                           _endDate != _originalEndDate;
+      final datesChanged =
+          _startDate != _originalStartDate || _endDate != _originalEndDate;
 
       // Only update if dates changed
       if (datesChanged) {
@@ -1000,20 +1005,20 @@ class _JobPostingPageState extends State<JobPostingPage> {
   Future<bool> _onWillPop() async {
     // In edit mode, only show prompt if dates changed
     if (_isEdit) {
-      final datesChanged = _startDate != _originalStartDate ||
-                           _endDate != _originalEndDate;
+      final datesChanged =
+          _startDate != _originalStartDate || _endDate != _originalEndDate;
       if (!datesChanged) {
         return true; // Allow back without prompt
       }
     } else {
       // In create mode, check if user has entered any data
       final hasData = _jobTitleController.text.trim().isNotEmpty ||
-                      _positionController.text.trim().isNotEmpty ||
-                      _selectedSpecialty != null ||
-                      _jobDescriptionController.text.trim().isNotEmpty ||
-                      _requirements.isNotEmpty ||
-                      _startDate != null ||
-                      _endDate != null;
+          _positionController.text.trim().isNotEmpty ||
+          _selectedSpecialty != null ||
+          _jobDescriptionController.text.trim().isNotEmpty ||
+          _requirements.isNotEmpty ||
+          _startDate != null ||
+          _endDate != null;
 
       if (!hasData) {
         return true; // Allow back without prompt if nothing entered
@@ -1229,6 +1234,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                           ],
                         ),
                         child: Autocomplete<String>(
+                          key: ValueKey('spec-${_selectedSpecialty ?? ''}'),
                           initialValue: _selectedSpecialty != null
                               ? TextEditingValue(text: _selectedSpecialty!)
                               : null,
@@ -1248,10 +1254,6 @@ class _JobPostingPageState extends State<JobPostingPage> {
                           },
                           fieldViewBuilder: (context, textEditingController,
                               focusNode, onFieldSubmitted) {
-                            if (_selectedSpecialty != null &&
-                                textEditingController.text.isEmpty) {
-                              textEditingController.text = _selectedSpecialty!;
-                            }
                             return TextFormField(
                               controller: textEditingController,
                               focusNode: focusNode,
@@ -1259,28 +1261,25 @@ class _JobPostingPageState extends State<JobPostingPage> {
                               maxLength: 100,
                               decoration: const InputDecoration(
                                 hintText: 'Type or select specialty',
-                                hintStyle: TextStyle(
-                                  color: Colors.grey,
-                                ),
+                                hintStyle: TextStyle(color: Colors.grey),
                                 filled: true,
                                 fillColor: Colors.transparent,
-                                border: const OutlineInputBorder(
+                                border: OutlineInputBorder(
                                   borderRadius:
                                       BorderRadius.all(Radius.circular(12)),
                                   borderSide: BorderSide.none,
                                 ),
-                                errorBorder: const OutlineInputBorder(
+                                errorBorder: OutlineInputBorder(
                                   borderRadius:
                                       BorderRadius.all(Radius.circular(12)),
                                   borderSide: BorderSide.none,
                                 ),
-                                focusedErrorBorder: const OutlineInputBorder(
+                                focusedErrorBorder: OutlineInputBorder(
                                   borderRadius:
                                       BorderRadius.all(Radius.circular(12)),
                                   borderSide: BorderSide.none,
                                 ),
-                                errorStyle:
-                                    const TextStyle(height: 0, fontSize: 0),
+                                errorStyle: TextStyle(height: 0, fontSize: 0),
                                 errorMaxLines: 1,
                                 counterText: '',
                               ),
