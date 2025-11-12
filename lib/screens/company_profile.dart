@@ -7,6 +7,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 const kUsersCollection = 'Users';
 
@@ -18,6 +19,7 @@ class UserFields {
   static const phone = 'Phone';
   static const isProfileComplete = 'IsProfileComplete';
   static const photoPath = 'PhotoPath';
+  static const website = 'Website';
 }
 
 final _email =
@@ -50,16 +52,24 @@ class _CompanyProfileState extends State<CompanyProfile> {
   final _emailCtrl = TextEditingController();
   final _phone = TextEditingController();
   final _locCtrl = TextEditingController();
-
   final _descKey = GlobalKey<FormFieldState>();
   final _emailKey = GlobalKey<FormFieldState>();
   final _phoneKey = GlobalKey<FormFieldState>();
   final _locKey = GlobalKey<FormFieldState>();
-
   final _descFocus = FocusNode();
   final _emailFocus = FocusNode();
   final _phoneFocus = FocusNode();
   final _locFocus = FocusNode();
+  final _websiteCtrl = TextEditingController();
+  final _websiteKey = GlobalKey<FormFieldState>();
+  final _websiteFocus = FocusNode();
+
+  final _urlReg = RegExp(
+    r'^(https?:\/\/)?'
+    r'([A-Za-z0-9-]+\.)+[A-Za-z]{2,}'
+    r'(\/[^\s]*)?$',
+    caseSensitive: false,
+  );
 
   File? _pendingLogoFile;
   static const int _kMaxImageBytes = 5 * 1024 * 1024; // 5MB
@@ -72,7 +82,6 @@ class _CompanyProfileState extends State<CompanyProfile> {
       RegExp(r"^[A-Za-z\u0600-\u06FF][A-Za-z\u0600-\u06FF\s\.'-]{1,39}$");
   String _cleanLoc(String raw) => raw.trim().replaceAll(RegExp(r'\s+'), ' ');
 
-  // تحقق صارم للصورة
   String? _validateImageFile(File f) {
     final len = f.lengthSync();
     if (len > _kMaxImageBytes) return 'Image too large (max 5 MB)';
@@ -112,7 +121,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
       return 'Could not read image file.';
     }
 
-    return null; // valid
+    return null;
   }
 
   void _showSnackSuccess(String message, {BuildContext? inContext}) {
@@ -148,7 +157,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
           ),
           textAlign: TextAlign.center,
         ),
-        backgroundColor: const Color(0xFFFF7B7B).withOpacity(0.8), // Red
+        backgroundColor: const Color(0xFFFF7B7B).withOpacity(0.8),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
@@ -157,20 +166,33 @@ class _CompanyProfileState extends State<CompanyProfile> {
     );
   }
 
+  Future<void> _openWebsite(String raw) async {
+    final t = raw.trim();
+    final url = t.startsWith(RegExp(r'https?://', caseSensitive: false))
+        ? t
+        : 'https://$t'; // ضمان وجود البروتوكول
+    final uri = Uri.tryParse(url);
+    if (uri == null) {
+      _showSnackError('Invalid URL');
+      return;
+    }
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok) _showSnackError('Could not open the website');
+  }
+
   @override
   void dispose() {
     _desc.dispose();
     _emailCtrl.dispose();
     _phone.dispose();
     _locCtrl.dispose();
-
     _descFocus.dispose();
     _emailFocus.dispose();
     _phoneFocus.dispose();
     _locFocus.dispose();
-
     _uploadSub?.cancel();
-
+    _websiteCtrl.dispose();
+    _websiteFocus.dispose();
     super.dispose();
   }
 
@@ -340,9 +362,9 @@ class _CompanyProfileState extends State<CompanyProfile> {
     try {
       String normalizePhoneToE164(String local) {
         final s = local.trim();
-        if (RegExp(r'^5\d{8}$').hasMatch(s)) return '+966$s'; // mobile
+        if (RegExp(r'^5\d{8}$').hasMatch(s)) return '+966$s';
         if (RegExp(r'^(01[1-7]\d{6,7})$').hasMatch(s)) {
-          return '+966${s.substring(1)}'; // landline
+          return '+966${s.substring(1)}';
         }
         return '';
       }
@@ -358,6 +380,8 @@ class _CompanyProfileState extends State<CompanyProfile> {
           newPhoneE164 = candidate;
         }
       }
+      final websiteRaw = _websiteCtrl.text.trim();
+      final oldWebsite = (current[UserFields.website] ?? '').toString().trim();
 
       String? newLogoUrl;
       String? newLogoPath;
@@ -401,6 +425,17 @@ class _CompanyProfileState extends State<CompanyProfile> {
         updates[UserFields.phone] = newPhoneE164;
       }
 
+      if (websiteRaw != oldWebsite) {
+        if (websiteRaw.isEmpty) {
+          updates[UserFields.website] = FieldValue.delete();
+        } else {
+          final normalized =
+              websiteRaw.startsWith(RegExp(r'https?://', caseSensitive: false))
+                  ? websiteRaw
+                  : 'https://$websiteRaw';
+          updates[UserFields.website] = normalized;
+        }
+      }
       if (newLogoUrl != null) {
         updates[UserFields.photoUrl] = newLogoUrl;
         if (newLogoPath != null) {
@@ -491,7 +526,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
 
         final contactEmail =
             (data[UserFields.contactEmail] ?? '').toString().trim();
-
+        final website = (data[UserFields.website] ?? '').toString().trim();
         final rawPhone = (data[UserFields.phone] ?? '').toString().trim();
         final prettyPhone = rawPhone.isEmpty ? '' : _toLocal(rawPhone);
 
@@ -521,6 +556,9 @@ class _CompanyProfileState extends State<CompanyProfile> {
                     final raw = (data[UserFields.phone] ?? '').toString();
                     return raw.isEmpty ? '' : _toLocal(raw);
                   })();
+            _websiteCtrl.text = _websiteCtrl.text.isNotEmpty
+                ? _websiteCtrl.text
+                : (data[UserFields.website] ?? '').toString();
 
             _filledFromServer = true;
             setState(() {});
@@ -662,9 +700,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
                     if (contactEmail.isNotEmpty || prettyPhone.isNotEmpty)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
+                            horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           color: const Color(0xFFEFF2FF),
                           borderRadius: BorderRadius.circular(20),
@@ -702,6 +738,32 @@ class _CompanyProfileState extends State<CompanyProfile> {
                               ),
                           ],
                         ),
+                      ),
+                    const SizedBox(height: 8),
+                    if (website.isNotEmpty)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.link,
+                              size: 16, color: Color(0xFF4A5FBC)),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: InkWell(
+                              onTap: () => _openWebsite(website),
+                              child: Text(
+                                website,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF4A5FBC),
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     const SizedBox(height: 16),
                     if (desc.isNotEmpty) _ExpandableDescription(text: desc),
@@ -1287,6 +1349,33 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                       );
                     },
                   ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Company Website (optional)',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    key: parent._websiteKey,
+                    controller: parent._websiteCtrl,
+                    keyboardType: TextInputType.url,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: 'https://example.com',
+                      helperText:
+                          'Optional. Include http:// or https:// if you like.',
+                    ),
+                    validator: (v) {
+                      final t = (v ?? '').trim();
+                      if (t.isEmpty) return null;
+                      if (!parent._urlReg.hasMatch(t)) {
+                        return 'Enter a valid website URL or leave empty';
+                      }
+                      return null;
+                    },
+                  ),
                   const SizedBox(height: 120),
                 ],
               ),
@@ -1335,62 +1424,51 @@ class _EditCompanyPageState extends State<EditCompanyPage>
   bool _hasUnsavedChanges() {
     final parent = widget.parentState;
     final original = widget.data;
-
+    final origWebsite = (original[UserFields.website] ?? '').toString().trim();
+    final currWebsite = widget.parentState._websiteCtrl.text.trim();
+    if (currWebsite != origWebsite) return true;
     final origDesc = (original[UserFields.description] ?? '').toString().trim();
     final currDesc = parent._desc.text.trim();
     if (currDesc != origDesc) return true;
-
     final origLoc = (original[UserFields.location] ?? '').toString().trim();
     final currLoc = parent._locCtrl.text.trim();
     if (currLoc != origLoc) return true;
-
     final origEmail =
         (original[UserFields.contactEmail] ?? '').toString().trim();
     final currEmail = parent._emailCtrl.text.trim();
     if (currEmail != origEmail) return true;
-
     final origPhoneE164 = (original[UserFields.phone] ?? '').toString().trim();
     final currPhoneLocal = parent._phone.text.trim();
-
     String _toComparableLocal(String e164) {
       if (e164.isEmpty) return '';
       final t = e164.trim();
       if (!t.startsWith(_saPrefix)) return t;
-
       final rest = t.substring(_saPrefix.length);
-
       if (rest.startsWith('5')) {
         return rest;
       }
-
       if (RegExp(r'^1[1-7]\d{6,7}$').hasMatch(rest)) {
         return '0$rest';
       }
-
       return rest;
     }
 
     final origPhoneLocal = _toComparableLocal(origPhoneE164);
     if (currPhoneLocal != origPhoneLocal) return true;
-
     final origLogoUrl = (original[UserFields.photoUrl] ?? '').toString().trim();
-
     if (parent._pendingLogoFile != null) {
       return true;
     }
-
     if (parent._logoUrl == '') {
       if (origLogoUrl.isNotEmpty) {
         return true;
       }
     }
-
     if (parent._logoUrl != null &&
         parent._logoUrl!.isNotEmpty &&
         parent._logoUrl!.trim() != origLogoUrl) {
       return true;
     }
-
     return false;
   }
 
@@ -1441,10 +1519,8 @@ class _EditCompanyPageState extends State<EditCompanyPage>
 
           const SizedBox(width: 12),
 
-          // زر Discard (اخرج وامسح التعديلات)
           TextButton(
             onPressed: () {
-              // نرجع القيم الأصلية قبل ما نطلع
               _restoreParentFromOriginal();
               Navigator.pop(context, true);
             },
@@ -1471,23 +1547,19 @@ class _EditCompanyPageState extends State<EditCompanyPage>
     final original = widget.data;
 
     parent.setState(() {
-      // رجّعي الوصف
       parent._desc.text =
           (original[UserFields.description] ?? '').toString().trim();
 
-      // رجّعي الموقع
       parent._locCtrl.text =
           (original[UserFields.location] ?? '').toString().trim();
 
-      // رجّعي الإيميل
       parent._emailCtrl.text =
           (original[UserFields.contactEmail] ?? '').toString().trim();
 
-      // رجّعي الرقم (حوّلي من E.164 للعرض المحلي)
       final origPhoneE164 =
           (original[UserFields.phone] ?? '').toString().trim();
 
-      String _toComparableLocal(String e164) {
+      String toComparableLocal(String e164) {
         if (e164.isEmpty) return '';
         final t = e164.trim();
         if (!t.startsWith(_saPrefix)) return t;
@@ -1495,31 +1567,26 @@ class _EditCompanyPageState extends State<EditCompanyPage>
         final rest = t.substring(_saPrefix.length);
 
         if (rest.startsWith('5')) {
-          // جوال: نخليه 5XXXXXXXX
           return rest;
         }
 
         if (RegExp(r'^1[1-7]\d{6,7}$').hasMatch(rest)) {
-          // أرضي: 011 ... -> نرجع له الصفر
           return '0$rest';
         }
 
         return rest;
       }
 
-      parent._phone.text = _toComparableLocal(origPhoneE164);
+      parent._phone.text = toComparableLocal(origPhoneE164);
 
-      // رجّعي حالة اللوقو:
-      // 1. ما عاد فيه ملف pending
       parent._pendingLogoFile = null;
+      parent._websiteCtrl.text =
+          (original[UserFields.website] ?? '').toString().trim();
 
-      // 2. لو كانت _logoUrl = '' لأن المستخدم ضغط Remove
-      //    نرجعها للي في الداتا الأصلية
       final origLogoUrl =
           (original[UserFields.photoUrl] ?? '').toString().trim();
       parent._logoUrl = origLogoUrl.isEmpty ? null : origLogoUrl;
 
-      // reset حالات ui
       parent._saving = false;
       parent._progress = null;
     });

@@ -13,10 +13,8 @@ class CompanyHome extends StatefulWidget {
     this.fallbackCompanyName = 'Company',
   });
 
-  /// uid الخاص بحساب الشركة (يوصل من اللوق إن)
   final String? companyId;
 
-  /// اسم احتياطي لو ما وُجد شي في الداتابيس
   final String fallbackCompanyName;
 
   @override
@@ -369,12 +367,9 @@ class _CompanyHomeState extends State<CompanyHome> {
                   .doc(doc.id)
                   .update({'JobStatus': 'Closed'});
             }
-            // Note: We don't auto-reopen closed jobs, even if date is extended
-            // Company can manually reopen using "Reopen Job" option
           }
         }
 
-        // ترتيب محلي حسب StartDate (الأحدث أولًا)
         docs.sort((a, b) {
           final sa = a.data()['StartDate'];
           final sb = b.data()['StartDate'];
@@ -389,7 +384,6 @@ class _CompanyHomeState extends State<CompanyHome> {
         return docs;
       });
     } catch (e) {
-      // الحل الدفاعي لخطأ 'is not a subtype of JavaScriptObject' على الويب
       print("Error in _jobsStream: $e");
       return Stream.error(e);
     }
