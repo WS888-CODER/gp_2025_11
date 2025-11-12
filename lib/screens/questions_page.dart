@@ -616,7 +616,6 @@ class _QuestionsPageState extends State<QuestionsPage> {
         return {
           'Text': (q['text'] ?? '').toString().trim(),
           'Type': (q['type'] ?? '').toString(),
-          'Difficulty': (q['difficulty'] ?? '').toString(),
         };
       }).toList();
 
