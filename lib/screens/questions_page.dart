@@ -742,7 +742,6 @@ class _QuestionsPageState extends State<QuestionsPage> {
     try {
       await _jobRef.update({
         'QuestionsLocked': true,
-        'QuestionsLockedAt': FieldValue.serverTimestamp(),
       });
       _locked = true;
       _snack('Questions locked for this job.');
