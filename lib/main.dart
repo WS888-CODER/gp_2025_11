@@ -29,6 +29,7 @@ import 'screens/questions_page.dart';
 import 'screens/jobseeker_home.dart';
 import 'screens/company_home.dart';
 import 'package:gp_2025_11/screens/favorites_page.dart';
+import 'package:gp_2025_11/screens/cv_next_steps_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -107,7 +108,15 @@ class Jadeer extends StatelessWidget {
             userType: args['userType'],
           );
         },
-
+        '/cv-next-steps': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments
+              as Map<String, dynamic>?;
+          return CVNextStepsScreen(
+            cvHistoryId: args?['cvHistoryId'],
+            jobTitle: args?['jobTitle'],
+            hasJobSelection: args?['hasJobSelection'] ?? false,
+          );
+        },
         // About page route
         '/about': (context) => const AboutPage(),
       },

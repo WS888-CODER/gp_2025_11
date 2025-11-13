@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:gp_2025_11/screens/all_jobs.dart';
 import 'package:gp_2025_11/screens/jobseeker_profile.dart';
-import 'package:gp_2025_11/screens/cv_enhancement.screen.dart';
+import 'package:gp_2025_11/screens/cv_enhancement_screen.dart';
 import 'package:gp_2025_11/screens/history_page.dart';
 import 'package:gp_2025_11/screens/favorites_page.dart';
 
