@@ -1,10 +1,10 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:dotted_border/dotted_border.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import '../config/theme.dart';
 
@@ -23,13 +23,13 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
   File? _selectedFile;
   double _uploadProgress = 0.0;
   bool _isUploading = false;
+  bool _isExtracting = false;
+  bool _extractionComplete = false;
   String? _cvHistoryId;
+  StreamSubscription<DocumentSnapshot>? _extractionListener;
 
-  // Steps
-  int _currentStep = 0; // 0 = upload, 1 = job selection
-
-  // Job selection
-  String _jobSelectionType = 'none'; // 'jadeer', 'other', or 'none'
+  int _currentStep = 0;
+  String _jobSelectionType = 'none';
   String? _selectedJobId;
   List<Map<String, dynamic>> _allJobs = [];
   List<Map<String, dynamic>> _wishlistJobs = [];
@@ -47,6 +47,7 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
   void dispose() {
     _jobTitleController.dispose();
     _jobDescriptionController.dispose();
+    _extractionListener?.cancel();
     super.dispose();
   }
 
@@ -130,14 +131,12 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
         _selectedFile = file;
       });
 
-      await _uploadCV();
+      await _uploadAndExtractCV();
     }
   }
 
-  Future<void> _uploadCV() async {
-    if (_selectedFile == null) {
-      return;
-    }
+  Future<void> _uploadAndExtractCV() async {
+    if (_selectedFile == null) return;
 
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) {
@@ -150,6 +149,8 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
     setState(() {
       _isUploading = true;
       _uploadProgress = 0.0;
+      _isExtracting = false;
+      _extractionComplete = false;
     });
 
     try {
@@ -161,7 +162,10 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
         'CVHistoryID': cvHistoryId,
         'Date': FieldValue.serverTimestamp(),
         'JobTitle': '',
-        'Description': '',
+        'OldCVText': '',
+        'NewCVText': '',
+        'Suggestions': '',
+        'NewCVURL': '',
         'UserID': currentUser.uid,
       });
 
@@ -171,11 +175,18 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
 
       final fileName = _selectedFile!.path.split(Platform.pathSeparator).last;
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('CVs/${currentUser.uid}/${timestamp}_$fileName');
+      final storageRef = FirebaseStorage.instance.ref().child(
+          'temp_cv_extraction/${currentUser.uid}/${timestamp}_$fileName');
 
-      final uploadTask = storageRef.putFile(_selectedFile!);
+      final uploadTask = storageRef.putFile(
+        _selectedFile!,
+        SettableMetadata(
+          customMetadata: {
+            'cvHistoryId': cvHistoryId,
+            'userId': currentUser.uid,
+          },
+        ),
+      );
 
       uploadTask.snapshotEvents.listen((snapshot) {
         final progress = snapshot.bytesTransferred / snapshot.totalBytes;
@@ -185,35 +196,37 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
       });
 
       await uploadTask;
-      final downloadUrl = await storageRef.getDownloadURL();
-
-      await cvHistoryRef.update({
-        'CVURL': downloadUrl,
-      });
 
       setState(() {
         _isUploading = false;
+        _isExtracting = true;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('CV uploaded successfully!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      _extractionListener = cvHistoryRef.snapshots().listen((snapshot) {
+        if (!mounted) return;
+
+        final data = snapshot.data();
+        if (data != null && data['OldCVText'] != null) {
+          final oldCVText = data['OldCVText'].toString().trim();
+          if (oldCVText.isNotEmpty) {
+            setState(() {
+              _isExtracting = false;
+              _extractionComplete = true;
+            });
+            _extractionListener?.cancel();
+          }
+        }
+      });
     } catch (e) {
       setState(() {
         _isUploading = false;
+        _isExtracting = false;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error uploading CV: $e'),
           backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
         ),
       );
     }
@@ -221,15 +234,14 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
 
   void _goToNextStep() {
     if (_currentStep == 0) {
-      if (_selectedFile == null || _isUploading) {
+      if (!_extractionComplete) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please upload a file first.'),
+            content: Text('Please wait for extraction to complete.'),
           ),
         );
         return;
       }
-
       setState(() {
         _currentStep = 1;
       });
@@ -241,25 +253,19 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
   Future<void> _saveAndNavigate() async {
     if (_cvHistoryId == null) return;
 
-    // Validate based on selection type
-    if (_jobSelectionType == 'jadeer') {
-      if (_selectedJobId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please select a job from the list.'),
-          ),
-        );
-        return;
-      }
-    } else if (_jobSelectionType == 'other') {
-      if (_jobTitleController.text.trim().isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please enter a job title.'),
-          ),
-        );
-        return;
-      }
+    if (_jobSelectionType == 'jadeer' && _selectedJobId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a job.')),
+      );
+      return;
+    }
+
+    if (_jobSelectionType == 'other' &&
+        _jobTitleController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a job title.')),
+      );
+      return;
     }
 
     setState(() {
@@ -295,13 +301,11 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
           'Description': savedJobDescription,
         });
       }
-      // If 'none', we don't save anything
 
       setState(() {
         _isSaving = false;
       });
 
-      // Navigate to next steps screen
       Navigator.pushReplacementNamed(
         context,
         '/cv-next-steps',
@@ -317,10 +321,7 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error saving: $e'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
       );
     }
   }
@@ -344,7 +345,7 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Got it', style: TextStyle(fontSize: 16)),
+            child: const Text('Got it'),
           ),
         ],
       ),
@@ -383,17 +384,14 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
           Expanded(
             child: Center(
               child: GestureDetector(
-                onTap: _isUploading ? null : _pickFile,
+                onTap: (_isUploading || _isExtracting) ? null : _pickFile,
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(40),
                   decoration: BoxDecoration(
                     color: Colors.grey[50],
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: AppTheme.primaryPurple,
-                      width: 2,
-                    ),
+                    border: Border.all(color: AppTheme.primaryPurple, width: 2),
                   ),
                   child: _selectedFile == null
                       ? const Column(
@@ -402,21 +400,13 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
                             Icon(Iconsax.document_upload,
                                 size: 60, color: AppTheme.primaryPurple),
                             SizedBox(height: 16),
-                            Text(
-                              'Click to upload CV',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                            Text('Click to upload CV',
+                                style: TextStyle(
+                                    fontSize: 16, fontWeight: FontWeight.w600)),
                             SizedBox(height: 8),
-                            Text(
-                              'Supported: PDF, DOC, DOCX (Max 10MB)',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
-                              ),
-                            ),
+                            Text('Supported: PDF, DOC, DOCX (Max 10MB)',
+                                style: TextStyle(
+                                    fontSize: 14, color: Colors.grey)),
                           ],
                         )
                       : Column(
@@ -426,10 +416,8 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
                                 size: 60, color: Colors.green),
                             const SizedBox(height: 16),
                             Text(
-                              'Selected: ${_selectedFile!.path.split('/').last}',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(fontSize: 16),
-                            ),
+                                'Selected: ${_selectedFile!.path.split('/').last}',
+                                textAlign: TextAlign.center),
                           ],
                         ),
                 ),
@@ -444,13 +432,30 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
             LinearProgressIndicator(value: _uploadProgress),
             const SizedBox(height: 8),
             Text('${(_uploadProgress * 100).toStringAsFixed(0)}%'),
-            const SizedBox(height: 20),
           ],
+          if (_isExtracting) ...[
+            const Text('Extracting text...',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            const LinearProgressIndicator(),
+          ],
+          if (_extractionComplete) ...[
+            const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green, size: 20),
+                SizedBox(width: 8),
+                Text('Extraction complete!',
+                    style: TextStyle(
+                        color: Colors.green, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ],
+          const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
             height: 50,
             child: ElevatedButton(
-              onPressed: (_selectedFile == null || _isUploading)
+              onPressed: (_isUploading || _isExtracting || !_extractionComplete)
                   ? null
                   : _goToNextStep,
               style: ElevatedButton.styleFrom(
@@ -458,13 +463,10 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
                 foregroundColor: Colors.white,
                 disabledBackgroundColor: Colors.grey[300],
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                    borderRadius: BorderRadius.circular(10)),
               ),
-              child: const Text(
-                'Next',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
+              child: const Text('Next',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
           ),
         ],
@@ -486,19 +488,15 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
                 child: Text(
                   'Are you interested in applying for a Jadeer job?',
                   style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryPurple,
-                  ),
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primaryPurple),
                 ),
               ),
               IconButton(
                 onPressed: _showInfoDialog,
-                icon: const Icon(
-                  Icons.help_outline,
-                  color: AppTheme.primaryPurple,
-                  size: 28,
-                ),
+                icon: const Icon(Icons.help_outline,
+                    color: AppTheme.primaryPurple, size: 28),
               ),
             ],
           ),
@@ -506,9 +504,8 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(12),
-            ),
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(12)),
             child: Column(
               children: [
                 RadioListTile<String>(
@@ -559,13 +556,9 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  _showAllJobs ? 'All Jadeer Jobs' : 'Your Wishlist Jobs',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                Text(_showAllJobs ? 'All Jadeer Jobs' : 'Your Wishlist Jobs',
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold)),
                 TextButton.icon(
                   onPressed: () {
                     setState(() {
@@ -576,8 +569,7 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
                   icon: Icon(_showAllJobs ? Icons.favorite : Icons.grid_view),
                   label: Text(_showAllJobs ? 'Show Wishlist' : 'Show All Jobs'),
                   style: TextButton.styleFrom(
-                    foregroundColor: AppTheme.primaryPurple,
-                  ),
+                      foregroundColor: AppTheme.primaryPurple),
                 ),
               ],
             ),
@@ -588,16 +580,14 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(12)),
                 child: Center(
                   child: Text(
-                    _showAllJobs
-                        ? 'No jobs available'
-                        : 'No jobs in your wishlist',
-                    style: const TextStyle(color: Colors.grey),
-                  ),
+                      _showAllJobs
+                          ? 'No jobs available'
+                          : 'No jobs in wishlist',
+                      style: const TextStyle(color: Colors.grey)),
                 ),
               )
             else
@@ -618,23 +608,19 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
                       color: isClosed ? Colors.grey[100] : null,
                     ),
                     child: RadioListTile<String>(
-                      title: Text(
-                        job['title'],
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: isClosed ? Colors.grey : Colors.black,
-                        ),
-                      ),
+                      title: Text(job['title'],
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isClosed ? Colors.grey : Colors.black)),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (job['position']?.toString().isNotEmpty == true)
-                            Text(
-                              job['position'],
-                              style: TextStyle(
-                                color: isClosed ? Colors.grey : Colors.black54,
-                              ),
-                            ),
+                            Text(job['position'],
+                                style: TextStyle(
+                                    color: isClosed
+                                        ? Colors.grey
+                                        : Colors.black54)),
                           Text(
                             job['description'].length > 100
                                 ? '${job['description'].substring(0, 100)}...'
@@ -642,17 +628,13 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              color: isClosed ? Colors.grey : Colors.black54,
-                            ),
+                                color: isClosed ? Colors.grey : Colors.black54),
                           ),
                           if (isClosed)
-                            const Text(
-                              '(Closed)',
-                              style: TextStyle(
-                                color: Colors.red,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                            const Text('(Closed)',
+                                style: TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.bold)),
                         ],
                       ),
                       value: job['id'],
@@ -660,39 +642,27 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
                       activeColor: AppTheme.primaryPurple,
                       onChanged: isClosed
                           ? null
-                          : (value) {
-                              setState(() {
-                                _selectedJobId = value;
-                              });
-                            },
+                          : (value) => setState(() => _selectedJobId = value),
                     ),
                   );
                 }).toList(),
               ),
           ],
           if (_jobSelectionType == 'other') ...[
-            const Text(
-              'Or do you want to apply for another job?',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            const Text('Or do you want to apply for another job?',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             TextField(
               controller: _jobTitleController,
               decoration: InputDecoration(
                 labelText: 'Job Title',
                 hintText: 'Enter the job title',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
-                    color: AppTheme.primaryPurple,
-                    width: 2,
-                  ),
+                  borderSide:
+                      const BorderSide(color: AppTheme.primaryPurple, width: 2),
                 ),
               ),
             ),
@@ -703,15 +673,12 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
               decoration: InputDecoration(
                 labelText: 'Job Description',
                 hintText: 'Enter the job description (optional)',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
-                    color: AppTheme.primaryPurple,
-                    width: 2,
-                  ),
+                  borderSide:
+                      const BorderSide(color: AppTheme.primaryPurple, width: 2),
                 ),
                 alignLabelWithHint: true,
               ),
@@ -728,16 +695,13 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
                 foregroundColor: Colors.white,
                 disabledBackgroundColor: Colors.grey[300],
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                    borderRadius: BorderRadius.circular(10)),
               ),
               child: _isSaving
                   ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text(
-                      'Next',
+                  : const Text('Next',
                       style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
           ),
         ],
