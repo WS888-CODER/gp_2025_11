@@ -352,17 +352,72 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
     );
   }
 
+  Future<bool> _onWillPop() async {
+    // Allow free navigation if nothing started yet
+    if (_currentStep == 0 && _selectedFile == null && !_isUploading) {
+      return true;
+    }
+
+    // Prevent back during upload/extraction
+    if (_isUploading || _isExtracting || _isSaving) {
+      return false;
+    }
+
+    // Show warning if file selected or in job selection
+    final shouldPop = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Leave CV Enhancement?'),
+        content: const Text(
+          'Your uploaded CV and progress will be lost. Are you sure you want to leave?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Leave'),
+          ),
+        ],
+      ),
+    );
+
+    return shouldPop ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: AppTheme.primaryPurple,
-        foregroundColor: Colors.white,
-        title: const Text('CV Upload'),
-        elevation: 0,
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (didPop) return;
+        final shouldPop = await _onWillPop();
+        if (shouldPop && context.mounted) {
+          Navigator.pop(context);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          backgroundColor: AppTheme.primaryPurple,
+          foregroundColor: Colors.white,
+          title: const Text('CV Upload'),
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () async {
+              final shouldPop = await _onWillPop();
+              if (shouldPop && context.mounted) {
+                Navigator.pop(context);
+              }
+            },
+          ),
+        ),
+        body: _currentStep == 0 ? _buildUploadStep() : _buildJobSelectionStep(),
       ),
-      body: _currentStep == 0 ? _buildUploadStep() : _buildJobSelectionStep(),
     );
   }
 

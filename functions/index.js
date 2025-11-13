@@ -8,7 +8,7 @@ import mammoth from "mammoth";
 import path from "path";
 import os from "os";
 import fs from "fs";
-import PDFDocument from "pdfkit"; 
+import PDFDocument from "pdfkit";
 import { generateInterviewQuestions } from "./interview/generateQuestions.js";
 
 // ============================================
@@ -328,8 +328,10 @@ export const enhanceCV = v2.https.onCall(
     console.log("📋 Request data:", request.data);
 
     const cvHistoryId = request.data.cvHistoryId || "";
+    const additionalSections = request.data.additionalSections || null;
 
     console.log("📝 CVHistoryID:", cvHistoryId);
+    console.log("📝 Has additional sections:", !!additionalSections);
 
     if (!cvHistoryId || cvHistoryId.trim() === "") {
       throw new v2.https.HttpsError("invalid-argument", "cvHistoryId is required");
@@ -352,6 +354,7 @@ export const enhanceCV = v2.https.onCall(
       const cvData = cvDoc.data();
       const oldCVText = cvData.OldCVText || "";
       const jobTitle = cvData.JobTitle || "";
+      const jobDescription = cvData.Description || "";
       const userId = cvData.UserID || request.auth?.uid || "unknown";
 
       if (!oldCVText) {
@@ -361,7 +364,8 @@ export const enhanceCV = v2.https.onCall(
         );
       }
 
-      console.log(`📄 Enhancing CV for job: ${jobTitle}`);
+      console.log(`📄 Enhancing CV for job: ${jobTitle || "Not specified"}`);
+      console.log(`📄 Has job description: ${!!jobDescription}`);
       console.log(`📊 CV text length: ${oldCVText.length} characters`);
 
       // Initialize OpenAI
@@ -370,23 +374,50 @@ export const enhanceCV = v2.https.onCall(
       });
 
       // Build the prompt
+      let additionalSectionsText = "";
+      if (additionalSections) {
+        additionalSectionsText = `
+
+---
+
+### ADDITIONAL SECTIONS PROVIDED BY USER:
+The user has provided the following additional information to be included in their CV:
+
+${JSON.stringify(additionalSections, null, 2)}
+
+IMPORTANT: Include these additional sections in the enhanced CV. Merge them with any existing information from the original CV text.
+
+---`;
+      }
+
       const prompt = `You are an expert career coach and CV optimization assistant.
+
+CRITICAL RULES - READ CAREFULLY:
+1. ONLY use information that EXISTS in the original CV or additional sections provided
+2. DO NOT invent, create, or generate ANY fake data (names, companies, dates, skills, etc.)
+3. If a section is empty in the original CV AND no additional data was provided for it, DO NOT include that section in the output
+4. If ALL sections are empty, return ONLY empty arrays/objects for each section
+5. You can improve grammar and formatting of EXISTING content, but NEVER add new content that wasn't there
 
 Enhance the following CV text to make it:
 - Professional and grammatically correct
 - Optimized for ATS (Applicant Tracking Systems)
 - Concise and well-structured
-- Suitable for a job title if provided
-- in the suggestions section, provide the CV owner with suggestions based on the content of the CV
-- if important sections are missing (like skills, education, experience), mention them in the suggestions section and don't add them to the enhanced CV
-- there is 5 suggestions maximum but you can provide less if not needed
-Do not invent new information.
+- Tailored for the target job if provided
+- In the suggestions section, provide the CV owner with suggestions based on the content of the CV
+- If important sections are missing (like skills, education, experience), mention them in the suggestions section
+- Maximum 5 suggestions, but you can provide less if not needed
 
 ---
 
-Job Title: ${jobTitle || "Not specified"} ${jobTitle ? "" : "(If empty, ignore this field)"}
+TARGET JOB INFORMATION:
+Job Title: ${jobTitle || "Not specified"}
+${jobDescription ? `Job Description: ${jobDescription}` : ""}
+${(!jobTitle && !jobDescription) ? "(No specific job provided - enhance CV for general use)" : ""}
+
 Original CV Text:
 ${oldCVText}
+${additionalSectionsText}
 
 ---
 
@@ -406,7 +437,7 @@ Return ONLY valid JSON in the following structure:
       }
     },
     {
-      "section": "ProfessionalSummary",
+      "section": "Summary",
       "content": "..."
     },
     {
@@ -424,6 +455,18 @@ Return ONLY valid JSON in the following structure:
     {
       "section": "Skills",
       "content": ["Skill1", "Skill2", "Skill3"]
+    },
+    {
+      "section": "Certifications",
+      "content": [
+        {"name": "...", "issuer": "...", "year": "..."}
+      ]
+    },
+    {
+      "section": "Languages",
+      "content": [
+        {"language": "...", "proficiency": "..."}
+      ]
     }
   ],
   "suggestions": [
@@ -435,6 +478,14 @@ Return ONLY valid JSON in the following structure:
   ]
 }
 
+IMPORTANT REMINDERS:
+- If a section has NO data in the original CV or additional sections, use empty values:
+  * For PersonalInformation: {"full_name": "", "email": "", "phone": "", "location": "", "links": []}
+  * For Summary: ""
+  * For arrays (Experience, Education, Skills, Certifications, Languages): []
+- NEVER create fake examples like "John Doe", "ABC Corp", "Project Manager", etc.
+- ONLY enhance what actually exists in the provided data
+
 Do not include explanations or commentary outside this JSON.`;
 
       // Call OpenAI
@@ -443,7 +494,7 @@ Do not include explanations or commentary outside this JSON.`;
         messages: [
           {
             role: "system",
-            content: "You are a professional CV enhancement assistant. Always return valid JSON."
+            content: "You are a professional CV enhancement assistant. Always return valid JSON. CRITICAL: Never invent or create fake data - only use information that exists in the provided CV. If sections are empty, return empty values, NOT fake examples."
           },
           {
             role: "user",
@@ -539,7 +590,182 @@ Do not include explanations or commentary outside this JSON.`;
 );
 
 /**
- * 7️⃣ Send Password Reset OTP
+ * 7️⃣ Detect Missing Sections in CV
+ */
+export const detectMissingSections = v2.https.onCall(
+  { memory: "512MiB", timeoutSeconds: 60 },
+  async (request) => {
+    console.log("📥 Detect Missing Sections request");
+    console.log("📋 Request data:", request.data);
+
+    const cvHistoryId = request.data.cvHistoryId || "";
+
+    if (!cvHistoryId || cvHistoryId.trim() === "") {
+      throw new v2.https.HttpsError("invalid-argument", "cvHistoryId is required");
+    }
+
+    try {
+      // Get CV data from Firestore
+      const cvDoc = await admin.firestore().collection("CVHistory").doc(cvHistoryId).get();
+
+      if (!cvDoc.exists) {
+        throw new v2.https.HttpsError("not-found", "CV not found");
+      }
+
+      const cvData = cvDoc.data();
+      const oldCVText = cvData.OldCVText || "";
+      const jobTitle = cvData.JobTitle || "";
+      const jobDescription = cvData.Description || "";
+      const hasJob = jobTitle.trim() !== "" || jobDescription.trim() !== "";
+
+      if (!oldCVText) {
+        throw new v2.https.HttpsError(
+          "failed-precondition",
+          "CV text not extracted yet"
+        );
+      }
+
+      console.log(`📄 Analyzing CV for missing sections`);
+      console.log(`📊 CV text length: ${oldCVText.length} characters`);
+      console.log(`💼 Has job: ${hasJob}`);
+
+      // Initialize OpenAI
+      const openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+      });
+
+      // Build the detection prompt
+      const prompt = `You are a CV analysis expert. Analyze the following CV text and determine which sections are COMPLETELY MISSING or EMPTY.
+
+The CV should ideally contain these sections:
+1. PersonalInformation (name, email, phone, location)
+2. Summary (professional summary or objective)
+3. Experience (work history)
+4. Education (degrees, institutions)
+5. Skills (technical and soft skills)
+6. Certifications (professional certifications)
+7. Languages (spoken languages and proficiency)
+
+Review the CV text below and return the names of sections that are MISSING or have NO ACTUAL CONTENT.
+
+CRITICAL RULES:
+- A section is MISSING if:
+  * It doesn't exist at all in the CV, OR
+  * It only has a title/header but NO actual content
+  * For example, if the CV has "Experience:" or "Skills:" as a header but no actual experience entries or skills listed, that section is MISSING
+
+- A section EXISTS and should NOT be included if:
+  * It has actual data/content (not just the section title)
+  * For example: actual job entries for Experience, actual skills listed for Skills, etc.
+
+- Ignore section titles/headers - only check if there's actual content in each section
+
+CV Text:
+${oldCVText}
+
+---
+
+Return ONLY valid JSON in this format:
+{
+  "missingSections": ["SectionName1", "SectionName2"]
+}
+
+Rules:
+- Only include section names from the list above
+- Use exact names: "PersonalInformation", "Summary", "Experience", "Education", "Skills", "Certifications", "Languages"
+- If a section has actual content (not just a title), DO NOT include it
+- If ALL sections have actual content, return an empty array: {"missingSections": []}
+- Do not include explanations outside the JSON`;
+
+      // Call OpenAI
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "You are a CV analysis assistant. Always return valid JSON."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.3,
+        max_tokens: 500
+      });
+
+      const gptResponse = response.choices[0].message.content;
+      console.log("✅ Got response from OpenAI");
+
+      // Parse JSON response
+      const parsedData = JSON.parse(gptResponse);
+      const missingSections = parsedData.missingSections || [];
+
+      console.log(`🔍 Missing sections detected: ${missingSections.join(", ") || "None"}`);
+
+      // Generate suggested skills if there's a job
+      let suggestedSkills = null;
+      if (hasJob) {
+        console.log(`🎯 Generating suggested skills for job`);
+
+        const skillsPrompt = `You are a career expert. Based on the job information below, suggest 15-20 relevant skills that would be valuable for this position.
+
+TARGET JOB:
+Job Title: ${jobTitle || "Not specified"}
+${jobDescription ? `Job Description: ${jobDescription}` : ""}
+
+Return a list of specific, relevant skills. Include both technical skills and important soft skills for this role.
+Focus on skills that are commonly required or highly valued for this position.
+
+Return ONLY valid JSON in this format:
+{
+  "skills": ["Skill 1", "Skill 2", "Skill 3", ...]
+}
+
+Keep each skill concise (1-3 words). Return 15-20 skills.`;
+
+        const skillsResponse = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content: "You are a career expert assistant. Always return valid JSON."
+            },
+            {
+              role: "user",
+              content: skillsPrompt
+            }
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.5,
+          max_tokens: 800
+        });
+
+        const skillsData = JSON.parse(skillsResponse.choices[0].message.content);
+        suggestedSkills = skillsData.skills || [];
+        console.log(`✅ Generated ${suggestedSkills.length} suggested skills`);
+      }
+
+      return {
+        success: true,
+        missingSections: missingSections,
+        hasMissingSections: missingSections.length > 0,
+        suggestedSkills: suggestedSkills
+      };
+
+    } catch (error) {
+      console.error("❌ Error detecting missing sections:", error);
+      throw new v2.https.HttpsError(
+        "internal",
+        `Failed to detect missing sections: ${error.message}`
+      );
+    }
+  }
+);
+
+/**
+ * 8️⃣ Send Password Reset OTP
  */
 export const sendPasswordResetOtp = functions.https.onCall(async (data, context) => {
   console.log("📥 Password reset OTP - Full data:", data);
@@ -704,10 +930,12 @@ export const extractCVTextEnhancement = v2.storage.onObjectFinalized(async (even
       console.log('📕 Extracting from PDF...');
       const dataBuffer = fs.readFileSync(tempFilePath);
 
-      // ✅ الطريقة الصحيحة لاستخدام pdf-parse
-      const pdfParse = (await import('pdf-parse')).default;
-      const data = await pdfParse(dataBuffer);
-      extractedText = data.text.trim();
+      // ✅ Using dynamic import with named export for pdf-parse v2.4.5
+      const { PDFParse } = await import('pdf-parse');
+      const parser = new PDFParse({ data: dataBuffer });
+      const result = await parser.getText();
+      extractedText = (result.text || '').trim();
+      await parser.destroy();
 
       console.log(`📊 Extracted ${extractedText.length} characters`);
     } else if (
