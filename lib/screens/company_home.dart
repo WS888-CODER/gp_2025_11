@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
-import 'package:gp_2025_11/screens/company_profile.dart';
 import 'dart:async';
 
 class CompanyHome extends StatefulWidget {
@@ -338,7 +337,6 @@ class _CompanyHomeState extends State<CompanyHome> {
     });
   }
 
-  /// وظائف الشركة (Jobs).
   Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>> _jobsStream(
       String companyId) {
     try {
@@ -349,27 +347,8 @@ class _CompanyHomeState extends State<CompanyHome> {
       }
       return q.snapshots().map((snap) {
         final docs = snap.docs.toList();
-        final now = DateTime.now();
 
-        // Auto-close expired jobs only (no auto-reopening)
-        for (final doc in docs) {
-          final data = doc.data();
-          final endDateField = data['EndDate'];
-          final currentStatus = data['JobStatus'] ?? 'Open';
-
-          if (endDateField is Timestamp) {
-            final endDate = endDateField.toDate();
-
-            // If job is past end date and still Open, close it automatically
-            if (endDate.isBefore(now) && currentStatus == 'Open') {
-              FirebaseFirestore.instance
-                  .collection('Jobs')
-                  .doc(doc.id)
-                  .update({'JobStatus': 'Closed'});
-            }
-          }
-        }
-
+        // بس رتبنا الوظائف حسب startDate بدون أي تحديث في الداتابيس
         docs.sort((a, b) {
           final sa = a.data()['StartDate'];
           final sb = b.data()['StartDate'];
@@ -381,6 +360,7 @@ class _CompanyHomeState extends State<CompanyHome> {
               : DateTime.fromMillisecondsSinceEpoch(0);
           return db.compareTo(da);
         });
+
         return docs;
       });
     } catch (e) {
@@ -471,8 +451,16 @@ class _CompanyHomeState extends State<CompanyHome> {
                 final title = (data['JobTitle'] ?? 'Untitled').toString();
                 final position = (data['Position'] ?? '').toString();
                 final specialty = (data['Specialty'] ?? '').toString();
+                final endDateField = data['EndDate'];
+                DateTime? endDate;
+                if (endDateField is Timestamp) {
+                  endDate = endDateField.toDate();
+                }
+                final now = DateTime.now();
+
                 final jobStatus = (data['JobStatus'] ?? 'Open').toString();
-                final isClosed = jobStatus == 'Closed';
+                final isClosed = jobStatus == 'Closed' ||
+                    (endDate != null && endDate.isBefore(now));
 
                 // ⬇️ تحديد لون الخلفية الديناميكي للعنصر
                 final cardBackgroundColor = isClosed
@@ -567,50 +555,85 @@ class _CompanyHomeState extends State<CompanyHome> {
                       const SizedBox(width: 10),
 
                       // Edit button
-                      OutlinedButton(
-                        onPressed: () async {
-                          // Check profile completion first
-                          final canProceed = await _checkProfileComplete();
-                          if (!canProceed || !mounted) return;
+                      Column(
+                        children: [
+                          OutlinedButton(
+                            onPressed: () async {
+                              // Check profile completion first
+                              final canProceed = await _checkProfileComplete();
+                              if (!canProceed || !mounted) return;
 
-                          final desc = data['JobDescription'] ??
-                              data['Description'] ??
-                              '';
-                          final req =
-                              data['Requirements'] ?? data['Requirments'] ?? [];
-                          final start = data['StartDate'];
-                          final end = data['EndDate'];
+                              final desc = data['JobDescription'] ??
+                                  data['Description'] ??
+                                  '';
+                              final req = data['Requirements'] ??
+                                  data['Requirments'] ??
+                                  [];
+                              final start = data['StartDate'];
+                              final end = data['EndDate'];
 
-                          await Navigator.pushNamed(
-                            context,
-                            '/job-posting',
-                            arguments: <String, dynamic>{
-                              'jobId': doc.id,
-                              'title': title,
-                              'position': position,
-                              'specialty': specialty,
-                              'description': desc,
-                              'requirements': req is List ? req : <String>[],
-                              'startDate': start,
-                              'endDate': end,
+                              await Navigator.pushNamed(
+                                context,
+                                '/job-posting',
+                                arguments: <String, dynamic>{
+                                  'jobId': doc.id,
+                                  'title': title,
+                                  'position': position,
+                                  'specialty': specialty,
+                                  'description': desc,
+                                  'requirements':
+                                      req is List ? req : <String>[],
+                                  'startDate': start,
+                                  'endDate': end,
+                                },
+                              );
+
+                              // Refresh the page after returning from edit
+                              if (mounted) {
+                                setState(() {});
+                              }
                             },
-                          );
-
-                          // Refresh the page after returning from edit
-                          if (mounted) {
-                            setState(() {});
-                          }
-                        },
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: _brand),
-                          foregroundColor: _brand,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: _brand),
+                              foregroundColor: _brand,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 10),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: const Text('Edit'),
                           ),
-                        ),
-                        child: const Text('Edit'),
+                          const SizedBox(width: 8),
+                          OutlinedButton(
+                            onPressed: () {
+                              Navigator.pushNamed(
+                                context,
+                                '/questions',
+                                arguments: {
+                                  'jobId': doc.id,
+                                  'locked': true,
+                                },
+                              );
+                            },
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: _brand),
+                              foregroundColor: _brand,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 10),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: const Text(
+                              'View',
+                              style: TextStyle(
+                                color: Color(0xFF4A5FBC),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
 
                       // More options menu (using IconButton + Dialog)
