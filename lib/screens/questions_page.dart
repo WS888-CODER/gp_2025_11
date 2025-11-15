@@ -188,8 +188,8 @@ class _QuestionsPageState extends State<QuestionsPage> {
                       child: Text('Technical',
                           style: TextStyle(color: Colors.white))),
                   DropdownMenuItem(
-                      value: 'behavioral',
-                      child: Text('Behavioral',
+                      value: 'psychometric',
+                      child: Text('Psychometric',
                           style: TextStyle(color: Colors.white))),
                 ],
                 onChanged: (v) => type = v ?? 'technical',
@@ -315,8 +315,8 @@ class _QuestionsPageState extends State<QuestionsPage> {
                       child: Text('Technical',
                           style: TextStyle(color: Colors.white))),
                   DropdownMenuItem(
-                      value: 'behavioral',
-                      child: Text('Behavioral',
+                      value: 'psychometric',
+                      child: Text('Psychometric',
                           style: TextStyle(color: Colors.white))),
                 ],
                 onChanged: (v) => type = v ?? 'technical',

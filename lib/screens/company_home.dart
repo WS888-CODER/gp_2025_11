@@ -594,7 +594,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                               }
                             },
                             style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: _brand),
+                              side: const BorderSide(color: _brand, width: 3),
                               foregroundColor: _brand,
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 10),
@@ -602,7 +602,10 @@ class _CompanyHomeState extends State<CompanyHome> {
                                 borderRadius: BorderRadius.circular(10),
                               ),
                             ),
-                            child: const Text('Edit'),
+                            child: const Text(
+                              'Edit',
+                              style: TextStyle(fontWeight: FontWeight.w800),
+                            ),
                           ),
                           const SizedBox(width: 8),
                           OutlinedButton(
@@ -617,7 +620,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                               );
                             },
                             style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: _brand),
+                              side: const BorderSide(color: _brand, width: 3),
                               foregroundColor: _brand,
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 10),
@@ -629,7 +632,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                               'View',
                               style: TextStyle(
                                 color: Color(0xFF4A5FBC),
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
                           ),
