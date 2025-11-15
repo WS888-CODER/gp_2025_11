@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -172,7 +173,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                 _originalEndDate = _endDate;
               }
             } catch (e) {
-              _showErrorSnackBar('Error loading job: $e');
+              SnackHelper.error(context, 'Error loading job: $e');
             }
           } else {
             // Normal edit mode with all data in args
@@ -368,48 +369,6 @@ class _JobPostingPageState extends State<JobPostingPage> {
     }
   }
 
-  void _showSuccessSnackBar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        backgroundColor: const Color(0xFF4CAF50).withOpacity(0.8),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-      ),
-    );
-  }
-
-  void _showErrorSnackBar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        backgroundColor: const Color(0xFFFF7B7B).withOpacity(0.8),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-      ),
-    );
-  }
-
   void _showWarningSnackBar(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -455,7 +414,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
   }
 
   void _showErrorAndGoBack(String message) {
-    _showErrorSnackBar(message);
+    SnackHelper.error(context, message);
     Future.delayed(const Duration(seconds: 1), () {
       if (mounted) Navigator.pop(context);
     });
@@ -737,7 +696,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
           .get();
 
       if (!userDoc.exists) {
-        _showErrorSnackBar('User data not found');
+        SnackHelper.error(context, 'User data not found');
         return;
       }
 
@@ -831,14 +790,14 @@ class _JobPostingPageState extends State<JobPostingPage> {
           _aiCreditsRemaining = jobPostingCount - 1;
         });
 
-        _showSuccessSnackBar(
+        SnackHelper.success(context,
             'AI job description generated! (${jobPostingCount - 1} uses remaining)');
       } else {
-        _showErrorSnackBar('Failed: ${response.body}');
+        SnackHelper.error(context, 'Failed: ${response.body}');
       }
     } catch (e) {
       if (!mounted) return;
-      _showErrorSnackBar('Error: $e');
+      SnackHelper.error(context, 'Error: $e');
     }
   }
 
@@ -876,7 +835,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
           'StartDate': _startDate,
           'EndDate': _endDate,
         });
-        _showSuccessSnackBar('Job dates updated successfully');
+        SnackHelper.success(context, 'Job dates updated successfully');
 
         if (!mounted) return;
         Navigator.pop(context);
@@ -913,43 +872,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
       }
     } catch (e) {
       if (!mounted) return;
-      _showErrorSnackBar('Error: $e');
-    }
-  }
-
-  Future<void> _continueToQuestions() async {
-    // Validate dates are selected
-    if (_startDate == null || _endDate == null) {
-      _showWarningSnackBar('Please select start and end dates');
-      return;
-    }
-
-    if (_jobId == null) return;
-
-    try {
-      // Check if dates actually changed
-      final datesChanged =
-          _startDate != _originalStartDate || _endDate != _originalEndDate;
-
-      // Only update if dates changed
-      if (datesChanged) {
-        await FirebaseFirestore.instance.collection('Jobs').doc(_jobId).update({
-          'StartDate': _startDate,
-          'EndDate': _endDate,
-        });
-        _showSuccessSnackBar('Job dates updated successfully');
-      }
-
-      // Navigate to questions page
-      if (!mounted) return;
-      Navigator.pushReplacementNamed(
-        context,
-        '/questions',
-        arguments: {'jobId': _jobId},
-      );
-    } catch (e) {
-      if (!mounted) return;
-      _showErrorSnackBar('Error updating dates: $e');
+      SnackHelper.error(context, 'Error: $e');
     }
   }
 
@@ -961,7 +884,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
     }
 
     if (_jobId == null || _jobId!.isEmpty) {
-      _showErrorSnackBar('Job not found');
+      SnackHelper.error(context, 'Job not found');
       return;
     }
 
@@ -975,14 +898,14 @@ class _JobPostingPageState extends State<JobPostingPage> {
           'EndDate': _endDate,
         });
 
-        _showSuccessSnackBar('Job dates updated successfully');
+        SnackHelper.success(context, 'Job dates updated successfully');
       }
 
       if (!mounted) return;
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
-      _showErrorSnackBar('Error updating dates: $e');
+      SnackHelper.error(context, 'Error updating dates: $e');
     }
   }
 

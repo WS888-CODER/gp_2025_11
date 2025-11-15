@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:provider/provider.dart';
 import 'package:gp_2025_11/config/app_settings_notifier.dart';
@@ -115,12 +116,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ? (currentLangCode == 'ar' ? 'الوضع الفاتح' : 'Light Mode')
         : (currentLangCode == 'ar' ? 'الوضع الداكن' : 'Dark Mode');
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(currentLangCode == 'ar'
-            ? 'تم تغيير السمة إلى $themeName'
-            : 'Theme changed to $themeName'),
-      ),
+    SnackHelper.success(
+      context,
+      currentLangCode == 'ar'
+          ? 'تم تغيير السمة إلى $themeName'
+          : 'Theme changed to $themeName',
     );
   }
 
@@ -141,12 +141,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(currentLangCode == 'ar'
-            ? 'تم التبديل إلى $targetLangName'
-            : 'Language switched to $targetLangName'),
-      ),
+    SnackHelper.success(
+      context,
+      currentLangCode == 'ar'
+          ? 'تم التبديل إلى $targetLangName'
+          : 'Language switched to $targetLangName',
     );
   }
 
@@ -158,12 +157,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ? (currentLangCode == 'ar' ? 'قيد التشغيل' : 'ON')
         : (currentLangCode == 'ar' ? 'متوقفة' : 'OFF');
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(currentLangCode == 'ar'
-            ? 'الإشعارات الآن $statusText'
-            : 'Notifications are $statusText'),
-      ),
+    SnackHelper.success(
+      context,
+      currentLangCode == 'ar'
+          ? 'الإشعارات الآن $statusText'
+          : 'Notifications are $statusText',
     );
   }
 
