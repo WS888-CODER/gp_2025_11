@@ -106,3 +106,46 @@ class AppTheme {
     );
   }
 }
+
+class SnackHelper {
+  // ✅ Success message
+  static void success(BuildContext context, String message) {
+    _show(
+      context,
+      message,
+      const Color(0xFF4CAF50), // Green
+    );
+  }
+
+  // ✅ Error message
+  static void error(BuildContext context, String message) {
+    _show(
+      context,
+      message,
+      const Color(0xFFFF7B7B), // Red
+    );
+  }
+
+  // ✅ Base snack builder
+  static void _show(BuildContext context, String message, Color color) {
+    if (context.mounted == false) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        backgroundColor: color.withOpacity(0.8),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
+  }
+}

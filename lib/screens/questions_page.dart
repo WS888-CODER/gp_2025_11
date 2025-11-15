@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
@@ -46,7 +47,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
       _jobData = args?['jobData'] as Map<String, dynamic>?;
 
       if (_jobData == null) {
-        _snack('Missing job data.', error: true);
+        SnackHelper.error(context, 'Missing job data.');
       } else {
         _autoGenerateIfEmpty();
       }
@@ -55,26 +56,6 @@ class _QuestionsPageState extends State<QuestionsPage> {
   }
 
   // ===== UX helpers =====
-  void _snack(String msg, {bool error = false}) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          msg,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        backgroundColor: error
-            ? const Color(0xFFFF7B7B).withOpacity(0.8)
-            : const Color(0xFF4CAF50).withOpacity(0.8),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-  }
 
   Future<void> _loadExistingJob(String jobId) async {
     try {
@@ -82,7 +63,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
           await FirebaseFirestore.instance.collection('Jobs').doc(jobId).get();
 
       if (!doc.exists) {
-        _snack('Job not found.', error: true);
+        SnackHelper.error(context, 'Job not found.');
         return;
       }
       final data = doc.data() as Map<String, dynamic>;
@@ -100,12 +81,11 @@ class _QuestionsPageState extends State<QuestionsPage> {
 
       _userAddedCount = (data['QuestionsUserAddedCount'] ?? 0) as int;
 
-      // لو كانت مقفلة في الداتابيس نقفلها في الـ UI
       _locked = data['QuestionsLocked'] == true;
 
       setState(() {});
     } catch (e) {
-      _snack('Failed to load questions: $e', error: true);
+      SnackHelper.error(context, 'Failed to load questions: $e');
     }
   }
 
@@ -118,15 +98,16 @@ class _QuestionsPageState extends State<QuestionsPage> {
   // ===== Add Question (3 max) =====
   Future<void> _addQuestionDialog() async {
     if (_locked) {
-      _snack('Questions are locked.', error: true);
+      SnackHelper.error(context, 'Questions are locked.');
       return;
     }
 
     if (_userAddedCount >= kMaxUserAdds) {
-      _snack(
+      SnackHelper.error(
+        context,
         'You can only add up to $kMaxUserAdds custom questions for this job.',
-        error: true,
       );
+
       return;
     }
 
@@ -230,12 +211,13 @@ class _QuestionsPageState extends State<QuestionsPage> {
     if (ok != true) return;
 
     final text = controller.text.trim();
-    if (text.isEmpty) return _snack('Question cannot be empty.', error: true);
+    if (text.isEmpty)
+      return SnackHelper.error(context, 'Question cannot be empty.');
     if (text.length > kMaxQuestionLength) {
-      return _snack('Character limit reached.', error: true);
+      return SnackHelper.error(context, 'Character limit reached.');
     }
     if (_isDuplicateQuestionLocal(text)) {
-      return _snack('Duplicate question.', error: true);
+      return SnackHelper.error(context, 'Duplicate question.');
     }
 
     setState(() {
@@ -246,13 +228,13 @@ class _QuestionsPageState extends State<QuestionsPage> {
       _userAddedCount += 1;
     });
 
-    _snack('Added.');
+    SnackHelper.success(context, 'Added.');
   }
 
   // ===== Edit Question (no limit) =====
   Future<void> _editQuestionAt(int index, Map<String, dynamic> q) async {
     if (_locked) {
-      _snack('Questions are locked.', error: true);
+      SnackHelper.error(context, 'Questions are locked.');
       return;
     }
 
@@ -360,19 +342,19 @@ class _QuestionsPageState extends State<QuestionsPage> {
 
     final newText = controller.text.trim();
     if (newText.isEmpty) {
-      return _snack('Question cannot be empty.', error: true);
+      return SnackHelper.error(context, 'Question cannot be empty.');
     }
     if (newText.length > kMaxQuestionLength) {
-      return _snack('Character limit reached.', error: true);
+      return SnackHelper.error(context, 'Character limit reached.');
     }
 
     if (newText != (q['Text'] ?? '').toString() &&
         _isDuplicateQuestionLocal(newText)) {
-      return _snack('Duplicate question.', error: true);
+      return SnackHelper.error(context, 'Duplicate question.');
     }
 
     if (index < 0 || index >= _questions.length) {
-      return _snack('Invalid question.', error: true);
+      return SnackHelper.error(context, 'Invalid question.');
     }
 
     setState(() {
@@ -382,7 +364,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
       };
     });
 
-    _snack('Saved.');
+    SnackHelper.success(context, 'Saved.');
   }
 
   // ===== Generate via Cloud Function =====
@@ -390,8 +372,10 @@ class _QuestionsPageState extends State<QuestionsPage> {
     if (_jobData == null) return;
 
     if (_locked) {
-      _snack('Questions are locked. You can no longer generate or modify.',
-          error: true);
+      SnackHelper.error(
+        context,
+        'Questions are locked. You can no longer generate or modify.',
+      );
       return;
     }
 
@@ -406,12 +390,12 @@ class _QuestionsPageState extends State<QuestionsPage> {
       final description = (_jobData?['JobDescription'] ?? '').toString();
 
       if (title.isEmpty) {
-        _snack('Missing job title.', error: true);
+        SnackHelper.error(context, 'Missing job title.');
         setState(() => _busy = false);
         return;
       }
       if (specialty.isEmpty) {
-        _snack('Missing specialty.', error: true);
+        SnackHelper.error(context, 'Missing specialty.');
         setState(() => _busy = false);
         return;
       }
@@ -435,7 +419,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
       );
 
       if (resp.statusCode != 200) {
-        _snack('AI generation failed: ${resp.body}', error: true);
+        SnackHelper.error(context, 'AI generation failed: ${resp.body}');
         setState(() => _busy = false);
         return;
       }
@@ -459,9 +443,9 @@ class _QuestionsPageState extends State<QuestionsPage> {
           ..addAll(generated);
       });
 
-      _snack('Questions generated successfully!');
+      SnackHelper.success(context, 'Questions generated successfully!');
     } catch (e) {
-      _snack('Error: $e', error: true);
+      SnackHelper.error(context, 'Error: $e');
     } finally {
       setState(() => _busy = false);
     }
@@ -561,15 +545,13 @@ class _QuestionsPageState extends State<QuestionsPage> {
     if (_locked) return;
 
     if (_jobData == null) {
-      _snack('Missing job data.', error: true);
+      SnackHelper.error(context, 'Missing job data.');
       return;
     }
 
     if (_questions.length < kMinQuestions) {
-      _snack(
-        'Please add at least $kMinQuestions questions before finishing.',
-        error: true,
-      );
+      SnackHelper.error(context,
+          'Please add at least $kMinQuestions questions before finishing.');
       return;
     }
 
@@ -642,9 +624,9 @@ class _QuestionsPageState extends State<QuestionsPage> {
       await newJobDoc.set(jobDataToSave);
 
       _locked = true;
-      _snack('Job posted successfully.');
+      SnackHelper.success(context, 'Job posted successfully.');
     } catch (e) {
-      _snack('Failed to post job: $e', error: true);
+      SnackHelper.error(context, 'Failed to post job: $e');
       return;
     }
 
