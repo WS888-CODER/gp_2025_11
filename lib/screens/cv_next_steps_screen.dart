@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../config/theme.dart';
+import 'cv_ready_screen.dart'; // ← ضيفي هذا
 
 class CVNextStepsScreen extends StatefulWidget {
   final String? cvHistoryId;
@@ -43,7 +44,8 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
       final callable = functions.httpsCallable('detectMissingSections');
       final result = await callable.call({'cvHistoryId': widget.cvHistoryId});
 
-      final missingSections = List<String>.from(result.data['missingSections'] ?? []);
+      final missingSections =
+          List<String>.from(result.data['missingSections'] ?? []);
       final suggestedSkills = result.data['suggestedSkills'] != null
           ? List<String>.from(result.data['suggestedSkills'])
           : null;
@@ -92,8 +94,15 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
         _isEnhancing = false;
       });
 
-      // Navigate to results or history page
-      Navigator.pushReplacementNamed(context, '/history');
+      // Navigate to CV Ready Screen to show results
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PublishScreen(cvUrl: widget.cvHistoryId!),
+          ),
+        );
+      }
     } catch (e) {
       setState(() {
         _isEnhancing = false;
@@ -214,7 +223,8 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
     }
 
     if (_isEnhancing) {
-      return _buildLoadingState('Enhancing your CV...\nThis may take a moment.');
+      return _buildLoadingState(
+          'Enhancing your CV...\nThis may take a moment.');
     }
 
     if (_missingSections.isEmpty) {
@@ -281,7 +291,8 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
               LinearProgressIndicator(
                 value: progress,
                 backgroundColor: Colors.grey[300],
-                valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryPurple),
+                valueColor:
+                    const AlwaysStoppedAnimation<Color>(AppTheme.primaryPurple),
               ),
             ],
           ),
@@ -361,7 +372,8 @@ class _PersonalInformationForm extends StatefulWidget {
   });
 
   @override
-  State<_PersonalInformationForm> createState() => _PersonalInformationFormState();
+  State<_PersonalInformationForm> createState() =>
+      _PersonalInformationFormState();
 }
 
 class _PersonalInformationFormState extends State<_PersonalInformationForm> {
@@ -374,11 +386,16 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
   @override
   void initState() {
     super.initState();
-    final existingContent = widget.initialData?['content'] as Map<String, dynamic>?;
-    _fullNameController = TextEditingController(text: existingContent?['full_name'] ?? '');
-    _emailController = TextEditingController(text: existingContent?['email'] ?? '');
-    _phoneController = TextEditingController(text: existingContent?['phone'] ?? '');
-    _locationController = TextEditingController(text: existingContent?['location'] ?? '');
+    final existingContent =
+        widget.initialData?['content'] as Map<String, dynamic>?;
+    _fullNameController =
+        TextEditingController(text: existingContent?['full_name'] ?? '');
+    _emailController =
+        TextEditingController(text: existingContent?['email'] ?? '');
+    _phoneController =
+        TextEditingController(text: existingContent?['phone'] ?? '');
+    _locationController =
+        TextEditingController(text: existingContent?['location'] ?? '');
     final links = (existingContent?['links'] as List?)?.join(', ') ?? '';
     _linksController = TextEditingController(text: links);
   }
@@ -419,10 +436,12 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
             decoration: InputDecoration(
               labelText: 'Full Name',
               hintText: 'e.g., John Doe',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppTheme.primaryPurple, width: 2),
+                borderSide:
+                    const BorderSide(color: AppTheme.primaryPurple, width: 2),
               ),
             ),
           ),
@@ -433,10 +452,12 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
             decoration: InputDecoration(
               labelText: 'Email',
               hintText: 'e.g., john@example.com',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppTheme.primaryPurple, width: 2),
+                borderSide:
+                    const BorderSide(color: AppTheme.primaryPurple, width: 2),
               ),
             ),
           ),
@@ -447,10 +468,12 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
             decoration: InputDecoration(
               labelText: 'Phone',
               hintText: 'e.g., +1 234 567 8900',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppTheme.primaryPurple, width: 2),
+                borderSide:
+                    const BorderSide(color: AppTheme.primaryPurple, width: 2),
               ),
             ),
           ),
@@ -460,10 +483,12 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
             decoration: InputDecoration(
               labelText: 'Location',
               hintText: 'e.g., New York, USA',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppTheme.primaryPurple, width: 2),
+                borderSide:
+                    const BorderSide(color: AppTheme.primaryPurple, width: 2),
               ),
             ),
           ),
@@ -473,10 +498,12 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
             decoration: InputDecoration(
               labelText: 'Links (LinkedIn, Portfolio, etc.)',
               hintText: 'e.g., linkedin.com/in/johndoe, github.com/johndoe',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppTheme.primaryPurple, width: 2),
+                borderSide:
+                    const BorderSide(color: AppTheme.primaryPurple, width: 2),
               ),
             ),
             maxLines: 2,
@@ -504,7 +531,9 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
                         _locationController.text.trim().isEmpty &&
                         _linksController.text.trim().isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Please fill at least one field or skip')),
+                        const SnackBar(
+                            content:
+                                Text('Please fill at least one field or skip')),
                       );
                       return;
                     }
@@ -512,7 +541,8 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
                     final linksText = _linksController.text.trim();
                     final links = linksText.isEmpty
                         ? <String>[]
-                        : linksText.split(RegExp(r'[,\n]'))
+                        : linksText
+                            .split(RegExp(r'[,\n]'))
                             .map((e) => e.trim())
                             .where((e) => e.isNotEmpty)
                             .toList();
@@ -602,10 +632,12 @@ class _SummaryFormState extends State<_SummaryForm> {
             maxLines: 6,
             decoration: InputDecoration(
               hintText: 'e.g., Experienced software engineer with 5+ years...',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppTheme.primaryPurple, width: 2),
+                borderSide:
+                    const BorderSide(color: AppTheme.primaryPurple, width: 2),
               ),
             ),
           ),
@@ -628,7 +660,8 @@ class _SummaryFormState extends State<_SummaryForm> {
                   onPressed: () {
                     if (_controller.text.trim().isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Please enter a summary or skip')),
+                        const SnackBar(
+                            content: Text('Please enter a summary or skip')),
                       );
                       return;
                     }
@@ -674,7 +707,9 @@ class _ExperienceFormState extends State<_ExperienceForm> {
     super.initState();
     // Restore previously saved experiences
     if (widget.initialData != null) {
-      final existingExps = (widget.initialData!['content'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+      final existingExps = (widget.initialData!['content'] as List?)
+              ?.cast<Map<String, dynamic>>() ??
+          [];
       for (final exp in existingExps) {
         _experiences.add({
           'title': TextEditingController(text: exp['title'] ?? ''),
@@ -750,7 +785,8 @@ class _ExperienceFormState extends State<_ExperienceForm> {
                       icon: const Icon(Icons.add),
                       label: const Text('Add Another Experience'),
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 12, horizontal: 16),
                         side: const BorderSide(color: AppTheme.primaryPurple),
                         foregroundColor: AppTheme.primaryPurple,
                       ),
@@ -809,7 +845,8 @@ class _ExperienceFormState extends State<_ExperienceForm> {
     );
   }
 
-  Widget _buildExperienceEntry(int index, Map<String, TextEditingController> exp) {
+  Widget _buildExperienceEntry(
+      int index, Map<String, TextEditingController> exp) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       child: Padding(
@@ -889,7 +926,8 @@ class _ExperienceFormState extends State<_ExperienceForm> {
 
     if (experiences.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please add at least one experience or skip')),
+        const SnackBar(
+            content: Text('Please add at least one experience or skip')),
       );
       return;
     }
@@ -922,7 +960,9 @@ class _EducationFormState extends State<_EducationForm> {
     super.initState();
     // Restore previously saved education
     if (widget.initialData != null) {
-      final existingEdu = (widget.initialData!['content'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+      final existingEdu = (widget.initialData!['content'] as List?)
+              ?.cast<Map<String, dynamic>>() ??
+          [];
       for (final edu in existingEdu) {
         _education.add({
           'degree': TextEditingController(text: edu['degree'] ?? ''),
@@ -996,7 +1036,8 @@ class _EducationFormState extends State<_EducationForm> {
                       icon: const Icon(Icons.add),
                       label: const Text('Add Another Education'),
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 12, horizontal: 16),
                         side: const BorderSide(color: AppTheme.primaryPurple),
                         foregroundColor: AppTheme.primaryPurple,
                       ),
@@ -1055,7 +1096,8 @@ class _EducationFormState extends State<_EducationForm> {
     );
   }
 
-  Widget _buildEducationEntry(int index, Map<String, TextEditingController> edu) {
+  Widget _buildEducationEntry(
+      int index, Map<String, TextEditingController> edu) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       child: Padding(
@@ -1123,7 +1165,8 @@ class _EducationFormState extends State<_EducationForm> {
 
     if (education.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please add at least one education or skip')),
+        const SnackBar(
+            content: Text('Please add at least one education or skip')),
       );
       return;
     }
@@ -1160,7 +1203,8 @@ class _SkillsFormState extends State<_SkillsForm> {
     super.initState();
     // Restore previously saved skills
     if (widget.initialData != null) {
-      final existingSkills = (widget.initialData!['content'] as List?)?.cast<String>() ?? [];
+      final existingSkills =
+          (widget.initialData!['content'] as List?)?.cast<String>() ?? [];
       final suggested = widget.suggestedSkills?.toSet() ?? {};
 
       for (final skill in existingSkills) {
@@ -1179,11 +1223,14 @@ class _SkillsFormState extends State<_SkillsForm> {
     super.dispose();
   }
 
-  int get _totalSkills => _selectedSuggestedSkills.length + _customSkills.length;
+  int get _totalSkills =>
+      _selectedSuggestedSkills.length + _customSkills.length;
 
   void _addCustomSkill() {
     final skill = _controller.text.trim();
-    if (skill.isNotEmpty && _totalSkills < 20 && !_customSkills.contains(skill)) {
+    if (skill.isNotEmpty &&
+        _totalSkills < 20 &&
+        !_customSkills.contains(skill)) {
       setState(() {
         _customSkills.add(skill);
         _controller.clear();
@@ -1211,7 +1258,8 @@ class _SkillsFormState extends State<_SkillsForm> {
 
   @override
   Widget build(BuildContext context) {
-    final hasSuggestions = widget.suggestedSkills != null && widget.suggestedSkills!.isNotEmpty;
+    final hasSuggestions =
+        widget.suggestedSkills != null && widget.suggestedSkills!.isNotEmpty;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -1251,10 +1299,12 @@ class _SkillsFormState extends State<_SkillsForm> {
                   controller: _controller,
                   decoration: InputDecoration(
                     hintText: 'e.g., JavaScript, Python',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppTheme.primaryPurple, width: 2),
+                      borderSide: const BorderSide(
+                          color: AppTheme.primaryPurple, width: 2),
                     ),
                   ),
                   onSubmitted: (_) => _addCustomSkill(),
@@ -1319,12 +1369,14 @@ class _SkillsFormState extends State<_SkillsForm> {
                 return FilterChip(
                   label: Text(skill),
                   selected: isSelected,
-                  onSelected: canSelect ? (_) => _toggleSuggestedSkill(skill) : null,
+                  onSelected:
+                      canSelect ? (_) => _toggleSuggestedSkill(skill) : null,
                   selectedColor: AppTheme.primaryPurple,
                   checkmarkColor: Colors.white,
                   labelStyle: TextStyle(
                     color: isSelected ? Colors.white : Colors.black87,
-                    fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
+                    fontWeight:
+                        isSelected ? FontWeight.w500 : FontWeight.normal,
                   ),
                   backgroundColor: AppTheme.primaryPurple.withOpacity(0.1),
                   disabledColor: AppTheme.primaryPurple.withOpacity(0.05),
@@ -1358,12 +1410,17 @@ class _SkillsFormState extends State<_SkillsForm> {
                   onPressed: () {
                     if (_totalSkills == 0) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Please select or add at least one skill or skip')),
+                        const SnackBar(
+                            content: Text(
+                                'Please select or add at least one skill or skip')),
                       );
                       return;
                     }
                     // Combine selected suggested skills and custom skills
-                    final allSkills = [..._selectedSuggestedSkills, ..._customSkills];
+                    final allSkills = [
+                      ..._selectedSuggestedSkills,
+                      ..._customSkills
+                    ];
                     widget.onSave({'content': allSkills});
                   },
                   style: ElevatedButton.styleFrom(
@@ -1406,7 +1463,9 @@ class _CertificationsFormState extends State<_CertificationsForm> {
     super.initState();
     // Restore previously saved certifications
     if (widget.initialData != null) {
-      final existingCerts = (widget.initialData!['content'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+      final existingCerts = (widget.initialData!['content'] as List?)
+              ?.cast<Map<String, dynamic>>() ??
+          [];
       for (final cert in existingCerts) {
         _certifications.add({
           'name': TextEditingController(text: cert['name'] ?? ''),
@@ -1480,7 +1539,8 @@ class _CertificationsFormState extends State<_CertificationsForm> {
                       icon: const Icon(Icons.add),
                       label: const Text('Add Another Certification'),
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 12, horizontal: 16),
                         side: const BorderSide(color: AppTheme.primaryPurple),
                         foregroundColor: AppTheme.primaryPurple,
                       ),
@@ -1539,7 +1599,8 @@ class _CertificationsFormState extends State<_CertificationsForm> {
     );
   }
 
-  Widget _buildCertificationEntry(int index, Map<String, TextEditingController> cert) {
+  Widget _buildCertificationEntry(
+      int index, Map<String, TextEditingController> cert) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       child: Padding(
@@ -1607,7 +1668,8 @@ class _CertificationsFormState extends State<_CertificationsForm> {
 
     if (certifications.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please add at least one certification or skip')),
+        const SnackBar(
+            content: Text('Please add at least one certification or skip')),
       );
       return;
     }
@@ -1640,7 +1702,9 @@ class _LanguagesFormState extends State<_LanguagesForm> {
     super.initState();
     // Restore previously saved languages
     if (widget.initialData != null) {
-      final existingLangs = (widget.initialData!['content'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+      final existingLangs = (widget.initialData!['content'] as List?)
+              ?.cast<Map<String, dynamic>>() ??
+          [];
       for (final lang in existingLangs) {
         _languages.add({
           'language': TextEditingController(text: lang['language'] ?? ''),
@@ -1712,7 +1776,8 @@ class _LanguagesFormState extends State<_LanguagesForm> {
                       icon: const Icon(Icons.add),
                       label: const Text('Add Another Language'),
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 12, horizontal: 16),
                         side: const BorderSide(color: AppTheme.primaryPurple),
                         foregroundColor: AppTheme.primaryPurple,
                       ),
@@ -1771,7 +1836,8 @@ class _LanguagesFormState extends State<_LanguagesForm> {
     );
   }
 
-  Widget _buildLanguageEntry(int index, Map<String, TextEditingController> lang) {
+  Widget _buildLanguageEntry(
+      int index, Map<String, TextEditingController> lang) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       child: Padding(
@@ -1829,7 +1895,8 @@ class _LanguagesFormState extends State<_LanguagesForm> {
 
     if (languages.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please add at least one language or skip')),
+        const SnackBar(
+            content: Text('Please add at least one language or skip')),
       );
       return;
     }

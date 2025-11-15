@@ -1092,7 +1092,7 @@ async function createProfessionalCV(newCVText) {
     try {
       const doc = new PDFDocument({
         size: "A4",
-        margins: { top: 72, bottom: 72, left: 72, right: 72 },
+        margins: { top: 50, bottom: 50, left: 50, right: 50 },
       });
 
       const buffers = [];
@@ -1105,8 +1105,8 @@ async function createProfessionalCV(newCVText) {
       const colors = {
         primary: "#000000",
         accent: "#4A5FBC",
-        gray: "#666666",
-        lightGray: "#CCCCCC",
+        gray: "#555555",
+        lightGray: "#DDDDDD",
       };
 
       const fonts = {
@@ -1131,9 +1131,15 @@ async function createProfessionalCV(newCVText) {
           continue;
         }
 
+        // Page break check
+        if (currentY > 680) {
+          doc.addPage();
+          currentY = 50;
+        }
+
         if (sectionName === "PersonalInformation") {
           currentY = renderPersonalInfo(doc, content, colors, fonts, currentY);
-        } else if (sectionName === "ProfessionalSummary") {
+        } else if (sectionName === "Summary" || sectionName === "ProfessionalSummary") {
           currentY = renderSection(
             doc,
             "PROFESSIONAL SUMMARY",
@@ -1148,6 +1154,10 @@ async function createProfessionalCV(newCVText) {
           currentY = renderEducation(doc, content, colors, fonts, currentY);
         } else if (sectionName === "Skills") {
           currentY = renderSkills(doc, content, colors, fonts, currentY);
+        } else if (sectionName === "Certifications") {
+          currentY = renderCertifications(doc, content, colors, fonts, currentY);
+        } else if (sectionName === "Languages") {
+          currentY = renderLanguages(doc, content, colors, fonts, currentY);
         }
       }
 
@@ -1159,23 +1169,27 @@ async function createProfessionalCV(newCVText) {
 }
 
 function renderPersonalInfo(doc, content, colors, fonts, startY) {
-  const fullName = content.full_name || "";
+  const fullName = content.full_name || content.name || "";
   const email = content.email || "";
   const phone = content.phone || "";
   const location = content.location || "";
   const links = content.links || [];
 
+  let y = startY;
+
+  // Full Name - Large and Bold
   doc
     .font(fonts.bold)
-    .fontSize(22)
+    .fontSize(24)
     .fillColor(colors.primary)
-    .text(fullName.toUpperCase(), 72, startY, {
+    .text(fullName.toUpperCase(), 50, y, {
       align: "center",
-      width: 450,
+      width: 495,
     });
 
-  let y = doc.y + 8;
+  y = doc.y + 12;
 
+  // Contact Info Line
   const contactInfo = [];
   if (email) contactInfo.push(email);
   if (phone) contactInfo.push(phone);
@@ -1186,80 +1200,91 @@ function renderPersonalInfo(doc, content, colors, fonts, startY) {
       .font(fonts.regular)
       .fontSize(10)
       .fillColor(colors.gray)
-      .text(contactInfo.join("  |  "), 72, y, {
+      .text(contactInfo.join("  •  "), 50, y, {
         align: "center",
-        width: 450,
+        width: 495,
       });
-    y = doc.y + 4;
+    y = doc.y + 6;
   }
 
+  // Links
   if (links.length > 0) {
     doc
       .font(fonts.regular)
       .fontSize(10)
       .fillColor(colors.gray)
-      .text(links.join("  |  "), 72, y, {
+      .text(links.join("  •  "), 50, y, {
         align: "center",
-        width: 450,
+        width: 495,
       });
-    y = doc.y;
+    y = doc.y + 4;
   }
 
-  y += 16;
+  y += 20;
+
+  // Separator Line
   doc
-    .moveTo(72, y)
-    .lineTo(540, y)
+    .moveTo(50, y)
+    .lineTo(545, y)
     .strokeColor(colors.lightGray)
     .lineWidth(1)
     .stroke();
 
-  return y + 20;
+  return y + 25;
 }
 
 function renderSection(doc, title, content, colors, fonts, startY) {
+  let y = startY;
+
   doc
     .font(fonts.bold)
     .fontSize(14)
     .fillColor(colors.accent)
-    .text(title, 72, startY);
+    .text(title, 50, y);
 
-  let y = doc.y + 4;
+  y = doc.y + 8;
 
   doc
-    .moveTo(72, y)
-    .lineTo(300, y)
+    .moveTo(50, y)
+    .lineTo(200, y)
     .strokeColor(colors.accent)
-    .lineWidth(1)
+    .lineWidth(1.5)
     .stroke();
 
-  y += 12;
+  y += 18;
 
   doc
     .font(fonts.regular)
     .fontSize(11)
     .fillColor(colors.primary)
-    .text(content, 72, y, { width: 450, align: "left" });
+    .text(content, 50, y, {
+      width: 495,
+      align: "left",
+      lineGap: 4,
+    });
 
-  return doc.y + 20;
+  return doc.y + 25;
 }
 
 function renderExperience(doc, content, colors, fonts, startY) {
+  let y = startY;
+
   doc
     .font(fonts.bold)
     .fontSize(14)
     .fillColor(colors.accent)
-    .text("EXPERIENCE", 72, startY);
+    .text("EXPERIENCE", 50, y);
 
-  let y = doc.y + 4;
+  y = doc.y + 8;
 
   doc
-    .moveTo(72, y)
-    .lineTo(300, y)
+    .moveTo(50, y)
+    .lineTo(200, y)
     .strokeColor(colors.accent)
-    .lineWidth(1)
+    .lineWidth(1.5)
     .stroke();
 
-  y += 12;
+  y += 18;
 
   for (let i = 0; i < content.length; i++) {
     const exp = content[i];
@@ -1268,38 +1293,71 @@ function renderExperience(doc, content, colors, fonts, startY) {
     const years = exp.years || "";
     const description = exp.description || "";
 
-    doc.font(fonts.bold).fontSize(12).fillColor(colors.primary).text(title, 72, y);
+    // Page break check
+    if (y > 680) {
+      doc.addPage();
+      y = 50;
+    }
 
-    y = doc.y + 4;
+    // Job Title
+    doc
+      .font(fonts.bold)
+      .fontSize(12)
+      .fillColor(colors.primary)
+      .text(title, 50, y);
 
-    const companyLine = [company, years].filter((x) => x).join("  |  ");
+    y = doc.y + 8;
+
+    // Company | Years
+    const companyLine = [company, years].filter((x) => x).join("  •  ");
     doc
       .font(fonts.regular)
       .fontSize(10)
       .fillColor(colors.gray)
-      .text(companyLine, 72, y);
+      .text(companyLine, 50, y);
 
-    y = doc.y + 6;
+    y = doc.y + 12;
 
+    // Description with bullet points
     if (description) {
-      doc
-        .font(fonts.regular)
-        .fontSize(11)
-        .fillColor(colors.primary)
-        .text(`• ${description}`, 82, y, { width: 440, align: "left" });
+      const descriptions = Array.isArray(description) ? description : [description];
+      
+      descriptions.forEach((desc) => {
+        if (desc && desc.trim()) {
+          // Page break check for bullets
+          if (y > 680) {
+            doc.addPage();
+            y = 50;
+          }
 
-      y = doc.y + 4;
+          doc
+            .font(fonts.regular)
+            .fontSize(10)
+            .fillColor(colors.primary)
+            .text("•", 60, y)
+            .text(desc.trim(), 75, y, {
+              width: 470,
+              align: "left",
+              lineGap: 4,
+            });
+
+          y = doc.y + 8;
+        }
+      });
     }
 
+    // Separator between jobs
     if (i < content.length - 1) {
-      y += 8;
+      y += 12;
       doc
-        .moveTo(72, y)
-        .lineTo(250, y)
+        .moveTo(50, y)
+        .lineTo(300, y)
         .strokeColor(colors.lightGray)
         .lineWidth(0.5)
         .stroke();
-      y += 12;
+      y += 18;
+    } else {
+      y += 8;
     }
   }
 
@@ -1307,71 +1365,183 @@ function renderExperience(doc, content, colors, fonts, startY) {
 }
 
 function renderEducation(doc, content, colors, fonts, startY) {
+  let y = startY;
+
   doc
     .font(fonts.bold)
     .fontSize(14)
     .fillColor(colors.accent)
-    .text("EDUCATION", 72, startY);
+    .text("EDUCATION", 50, y);
 
-  let y = doc.y + 4;
+  y = doc.y + 8;
 
   doc
-    .moveTo(72, y)
-    .lineTo(300, y)
+    .moveTo(50, y)
+    .lineTo(200, y)
     .strokeColor(colors.accent)
-    .lineWidth(1)
+    .lineWidth(1.5)
     .stroke();
 
-  y += 12;
+  y += 18;
 
   for (const edu of content) {
     const degree = edu.degree || "";
     const institution = edu.institution || "";
     const years = edu.years || "";
 
-    doc.font(fonts.bold).fontSize(12).fillColor(colors.primary).text(degree, 72, y);
+    if (y > 680) {
+      doc.addPage();
+      y = 50;
+    }
 
-    y = doc.y + 4;
+    doc
+      .font(fonts.bold)
+      .fontSize(12)
+      .fillColor(colors.primary)
+      .text(degree, 50, y);
 
-    const institutionLine = [institution, years].filter((x) => x).join("  |  ");
+    y = doc.y + 8;
+
+    const institutionLine = [institution, years].filter((x) => x).join("  •  ");
     doc
       .font(fonts.regular)
       .fontSize(10)
       .fillColor(colors.gray)
-      .text(institutionLine, 72, y);
+      .text(institutionLine, 50, y);
 
-    y = doc.y + 12;
+    y = doc.y + 16;
   }
 
-  return y + 8;
+  return y + 15;
 }
 
 function renderSkills(doc, content, colors, fonts, startY) {
+  let y = startY;
+
   doc
     .font(fonts.bold)
     .fontSize(14)
     .fillColor(colors.accent)
-    .text("SKILLS", 72, startY);
+    .text("SKILLS", 50, y);
 
-  let y = doc.y + 4;
+  y = doc.y + 8;
 
   doc
-    .moveTo(72, y)
-    .lineTo(300, y)
+    .moveTo(50, y)
+    .lineTo(200, y)
     .strokeColor(colors.accent)
-    .lineWidth(1)
+    .lineWidth(1.5)
     .stroke();
 
-  y += 12;
+  y += 18;
 
-  const skillsText = content.map((skill) => `• ${skill}`).join("    ");
+  const skillsText = content.join(" • ");
 
   doc
     .font(fonts.regular)
     .fontSize(11)
     .fillColor(colors.primary)
-    .text(skillsText, 72, y, { width: 450, align: "left" });
+    .text(skillsText, 50, y, {
+      width: 495,
+      align: "left",
+      lineGap: 4,
+    });
 
-  return doc.y + 20;
+  return doc.y + 25;
 }
+
+function renderCertifications(doc, content, colors, fonts, startY) {
+  let y = startY;
+
+  doc
+    .font(fonts.bold)
+    .fontSize(14)
+    .fillColor(colors.accent)
+    .text("CERTIFICATIONS", 50, y);
+
+  y = doc.y + 8;
+
+  doc
+    .moveTo(50, y)
+    .lineTo(200, y)
+    .strokeColor(colors.accent)
+    .lineWidth(1.5)
+    .stroke();
+
+  y += 18;
+
+  for (const cert of content) {
+    const name = cert.name || "";
+    const issuer = cert.issuer || "";
+    const year = cert.year || "";
+
+    if (y > 680) {
+      doc.addPage();
+      y = 50;
+    }
+
+    doc
+      .font(fonts.bold)
+      .fontSize(11)
+      .fillColor(colors.primary)
+      .text(name, 50, y);
+
+    y = doc.y + 6;
+
+    const certLine = [issuer, year].filter((x) => x).join("  •  ");
+    if (certLine) {
+      doc
+        .font(fonts.regular)
+        .fontSize(10)
+        .fillColor(colors.gray)
+        .text(certLine, 50, y);
+
+      y = doc.y + 14;
+    }
+  }
+
+  return y + 15;
+}
+
+function renderLanguages(doc, content, colors, fonts, startY) {
+  let y = startY;
+
+  doc
+    .font(fonts.bold)
+    .fontSize(14)
+    .fillColor(colors.accent)
+    .text("LANGUAGES", 50, y);
+
+  y = doc.y + 8;
+
+  doc
+    .moveTo(50, y)
+    .lineTo(200, y)
+    .strokeColor(colors.accent)
+    .lineWidth(1.5)
+    .stroke();
+
+  y += 18;
+
+  const languagesText = content
+    .map((lang) => {
+      const language = lang.language || "";
+      const proficiency = lang.proficiency || "";
+      return `${language}${proficiency ? ` (${proficiency})` : ""}`;
+    })
+    .join(" • ");
+
+  doc
+    .font(fonts.regular)
+    .fontSize(11)
+    .fillColor(colors.primary)
+    .text(languagesText, 50, y, {
+      width: 495,
+      align: "left",
+      lineGap: 4,
+    });
+
+  return doc.y + 25;
+}
+
 export { generateInterviewQuestions };
