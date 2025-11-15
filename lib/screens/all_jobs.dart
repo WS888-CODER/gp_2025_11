@@ -271,23 +271,18 @@ class _JobsPageState extends State<JobsPage> {
   List<Job> _applyFilters(List<Job> jobs) {
     Iterable<Job> res = jobs;
 
-    // 1) فلتر الوظائف المقفلة (يقدّر المستخدم يغيّره بعد تفعيل For You)
     if (!_showClosedJobs) {
       res = res.where((j) => j.status != 'Closed');
     }
 
-    // 2) وضع For You: طبّق فلترة الـCV أولاً
     if (_forYou) {
       if (_profile.cvUrl == null) {
-        // ما عنده CV → ما في نتائج
         return const <Job>[];
       } else {
         res = res.where((j) => _matchesCvKeywords(j, _profile.cvKeywords));
       }
-      // ملاحظة: ما فيه return هنا — نكمّل ونطبّق بقية الفلاتر تحت
     }
 
-    // 3) البحث (ينطبق فوق مجموعة For You لو كان شغّال)
     if (_search.trim().isNotEmpty) {
       final q = _search.toLowerCase();
       res = res.where((j) {
@@ -300,12 +295,10 @@ class _JobsPageState extends State<JobsPage> {
       });
     }
 
-    // 4) تصفية بالسبيشالتي (تنطبق أيضاً فوق For You)
     if (_selectedSpecialty != 'All') {
       res = res.where((j) => _matchesSpecialty(j, _selectedSpecialty));
     }
 
-    // 5) الفرز (إذا For You مفعّل، الافتراضي Newest — لكن اليوزر يقدر يغيّره)
     final list = res.toList();
     list.sort(
       (a, b) => _sort == SortOrder.newestFirst
@@ -452,7 +445,7 @@ class _JobsPageState extends State<JobsPage> {
 
                 return Container(
                   decoration: BoxDecoration(
-                    color: scheme.surface, // أبيض في لايت، غامق في دارك
+                    color: scheme.surface,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
@@ -479,15 +472,13 @@ class _JobsPageState extends State<JobsPage> {
                                   value: _selectedSpecialty,
                                   icon: Icon(
                                     Icons.keyboard_arrow_down_rounded,
-                                    color: scheme.primary, // البنفسجي من الثيم
+                                    color: scheme.primary,
                                   ),
-                                  // لون الآيتمز داخل القائمة لما تفتح
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: scheme.onSurface,
                                     fontWeight: FontWeight.w500,
                                   ),
-                                  // النص المختار المعروض بعد الإغلاق
                                   selectedItemBuilder: (context) {
                                     return _specialties.map((m) {
                                       return Text(
@@ -903,7 +894,6 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
   }
 
   Future<void> _toggleFavorite() async {
-    final messenger = ScaffoldMessenger.maybeOf(context); // خذ المرجع قبل await
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
@@ -923,7 +913,6 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
         await favRef.set({
           'UserID': uid,
           'JobID': widget.job.jobId,
-          'CreatedAt': FieldValue.serverTimestamp(),
         });
         if (!mounted) return;
         SnackHelper.success(context, 'Saved to favorites');
@@ -1358,12 +1347,10 @@ class _JobCardState extends State<JobCard> {
     }
   }
 
-  // داخل _JobCardState
   Future<void> _toggleFavorite() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
-    final messenger = ScaffoldMessenger.maybeOf(context); // خذيه قبل await
     final jobId = widget.job.jobId;
     final favDocId = '${uid}_$jobId';
     final favRef =
@@ -1374,7 +1361,6 @@ class _JobCardState extends State<JobCard> {
         await favRef.set({
           'UserID': uid,
           'JobID': jobId,
-          'CreatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
         if (!mounted) return;
         setState(() => _saved = true);
@@ -1454,8 +1440,6 @@ class _JobCardState extends State<JobCard> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-
-                  // زر المفضلة (قلب)
                   IconButton(
                     tooltip: isClosed
                         ? 'Closed job'
@@ -1597,7 +1581,7 @@ class _FilterBox extends StatelessWidget {
         color: scheme.surface,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: scheme.primary, // لو تبين outline أهدى استخدمي scheme.outline
+          color: scheme.primary,
           width: 1,
         ),
         boxShadow: [

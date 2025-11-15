@@ -39,7 +39,6 @@ class _FavoritesPageState extends State<FavoritesPage> {
         .snapshots()
         .listen((favSnapshot) async {
       try {
-        // لا توجد مفضلات
         if (favSnapshot.docs.isEmpty) {
           if (!mounted) return;
           setState(() {
@@ -50,8 +49,6 @@ class _FavoritesPageState extends State<FavoritesPage> {
           return;
         }
 
-        // IDs بدون تكرار
-        // IDs بدون تكرار + trim
         final favoriteJobIds = favSnapshot.docs
             .map((d) => (d.data()['JobID'] ?? '').toString().trim())
             .where((id) => id.isNotEmpty)
@@ -61,8 +58,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
         final Map<String, Job> newJobs = {};
         final Map<String, CompanyInfo> newCompanies = {};
 
-// ---- الطور الأول: documentId whereIn ----
-        final idsLeft = <String>{...favoriteJobIds}; // سنحذف منها اللي لقيناه
+        final idsLeft = <String>{...favoriteJobIds};
         for (var i = 0; i < favoriteJobIds.length; i += 10) {
           final chunk = favoriteJobIds.sublist(
             i,
@@ -76,12 +72,11 @@ class _FavoritesPageState extends State<FavoritesPage> {
 
           for (final doc in jobDocs.docs) {
             final job = Job.fromDoc(doc);
-            newJobs[job.jobId] = job; // مفتاحنا الموحّد = doc.id
-            idsLeft.remove(doc.id); // لقيناه بالـdocId
+            newJobs[job.jobId] = job;
+            idsLeft.remove(doc.id);
           }
         }
 
-// ---- الطور الثاني (fallback): الحقل JobID whereIn لأي IDs ما رجعت ----
         final remaining = idsLeft.toList();
         for (var i = 0; i < remaining.length; i += 10) {
           final chunk = remaining.sublist(
@@ -98,11 +93,10 @@ class _FavoritesPageState extends State<FavoritesPage> {
 
           for (final doc in jobDocs.docs) {
             final job = Job.fromDoc(doc);
-            newJobs[job.jobId] = job; // نفس المفتاح
+            newJobs[job.jobId] = job;
           }
         }
 
-        // حمّل بيانات الشركات لأصحاب هذه الوظائف
         final ownerIds = newJobs.values.map((j) => j.userId).toSet().toList();
         for (var i = 0; i < ownerIds.length; i += 10) {
           final chunk = ownerIds.sublist(
@@ -133,7 +127,6 @@ class _FavoritesPageState extends State<FavoritesPage> {
             );
           }
 
-          // ضعي قيَم افتراضية لأي مالك لم يرجع
           for (final id in chunk) {
             newCompanies.putIfAbsent(id, () => const CompanyInfo());
           }
@@ -172,10 +165,10 @@ class _FavoritesPageState extends State<FavoritesPage> {
           .doc(docId)
           .delete();
 
-      if (!mounted) return; // <-- مهم
+      if (!mounted) return;
       SnackHelper.success(context, 'Removed from favorites');
     } catch (e) {
-      if (!mounted) return; // <-- مهم
+      if (!mounted) return;
       SnackHelper.error(context, 'Failed to remove from favorites');
     }
   }

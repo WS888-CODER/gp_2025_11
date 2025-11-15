@@ -26,6 +26,9 @@ class _QuestionsPageState extends State<QuestionsPage> {
   int _userAddedCount = 0;
   final List<Map<String, dynamic>> _questions = [];
 
+  final Set<Map<String, dynamic>> _userAddedQuestions =
+      <Map<String, dynamic>>{};
+
   Uri _fnUrl() => Uri.parse(
         'https://us-central1-jadeer-b4953.cloudfunctions.net/generateInterviewQuestions',
       );
@@ -72,15 +75,15 @@ class _QuestionsPageState extends State<QuestionsPage> {
       _questions
         ..clear()
         ..addAll(qsRaw.map((q) {
-          final m = q as Map<String, dynamic>;
+          final m = Map<String, dynamic>.from(q as Map);
           return {
             'Text': (m['Text'] ?? '').toString(),
             'Type': (m['Type'] ?? 'technical').toString(),
           };
         }));
 
+      _userAddedQuestions.clear();
       _userAddedCount = (data['QuestionsUserAddedCount'] ?? 0) as int;
-
       _locked = data['QuestionsLocked'] == true;
 
       setState(() {});
@@ -107,7 +110,6 @@ class _QuestionsPageState extends State<QuestionsPage> {
         context,
         'You can only add up to $kMaxUserAdds custom questions for this job.',
       );
-
       return;
     }
 
@@ -211,8 +213,9 @@ class _QuestionsPageState extends State<QuestionsPage> {
     if (ok != true) return;
 
     final text = controller.text.trim();
-    if (text.isEmpty)
+    if (text.isEmpty) {
       return SnackHelper.error(context, 'Question cannot be empty.');
+    }
     if (text.length > kMaxQuestionLength) {
       return SnackHelper.error(context, 'Character limit reached.');
     }
@@ -221,10 +224,12 @@ class _QuestionsPageState extends State<QuestionsPage> {
     }
 
     setState(() {
-      _questions.add({
+      final m = <String, dynamic>{
         'Text': text,
         'Type': type,
-      });
+      };
+      _questions.add(m);
+      _userAddedQuestions.add(m);
       _userAddedCount += 1;
     });
 
@@ -358,13 +363,91 @@ class _QuestionsPageState extends State<QuestionsPage> {
     }
 
     setState(() {
-      _questions[index] = {
-        'Text': newText,
-        'Type': type,
-      };
+      q['Text'] = newText;
+      q['Type'] = type;
     });
 
     SnackHelper.success(context, 'Saved.');
+  }
+
+  // ===== Delete Question (only user-added in this session) =====
+  Future<void> _deleteQuestionAt(int index) async {
+    if (_locked) {
+      SnackHelper.error(context, 'Questions are locked.');
+      return;
+    }
+    if (index < 0 || index >= _questions.length) {
+      SnackHelper.error(context, 'Invalid question.');
+      return;
+    }
+
+    final q = _questions[index];
+    final isUserAdded = _userAddedQuestions.contains(q);
+
+    if (!isUserAdded) {
+      SnackHelper.error(
+        context,
+        'You can only delete questions you added in this session.',
+      );
+      return;
+    }
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        title: const Text(
+          'Delete Question?',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'Are you sure you want to delete this question?',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white),
+        ),
+        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+        actionsPadding:
+            const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.white.withOpacity(0.9),
+              foregroundColor: const Color(0xFF4A5FBC),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
+            ),
+            child: const Text('Cancel'),
+          ),
+          const SizedBox(width: 12),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(
+              backgroundColor: const Color(0xFFFC686A),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (ok != true) return;
+
+    setState(() {
+      _userAddedQuestions.remove(q);
+      _questions.removeAt(index);
+      if (_userAddedCount > 0) _userAddedCount -= 1;
+    });
+
+    SnackHelper.success(context, 'Question deleted.');
   }
 
   // ===== Generate via Cloud Function =====
@@ -400,8 +483,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
         return;
       }
 
-      final tempJobId =
-          'temp-${DateTime.now().millisecondsSinceEpoch}'; // لعيون الفنكشن
+      final tempJobId = 'temp-${DateTime.now().millisecondsSinceEpoch}';
 
       final payload = {
         'jobId': tempJobId,
@@ -429,18 +511,23 @@ class _QuestionsPageState extends State<QuestionsPage> {
 
       final generated = out
           .map((q) {
-            return {
-              'Text': (q['text'] ?? '').toString().trim(),
-              'Type': (q['type'] ?? '').toString(),
+            final text = (q['text'] ?? '').toString().trim();
+            final type = (q['type'] ?? '').toString();
+            if (text.isEmpty) return null;
+            return <String, dynamic>{
+              'Text': text,
+              'Type': type,
             };
           })
-          .where((m) => (m['Text'] as String).isNotEmpty)
+          .whereType<Map<String, dynamic>>()
           .toList();
 
       setState(() {
         _questions
           ..clear()
           ..addAll(generated);
+        _userAddedQuestions.clear();
+        _userAddedCount = 0;
       });
 
       SnackHelper.success(context, 'Questions generated successfully!');
@@ -540,7 +627,6 @@ class _QuestionsPageState extends State<QuestionsPage> {
     }
   }
 
-  // ===== Done: هنا ننشئ البوست فعليًا =====
   Future<void> _done() async {
     if (_locked) return;
 
@@ -617,8 +703,6 @@ class _QuestionsPageState extends State<QuestionsPage> {
         'JobStatus': 'Open',
         'Questions': _questions,
         'QuestionsLocked': true,
-        'QuestionsLockedAt': FieldValue.serverTimestamp(),
-        'QuestionsUserAddedCount': _userAddedCount,
       };
 
       await newJobDoc.set(jobDataToSave);
@@ -642,6 +726,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
   // ===== UI =====
   @override
   Widget build(BuildContext context) {
+    final canAddMore = _userAddedCount < kMaxUserAdds;
     return WillPopScope(
       onWillPop: () async {
         if (_locked) {
@@ -685,11 +770,20 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                     const SizedBox(height: 12),
                                 itemBuilder: (context, i) {
                                   final q = _questions[i];
+                                  final typeRaw =
+                                      (q['Type'] ?? '').toString().trim();
+                                  final typeLabel = typeRaw.isEmpty
+                                      ? 'Question'
+                                      : typeRaw.toUpperCase();
+
+                                  final isUserAdded =
+                                      _userAddedQuestions.contains(q);
+
                                   return Card(
                                     elevation: 1.5,
                                     shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(12)),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
                                     child: Padding(
                                       padding: const EdgeInsets.all(14),
                                       child: Column(
@@ -697,31 +791,48 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
                                             children: [
-                                              const Icon(Icons.question_mark,
-                                                  color: Color(0xFF4A5FBC)),
-                                              const SizedBox(width: 6),
-                                              Text(
-                                                (q['Type'] ?? '')
-                                                        .toString()
-                                                        .isEmpty
-                                                    ? 'Question'
-                                                    : (q['Type'] as String)
-                                                        .toUpperCase(),
-                                                style: const TextStyle(
-                                                    fontWeight:
-                                                        FontWeight.w600),
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(
+                                                      Icons.question_mark,
+                                                      color: Color(0xFF4A5FBC)),
+                                                  const SizedBox(width: 6),
+                                                  Text(
+                                                    typeLabel,
+                                                    style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w600),
+                                                  ),
+                                                ],
                                               ),
-                                              const Spacer(),
-                                              IconButton(
-                                                tooltip: 'Edit',
-                                                onPressed: _locked
-                                                    ? null
-                                                    : () =>
-                                                        _editQuestionAt(i, q),
-                                                icon: const Icon(Icons.edit),
-                                              ),
-                                              // لا يوجد Delete
+                                              if (!_locked)
+                                                Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    IconButton(
+                                                      tooltip: 'Edit',
+                                                      onPressed: () =>
+                                                          _editQuestionAt(i, q),
+                                                      icon: const Icon(
+                                                          Icons.edit),
+                                                    ),
+                                                    if (isUserAdded)
+                                                      IconButton(
+                                                        tooltip: 'Delete',
+                                                        onPressed: () =>
+                                                            _deleteQuestionAt(
+                                                                i),
+                                                        icon: const Icon(
+                                                            Icons.delete,
+                                                            color: Colors.red),
+                                                      ),
+                                                  ],
+                                                ),
                                             ],
                                           ),
                                           const SizedBox(height: 10),
@@ -734,8 +845,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                       ),
                                     ),
                                   );
-                                },
-                              ),
+                                }),
                       ),
                       if (!_locked)
                         Padding(
@@ -743,18 +853,37 @@ class _QuestionsPageState extends State<QuestionsPage> {
                           child: SizedBox(
                             width: double.infinity,
                             child: OutlinedButton.icon(
-                              onPressed: (_userAddedCount >= kMaxUserAdds)
-                                  ? null
-                                  : _addQuestionDialog,
+                              style: ButtonStyle(
+                                side: MaterialStateProperty.resolveWith<
+                                    BorderSide>(
+                                  (states) {
+                                    if (states
+                                        .contains(MaterialState.disabled)) {
+                                      return const BorderSide(
+                                          color: Colors.grey, width: 2);
+                                    }
+                                    return const BorderSide(
+                                        color: Color(0xFF4A5FBC), width: 2);
+                                  },
+                                ),
+                                foregroundColor:
+                                    MaterialStateProperty.resolveWith<Color>(
+                                  (states) {
+                                    if (states
+                                        .contains(MaterialState.disabled)) {
+                                      return Colors.grey;
+                                    }
+                                    return const Color(0xFF4A5FBC);
+                                  },
+                                ),
+                              ),
+                              onPressed: canAddMore ? _addQuestionDialog : null,
                               icon: const Icon(Icons.add),
                               label: Text(
-                                _userAddedCount < kMaxUserAdds
+                                canAddMore
                                     ? 'Add question (${kMaxUserAdds - _userAddedCount} left)'
-                                    : 'Add question',
-                                style:
-                                    const TextStyle(color: Color(0xFF4A5FBC)),
+                                    : 'Max custom questions reached',
                               ),
-                              // ...
                             ),
                           ),
                         ),

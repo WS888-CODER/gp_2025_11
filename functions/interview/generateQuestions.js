@@ -409,7 +409,7 @@ export const generateInterviewQuestions = v2.https.onRequest(
       const techPct =
         mix && typeof mix.technical === "number" ? mix.technical : 0.7;
       const behPct =
-        mix && typeof mix.behavioral === "number" ? mix.behavioral : 0.3;
+        mix && typeof mix.psychometric === "number" ? mix.psychometric : 0.3;
       const easy =
         difficulty && typeof difficulty.easy === "number" ? difficulty.easy : 0.3;
       const med =
@@ -499,7 +499,6 @@ export const generateInterviewQuestions = v2.https.onRequest(
           } else if (psyCount < targetPsyCount) {
             type = "psychometric";
           } else {
-            // لو الاثنين وصلوا الهدف، خلّي الأغلبية حسب النسبة (احتياط)
             type = techPct >= behPct ? "technical" : "psychometric";
           }
 
