@@ -33,28 +33,6 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
     super.dispose();
   }
 
-  void _showSnackSuccess(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-  }
-
-  void _showSnackError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-  }
-
   // ========== OTP GENERATION ==========
   String _generateOTP() {
     Random random = Random();
@@ -279,13 +257,13 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
     final newEmail = _emailController.text.trim();
 
     if (newName.isEmpty) {
-      _showSnackError('Name cannot be empty');
+      SnackHelper.error(context, 'Name cannot be empty');
       return;
     }
 
     if (newEmail.isEmpty ||
         !RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(newEmail)) {
-      _showSnackError('Please enter a valid email');
+      SnackHelper.error(context, 'Please enter a valid email');
       return;
     }
 
@@ -313,7 +291,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
         final success = await _sendOTPEmail(newEmail, otp, widget.userType);
 
         if (!success) {
-          _showSnackError('Failed to send OTP. Please try again.');
+          SnackHelper.error(context, 'Failed to send OTP. Please try again.');
           setState(() => _isSaving = false);
           return;
         }
@@ -352,13 +330,13 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
           },
         );
       } catch (e) {
-        _showSnackError('Failed to update email: $e');
+        SnackHelper.error(context, 'Failed to update email: $e');
         setState(() => _isSaving = false);
       }
     } else {
       // Only name changed (no email change)
       if (newName == currentName) {
-        _showSnackError('No changes to save');
+        SnackHelper.error(context, 'No changes to save');
         setState(() {
           _isEditing = false;
         });
@@ -373,13 +351,13 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
             .update({'Name': newName});
 
         if (!mounted) return;
-        _showSnackSuccess('Name updated successfully');
+        SnackHelper.success(context, 'Name updated successfully');
         setState(() {
           _isEditing = false;
           _isSaving = false;
         });
       } catch (e) {
-        _showSnackError('Failed to update name: $e');
+        SnackHelper.error(context, 'Failed to update name: $e');
         setState(() => _isSaving = false);
       }
     }

@@ -111,20 +111,7 @@ class _PublishScreenState extends State<PublishScreen> {
       print('❌ Error opening PDF: $e');
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not open PDF: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            action: SnackBarAction(
-              label: 'Copy Link',
-              textColor: Colors.white,
-              onPressed: () {
-                // You can add clipboard functionality here
-                print('📋 PDF URL: $url');
-              },
-            ),
-          ),
-        );
+        SnackHelper.error(context, 'Could not open PDF: ${e.toString()}');
       }
     }
   }
@@ -318,12 +305,8 @@ class _PublishScreenState extends State<PublishScreen> {
                           TextButton(
                             onPressed: () {
                               print('📋 PDF URL: $pdfUrl');
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('URL copied to console'),
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
+                              SnackHelper.success(
+                                  context, 'URL copied to console');
                             },
                             child: const Text(
                               'Show URL (Debug)',

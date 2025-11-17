@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -40,11 +41,40 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
   }
 
-  Future<void> updateCompanyStatus(String id, String newStatus) async {
+  Future<void> _sendStatusEmail(
+      String companyEmail, String companyName, String status) async {
+    try {
+      final callable =
+          FirebaseFunctions.instance.httpsCallable('notifyCompanyStatusChange');
+      await callable.call({
+        'companyEmail': companyEmail,
+        'companyName': companyName,
+        'status': status,
+      });
+      print('✅ Status email sent to $companyEmail');
+    } catch (e) {
+      print('❌ Error sending status email: $e');
+    }
+  }
+
+  Future<void> updateCompanyStatus(
+      String id, String newStatus, Map<String, dynamic> companyData) async {
     await FirebaseFirestore.instance
         .collection('Users')
         .doc(id)
         .update({'AccountStatus': newStatus});
+
+    // إرسال الإيميل فقط إذا كان القرار نهائي (Verified أو Rejected)
+    if (newStatus == 'Verified' || newStatus == 'Rejected') {
+      final companyEmail = companyData['Email'] ?? '';
+      final companyName = companyData['CompanyName'] ?? 'Company';
+
+      if (companyEmail.isNotEmpty) {
+        // استخدام "Accepted" بدل "Verified" للإيميل
+        final emailStatus = newStatus == 'Verified' ? 'Accepted' : 'Rejected';
+        await _sendStatusEmail(companyEmail, companyName, emailStatus);
+      }
+    }
   }
 
   Future<void> loadCompanies() async {
@@ -142,15 +172,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             return _CompanyCard(
                               data: data,
                               onSelected: (newStatus) async {
-                                await updateCompanyStatus(doc.id, newStatus);
+                                // ✅ هنا التعديل: تمرير الـ data كـ parameter ثالث
+                                await updateCompanyStatus(
+                                    doc.id, newStatus, data);
 
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Status updated to "$newStatus"',
-                                    ),
-                                  ),
-                                );
+                                if (!mounted) return;
+
+                                SnackHelper.success(
+                                    context, 'Status updated to "$newStatus"');
 
                                 await loadCompanies();
                               },

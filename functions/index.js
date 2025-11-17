@@ -256,6 +256,7 @@ export const sendCompanyDocumentRequest = functions.https.onCall(async (data, co
               <li>Tax Certificate</li>
               <li>Company License</li>
             </ul>
+            <p>You will receive an email from Jadeer informing you whether your registration has been accepted or rejected.</p>
           </div>
         </div>
       `,
@@ -273,6 +274,150 @@ export const sendCompanyDocumentRequest = functions.https.onCall(async (data, co
     );
   }
 });
+
+/**
+ * 🔔 Notify Company of Account Status Change (Accepted/Rejected)
+ */
+export const notifyCompanyStatusChange = functions.https.onCall(async (data, context) => {
+  console.log("📥 Company status notification - Full data:", data);
+
+  const actualData = data.data || data;
+  const companyEmail = actualData.companyEmail || actualData["companyEmail"] || "";
+  const companyName = actualData.companyName || actualData["companyName"] || "";
+  const status = actualData.status || actualData["status"] || "";
+
+  if (!companyEmail || !status) {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "Company email and status are required"
+    );
+  }
+
+  if (status !== "Accepted" && status !== "Rejected") {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "Status must be either Accepted or Rejected"
+    );
+  }
+
+  console.log(`📧 Sending ${status} email to ${companyName} (${companyEmail})`);
+
+  try {
+    let mailOptions;
+
+    if (status === "Accepted") {
+      // ✅ Acceptance Email
+      mailOptions = {
+        from: `"Jadeer Recruitment" <${EMAIL_USER}>`,
+        to: companyEmail,
+        subject: "Your Registration Has Been Accepted - Jadeer",
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+            <div style="background-color: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+              <div style="text-align: center; margin-bottom: 30px;">
+                <h1 style="color: #4A5FBC; margin: 0; font-size: 28px;">Jadeer</h1>
+                <p style="color: #666; margin-top: 10px;">Smart Recruitment Management System</p>
+              </div>
+              
+              <div style="background: linear-gradient(135deg, #4A5FBC 0%, #FF7B7B 100%); padding: 30px; border-radius: 8px; margin: 30px 0;">
+                <h2 style="color: white; margin: 0; font-size: 22px; text-align: center;">Registration Accepted</h2>
+              </div>
+              
+              <div style="padding: 20px 0;">
+                <p style="color: #333; font-size: 16px; line-height: 1.8;">Dear ${companyName},</p>
+                
+                <p style="color: #333; font-size: 16px; line-height: 1.8;">
+                  We are pleased to inform you that <strong style="color: #4A5FBC;">your registration has been accepted</strong> on Jadeer application.
+                </p>
+                
+                <p style="color: #333; font-size: 16px; line-height: 1.8;">
+                  You can now access your account and use all application features.
+                </p>
+
+                <div style="text-align: center; margin: 30px 0;">
+                  <p style="background-color: #4A5FBC; color: white; padding: 15px 40px; border-radius: 8px; display: inline-block; font-size: 16px; font-weight: bold; margin: 0;">
+                    You can login now
+                  </p>
+                </div>
+                
+                <p style="color: #333; font-size: 16px; margin-top: 30px; line-height: 1.8;">
+                  Best regards,<br>
+                  <strong style="color: #4A5FBC;">Jadeer Team</strong>
+                </p>
+              </div>
+              
+              <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; text-align: center;">
+                <p style="color: #999; font-size: 12px; margin: 5px 0;">© 2025 Jadeer - All Rights Reserved</p>
+              </div>
+            </div>
+          </div>
+        `,
+      };
+    } else {
+      // ❌ Rejection Email
+      mailOptions = {
+        from: `"Jadeer Recruitment" <${EMAIL_USER}>`,
+        to: companyEmail,
+        subject: "Registration Status - Jadeer Application",
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+            <div style="background-color: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+              <div style="text-align: center; margin-bottom: 30px;">
+                <h1 style="color: #4A5FBC; margin: 0; font-size: 28px;">Jadeer</h1>
+                <p style="color: #666; margin-top: 10px;">Smart Recruitment Management System</p>
+              </div>
+              
+              <div style="background-color: #fff3cd; border-left: 4px solid #FF7B7B; padding: 20px; margin: 30px 0;">
+                <h2 style="color: #856404; margin: 0 0 10px 0; font-size: 18px;">Registration Not Accepted</h2>
+              </div>
+              
+              <div style="padding: 20px 0;">
+                <p style="color: #333; font-size: 16px; line-height: 1.8;">Dear ${companyName},</p>
+                
+                <p style="color: #333; font-size: 16px; line-height: 1.8;">
+                  We apologize for not being able to accept your registration on Jadeer application.
+                </p>
+                
+                <p style="color: #333; font-size: 16px; line-height: 1.8;">
+                  <strong>Reason:</strong> The submitted documents are insufficient or incorrect.
+                </p>
+                
+                <div style="background-color: #e3f2fd; border-radius: 8px; padding: 20px; margin: 30px 0;">
+                  <p style="color: #1976d2; font-size: 15px; margin: 0; line-height: 1.6;">
+                    <strong>💡 Note:</strong><br>
+                    Please ensure all required documents are complete, valid, and match your company's official records before submitting a new registration.
+                  </p>
+                </div>
+
+                <p style="color: #333; font-size: 16px; margin-top: 30px; line-height: 1.8;">
+                  Best regards,<br>
+                  <strong style="color: #4A5FBC;">Jadeer Team</strong>
+                </p>
+              </div>
+              
+              <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; text-align: center;">
+                <p style="color: #999; font-size: 12px; margin: 5px 0;">© 2025 Jadeer - All Rights Reserved</p>
+              </div>
+            </div>
+          </div>
+        `,
+      };
+    }
+
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ ${status} email sent to ${companyEmail}`);
+
+    return { success: true, message: `${status} email sent successfully` };
+  } catch (error) {
+    console.error(`❌ Error sending ${status} email:`, error);
+    throw new functions.https.HttpsError(
+      "internal",
+      "Failed to send email: " + error.message
+    );
+  }
+});
+
+
 
 // ============================================
 // 🤖 OPENAI API (SAFE FIXED VERSION)

@@ -99,43 +99,14 @@ class _CompanyHomeState extends State<CompanyHome> {
       // Check mounted after async operation
       if (!mounted) return;
 
-      ScaffoldMessenger.of(ctx).showSnackBar(
-        SnackBar(
-          content: Text(
-            isClosed ? 'Job reopened successfully' : 'Job closed successfully',
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          backgroundColor: const Color(0xFF4CAF50).withOpacity(0.8),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
+      SnackHelper.success(
+        ctx,
+        isClosed ? 'Job reopened successfully' : 'Job closed successfully',
       );
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(ctx).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Error: $e',
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          backgroundColor: const Color(0xFFFF7B7B).withOpacity(0.8),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      );
+      SnackHelper.error(ctx, 'Error: $e');
     }
   }
 
@@ -170,43 +141,11 @@ class _CompanyHomeState extends State<CompanyHome> {
         // Check mounted after async operation
         if (!mounted) return;
 
-        ScaffoldMessenger.of(ctx).showSnackBar(
-          SnackBar(
-            content: const Text(
-              'Job deleted successfully',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            backgroundColor: const Color(0xFF4CAF50).withOpacity(0.8),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        );
+        SnackHelper.success(ctx, 'Job deleted successfully');
       } catch (e) {
         if (!mounted) return;
 
-        ScaffoldMessenger.of(ctx).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Error: $e',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            backgroundColor: const Color(0xFFFF7B7B).withOpacity(0.8),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        );
+        SnackHelper.error(ctx, 'Error: $e');
       }
     }
   }

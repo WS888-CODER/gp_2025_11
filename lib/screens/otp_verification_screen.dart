@@ -72,23 +72,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   }
 
   void _showSuccessSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: TextStyle(
-            color: Colors.white, // ✅ نص أبيض
-            fontWeight: FontWeight.bold,
-          ),
-          textAlign: TextAlign.center, // ✅ وسطه مثل الملك
-        ),
-        backgroundColor: Color(0xFFFF7B7B).withOpacity(0.8), // ✅ اللون حقك
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-      ),
-    );
+    SnackHelper.success(context, message);
   }
 
   String _generateOTP() {
@@ -263,17 +247,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
             userData['CompanyName'] ?? 'N/A',
             userData['Name'] ?? 'N/A',
           );
-        } else if (userType == 'Company') {
-          DocumentSnapshot userDoc =
-              await _firestore.collection('Users').doc(userId).get();
-          Map<String, dynamic> userData =
-              userDoc.data() as Map<String, dynamic>;
-
-          await _sendCompanyEmails(
-            email,
-            userData['CompanyName'] ?? 'N/A',
-            userData['Name'] ?? 'N/A',
-          );
 
           final result = await showDialog<String>(
             context: context,
@@ -302,9 +275,32 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
             Navigator.pushReplacementNamed(context, '/login');
           }
         } else if (userType == 'JobSeeker') {
-          _showSuccessSnackBar('Verification successful!');
-          await Future.delayed(Duration(milliseconds: 500));
-          Navigator.pushReplacementNamed(context, '/jobseeker-home');
+          final result = await showDialog<String>(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => WillPopScope(
+              onWillPop: () async => false,
+              child: JadeerDialog<String>(
+                title: 'Email Verified',
+                content: const Text(
+                  'Your email has been verified successfully! You can now login to your account.',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                primaryLabel: 'OK',
+                primaryResult: 'ok',
+              ),
+            ),
+          );
+
+          if (!mounted) return;
+
+          if (result == 'ok') {
+            Navigator.pushReplacementNamed(context, '/login');
+          }
         }
 
         await _firestore.collection('AdminOTPs').doc(email).delete();

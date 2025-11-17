@@ -64,9 +64,7 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
       setState(() {
         _isDetecting = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error detecting missing sections: $e')),
-      );
+      SnackHelper.error(context, 'Error detecting missing sections: $e');
     }
   }
 
@@ -107,12 +105,7 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
       setState(() {
         _isEnhancing = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error enhancing CV: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      SnackHelper.error(context, 'Error enhancing CV: $e');
     }
   }
 
@@ -530,11 +523,8 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
                         _phoneController.text.trim().isEmpty &&
                         _locationController.text.trim().isEmpty &&
                         _linksController.text.trim().isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content:
-                                Text('Please fill at least one field or skip')),
-                      );
+                      SnackHelper.error(
+                          context, 'Please fill at least one field or skip');
                       return;
                     }
                     // Split links by comma or newline
@@ -659,10 +649,8 @@ class _SummaryFormState extends State<_SummaryForm> {
                 child: ElevatedButton(
                   onPressed: () {
                     if (_controller.text.trim().isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Please enter a summary or skip')),
-                      );
+                      SnackHelper.error(
+                          context, 'Please enter a summary or skip');
                       return;
                     }
                     widget.onSave({'content': _controller.text.trim()});
@@ -925,10 +913,7 @@ class _ExperienceFormState extends State<_ExperienceForm> {
     }).toList();
 
     if (experiences.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Please add at least one experience or skip')),
-      );
+      SnackHelper.error(context, 'Please add at least one experience or skip');
       return;
     }
 
@@ -1164,10 +1149,7 @@ class _EducationFormState extends State<_EducationForm> {
     }).toList();
 
     if (education.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Please add at least one education or skip')),
-      );
+      SnackHelper.error(context, 'Please add at least one education or skip');
       return;
     }
 
@@ -1409,11 +1391,8 @@ class _SkillsFormState extends State<_SkillsForm> {
                 child: ElevatedButton(
                   onPressed: () {
                     if (_totalSkills == 0) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text(
-                                'Please select or add at least one skill or skip')),
-                      );
+                      SnackHelper.error(context,
+                          'Please select or add at least one skill or skip');
                       return;
                     }
                     // Combine selected suggested skills and custom skills
@@ -1667,10 +1646,8 @@ class _CertificationsFormState extends State<_CertificationsForm> {
     }).toList();
 
     if (certifications.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Please add at least one certification or skip')),
-      );
+      SnackHelper.error(
+          context, 'Please add at least one certification or skip');
       return;
     }
 
@@ -1894,10 +1871,7 @@ class _LanguagesFormState extends State<_LanguagesForm> {
     }).toList();
 
     if (languages.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Please add at least one language or skip')),
-      );
+      SnackHelper.error(context, 'Please add at least one language or skip');
       return;
     }
 

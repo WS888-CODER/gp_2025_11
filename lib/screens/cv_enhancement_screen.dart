@@ -121,9 +121,7 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
       final sizeInMB = fileSize / (1024 * 1024);
 
       if (sizeInMB > 10) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('File is larger than 10MB.')),
-        );
+        SnackHelper.error(context, 'File is larger than 10MB.');
         return;
       }
 
@@ -140,9 +138,7 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
 
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('User not authenticated.')),
-      );
+      SnackHelper.error(context, 'User not authenticated.');
       return;
     }
 
@@ -223,23 +219,14 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
         _isExtracting = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error uploading CV: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      SnackHelper.error(context, 'Error uploading CV: $e');
     }
   }
 
   void _goToNextStep() {
     if (_currentStep == 0) {
       if (!_extractionComplete) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please wait for extraction to complete.'),
-          ),
-        );
+        SnackHelper.error(context, 'Please wait for extraction to complete.');
         return;
       }
       setState(() {
@@ -254,17 +241,13 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
     if (_cvHistoryId == null) return;
 
     if (_jobSelectionType == 'jadeer' && _selectedJobId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a job.')),
-      );
+      SnackHelper.error(context, 'Please select a job.');
       return;
     }
 
     if (_jobSelectionType == 'other' &&
         _jobTitleController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a job title.')),
-      );
+      SnackHelper.error(context, 'Please enter a job title.');
       return;
     }
 
@@ -320,9 +303,7 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
         _isSaving = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-      );
+      SnackHelper.error(context, 'Error: $e');
     }
   }
 
