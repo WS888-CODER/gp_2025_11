@@ -19,15 +19,37 @@ class _FavoritesPageState extends State<FavoritesPage> {
   final Map<String, CompanyInfo> _companies = {};
   bool _loading = true;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _favSub;
+  StreamSubscription<User?>? _authSub; // ✅ إضافة
 
   @override
   void initState() {
     super.initState();
-    _listenFavorites();
+
+    // ✅ استمعي لتغيرات حالة المستخدم
+    _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
+      if (user == null) {
+        // المستخدم سجل خروج
+        _favSub?.cancel();
+        if (mounted) {
+          setState(() {
+            _jobs.clear();
+            _companies.clear();
+            _loading = false;
+          });
+        }
+      } else {
+        // المستخدم سجل دخول
+        _listenFavorites();
+      }
+    });
   }
 
   void _listenFavorites() {
     final userId = FirebaseAuth.instance.currentUser?.uid;
+
+    // ✅ إلغاء أي stream سابق
+    _favSub?.cancel();
+
     if (userId == null) {
       setState(() => _loading = false);
       return;
@@ -124,7 +146,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
               description: (data['Description'] ?? '').toString(),
               contactEmail: (data['ContactEmail'] ?? '').toString(),
               phone: (data['Phone'] ?? '').toString(),
-              website: (data['Website'] ?? '').toString(), // 👈 أضف هذي
+              website: (data['Website'] ?? '').toString(),
             );
           }
 
@@ -151,6 +173,13 @@ class _FavoritesPageState extends State<FavoritesPage> {
     }, onError: (e) {
       if (!mounted) return;
       setState(() => _loading = false);
+
+      // ✅ تجاهل أخطاء الـ permissions بعد تسجيل الخروج
+      if (e.toString().contains('permission-denied')) {
+        print('Permission denied - user logged out');
+        return;
+      }
+
       SnackHelper.error(context, 'Error listening to favorites: $e');
     });
   }
@@ -161,6 +190,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
   @override
   void dispose() {
     _favSub?.cancel();
+    _authSub?.cancel(); // ✅ إلغاء الاستماع لحالة المستخدم
     super.dispose();
   }
 
