@@ -5,7 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
-import 'package:gp_2025_11/screens/all_jobs.dart';
+import 'package:gp_2025_11/screens/job_card.dart';
 
 class FavoritesPage extends StatefulWidget {
   const FavoritesPage({super.key});
@@ -124,6 +124,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
               description: (data['Description'] ?? '').toString(),
               contactEmail: (data['ContactEmail'] ?? '').toString(),
               phone: (data['Phone'] ?? '').toString(),
+              website: (data['Website'] ?? '').toString(), // 👈 أضف هذي
             );
           }
 
@@ -220,6 +221,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                       return JobCard(
                         job: job,
                         company: company,
+                        isSaved: true,
                       );
                     },
                   ));

@@ -32,9 +32,9 @@ String _toLocal(String e164) {
   final t = e164.trim();
   if (!t.startsWith(_saPrefix)) return t;
 
-  final rest = t.substring(_saPrefix.length); // بعد +966
-  if (rest.startsWith('5')) return rest; // موبايل
-  if (RegExp(r'^1[1-7]\d{6,7}$').hasMatch(rest)) return '0$rest'; // أرضي
+  final rest = t.substring(_saPrefix.length);
+  if (rest.startsWith('5')) return rest;
+  if (RegExp(r'^1[1-7]\d{6,7}$').hasMatch(rest)) return '0$rest';
 
   return rest;
 }

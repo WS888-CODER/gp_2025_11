@@ -653,18 +653,15 @@ class _CompanyHomeState extends State<CompanyHome> {
 
     return ThemedScaffold(
       key: _scaffoldKey,
-      // ⬇️ تم حذف: backgroundColor: const Color(0xFFF7F6FC), والاعتماد على الثيم
       appBar: AppBar(
         backgroundColor: _brand,
         elevation: 0,
         centerTitle: true,
-        // ⬇️ زر الملف الشخصي للشركة
         leadingWidth: 56,
         leading: Padding(
           padding: const EdgeInsets.only(left: 8),
           child: _ProfileButton(userId: companyId),
         ),
-        // العنوان ديناميكي: Welcome, {CompanyName}!
         title: StreamBuilder<String>(
           stream: _companyNameStream(companyId),
           builder: (context, snap) {
@@ -686,7 +683,6 @@ class _CompanyHomeState extends State<CompanyHome> {
               const SnackBar(content: Text('Notifications – قريبًا')),
             ),
           ),
-          // ⬇️ ربط زر الإعدادات بصفحة الإعدادات
           IconButton(
             tooltip: 'Settings',
             icon: const Icon(Icons.settings_outlined, color: Colors.white),
@@ -762,7 +758,6 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-// ⬇️ زر الملف الشخصي الموحد للشركات
 class _ProfileButton extends StatelessWidget {
   const _ProfileButton({required this.userId});
   final String userId;
@@ -814,8 +809,10 @@ class _ProfileButton extends StatelessWidget {
             clipBehavior: Clip.none,
             children: [
               CircleAvatar(
-                radius: 18,
+                radius: 22,
                 backgroundImage: photo.isNotEmpty ? NetworkImage(photo) : null,
+                backgroundColor: const Color(0xFFFF7B7B),
+                foregroundColor: Colors.white,
                 child: photo.isEmpty && initials.isNotEmpty
                     ? Text(
                         initials,
@@ -826,22 +823,6 @@ class _ProfileButton extends StatelessWidget {
                         ),
                       )
                     : null,
-                // لون الخلفية الأحمر الموحد
-                backgroundColor: const Color(0xFFFF7B7B),
-                foregroundColor: Colors.white,
-              ),
-              Positioned(
-                right: -1,
-                bottom: -1,
-                child: Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: complete ? Colors.green : Colors.orange,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Colors.white, width: 1.5),
-                  ),
-                ),
               ),
             ],
           ),

@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:gp_2025_11/screens/all_jobs.dart';
+import 'package:gp_2025_11/screens/job_card.dart';
 import 'package:gp_2025_11/screens/jobseeker_profile.dart';
 import 'package:gp_2025_11/screens/cv_enhancement_screen.dart';
 import 'package:gp_2025_11/screens/history_page.dart';
@@ -198,7 +199,7 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
         children: [
           const HistoryPage(),
           homeBody,
-          const FavoritesPage(), // Now shows actual favorites page!
+          const FavoritesPage(),
         ],
       ),
       bottomNavigationBar: Container(
@@ -345,8 +346,10 @@ class _ProfileButton extends StatelessWidget {
             clipBehavior: Clip.none,
             children: [
               CircleAvatar(
-                radius: 18,
+                radius: 22,
                 backgroundImage: photo.isNotEmpty ? NetworkImage(photo) : null,
+                backgroundColor: const Color(0xFFFF7B7B),
+                foregroundColor: Colors.white,
                 child: photo.isEmpty
                     ? Text(
                         placeholder,
@@ -357,21 +360,6 @@ class _ProfileButton extends StatelessWidget {
                         ),
                       )
                     : null,
-                backgroundColor: const Color(0xFFFF7B7B),
-                foregroundColor: Colors.white,
-              ),
-              Positioned(
-                right: -1,
-                bottom: -1,
-                child: Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: complete ? Colors.green : Colors.orange,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Colors.white, width: 1.5),
-                  ),
-                ),
               ),
             ],
           ),
@@ -516,6 +504,7 @@ class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
           description: (data['Description'] ?? '').toString().trim(),
           contactEmail: (data['ContactEmail'] ?? '').toString().trim(),
           phone: (data['Phone'] ?? '').toString().trim(),
+          website: (data['Website'] ?? '').toString().trim(),
         );
       }
 
@@ -662,13 +651,13 @@ class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
                     _companyByUserId[job.userId] ?? const CompanyInfo();
                 final isSaved = savedIds.contains(job.jobId);
 
-                // المفتاح يتغيّر مع تغيّر حالة الحفظ → يعيد بناء JobCard فورًا
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: JobCard(
                     key: ValueKey('job-${job.jobId}-${isSaved ? '1' : '0'}'),
                     job: job,
                     company: company,
+                    isSaved: isSaved,
                   ),
                 );
               }).toList(),

@@ -94,9 +94,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
   ];
   String? _selectedSpecialty;
 
-  // ---- وضع تعديل أم إنشاء؟
   bool _isEdit = false;
-  String? _jobId; // لو تعديل راح نستعمله
+  String? _jobId;
 
   // Store original dates for comparison (only in edit mode)
   DateTime? _originalStartDate;
@@ -112,7 +111,6 @@ class _JobPostingPageState extends State<JobPostingPage> {
   @override
   void initState() {
     super.initState();
-    // نقرأ الarguments بعد بناء الصفحة
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // Security check: Verify user is a verified company
       await _verifyUserAccess();
@@ -121,7 +119,6 @@ class _JobPostingPageState extends State<JobPostingPage> {
           ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
 
       if (args != null) {
-        // حالة تعديل وظيفة موجودة
         if (args['jobId'] != null) {
           _isEdit = true;
           _jobId = args['jobId'] as String?;
@@ -219,9 +216,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
             _originalStartDate = _startDate;
             _originalEndDate = _endDate;
           }
-        }
-        // حالة إنشاء جديد لكن راجع من صفحة الأسئلة ومعه draft
-        else if (args['draftJobData'] != null) {
+        } else if (args['draftJobData'] != null) {
           _isEdit = false;
           final draft = args['draftJobData'] as Map<String, dynamic>;
 
