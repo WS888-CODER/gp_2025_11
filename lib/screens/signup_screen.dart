@@ -90,6 +90,7 @@ class _SignupScreenState extends State<SignupScreen> {
   // Check if email domain is a public domain (for Company validation only)
   bool _isPublicEmailDomain(String email) {
     final publicDomains = [
+      'gmail.com',
       'yahoo.com',
       'hotmail.com',
       'outlook.com',
