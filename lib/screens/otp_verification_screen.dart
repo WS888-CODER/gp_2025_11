@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:math';
 import 'dart:async';
 
+import 'package:gp_2025_11/config/theme.dart';
+
 class OTPVerificationScreen extends StatefulWidget {
   @override
   _OTPVerificationScreenState createState() => _OTPVerificationScreenState();
@@ -52,24 +54,19 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   }
 
   void _showErrorDialog(String message) {
-    showDialog(
+    showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: const [
-            Icon(Icons.error_outline, color: Colors.red, size: 28),
-            SizedBox(width: 10),
-            Text('Error', style: TextStyle(color: Colors.red)),
-          ],
-        ),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('OK', style: TextStyle(color: Color(0xFF4A5FBC))),
+      builder: (ctx) => JadeerDialog<void>(
+        title: 'Error',
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 15,
           ),
-        ],
+          textAlign: TextAlign.center,
+        ),
+        primaryLabel: 'OK',
       ),
     );
   }
@@ -266,64 +263,44 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
             userData['CompanyName'] ?? 'N/A',
             userData['Name'] ?? 'N/A',
           );
+        } else if (userType == 'Company') {
+          DocumentSnapshot userDoc =
+              await _firestore.collection('Users').doc(userId).get();
+          Map<String, dynamic> userData =
+              userDoc.data() as Map<String, dynamic>;
 
-          showDialog(
+          await _sendCompanyEmails(
+            email,
+            userData['CompanyName'] ?? 'N/A',
+            userData['Name'] ?? 'N/A',
+          );
+
+          final result = await showDialog<String>(
             context: context,
             barrierDismissible: false,
             builder: (ctx) => WillPopScope(
               onWillPop: () async => false,
-              child: AlertDialog(
-                backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30)),
-                title: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Icon(Icons.check_circle_outline,
-                        color: Colors.white, size: 28),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Email Verified',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ],
-                ),
-                content: Text(
+              child: JadeerDialog<String>(
+                title: 'Email Verified',
+                content: const Text(
                   'Your email has been verified successfully! Please check your email for instructions on submitting company verification documents.',
-                  style: const TextStyle(color: Colors.white, fontSize: 15),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                  ),
                   textAlign: TextAlign.center,
                 ),
-                contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-                actionsPadding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                actionsAlignment: MainAxisAlignment.center,
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(ctx).pop();
-                      Navigator.pushReplacementNamed(context, '/login');
-                    },
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.white.withOpacity(0.9),
-                      foregroundColor: const Color(0xFF4A5FBC),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-                    child: const Text('OK'),
-                  ),
-                ],
+                primaryLabel: 'OK',
+                primaryResult: 'ok',
               ),
             ),
           );
+
+          if (!mounted) return;
+
+          if (result == 'ok') {
+            Navigator.pushReplacementNamed(context, '/login');
+          }
         } else if (userType == 'JobSeeker') {
           _showSuccessSnackBar('Verification successful!');
           await Future.delayed(Duration(milliseconds: 500));

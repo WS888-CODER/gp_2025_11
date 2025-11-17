@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
@@ -126,51 +127,21 @@ class _CompanyProfileState extends State<CompanyProfile> {
 
   void _showSnackSuccess(String message, {BuildContext? inContext}) {
     final ctx = inContext ?? context;
-    ScaffoldMessenger.of(ctx).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        backgroundColor: const Color(0xFF4CAF50).withOpacity(0.8), // Green
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-      ),
-    );
+    if (!mounted) return;
+    SnackHelper.success(ctx, message);
   }
 
   void _showSnackError(String message, {BuildContext? inContext}) {
     final ctx = inContext ?? context;
-    ScaffoldMessenger.of(ctx).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        backgroundColor: const Color(0xFFFF7B7B).withOpacity(0.8),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-      ),
-    );
+    if (!mounted) return;
+    SnackHelper.error(ctx, message);
   }
 
   Future<void> _openWebsite(String raw) async {
     final t = raw.trim();
     final url = t.startsWith(RegExp(r'https?://', caseSensitive: false))
         ? t
-        : 'https://$t'; // ضمان وجود البروتوكول
+        : 'https://$t';
     final uri = Uri.tryParse(url);
     if (uri == null) {
       _showSnackError('Invalid URL');

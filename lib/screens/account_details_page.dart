@@ -1,8 +1,8 @@
 // lib/screens/account_details_page.dart
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/l10n/app_localizations.dart';
 import 'dart:math';
 
@@ -98,258 +98,175 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
       }
       return false;
     } catch (e) {
-      print('Error sending OTP: $e');
       return false;
     }
   }
 
   // ========== EMAIL CHANGE WARNING DIALOG (FOR COMPANIES) ==========
-Future<bool> _showEmailChangeWarningForCompany(
-    String oldEmail, String newEmail) async {
-  const Color dialogBaseColor = Color(0xFF4A5FBC);
-  const Color cancelBgColor = Color(0xFFE5E7EB);
-  const Color cancelTextColor = Color(0xFF4B5563);
-  const Color confirmBgColor = Color(0xFFFD6C67); // Salmon/red color
-  
-  final confirmed = await showDialog<bool>(
-    context: context,
-    barrierDismissible: false,
-    builder: (ctx) => AlertDialog(
-      backgroundColor: dialogBaseColor.withOpacity(0.7),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-      title: Row(
-        children: const [
-          Icon(Icons.warning_amber_rounded, color: Color(0xFFFD6C67), size: 28),
-          SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Email Change Warning',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Color(0xFFFD6C67),
-              ),
-            ),
-          ),
-        ],
-      ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Important Information:',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              '• Your account status will change to "Pending"',
-              style: TextStyle(color: Colors.white70),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              '• Admin approval will be required after verification',
-              style: TextStyle(color: Colors.white70),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              '• An OTP will be sent to your new email',
-              style: TextStyle(color: Colors.white70),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              '• You must verify the OTP to complete the change',
-              style: TextStyle(color: Colors.white70),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              '• You will be logged out after verification',
-              style: TextStyle(color: Colors.white70),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+  Future<bool> _showEmailChangeWarningForCompany(
+      String oldEmail, String newEmail) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => JadeerDialog<bool>(
+        title: 'Email Change Warning',
+        primaryLabel: 'Continue',
+        primaryResult: true,
+        secondaryLabel: 'Cancel',
+        secondaryResult: false,
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
                 children: [
-                  Text(
-                    'Old email: $oldEmail',
-                    style: const TextStyle(fontSize: 12, color: Colors.white60),
+                  Icon(
+                    Icons.warning_amber_rounded,
+                    color: Color(0xFFFD6C67),
+                    size: 24,
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(width: 8),
                   Text(
-                    'New email: $newEmail',
-                    style: const TextStyle(
-                      fontSize: 12,
+                    'Important Information:',
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
+                      fontSize: 16,
                       color: Colors.white,
                     ),
                   ),
                 ],
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              const Text(
+                '• Your account status will change to "Pending".',
+                style: TextStyle(color: Colors.white70),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                '• Admin approval will be required after verification.',
+                style: TextStyle(color: Colors.white70),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                '• An OTP will be sent to your new email.',
+                style: TextStyle(color: Colors.white70),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                '• You must verify the OTP to complete the change.',
+                style: TextStyle(color: Colors.white70),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                '• You will be logged out after verification.',
+                style: TextStyle(color: Colors.white70),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Old email: $oldEmail',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.white60,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'New email: $newEmail',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-      contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-      actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      actionsAlignment: MainAxisAlignment.center,
-      actions: [
-        Expanded(
-          child: TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            style: TextButton.styleFrom(
-              backgroundColor: cancelBgColor,
-              foregroundColor: cancelTextColor,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(25),
-              ),
-            ),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: TextButton.styleFrom(
-              backgroundColor: confirmBgColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(25),
-              ),
-            ),
-            child: const Text(
-              'Continue',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
+    );
 
-  return confirmed ?? false;
-}
+    return confirmed ?? false;
+  }
 
   // ========== SIMPLE EMAIL CHANGE CONFIRMATION (FOR JOB SEEKERS) ==========
   Future<bool> _showEmailChangeConfirmation(
       String oldEmail, String newEmail) async {
-    const Color dialogBaseColor = Color(0xFF4A5FBC);
-    const Color cancelBgColor = Color(0xFFE5E7EB);
-    const Color cancelTextColor = Color(0xFF4B5563);
-    const Color confirmBgColor = Color(0xFFFD6C67); // Salmon/red color
-    
     final confirmed = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: dialogBaseColor.withOpacity(0.7),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-        title: Row(
-          children: const [
-            Icon(Icons.info_outline, color: Colors.white, size: 28),
-            SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Confirm Email Change',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'An OTP will be sent to your new email for verification.',
-              style: TextStyle(color: Colors.white70),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      builder: (ctx) => JadeerDialog<bool>(
+        title: 'Confirm Email Change',
+        primaryLabel: 'Continue',
+        primaryResult: true,
+        secondaryLabel: 'Cancel',
+        secondaryResult: false,
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
                 children: [
-                  Text(
-                    'Old email: $oldEmail',
-                    style: const TextStyle(fontSize: 12, color: Colors.white60),
+                  Icon(
+                    Icons.info_outline,
+                    color: Colors.white,
+                    size: 24,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'New email: $newEmail',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'An OTP will be sent to your new email for verification.',
+                      style: TextStyle(
+                        color: Colors.white70,
+                      ),
                     ),
                   ),
                 ],
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Old email: $oldEmail',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.white60,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'New email: $newEmail',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          Expanded(
-            child: TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              style: TextButton.styleFrom(
-                backgroundColor: cancelBgColor,
-                foregroundColor: cancelTextColor,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25),
-                ),
-              ),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: TextButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              style: TextButton.styleFrom(
-                backgroundColor: confirmBgColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25),
-                ),
-              ),
-              child: const Text(
-                'Continue',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-        ],
       ),
     );
 
@@ -472,7 +389,7 @@ Future<bool> _showEmailChangeWarningForCompany(
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final isJobSeeker = widget.userType == 'JobSeeker';
-    final brandColor = const Color(0xFF4A5FBC);
+    const brandColor = Color(0xFF4A5FBC);
 
     return Scaffold(
       appBar: AppBar(

@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // <-- NEW for input formatters
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
@@ -23,7 +24,6 @@ class UserFields {
   static const photoPath = 'PhotoPath';
 }
 
-// صيغة الهاتف المحلية: يبدأ بـ 5 وطوله 9 أرقام (سعودي)
 final _localSaPhone = RegExp(r'^5\d{8}$');
 const _saPrefix = '+966';
 
@@ -62,7 +62,7 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
   DateTime? _dob;
   bool _saving = false;
   double? _progress;
-  File? _pendingPhotoFile; // صورة محليّة قبل الرفع
+  File? _pendingPhotoFile;
   File? _pendingCvFile;
   static const int _kMaxImageBytes = 5 * 1024 * 1024; // 5MB
   static const int _kMaxCvBytes = 10 * 1024 * 1024; // 10MB
@@ -89,47 +89,6 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
     return null; // valid
   }
 
-  void _showSnackSuccess(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        backgroundColor: const Color(0xFF4CAF50).withOpacity(0.8), // Green
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-      ),
-    );
-  }
-
-  void _showSnackError(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        backgroundColor: const Color(0xFFFF7B7B).withOpacity(0.8), // Red
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-      ),
-    );
-  }
   // ======================================================================
 
   @override
@@ -242,11 +201,10 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
 
     final file = File(res.files.single.path!);
 
-    // ✅ لا نرفع الآن — بس نخزن محلي
     setState(() {
       _pendingCvFile = file;
     });
-    _showSnackSuccess('CV selected.');
+    SnackHelper.success(context, 'CV selected.');
   }
 
   Future<void> _pickPhoto() async {
@@ -275,41 +233,35 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
     final img = await ImagePicker().pickImage(source: src, imageQuality: 92);
     if (img == null) return;
 
-    // ✅ لا نرفع الآن — بس نخزن محلي ونحدث المعاينة
     setState(() {
       _pendingPhotoFile = File(img.path);
     });
-    _showSnackSuccess('Photo selected.');
+    SnackHelper.success(context, 'Photo selected.');
   }
 
   Future<void> _save(Map<String, dynamic> current) async {
     if (_progress != null) {
-      _showSnackError('Please wait for uploads to finish');
+      SnackHelper.error(context, 'Please wait for uploads to finish');
       return;
     }
 
-    // قيم حالية من السيرفر
     final dobCurrent = current[UserFields.dob] is Timestamp
         ? (current[UserFields.dob] as Timestamp).toDate()
         : null;
 
-    // تحقّق الجنسية (لو تم تغييرها)
     if (_nationality != null && _nationality!.isEmpty) {
-      _showSnackError('Select nationality');
+      SnackHelper.error(context, 'Select nationality');
       return;
     }
 
-    // تحقّق الهاتف المحلي (5XXXXXXXX)
     final local = _phone.text.trim();
     if (local.isNotEmpty && !_localSaPhone.hasMatch(local)) {
-      _showSnackError('Enter a valid Saudi mobile number');
+      SnackHelper.error(context, 'Enter a valid Saudi mobile number');
       return;
     }
 
-    // حضّري التحديثات
     final updates = <String, dynamic>{};
 
-    // ========== 1) ارفعي الملفات المعلّقة ==========
     String? newPhotoUrl, newPhotoPath;
     String? newCvUrl, newCvPath;
 
@@ -331,12 +283,10 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
       final msg = e.toString().contains('Unsupported image')
           ? '❌ Only JPG or PNG images are supported.'
           : '❌ Failed to upload file: ${e.toString()}';
-      _showSnackError(msg);
+      SnackHelper.error(context, msg);
       return;
     }
 
-    // ========== 2) ضعي التغييرات في updates ==========
-    // CV - check new uploads first, then deletions
     if (newCvUrl != null) {
       updates[UserFields.cvUrl] = newCvUrl;
       if (newCvPath != null) updates[UserFields.cvPath] = newCvPath;
@@ -367,7 +317,6 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
       updates[UserFields.nationality] = _nationality;
     }
 
-    // Phone (حفظ بصيغة E.164 +9665XXXXXXXX إذا تغيّر)
     if (local.isNotEmpty && _localSaPhone.hasMatch(local)) {
       final e164 = '$_saPrefix$local';
       if (e164 != (current[UserFields.phone] ?? '')) {
@@ -376,11 +325,10 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
     }
 
     if (updates.isEmpty) {
-      _showSnackError('No changes to save');
+      SnackHelper.error(context, 'No changes to save');
       return;
     }
 
-    // ========== 3) احسبي IsProfileComplete بعد الدمج ==========
     final merged = {...current, ...updates};
 
     final cvOk = (merged[UserFields.cvUrl] ?? '').toString().isNotEmpty;
@@ -396,7 +344,6 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
     final complete = cvOk && photoOk && dobOk && natOk && phoneOk;
     updates[UserFields.isProfileComplete] = complete;
 
-    // ========== 4) نفّذي الحفظ ==========
     final uid = FirebaseAuth.instance.currentUser!.uid;
     setState(() => _saving = true);
     try {
@@ -405,7 +352,6 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
           .doc(uid)
           .set(updates, SetOptions(merge: true));
 
-      // ========== 5) تنظيف الملفات القديمة إن تغيّرت ==========
       // Photo
       if (newPhotoUrl != null) {
         final oldPhotoPath = (current[UserFields.photoPath] ?? '').toString();
@@ -444,10 +390,10 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
 
       if (!mounted) return;
       Navigator.pop(context);
-      _showSnackSuccess('✅ Profile updated successfully');
+      SnackHelper.success(context, '✅ Profile updated successfully');
     } catch (e) {
       if (!mounted) return;
-      _showSnackError('❌ Failed to update profile');
+      SnackHelper.error(context, '❌ Failed to update profile');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -487,30 +433,27 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
             ? 'Select date'
             : DateFormat('yyyy/MM/dd').format(_dob ?? dobCurrent!);
 
-        final hasCV = _pendingCvFile != null ||
-            (_cvUrl != '' &&
-                ((_cvUrl ?? data[UserFields.cvUrl])?.toString().isNotEmpty ??
-                    false));
+        final cvSource = (_cvUrl ?? data[UserFields.cvUrl]);
+        final hasCV =
+            _pendingCvFile != null || ((cvSource?.toString() ?? '').isNotEmpty);
 
+        final photoSource = (_photoUrl ?? data[UserFields.photoUrl]);
         final hasPhoto = _pendingPhotoFile != null ||
-            (_photoUrl != '' &&
-                ((_photoUrl ?? data[UserFields.photoUrl])
-                        ?.toString()
-                        .isNotEmpty ==
-                    true));
+            ((photoSource?.toString() ?? '').isNotEmpty);
 
         final phoneLocal = _phone.text.trim();
         final phoneValid = _localSaPhone.hasMatch(phoneLocal);
+
+        final nationalitySource =
+            (_nationality ?? data[UserFields.nationality])?.toString();
 
         final profileComplete = (data[UserFields.isProfileComplete] == true) ||
             (hasCV &&
                 hasPhoto &&
                 ((_dob ?? dobCurrent) != null) &&
-                ((_nationality ?? data[UserFields.nationality])
-                        ?.toString()
-                        .isNotEmpty ==
-                    true) &&
+                ((nationalitySource ?? '').isNotEmpty) &&
                 phoneValid);
+        final photoUrlString = (photoSource?.toString() ?? '');
         return ThemedScaffold(
           appBar: AppBar(
             backgroundColor: const Color(0xFF4A5FBC),
@@ -627,11 +570,9 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       children: [
-                        // <-- كل الباقي هنا
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            // ==== الصورة مع البوردر ====
                             Hero(
                               tag: 'profileAvatar',
                               child: Container(
@@ -639,8 +580,7 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: const Color(
-                                        0xFF4A5FBC), // بنفسجي البراند
+                                    color: const Color(0xFF4A5FBC),
                                     width: 3,
                                   ),
                                   color: Colors.white,
@@ -659,27 +599,11 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                                   backgroundImage: _pendingPhotoFile != null
                                       ? FileImage(_pendingPhotoFile!)
                                           as ImageProvider
-                                      : ((_photoUrl ??
-                                                      data[UserFields
-                                                          .photoUrl]) !=
-                                                  null &&
-                                              (_photoUrl ??
-                                                      data[UserFields.photoUrl])
-                                                  .toString()
-                                                  .isNotEmpty)
-                                          ? NetworkImage((_photoUrl ??
-                                                  data[UserFields.photoUrl])
-                                              .toString())
-                                          : null,
+                                      : (photoUrlString.isNotEmpty
+                                          ? NetworkImage(photoUrlString)
+                                          : null),
                                   child: (_pendingPhotoFile == null &&
-                                          ((_photoUrl ??
-                                                      data[UserFields
-                                                          .photoUrl]) ==
-                                                  null ||
-                                              (_photoUrl ??
-                                                      data[UserFields.photoUrl])
-                                                  .toString()
-                                                  .isEmpty))
+                                          photoUrlString.isEmpty)
                                       ? const Icon(
                                           Icons.person,
                                           size: 40,
@@ -689,14 +613,11 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                                 ),
                               ),
                             ),
-
                             const SizedBox(width: 16),
-
-                            // ==== الزر ====
                             Expanded(
                               child: Align(
                                 alignment: Alignment.centerRight,
-                                child: (hasPhoto || _pendingPhotoFile != null)
+                                child: hasPhoto
                                     ? TextButton(
                                         onPressed:
                                             (_saving || _progress != null)
@@ -733,9 +654,10 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                                             fontWeight: FontWeight.w600,
                                           ),
                                         ),
-                                        child: const Text('Upload Photo',
-                                            style:
-                                                TextStyle(color: Colors.white)),
+                                        child: const Text(
+                                          'Upload Photo',
+                                          style: TextStyle(color: Colors.white),
+                                        ),
                                       ),
                               ),
                             ),
@@ -753,22 +675,10 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                                   color: Color(0xFF4A5FBC),
                                   fontWeight: FontWeight.w800)),
                           subtitle: Text(
-                            _pendingCvFile != null ||
-                                    (_cvUrl != '' &&
-                                        (data[UserFields.cvUrl]
-                                                ?.toString()
-                                                .isNotEmpty ??
-                                            false))
-                                ? 'File uploaded'
-                                : 'No file',
+                            hasCV ? 'File uploaded' : 'No file',
                             style: const TextStyle(color: Colors.black54),
                           ),
-                          trailing: (_pendingCvFile != null ||
-                                  (_cvUrl != '' &&
-                                      (data[UserFields.cvUrl]
-                                              ?.toString()
-                                              .isNotEmpty ??
-                                          false)))
+                          trailing: hasCV
                               ? TextButton(
                                   onPressed: (_saving || _progress != null)
                                       ? null
@@ -849,17 +759,15 @@ class _JobSeekerProfileState extends State<JobSeekerProfile> {
                                     value: c,
                                     child: Text(
                                       c,
-                                      style: TextStyle(
-                                          color: Color(
-                                              0xFF4A5FBC)), // 🔹 لون النص داخل القائمة
+                                      style:
+                                          TextStyle(color: Color(0xFF4A5FBC)),
                                     ),
                                   ))
                               .toList(),
                           onChanged: (_saving || _progress != null)
                               ? null
                               : (v) => setState(() => _nationality = v),
-                          style: const TextStyle(
-                              color: Color(0xFF4A5FBC)), // 🔹 لون النص المختار
+                          style: const TextStyle(color: Color(0xFF4A5FBC)),
                           decoration: const InputDecoration(
                             labelText: 'Nationality',
                             labelStyle: TextStyle(

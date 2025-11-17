@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'dart:math';
 import 'dart:async';
+
+import 'package:gp_2025_11/config/theme.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   @override
@@ -16,8 +17,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _otpController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-
-  final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
 
   bool _isLoading = false;
@@ -65,7 +64,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     _canResend = false;
     _resendTimer = 120;
     _timer?.cancel();
-    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
         if (_resendTimer > 0) {
           _resendTimer--;
@@ -96,7 +95,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           'Email': email.toLowerCase(),
           'CreatedAt': FieldValue.serverTimestamp(),
           'ExpiresAt': Timestamp.fromDate(
-            DateTime.now().add(Duration(minutes: 2)),
+            DateTime.now().add(const Duration(minutes: 2)),
           ),
           'Used': false,
         });
@@ -167,7 +166,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       bool otpSent = await _sendOTPEmail(email, otp);
 
       if (otpSent) {
-        _showSuccessSnackBar('Verification code sent to your email');
+        SnackHelper.success(context, 'Verification code sent to your email');
         _startResendTimer();
 
         setState(() {
@@ -260,7 +259,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           'Used': true,
         });
 
-        _showSuccessSnackBar('Code verified successfully!');
+        SnackHelper.success(context, 'Code verified successfully!');
 
         setState(() {
           _currentStep = 3;
@@ -349,27 +348,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
   }
 
-  void _showSuccessSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: TextStyle(
-            color: Colors.white, // âœ… Ù†Øµ Ø£Ø¨ÙŠØ¶
-            fontWeight: FontWeight.bold,
-          ),
-          textAlign: TextAlign.center, // âœ… ÙˆØ³Ø·Ù‡ Ù…Ø«Ù„ Ø§Ù„Ù…Ù„Ùƒ
-        ),
-        backgroundColor:
-            Color(0xFFFF7B7B).withOpacity(0.8), // âœ… Ø§Ù„Ù„ÙˆÙ† Ø­Ù‚Ùƒ
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-      ),
-    );
-  }
-
   void _showSuccessDialog(String message) {
     showDialog(
       context: context,
@@ -377,9 +355,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-        title: Row(
+        title: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
+          children: [
             Icon(Icons.check_circle_outline, color: Colors.white, size: 28),
             SizedBox(width: 10),
             Text('Success',
@@ -453,7 +431,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             Center(
               child: Container(
                 width: MediaQuery.of(context).size.width * 0.85,
-                padding: EdgeInsets.all(40),
+                padding: const EdgeInsets.all(40),
                 decoration: BoxDecoration(
                   color: const Color(0xFF4A5FBC).withOpacity(0.7),
                   borderRadius: BorderRadius.circular(30),
@@ -472,7 +450,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               : _currentStep == 2
                                   ? 'Enter Verification Code'
                                   : 'Create New Password',
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
@@ -512,7 +490,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               hintStyle: TextStyle(
                                 color: Colors.white.withOpacity(0.5),
                               ),
-                              prefixIcon: Icon(
+                              prefixIcon: const Icon(
                                 Icons.email_outlined,
                                 color: Colors.white,
                               ),
@@ -530,10 +508,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                       : Colors.white,
                                 ),
                               ),
-                              errorBorder: UnderlineInputBorder(
+                              errorBorder: const UnderlineInputBorder(
                                 borderSide: BorderSide(color: Colors.red),
                               ),
-                              focusedErrorBorder: UnderlineInputBorder(
+                              focusedErrorBorder: const UnderlineInputBorder(
                                 borderSide: BorderSide(color: Colors.red),
                               ),
                             ),
@@ -557,7 +535,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                 textAlign: TextAlign.center,
                               ),
                             ),
-                          SizedBox(height: 40),
+                          const SizedBox(height: 40),
                           Container(
                             width: 45,
                             height: 45,
@@ -627,7 +605,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               ),
                               counterText: '',
                               contentPadding:
-                                  EdgeInsets.symmetric(vertical: 20),
+                                  const EdgeInsets.symmetric(vertical: 20),
                             ),
                             onChanged: (value) {
                               if (_otpError != null) {
@@ -672,7 +650,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                         bool otpSent = await _sendOTPEmail(
                                             _userEmail, otp);
                                         if (otpSent) {
-                                          _showSuccessSnackBar(
+                                          SnackHelper.success(context,
                                               'A new verification code has been sent.');
                                           _startResendTimer();
                                           _otpController.clear();
@@ -753,7 +731,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               hintStyle: TextStyle(
                                 color: Colors.white.withOpacity(0.5),
                               ),
-                              prefixIcon: Icon(
+                              prefixIcon: const Icon(
                                 Icons.lock_outline,
                                 color: Colors.white,
                               ),
@@ -784,10 +762,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                       : Colors.white,
                                 ),
                               ),
-                              errorBorder: UnderlineInputBorder(
+                              errorBorder: const UnderlineInputBorder(
                                 borderSide: BorderSide(color: Colors.red),
                               ),
-                              focusedErrorBorder: UnderlineInputBorder(
+                              focusedErrorBorder: const UnderlineInputBorder(
                                 borderSide: BorderSide(color: Colors.red),
                               ),
                             ),
@@ -799,7 +777,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               }
                             },
                           ),
-                          SizedBox(height: 8),
+                          const SizedBox(height: 8),
                           Text(
                             'Must include: uppercase, lowercase, number, special character',
                             style: TextStyle(
@@ -809,7 +787,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          SizedBox(height: 24),
+                          const SizedBox(height: 24),
                           TextFormField(
                             controller: _confirmPasswordController,
                             obscureText: _obscureConfirmPassword,
@@ -822,7 +800,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               hintStyle: TextStyle(
                                 color: Colors.white.withOpacity(0.5),
                               ),
-                              prefixIcon: Icon(
+                              prefixIcon: const Icon(
                                 Icons.lock_outline,
                                 color: Colors.white,
                               ),
@@ -854,10 +832,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                       : Colors.white,
                                 ),
                               ),
-                              errorBorder: UnderlineInputBorder(
+                              errorBorder: const UnderlineInputBorder(
                                 borderSide: BorderSide(color: Colors.red),
                               ),
-                              focusedErrorBorder: UnderlineInputBorder(
+                              focusedErrorBorder: const UnderlineInputBorder(
                                 borderSide: BorderSide(color: Colors.red),
                               ),
                             ),
@@ -881,7 +859,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                 textAlign: TextAlign.center,
                               ),
                             ),
-                          SizedBox(height: 40),
+                          const SizedBox(height: 40),
                           Container(
                             width: 45,
                             height: 45,

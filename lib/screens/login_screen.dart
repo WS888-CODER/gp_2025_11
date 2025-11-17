@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/screens/welcome_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -31,110 +32,56 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _showSuccessSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        backgroundColor: Color(0xFFFF7B7B).withOpacity(0.8),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-      ),
-    );
-  }
+  // 🔒 Dialog for locked accounts using JadeerDialog
+  Future<void> _showPasswordResetRequiredDialog(String userType) async {
+    final bool isAdmin = userType == 'Admin';
 
-  // ðŸ”’ Dialog for locked accounts
-  void _showPasswordResetRequiredDialog(String userType) {
-    showDialog(
+    final result = await showDialog<String>(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => WillPopScope(
         onWillPop: () async => false,
-        child: AlertDialog(
-          backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-          title: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              Icon(Icons.lock_outline, color: Colors.white, size: 28),
-              SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Account Locked',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ],
-          ),
+        child: JadeerDialog<String>(
+          title: 'Account Locked',
           content: Text(
-            userType == 'Admin'
-                ? 'You have entered an incorrect password 5 times today. '
+            isAdmin
+                ? 'You have entered an incorrect password 5 times today.\n\n'
                     'For security reasons, please contact the system administrator to unlock your account.'
-                : 'You have entered an incorrect password 5 times today. '
+                : 'You have entered an incorrect password 5 times today.\n\n'
                     'For security reasons, you must reset your password before you can access your account again.',
-            style: const TextStyle(color: Colors.white, fontSize: 15),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+            ),
             textAlign: TextAlign.center,
           ),
-          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-          actionsPadding:
-              const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-          actionsAlignment: MainAxisAlignment.center,
-          actions: [
-            if (userType == 'Admin')
-              TextButton(
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                  Navigator.of(context).pop();
-                },
-                style: TextButton.styleFrom(
-                  backgroundColor: Colors.white.withOpacity(0.9),
-                  foregroundColor: const Color(0xFF4A5FBC),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                ),
-                child: const Text('OK'),
-              )
-            else
-              TextButton(
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                  Navigator.pushReplacementNamed(
-                    context,
-                    '/forgot-password',
-                    arguments: {'email': _emailController.text.trim()},
-                  );
-                },
-                style: TextButton.styleFrom(
-                  backgroundColor: Colors.white.withOpacity(0.9),
-                  foregroundColor: const Color(0xFF4A5FBC),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                ),
-                child: const Text('Reset Password'),
-              ),
-          ],
+          // الأزرار:
+          primaryLabel: isAdmin ? 'OK' : 'Reset Password',
+          primaryResult: isAdmin ? 'ok' : 'reset',
+          // ما نحتاج زر ثاني هنا (نفس السلوك القديم)
+          secondaryLabel: null,
+          secondaryResult: null,
         ),
       ),
     );
+
+    if (!mounted) return;
+
+    if (isAdmin) {
+      // كان زمان زر OK يقفل الديالوغ ويرجع للصفحة اللي قبل
+      if (result == 'ok') {
+        Navigator.of(context).pop();
+      }
+    } else {
+      // كان زمان زر Reset Password يودّي لصفحة نسيان كلمة السر
+      if (result == 'reset') {
+        Navigator.pushReplacementNamed(
+          context,
+          '/forgot-password',
+          arguments: {'email': _emailController.text.trim()},
+        );
+      }
+    }
   }
 
   String _generateOTP() {
@@ -425,7 +372,7 @@ class _LoginScreenState extends State<LoginScreen> {
         final otp = _generateOTP();
         final ok = await _sendOTPEmail(_emailController.text.trim(), otp);
         if (ok) {
-          _showSuccessSnackBar('Verification code sent to your email');
+          SnackHelper.success(context, 'Verification code sent to your email');
           Navigator.pushReplacementNamed(
             context,
             '/otp-verification',

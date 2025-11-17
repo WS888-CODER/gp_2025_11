@@ -479,8 +479,7 @@ class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
   Stream<QuerySnapshot<Map<String, dynamic>>> _favStream() {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) {
-      // يرجّع ستريم فاضي لو مافيه مستخدم
-      return const Stream<QuerySnapshot<Map<String, dynamic>>>.empty();
+      return const Stream.empty();
     }
     return FirebaseFirestore.instance
         .collection('Favourite')

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
@@ -209,25 +210,25 @@ class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
     await FirebaseAuth.instance.signOut();
 
     if (mounted) {
-      showDialog(
+      showDialog<void>(
         context: context,
         barrierDismissible: false,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Session Expired'),
-          content: const Text(
-            'You have been automatically logged out after 1 hour',
+        builder: (ctx) => const JadeerDialog<void>(
+          title: 'Session Expired',
+          primaryLabel: 'OK',
+          primaryResult: null,
+          content: Text(
+            'You have been automatically logged out after 1 hour.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white),
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(ctx).pop();
-                Navigator.pushReplacementNamed(context, '/login');
-              },
-              child: const Text('OK'),
-            ),
-          ],
         ),
-      );
+      ).then((_) {
+        // Navigate after dialog is closed
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/login');
+        }
+      });
     }
   }
 
@@ -241,64 +242,19 @@ class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
   }
 
   Future<void> _handleLogout() async {
-    final theme = Theme.of(context);
-
     bool? confirm = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: theme.colorScheme.primary.withOpacity(0.7),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(30),
-        ),
-        title: const Text(
-          'Confirm Logout',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: const Text(
+      builder: (ctx) => const JadeerDialog<bool>(
+        title: 'Confirm Logout',
+        primaryLabel: 'Logout',
+        primaryResult: true,
+        secondaryLabel: 'Cancel',
+        secondaryResult: false,
+        content: Text(
           'Are you sure you want to log out?',
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.white),
         ),
-        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-        actionsPadding:
-            const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            style: TextButton.styleFrom(
-              backgroundColor: Colors.white.withOpacity(0.9),
-              foregroundColor: theme.colorScheme.primary,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 12,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-            ),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: TextButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 12,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-            ),
-            child: const Text('Logout'),
-          ),
-        ],
       ),
     );
 

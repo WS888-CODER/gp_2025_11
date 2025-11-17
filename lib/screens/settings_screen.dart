@@ -29,72 +29,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final l10n = AppLocalizations.of(context)!;
     final currentLangCode = Localizations.localeOf(context).languageCode;
 
-    const Color dialogBaseColor = Color(0xFF4A5FBC);
-    const Color cancelBgColor = Color(0xFFE5E7EB);
-    const Color cancelTextColor = Color(0xFF4B5563);
-    const Color logoutBgColor = Color(0xFFFC686A);
-
     bool? confirm = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: dialogBaseColor.withOpacity(0.7),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-        title: Text(
-          currentLangCode == 'ar' ? 'تأكيد تسجيل الخروج' : 'Confirm Logout',
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
+      builder: (ctx) => JadeerDialog<bool>(
+        title:
+            currentLangCode == 'ar' ? 'تأكيد تسجيل الخروج' : 'Confirm Logout',
         content: Text(
           currentLangCode == 'ar'
               ? 'هل أنت متأكد أنك تريد تسجيل الخروج؟'
               : 'Are you sure you want to log out?',
           textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.white70),
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 15,
+          ),
         ),
-        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-        actionsPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          Expanded(
-            child: TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              style: TextButton.styleFrom(
-                backgroundColor: cancelBgColor,
-                foregroundColor: cancelTextColor,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25),
-                ),
-              ),
-              child: Text(
-                currentLangCode == 'ar' ? 'إلغاء' : 'Cancel',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: TextButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              style: TextButton.styleFrom(
-                backgroundColor: logoutBgColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25),
-                ),
-              ),
-              child: Text(
-                l10n.logoutOption,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-        ],
+        secondaryLabel: currentLangCode == 'ar' ? 'إلغاء' : 'Cancel',
+        secondaryResult: false,
+        primaryLabel: l10n.logoutOption,
+        primaryResult: true,
       ),
     );
 

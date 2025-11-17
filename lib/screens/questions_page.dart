@@ -15,7 +15,8 @@ class QuestionsPage extends StatefulWidget {
 class _QuestionsPageState extends State<QuestionsPage> {
   Map<String, dynamic>? _jobData;
   String? _jobId;
-  static const int kMaxQuestionLength = 180;
+  static const int kMaxQuestionLength = 500;
+  static const int kMinQuestionChars = 20;
   static const int kMinQuestions = 10;
   static const int kMaxUserAdds = 3;
 
@@ -118,95 +119,106 @@ class _QuestionsPageState extends State<QuestionsPage> {
 
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-        title: const Text(
-          'Add Question',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+      builder: (ctx) => JadeerDialog<bool>(
+        title: 'Add Question',
+        primaryLabel: 'Add',
+        primaryResult: true,
+        secondaryLabel: 'Cancel',
+        secondaryResult: false,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            StatefulBuilder(
+              builder: (context, setSB) {
+                final currentLen = controller.text.trim().length;
+                final isBelowMin = currentLen < kMinQuestionChars;
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: controller,
+                      maxLength: kMaxQuestionLength,
+                      onChanged: (_) => setSB(() {}),
+                      decoration: InputDecoration(
+                        labelText: 'Question text',
+                        labelStyle: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 24,
+                        ),
+                        enabledBorder: const UnderlineInputBorder(
+                          borderSide: BorderSide(color: Colors.white),
+                        ),
+                        focusedBorder: const UnderlineInputBorder(
+                          borderSide: BorderSide(
+                            color: Colors.white,
+                            width: 2,
+                          ),
+                        ),
+                        counterText:
+                            '${controller.text.length}/$kMaxQuestionLength',
+                      ),
+                      style: const TextStyle(color: Colors.white),
+                      maxLines: null,
+                    ),
+                    const SizedBox(height: 4),
+                    // fixed space for the min-length message to avoid jumping
+                    SizedBox(
+                      height: 20,
+                      child: isBelowMin
+                          ? const Text(
+                              'Minimum is $kMinQuestionChars characters',
+                              style: TextStyle(
+                                color: Colors.redAccent,
+                                fontSize: 12,
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: type,
+              decoration: const InputDecoration(
+                labelText: 'Type',
+                labelStyle: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 24,
+                ),
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white),
+                ),
+                focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white, width: 2),
+                ),
+              ),
+              dropdownColor: Colors.black,
+              items: const [
+                DropdownMenuItem(
+                  value: 'technical',
+                  child: Text(
+                    'Technical',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+                DropdownMenuItem(
+                  value: 'psychometric',
+                  child: Text(
+                    'Psychometric',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+              onChanged: (v) => type = v ?? 'technical',
+              style: const TextStyle(color: Colors.white),
+            ),
+          ],
         ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: controller,
-                maxLength: kMaxQuestionLength,
-                decoration: const InputDecoration(
-                  labelText: 'Question text',
-                  labelStyle: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 24),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white),
-                  ),
-                  focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white, width: 2),
-                  ),
-                ),
-                style: const TextStyle(color: Colors.white),
-              ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                value: type,
-                decoration: const InputDecoration(
-                  labelText: 'Type',
-                  labelStyle: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 24),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white),
-                  ),
-                  focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white, width: 2),
-                  ),
-                ),
-                dropdownColor: Colors.black,
-                items: const [
-                  DropdownMenuItem(
-                      value: 'technical',
-                      child: Text('Technical',
-                          style: TextStyle(color: Colors.white))),
-                  DropdownMenuItem(
-                      value: 'psychometric',
-                      child: Text('Psychometric',
-                          style: TextStyle(color: Colors.white))),
-                ],
-                onChanged: (v) => type = v ?? 'technical',
-                style: const TextStyle(color: Colors.white),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              style: TextButton.styleFrom(
-                backgroundColor: Colors.white.withOpacity(0.9),
-                foregroundColor: const Color(0xFF4A5FBC),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-              ),
-              child: const Text('Cancel')),
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: TextButton.styleFrom(
-                backgroundColor: const Color(0xFFFC686A),
-                foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-              ),
-              child: const Text('Add')),
-        ],
       ),
     );
 
@@ -221,6 +233,12 @@ class _QuestionsPageState extends State<QuestionsPage> {
     }
     if (_isDuplicateQuestionLocal(text)) {
       return SnackHelper.error(context, 'Duplicate question.');
+    }
+    if (text.length < kMinQuestionChars) {
+      return SnackHelper.error(
+        context,
+        'Question must be at least $kMinQuestionChars characters.',
+      );
     }
 
     setState(() {
@@ -249,97 +267,66 @@ class _QuestionsPageState extends State<QuestionsPage> {
 
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-        title: const Text(
-          'Edit Question',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: controller,
-                maxLength: kMaxQuestionLength,
-                decoration: const InputDecoration(
-                  labelText: 'Question text',
-                  labelStyle: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 24),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white),
-                  ),
-                  focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white, width: 2),
-                  ),
-                ),
-                style: const TextStyle(color: Colors.white),
-              ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                value: type,
-                decoration: const InputDecoration(
-                  labelText: 'Type',
-                  labelStyle: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 24),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white),
-                  ),
-                  focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white, width: 2),
-                  ),
-                ),
-                dropdownColor: Colors.black,
-                items: const [
-                  DropdownMenuItem(
-                      value: 'technical',
-                      child: Text('Technical',
-                          style: TextStyle(color: Colors.white))),
-                  DropdownMenuItem(
-                      value: 'psychometric',
-                      child: Text('Psychometric',
-                          style: TextStyle(color: Colors.white))),
-                ],
-                onChanged: (v) => type = v ?? 'technical',
-                style: const TextStyle(color: Colors.white),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            style: TextButton.styleFrom(
-              backgroundColor: Colors.white.withOpacity(0.9),
-              foregroundColor: const Color(0xFF4A5FBC),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
+      builder: (ctx) => JadeerDialog<bool>(
+        title: 'Edit Question',
+        primaryLabel: 'Save',
+        primaryResult: true,
+        secondaryLabel: 'Cancel',
+        secondaryResult: false,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            StatefulBuilder(
+              builder: (context, setSB) {
+                final currentLen = controller.text.trim().length;
+                final isBelowMin = currentLen < kMinQuestionChars;
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: controller,
+                      maxLength: kMaxQuestionLength,
+                      onChanged: (_) => setSB(() {}),
+                      decoration: const InputDecoration(
+                        labelText: 'Question text',
+                        labelStyle: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 24,
+                        ),
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Colors.white),
+                        ),
+                        focusedBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(
+                            color: Colors.white,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      style: const TextStyle(color: Colors.white),
+                      maxLines: null,
+                    ),
+                    const SizedBox(height: 4),
+                    SizedBox(
+                      height: 20,
+                      child: isBelowMin
+                          ? const Text(
+                              'Minimum is $kMinQuestionChars characters',
+                              style: TextStyle(
+                                color: Colors.redAccent,
+                                fontSize: 12,
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                  ],
+                );
+              },
             ),
-            child: const Text('Cancel',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(
-              backgroundColor: const Color(0xFFFC686A),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-            ),
-            child: const Text('Save',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
+          ],
+        ),
       ),
     );
 
@@ -348,6 +335,12 @@ class _QuestionsPageState extends State<QuestionsPage> {
     final newText = controller.text.trim();
     if (newText.isEmpty) {
       return SnackHelper.error(context, 'Question cannot be empty.');
+    }
+    if (newText.length < kMinQuestionChars) {
+      return SnackHelper.error(
+        context,
+        'Question must be at least $kMinQuestionChars characters.',
+      );
     }
     if (newText.length > kMaxQuestionLength) {
       return SnackHelper.error(context, 'Character limit reached.');
@@ -394,48 +387,17 @@ class _QuestionsPageState extends State<QuestionsPage> {
 
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-        title: const Text(
-          'Delete Question?',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        content: const Text(
+      builder: (ctx) => const JadeerDialog<bool>(
+        title: 'Delete Question?',
+        primaryLabel: 'Delete',
+        primaryResult: true,
+        secondaryLabel: 'Cancel',
+        secondaryResult: false,
+        content: Text(
           'Are you sure you want to delete this question?',
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.white),
         ),
-        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-        actionsPadding:
-            const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            style: TextButton.styleFrom(
-              backgroundColor: Colors.white.withOpacity(0.9),
-              foregroundColor: const Color(0xFF4A5FBC),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20)),
-            ),
-            child: const Text('Cancel'),
-          ),
-          const SizedBox(width: 12),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(
-              backgroundColor: const Color(0xFFFC686A),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20)),
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
       ),
     );
 
@@ -577,48 +539,17 @@ class _QuestionsPageState extends State<QuestionsPage> {
   Future<void> _confirmBackToJobPosting() async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-        title: const Text(
-          'Leave Questions?',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        content: const Text(
+      builder: (ctx) => const JadeerDialog<bool>(
+        title: 'Leave Questions?',
+        primaryLabel: 'Go back',
+        primaryResult: true,
+        secondaryLabel: 'Stay',
+        secondaryResult: false,
+        content: Text(
           'If you go back, your job posting data will stay, but any unsaved changes to questions will be lost.',
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.white),
         ),
-        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-        actionsPadding:
-            const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            style: TextButton.styleFrom(
-              backgroundColor: Colors.white.withOpacity(0.9),
-              foregroundColor: const Color(0xFF4A5FBC),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20)),
-            ),
-            child: const Text('Stay'),
-          ),
-          const SizedBox(width: 12),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(
-              backgroundColor: const Color(0xFFFC686A),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20)),
-            ),
-            child: const Text('Go back'),
-          ),
-        ],
       ),
     );
 
@@ -643,50 +574,19 @@ class _QuestionsPageState extends State<QuestionsPage> {
 
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-        title: const Text(
-          'Confirm Post',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        content: const Text(
+      builder: (ctx) => const JadeerDialog<bool>(
+        title: 'Confirm Post',
+        primaryLabel: 'Post & Lock',
+        primaryResult: true,
+        secondaryLabel: 'Cancel',
+        secondaryResult: false,
+        content: Text(
           'After finishing, this job and its questions will be posted.\n'
           'You will not be able to add or edit questions later.\n\n'
           'Do you want to proceed?',
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.white),
         ),
-        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-        actionsPadding:
-            const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            style: TextButton.styleFrom(
-              backgroundColor: Colors.white.withOpacity(0.9),
-              foregroundColor: const Color(0xFF4A5FBC),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20)),
-            ),
-            child: const Text('Cancel'),
-          ),
-          const SizedBox(width: 12),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(
-              backgroundColor: const Color(0xFFFC686A),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20)),
-            ),
-            child: const Text('Post & Lock'),
-          ),
-        ],
       ),
     );
 
@@ -723,6 +623,40 @@ class _QuestionsPageState extends State<QuestionsPage> {
     );
   }
 
+  void _showInstructions() {
+    showDialog(
+      context: context,
+      builder: (ctx) => JadeerDialog<void>(
+        title: 'How this page works',
+        primaryLabel: 'OK',
+        primaryResult: null,
+        content: Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_locked)
+                const Text(
+                  '• Questions are locked for this job.\n'
+                  '• You can review questions only.\n'
+                  '• Editing, adding, or deleting is disabled.',
+                  style: TextStyle(color: Colors.white, height: 1.4),
+                )
+              else
+                const Text(
+                  '• You can edit any AI-generated question.\n'
+                  '• You can add up to 3 custom questions.\n'
+                  '• You can delete only questions you added yourself.\n'
+                  '• All questions will be locked after posting the job.',
+                  style: TextStyle(color: Colors.white, height: 1.4),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   // ===== UI =====
   @override
   Widget build(BuildContext context) {
@@ -739,9 +673,13 @@ class _QuestionsPageState extends State<QuestionsPage> {
       child: ThemedScaffold(
         resizeToAvoidBottomInset: false,
         appBar: AppBar(
-          title: const Text('Job Questions',
-              style:
-                  TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+          title: const Text(
+            'Job Questions',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () {
@@ -752,6 +690,13 @@ class _QuestionsPageState extends State<QuestionsPage> {
               }
             },
           ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.info_outline, color: Colors.white),
+              tooltip: 'Instructions',
+              onPressed: _showInstructions,
+            ),
+          ],
         ),
         body: (_jobData == null)
             ? const _CenteredInfo(text: 'Missing job data')
@@ -889,7 +834,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
                         ),
                       if (!_locked)
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                           child: SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
@@ -897,8 +842,6 @@ class _QuestionsPageState extends State<QuestionsPage> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF4A5FBC),
                                 foregroundColor: Colors.white,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(30),
                                 ),

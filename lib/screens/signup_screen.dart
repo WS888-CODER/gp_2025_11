@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'dart:math';
 
+import 'package:gp_2025_11/config/theme.dart';
+
 class SignupScreen extends StatefulWidget {
   @override
   _SignupScreenState createState() => _SignupScreenState();
@@ -56,44 +58,20 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   void _showErrorDialog(String message) {
-    showDialog(
+    showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(Icons.error_outline, color: Colors.white, size: 28),
-            SizedBox(width: 10),
-            Text('Error',
-                style: TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.bold)),
-          ],
-        ),
+      builder: (ctx) => JadeerDialog<void>(
+        title: 'Error',
         content: Text(
           message,
-          style: const TextStyle(color: Colors.white),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 15,
+          ),
           textAlign: TextAlign.center,
         ),
-        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-        actionsPadding:
-            const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            style: TextButton.styleFrom(
-              backgroundColor: Colors.white.withOpacity(0.9),
-              foregroundColor: const Color(0xFF4A5FBC),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-            ),
-            child: const Text('OK'),
-          ),
-        ],
+        primaryLabel: 'OK',
+        // ما نحتاج نرجّع قيمة، بس نسكر الديالوج
       ),
     );
   }

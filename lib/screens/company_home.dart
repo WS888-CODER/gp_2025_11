@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'dart:async';
 
@@ -50,64 +51,40 @@ class _CompanyHomeState extends State<CompanyHome> {
 
       if (!isProfileComplete) {
         if (!mounted) return false;
-        showDialog(
+        showDialog<void>(
           context: context,
-          builder: (context) => AlertDialog(
-            backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-            title: const Text(
-              'Profile Incomplete',
-              textAlign: TextAlign.center,
-              style:
-                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-            ),
-            content: const Text(
+          builder: (context) => const JadeerDialog<void>(
+            title: 'Profile Incomplete',
+            primaryLabel: 'OK',
+            primaryResult: null,
+            content: Text(
               'Please complete your company profile before creating or editing job postings.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.white),
             ),
-            contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-            actionsPadding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-            actionsAlignment: MainAxisAlignment.center,
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                style: TextButton.styleFrom(
-                  backgroundColor: Colors.white.withOpacity(0.9),
-                  foregroundColor: const Color(0xFF4A5FBC),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                ),
-                child: const Text('OK',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ],
           ),
         );
+
         return false;
       }
 
       return true;
     } catch (e) {
       if (!mounted) return false;
-      showDialog(
+      showDialog<void>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Error'),
-          content: Text('Failed to verify profile: $e'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
-            ),
-          ],
+        builder: (context) => JadeerDialog<void>(
+          title: 'Error',
+          primaryLabel: 'OK',
+          primaryResult: null,
+          content: Text(
+            'Failed to verify profile: $e',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white),
+          ),
         ),
       );
+
       return false;
     }
   }
@@ -169,52 +146,17 @@ class _CompanyHomeState extends State<CompanyHome> {
 
     final shouldDelete = await showDialog<bool>(
       context: ctx,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-        title: const Text(
-          'Delete Job?',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+      builder: (context) => JadeerDialog<bool>(
+        title: 'Delete Job?',
+        primaryLabel: 'Delete',
+        primaryResult: true,
+        secondaryLabel: 'Cancel',
+        secondaryResult: false,
         content: Text(
           'Are you sure you want to permanently delete "$jobTitle"? This action cannot be undone.',
           textAlign: TextAlign.center,
           style: const TextStyle(color: Colors.white),
         ),
-        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-        actionsPadding:
-            const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            style: TextButton.styleFrom(
-              backgroundColor: Colors.white.withOpacity(0.9),
-              foregroundColor: const Color(0xFF4A5FBC),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-            ),
-            child: const Text('Cancel',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-          const SizedBox(width: 12),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(
-              backgroundColor: const Color(0xFFFC686A),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-            ),
-            child: const Text('Delete',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
       ),
     );
 
@@ -555,11 +497,11 @@ class _CompanyHomeState extends State<CompanyHome> {
                       const SizedBox(width: 10),
 
                       // Edit button
-                      Column(
+                      Row(
                         children: [
-                          OutlinedButton(
+                          // ===== Edit Icon =====
+                          IconButton(
                             onPressed: () async {
-                              // Check profile completion first
                               final canProceed = await _checkProfileComplete();
                               if (!canProceed || !mounted) return;
 
@@ -588,27 +530,19 @@ class _CompanyHomeState extends State<CompanyHome> {
                                 },
                               );
 
-                              // Refresh the page after returning from edit
-                              if (mounted) {
-                                setState(() {});
-                              }
+                              if (mounted) setState(() {});
                             },
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: _brand, width: 3),
-                              foregroundColor: _brand,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 10),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            child: const Text(
-                              'Edit',
-                              style: TextStyle(fontWeight: FontWeight.w800),
-                            ),
+                            icon: const Icon(Icons.edit),
+                            color: _brand,
+                            iconSize: 26,
+                            tooltip: 'Edit',
                           ),
-                          const SizedBox(width: 8),
-                          OutlinedButton(
+
+                          // Space
+                          const SizedBox(width: 4),
+
+                          // ===== View Icon =====
+                          IconButton(
                             onPressed: () {
                               Navigator.pushNamed(
                                 context,
@@ -619,22 +553,10 @@ class _CompanyHomeState extends State<CompanyHome> {
                                 },
                               );
                             },
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: _brand, width: 3),
-                              foregroundColor: _brand,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 10),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            child: const Text(
-                              'View',
-                              style: TextStyle(
-                                color: Color(0xFF4A5FBC),
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
+                            icon: const Icon(Icons.visibility),
+                            color: _brand,
+                            iconSize: 26,
+                            tooltip: 'View',
                           ),
                         ],
                       ),
@@ -650,7 +572,6 @@ class _CompanyHomeState extends State<CompanyHome> {
 
                           showDialog(
                             context: safeCtx,
-                            // ⬇️ الآن يعتمد على لون السطح الديناميكي
                             builder: (dialogContext) => AlertDialog(
                               backgroundColor:
                                   Theme.of(context).colorScheme.surface,
