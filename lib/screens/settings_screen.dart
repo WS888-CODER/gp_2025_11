@@ -1,3 +1,4 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -24,6 +25,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _isNotificationsEnabled = false;
   static const Color _brandColor = Color(0xFF4A5FBC);
+  bool _isDeletingAccount = false;
 
   Future<void> _handleLogout(BuildContext context) async {
     final l10n = AppLocalizations.of(context)!;
@@ -56,6 +58,125 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (context.mounted) {
         Navigator.of(context)
             .pushNamedAndRemoveUntil('/login', (route) => false);
+      }
+    }
+  }
+
+  Future<void> _handleDeleteAccount(BuildContext context) async {
+    final currentLangCode = Localizations.localeOf(context).languageCode;
+    final isArabic = currentLangCode == 'ar';
+    final isJobSeeker = widget.userType == 'JobSeeker';
+
+    final title = isJobSeeker
+        ? (isArabic ? 'حذف الحساب نهائيًا' : 'Delete Account')
+        : (isArabic ? 'حذف حساب الشركة' : 'Delete Company Account');
+
+    final description = isJobSeeker
+        ? (isArabic
+            ? 'سيتم حذف حسابك نهائيًا بما في ذلك بياناتك الشخصية، سيرتك الذاتية، تقاريرك، وبيانات المقابلات. كما سيتم إلغاء جميع طلبات التوظيف النشطة وحذف بياناتها المرتبطة.'
+            : 'Your account will be permanently deleted, including your personal data, CVs, reports, and interview data. All active applications will be cancelled and related data removed.')
+        : (isArabic
+            ? 'سيتم حذف حساب شركتكم نهائيًا بما في ذلك ملف الشركة، إعلانات الوظائف، وبيانات المتقدمين المرتبطة بها. سيتم إغلاق جميع الوظائف النشطة وحذف بيانات المتقدمين، وسيتم إرسال رسالة تأكيد إلى البريد الإلكتروني المسجل.'
+            : 'Your company account will be permanently deleted, including the company profile, job postings, and related applicant data. All active postings will be closed, and a confirmation email will be sent to the registered address.');
+
+    final confirmLabel =
+        isArabic ? 'تأكيد الحذف' : (isJobSeeker ? 'Delete Account' : 'Delete');
+
+    final cancelLabel = isArabic ? 'إلغاء' : 'Cancel';
+
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => JadeerDialog<bool>(
+        title: title,
+        primaryLabel: confirmLabel,
+        primaryResult: true,
+        secondaryLabel: cancelLabel,
+        secondaryResult: false,
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                isArabic
+                    ? 'هل أنت متأكد أنك تريد المتابعة؟ لا يمكن التراجع عن هذه العملية.'
+                    : 'Are you sure you want to proceed? This action cannot be undone.',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                description,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (confirm != true) {
+      return;
+    }
+
+    setState(() => _isDeletingAccount = true);
+
+    try {
+      final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
+      final callable = functions.httpsCallable('deleteUserAccount');
+
+      final result = await callable.call(<String, dynamic>{
+        'userId': widget.userId,
+        'userType': widget.userType,
+      });
+
+      final success = (result.data is Map &&
+              (result.data['success'] == true ||
+                  result.data['status'] == 'ok')) ||
+          result.data == true;
+
+      if (!success) {
+        SnackHelper.error(
+          context,
+          isArabic
+              ? 'فشل حذف الحساب. حاول مرة أخرى.'
+              : 'Failed to delete account. Please try again.',
+        );
+        setState(() => _isDeletingAccount = false);
+        return;
+      }
+
+      final successMessage = isJobSeeker
+          ? (isArabic
+              ? 'تم حذف حسابك بنجاح.'
+              : 'Your account has been deleted successfully.')
+          : (isArabic
+              ? 'تم حذف حساب الشركة بنجاح. تم إرسال رسالة تأكيد إلى بريدكم الإلكتروني.'
+              : 'Your company account has been deleted successfully. A confirmation email has been sent to your registered email.');
+
+      SnackHelper.success(context, successMessage);
+
+      await Future.delayed(const Duration(seconds: 2));
+
+      await FirebaseAuth.instance.signOut();
+      if (!context.mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+    } catch (e) {
+      SnackHelper.error(
+        context,
+        isArabic
+            ? 'حدث خطأ أثناء حذف الحساب. حاول مرة أخرى.'
+            : 'An error occurred while deleting your account. Please try again.',
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isDeletingAccount = false);
       }
     }
   }
@@ -260,7 +381,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     isTitleBold: true,
                   ),
                 ),
-                const SizedBox(height: 10),
+                SettingsSectionCard(
+                  child: _SettingsItem(
+                    title: currentLangIsArabic
+                        ? (widget.userType == 'JobSeeker'
+                            ? 'حذف الحساب نهائيًا'
+                            : 'حذف حساب الشركة نهائيًا')
+                        : (widget.userType == 'JobSeeker'
+                            ? 'Delete Account'
+                            : 'Delete Company Account'),
+                    icon: Icons.delete_forever_outlined,
+                    iconColor: Colors.red,
+                    trailing: _isDeletingAccount
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.red,
+                            ),
+                          )
+                        : const Icon(Icons.chevron_right),
+                    onTap: () {
+                      if (_isDeletingAccount) return;
+                      _handleDeleteAccount(context);
+                    },
+                    subtitle: Text(
+                      currentLangIsArabic
+                          ? (widget.userType == 'JobSeeker'
+                              ? 'سيتم حذف بياناتك وجميع نشاطاتك نهائيًا'
+                              : 'سيتم حذف بيانات الشركة وجميع الوظائف والمتقدمين المرتبطين بها')
+                          : (widget.userType == 'JobSeeker'
+                              ? 'Permanently delete your account and all related data'
+                              : 'Permanently delete your company account and related data'),
+                    ),
+                    isTitleBold: true,
+                  ),
+                ),
               ],
             ),
           );

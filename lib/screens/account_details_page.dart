@@ -1,10 +1,9 @@
 // lib/screens/account_details_page.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:gp_2025_11/config/theme.dart';
+import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:gp_2025_11/l10n/app_localizations.dart';
-import 'dart:math';
 
 class AccountDetailsPage extends StatefulWidget {
   final String userId;
@@ -22,342 +21,70 @@ class AccountDetailsPage extends StatefulWidget {
 
 class _AccountDetailsPageState extends State<AccountDetailsPage> {
   final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
+
   bool _isEditing = false;
   bool _isSaving = false;
 
   @override
   void dispose() {
     _nameController.dispose();
-    _emailController.dispose();
     super.dispose();
   }
 
-  // ========== OTP GENERATION ==========
-  String _generateOTP() {
-    Random random = Random();
-    return (100000 + random.nextInt(900000)).toString();
-  }
-
-  // ========== SEND OTP EMAIL ==========
-  Future<bool> _sendOTPEmail(String email, String otp, String userType) async {
-    try {
-      final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
-      final callable = userType == 'Admin'
-          ? functions.httpsCallable('sendAdminOtp')
-          : functions.httpsCallable('sendSignupOtp');
-
-      final Map<String, dynamic> params = {
-        'email': email.trim(),
-        'otp': otp.trim(),
-      };
-
-      if (userType != 'Admin') {
-        params['userType'] = userType;
-      }
-
-      final result = await callable.call(params);
-
-      if (result.data != null && result.data['success'] == true) {
-        await FirebaseFirestore.instance
-            .collection('AdminOTPs')
-            .doc(email)
-            .set({
-          'OTP': otp,
-          'Email': email,
-          'UserType': userType,
-          'CreatedAt': FieldValue.serverTimestamp(),
-          'ExpiresAt': Timestamp.fromDate(
-            DateTime.now().add(const Duration(minutes: 2)),
-          ),
-          'Used': false,
-        });
-        return true;
-      }
-      return false;
-    } catch (e) {
-      return false;
+  // نفس منطق الفالديشن في signup (Full Name):
+  // - حروف ومسافات فقط
+  // - على الأقل كلمتين
+  bool _isValidFullName(String name) {
+    String trimmedName = name.trim();
+    final nameRegex = RegExp(r'^[a-zA-Z\s]+$');
+    if (!nameRegex.hasMatch(trimmedName)) return false;
+    List<String> words = trimmedName.split(RegExp(r'\s+'));
+    if (words.length < 2) return false;
+    for (String word in words) {
+      if (word.isEmpty) return false;
     }
+    return true;
   }
 
-  // ========== EMAIL CHANGE WARNING DIALOG (FOR COMPANIES) ==========
-  Future<bool> _showEmailChangeWarningForCompany(
-      String oldEmail, String newEmail) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => JadeerDialog<bool>(
-        title: 'Email Change Warning',
-        primaryLabel: 'Continue',
-        primaryResult: true,
-        secondaryLabel: 'Cancel',
-        secondaryResult: false,
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Row(
-                children: [
-                  Icon(
-                    Icons.warning_amber_rounded,
-                    color: Color(0xFFFD6C67),
-                    size: 24,
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    'Important Information:',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                '• Your account status will change to "Pending".',
-                style: TextStyle(color: Colors.white70),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                '• Admin approval will be required after verification.',
-                style: TextStyle(color: Colors.white70),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                '• An OTP will be sent to your new email.',
-                style: TextStyle(color: Colors.white70),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                '• You must verify the OTP to complete the change.',
-                style: TextStyle(color: Colors.white70),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                '• You will be logged out after verification.',
-                style: TextStyle(color: Colors.white70),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Old email: $oldEmail',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.white60,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'New email: $newEmail',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    return confirmed ?? false;
-  }
-
-  // ========== SIMPLE EMAIL CHANGE CONFIRMATION (FOR JOB SEEKERS) ==========
-  Future<bool> _showEmailChangeConfirmation(
-      String oldEmail, String newEmail) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => JadeerDialog<bool>(
-        title: 'Confirm Email Change',
-        primaryLabel: 'Continue',
-        primaryResult: true,
-        secondaryLabel: 'Cancel',
-        secondaryResult: false,
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Row(
-                children: [
-                  Icon(
-                    Icons.info_outline,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'An OTP will be sent to your new email for verification.',
-                      style: TextStyle(
-                        color: Colors.white70,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Old email: $oldEmail',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.white60,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'New email: $newEmail',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    return confirmed ?? false;
-  }
-
-  // ========== SAVE CHANGES ==========
-  Future<void> _saveChanges(String currentEmail, String currentName) async {
+  Future<void> _saveChanges(String currentName) async {
     final newName = _nameController.text.trim();
-    final newEmail = _emailController.text.trim();
 
     if (newName.isEmpty) {
       SnackHelper.error(context, 'Name cannot be empty');
       return;
     }
 
-    if (newEmail.isEmpty ||
-        !RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(newEmail)) {
-      SnackHelper.error(context, 'Please enter a valid email');
+    if (!_isValidFullName(newName)) {
+      SnackHelper.error(
+          context, 'Full name must be at least 2 words (letters only)');
       return;
     }
 
-    // Check if email changed
-    final emailChanged = newEmail != currentEmail;
+    if (newName == currentName) {
+      SnackHelper.error(context, 'No changes to save');
+      setState(() {
+        _isEditing = false;
+      });
+      return;
+    }
 
-    if (emailChanged) {
-      // Show appropriate warning based on user type
-      bool confirmed;
-      if (widget.userType == 'Company') {
-        confirmed =
-            await _showEmailChangeWarningForCompany(currentEmail, newEmail);
-      } else {
-        confirmed = await _showEmailChangeConfirmation(currentEmail, newEmail);
-      }
+    setState(() => _isSaving = true);
+    try {
+      await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(widget.userId)
+          .update({'Name': newName});
 
-      if (!confirmed) {
-        return; // User cancelled
-      }
+      if (!mounted) return;
+      SnackHelper.success(context, 'Name updated successfully');
 
-      // Send OTP
-      setState(() => _isSaving = true);
-      try {
-        final otp = _generateOTP();
-        final success = await _sendOTPEmail(newEmail, otp, widget.userType);
-
-        if (!success) {
-          SnackHelper.error(context, 'Failed to send OTP. Please try again.');
-          setState(() => _isSaving = false);
-          return;
-        }
-
-        // Update database
-        final updates = <String, dynamic>{
-          'Email': newEmail,
-          'IsEmailVerified': false,
-        };
-
-        // Update name if changed
-        if (newName != currentName) {
-          updates['Name'] = newName;
-        }
-
-        // For companies, set account status to pending
-        if (widget.userType == 'Company') {
-          updates['AccountStatus'] = 'Pending';
-        }
-
-        await FirebaseFirestore.instance
-            .collection('Users')
-            .doc(widget.userId)
-            .update(updates);
-
-        if (!mounted) return;
-
-        // Navigate to OTP verification
-        Navigator.pushReplacementNamed(
-          context,
-          '/otp-verification',
-          arguments: {
-            'email': newEmail,
-            'userId': widget.userId,
-            'userType': widget.userType,
-          },
-        );
-      } catch (e) {
-        SnackHelper.error(context, 'Failed to update email: $e');
-        setState(() => _isSaving = false);
-      }
-    } else {
-      // Only name changed (no email change)
-      if (newName == currentName) {
-        SnackHelper.error(context, 'No changes to save');
-        setState(() {
-          _isEditing = false;
-        });
-        return;
-      }
-
-      setState(() => _isSaving = true);
-      try {
-        await FirebaseFirestore.instance
-            .collection('Users')
-            .doc(widget.userId)
-            .update({'Name': newName});
-
-        if (!mounted) return;
-        SnackHelper.success(context, 'Name updated successfully');
-        setState(() {
-          _isEditing = false;
-          _isSaving = false;
-        });
-      } catch (e) {
-        SnackHelper.error(context, 'Failed to update name: $e');
+      setState(() {
+        _isEditing = false;
+      });
+    } catch (e) {
+      SnackHelper.error(context, 'Failed to update name: $e');
+    } finally {
+      if (mounted) {
         setState(() => _isSaving = false);
       }
     }
@@ -369,10 +96,17 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
     final isJobSeeker = widget.userType == 'JobSeeker';
     const brandColor = Color(0xFF4A5FBC);
 
-    return Scaffold(
+    return ThemedScaffold(
       appBar: AppBar(
-        title: const Text('Account Details'),
+        title: Text(
+          l10n.myAccountDetailsSection,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
         backgroundColor: brandColor,
+        foregroundColor: Colors.white,
         actions: [
           if (!_isEditing)
             IconButton(
@@ -381,13 +115,16 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
               onPressed: () {
                 setState(() => _isEditing = true);
               },
-            ),
-          if (_isEditing)
+            )
+          else
             IconButton(
               icon: const Icon(Icons.close, color: Colors.white),
               tooltip: 'Cancel',
               onPressed: () {
-                setState(() => _isEditing = false);
+                setState(() {
+                  _isEditing = false;
+                  _nameController.clear();
+                });
               },
             ),
         ],
@@ -408,127 +145,102 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
           }
 
           final userData = snapshot.data!.data()!;
-
           final registeredFullName = userData['Name'] ?? 'N/A';
           final registeredEmail = userData['Email'] ?? 'N/A';
           final companyName = userData['CompanyName'] ?? 'N/A';
 
-          // Initialize controllers with current values when entering edit mode
-          if (_isEditing) {
-            if (_nameController.text.isEmpty) {
-              _nameController.text = registeredFullName;
-            }
-            if (_emailController.text.isEmpty) {
-              _emailController.text = registeredEmail;
-            }
-          } else {
-            // Clear controllers when not editing
-            _nameController.clear();
-            _emailController.clear();
+          // لما ندخل وضع التعديل لأول مرة نعبي الكنترولر بالاسم
+          if (_isEditing && _nameController.text.isEmpty) {
+            _nameController.text = registeredFullName;
           }
 
-          return ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              // Name Field
-              if (_isEditing)
-                TextField(
-                  controller: _nameController,
-                  decoration: InputDecoration(
-                    labelText: l10n.fullNameLabel,
-                    prefixIcon:
-                        const Icon(Icons.person, color: Color(0xFF4A5FBC)),
-                    border: const OutlineInputBorder(),
-                  ),
-                )
-              else
-                _DetailCard(
-                  icon: Icons.person,
-                  label: l10n.fullNameLabel,
-                  value: registeredFullName,
+          return SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _AccountHeader(
+                  fullName: registeredFullName,
+                  email: registeredEmail,
+                  userType: widget.userType,
                 ),
+                const SizedBox(height: 20),
 
-              const SizedBox(height: 15),
-
-              // Company Name (for companies only, not editable)
-              if (!isJobSeeker)
-                _DetailCard(
-                  icon: Icons.business,
-                  label: l10n.companyNameLabel,
-                  value: companyName,
-                ),
-
-              if (!isJobSeeker) const SizedBox(height: 15),
-
-              // Email Field
-              if (_isEditing)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    TextField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: InputDecoration(
-                        labelText: l10n.registeredEmailLabel,
-                        prefixIcon:
-                            const Icon(Icons.email, color: Color(0xFF4A5FBC)),
-                        border: const OutlineInputBorder(),
-                        suffixIcon: _emailController.text.trim() !=
-                                registeredEmail
-                            ? const Tooltip(
-                                message: 'Changing email requires verification',
-                                child: Icon(Icons.warning_amber_rounded,
-                                    color: Colors.orange),
-                              )
-                            : null,
-                      ),
-                    ),
-                    if (_emailController.text.trim() != registeredEmail)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8, left: 12),
-                        child: Text(
-                          widget.userType == 'Company'
-                              ? '⚠️ Changing email will set your account status to Pending. Admin approval will be required after OTP verification.'
-                              : '⚠️ Changing email requires OTP verification.',
-                          style: const TextStyle(
-                            color: Color(0xFFFD6C67),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                  ],
-                )
-              else
-                _DetailCard(
-                  icon: Icons.email,
-                  label: l10n.registeredEmailLabel,
-                  value: registeredEmail,
-                ),
-
-              if (_isEditing) ...[
-                const SizedBox(height: 30),
-                FilledButton(
-                  onPressed: _isSaving
-                      ? null
-                      : () => _saveChanges(registeredEmail, registeredFullName),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: brandColor,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: _isSaving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
+                // Name section (editable)
+                _AccountSectionCard(
+                  child: _isEditing
+                      ? _EditableNameField(
+                          controller: _nameController,
+                          label: l10n.fullNameLabel,
                         )
-                      : const Text('Save Changes'),
+                      : _DetailTile(
+                          icon: Icons.person,
+                          label: l10n.fullNameLabel,
+                          value: registeredFullName,
+                        ),
                 ),
+
+                const SizedBox(height: 12),
+
+                // Company name (read-only – للشركات فقط)
+                if (!isJobSeeker)
+                  _AccountSectionCard(
+                    child: _DetailTile(
+                      icon: Icons.business,
+                      label: l10n.companyNameLabel,
+                      value: companyName,
+                    ),
+                  ),
+
+                if (!isJobSeeker) const SizedBox(height: 12),
+
+                // Email (read-only)
+                _AccountSectionCard(
+                  child: _DetailTile(
+                    icon: Icons.email_outlined,
+                    label: l10n.registeredEmailLabel,
+                    value: registeredEmail,
+                    subtitle: 'Email address cannot be changed.',
+                  ),
+                ),
+
+                if (_isEditing) ...[
+                  const SizedBox(height: 28),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: _isSaving
+                          ? null
+                          : () => _saveChanges(registeredFullName),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: brandColor,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        elevation: 2,
+                      ),
+                      child: _isSaving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text(
+                              'Save Changes',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           );
         },
       ),
@@ -536,35 +248,236 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
   }
 }
 
-class _DetailCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
+/* ------------------ Header with avatar & basic info ------------------ */
 
-  const _DetailCard({
-    required this.icon,
-    required this.label,
-    required this.value,
+class _AccountHeader extends StatelessWidget {
+  final String fullName;
+  final String email;
+  final String userType;
+
+  const _AccountHeader({
+    required this.fullName,
+    required this.email,
+    required this.userType,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0.5,
-      margin: EdgeInsets.zero,
-      child: ListTile(
-        leading: Icon(icon, color: const Color(0xFF4A5FBC)),
-        title: Text(
-          label,
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
+    final initial =
+        fullName.trim().isNotEmpty ? fullName.trim()[0].toUpperCase() : '?';
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFF4A5FBC),
+            Color(0xFF6B7EF3),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        subtitle: Text(
-          value,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF4A5FBC).withOpacity(0.35),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
+        ],
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: Colors.white.withOpacity(0.15),
+            child: Text(
+              initial,
+              style: const TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  fullName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  email,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.white.withOpacity(0.85),
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.16),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    userType == 'JobSeeker' ? 'Job Seeker' : 'Company',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/* ---------------------- Card wrapper for sections -------------------- */
+
+class _AccountSectionCard extends StatelessWidget {
+  final Widget child;
+
+  const _AccountSectionCard({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF4A5FBC).withOpacity(0.08)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+/* -------------------------- Detail display row ----------------------- */
+
+class _DetailTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final String? subtitle;
+
+  const _DetailTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      leading: Icon(icon, color: const Color(0xFF4A5FBC)),
+      title: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 12,
+          color: Colors.grey,
         ),
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            value,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              subtitle!,
+              style: const TextStyle(
+                fontSize: 11,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/* --------------------- Editable name text field ---------------------- */
+
+class _EditableNameField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+
+  const _EditableNameField({
+    required this.controller,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const brandColor = Color(0xFF4A5FBC);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: controller,
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.person, color: brandColor),
+              hintText: 'Enter your full name',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: brandColor, width: 1.6),
+              ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            ),
+          ),
+        ],
       ),
     );
   }

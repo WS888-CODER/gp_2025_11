@@ -277,31 +277,22 @@ class _WelcomeTitle extends StatelessWidget {
         .map((snap) {
       final data = snap.data() ?? {};
 
-      // Role check
-      final role =
-          (data['Role'] ?? data['role'] ?? '').toString().toLowerCase();
+      final userType =
+          (data['UserType'] ?? data['userType'] ?? '').toString().toLowerCase();
 
-      // Company name for companies
-      final companyName = (data['CompanyName'] ?? '').toString();
-
-      // Full name
+      final companyName = (data['CompanyName'] ?? '').toString().trim();
       final fullName = (data['Name'] ?? '').toString().trim();
 
-      // If Company → show company name
       if (companyName.isNotEmpty) return companyName;
 
-      // If Job Seeker → return first name only
-      if (role == 'seeker' || role == 'jobseeker' || role == 'job_seeker') {
-        if (fullName.isNotEmpty) {
-          // take first word only
-          return fullName.split(' ').first;
-        }
+      final isJobSeeker = userType == 'jobseeker' || userType == 'job_seeker';
+
+      if (isJobSeeker && fullName.isNotEmpty) {
+        return fullName.split(' ').first;
       }
 
-      // If normal user and has a name → show full name
       if (fullName.isNotEmpty) return fullName;
 
-      // fallback: email username
       final email = (data['Email'] ?? data['email'] ?? '').toString();
       if (email.contains('@')) return email.split('@').first;
 
