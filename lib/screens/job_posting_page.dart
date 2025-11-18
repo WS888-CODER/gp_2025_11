@@ -835,7 +835,6 @@ class _JobPostingPageState extends State<JobPostingPage> {
         if (!mounted) return;
         Navigator.pop(context);
       } else {
-        // CREATE MODE — لا نسوي Firestore هنا 👈
         if (_requirements.isEmpty) {
           _showWarningSnackBar('Please add at least one requirement');
           return;
@@ -1116,9 +1115,13 @@ class _JobPostingPageState extends State<JobPostingPage> {
       child: ThemedScaffold(
         resizeToAvoidBottomInset: false,
         appBar: AppBar(
-          backgroundColor: Color(0xFF4A5FBC),
+          backgroundColor: const Color(0xFF4A5FBC),
           foregroundColor: Colors.white,
-          title: Text(_isEdit ? 'Edit Job' : 'Create Job Posting'),
+          title: Text(_isEdit ? 'Edit Job' : 'Create Job Posting',
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              )),
         ),
         body: SingleChildScrollView(
           child: Padding(
@@ -1154,6 +1157,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
                           enabled: !_isEdit,
                           maxLength: 100,
                           decoration: const InputDecoration(
+                            hintText: 'Enter job title',
+                            hintStyle: TextStyle(color: Colors.grey),
                             filled: true,
                             fillColor: Colors.transparent,
                             border: OutlineInputBorder(
@@ -1212,6 +1217,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
                           enabled: !_isEdit,
                           maxLength: 100,
                           decoration: const InputDecoration(
+                            hintText: 'Enter job position',
+                            hintStyle: TextStyle(color: Colors.grey),
                             filled: true,
                             fillColor: Colors.transparent,
                             border: OutlineInputBorder(
@@ -1523,6 +1530,9 @@ class _JobPostingPageState extends State<JobPostingPage> {
                           enabled: !_isEdit,
                           maxLength: 2000,
                           decoration: InputDecoration(
+                            hintText:
+                                'Write a clear description for this job...',
+                            hintStyle: const TextStyle(color: Colors.grey),
                             filled: true,
                             fillColor: Colors.transparent,
                             border: const OutlineInputBorder(
@@ -1609,6 +1619,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
                                       maxLength: 200,
                                       decoration: InputDecoration(
                                         hintText: 'Enter requirement',
+                                        hintStyle:
+                                            const TextStyle(color: Colors.grey),
                                         filled: true,
                                         fillColor: Colors.transparent,
                                         border: OutlineInputBorder(

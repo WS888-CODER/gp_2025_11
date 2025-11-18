@@ -153,7 +153,7 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
           ],
         ),
         const SizedBox(height: 8),
-        const _JobsPreviewCompact(limit: 2),
+        const _JobsPreviewCompact(limit: 3),
         const SizedBox(height: 16),
       ],
     );
@@ -203,43 +203,60 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
         ],
       ),
       bottomNavigationBar: Container(
-        height: 70,
-        color: Theme.of(context).colorScheme.surface,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildNavItem(
-              icon: Icons.history_outlined,
-              filledIcon: Icons.history,
-              label: 'History',
-              isSelected: _tab == 0,
-              onTap: () => setState(() => _tab = 0),
-            ),
-            const SizedBox(width: 60),
-            _buildNavItem(
-              icon: Icons.home_outlined,
-              filledIcon: Icons.home,
-              label: 'Home',
-              isSelected: _tab == 1,
-              onTap: () {
-                if (_tab == 1 && _homeScroll.hasClients) {
-                  _homeScroll.animateTo(0,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeOut);
-                } else {
-                  setState(() => _tab = 1);
-                }
-              },
-            ),
-            const SizedBox(width: 60),
-            _buildNavItem(
-              icon: Icons.favorite_border,
-              filledIcon: Icons.favorite,
-              label: 'Wishlist',
-              isSelected: _tab == 2,
-              onTap: () => setState(() => _tab = 2),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 16,
+              offset: const Offset(0, -4),
             ),
           ],
+          border: Border(
+            top: BorderSide(
+              color: Theme.of(context).colorScheme.outline.withOpacity(0.15),
+            ),
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 6),
+        child: SafeArea(
+          top: false,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildNavItem(
+                icon: Icons.history_outlined,
+                filledIcon: Icons.history,
+                label: 'History',
+                isSelected: _tab == 0,
+                onTap: () => setState(() => _tab = 0),
+              ),
+              _buildNavItem(
+                icon: Icons.home_outlined,
+                filledIcon: Icons.home,
+                label: 'Home',
+                isSelected: _tab == 1,
+                onTap: () {
+                  if (_tab == 1 && _homeScroll.hasClients) {
+                    _homeScroll.animateTo(
+                      0,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                    );
+                  } else {
+                    setState(() => _tab = 1);
+                  }
+                },
+              ),
+              _buildNavItem(
+                icon: Icons.favorite_border,
+                filledIcon: Icons.favorite,
+                label: 'Favorites',
+                isSelected: _tab == 2,
+                onTap: () => setState(() => _tab = 2),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -259,11 +276,32 @@ class _WelcomeTitle extends StatelessWidget {
         .snapshots()
         .map((snap) {
       final data = snap.data() ?? {};
-      final companyName = (data['CompanyName'] ?? '').toString();
-      final name = (data['Name'] ?? '').toString();
-      if (companyName.trim().isNotEmpty) return companyName.trim();
-      if (name.trim().isNotEmpty) return name.trim();
 
+      // Role check
+      final role =
+          (data['Role'] ?? data['role'] ?? '').toString().toLowerCase();
+
+      // Company name for companies
+      final companyName = (data['CompanyName'] ?? '').toString();
+
+      // Full name
+      final fullName = (data['Name'] ?? '').toString().trim();
+
+      // If Company → show company name
+      if (companyName.isNotEmpty) return companyName;
+
+      // If Job Seeker → return first name only
+      if (role == 'seeker' || role == 'jobseeker' || role == 'job_seeker') {
+        if (fullName.isNotEmpty) {
+          // take first word only
+          return fullName.split(' ').first;
+        }
+      }
+
+      // If normal user and has a name → show full name
+      if (fullName.isNotEmpty) return fullName;
+
+      // fallback: email username
       final email = (data['Email'] ?? data['email'] ?? '').toString();
       if (email.contains('@')) return email.split('@').first;
 
@@ -455,11 +493,35 @@ class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
   Map<String, CompanyInfo> _companyByUserId = {};
   bool _loadingCompanies = false;
   String? _error;
+  Future<void> _toggleFavoriteForJob(Job job, bool newValue) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    final favRef = FirebaseFirestore.instance
+        .collection('Favourite')
+        .doc('${uid}_${job.jobId}');
+
+    try {
+      if (newValue) {
+        await favRef.set({
+          'UserID': uid,
+          'JobID': job.jobId,
+        });
+      } else {
+        await favRef.delete();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update favorites: $e')),
+      );
+    }
+  }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> _jobsStream() {
     return FirebaseFirestore.instance
         .collection('Jobs')
-        .orderBy('StartDate', descending: true)
+        .orderBy(JobFields.startDate, descending: true)
         .limit(widget.limit * 5)
         .snapshots();
   }
@@ -658,6 +720,7 @@ class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
                     job: job,
                     company: company,
                     isSaved: isSaved,
+                    onSavedChanged: (v) => _toggleFavoriteForJob(job, v),
                   ),
                 );
               }).toList(),

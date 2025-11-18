@@ -133,11 +133,45 @@ class _JobsPageState extends State<JobsPage> {
   String _userType = 'JobSeeker';
   bool _isProfileComplete = false;
   UserProfile? _liveProfile;
+  Stream<QuerySnapshot<Map<String, dynamic>>> _favStream() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      return const Stream.empty();
+    }
+
+    return FirebaseFirestore.instance
+        .collection('Favourite')
+        .where('UserID', isEqualTo: uid)
+        .snapshots();
+  }
 
   StreamSubscription<List<Job>>? _jobsSub;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userSub;
   final Map<String, CompanyInfo> _company = {};
   bool _loadingCompanies = false;
+  Future<void> _handleToggleFavorite(Job job, bool newValue) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    final favRef = FirebaseFirestore.instance
+        .collection('Favourite')
+        .doc('${uid}_${job.jobId}');
+
+    try {
+      if (newValue) {
+        await favRef.set({
+          'UserID': uid,
+          'JobID': job.jobId,
+        });
+      } else {
+        await favRef.delete();
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update favorites: $e')),
+      );
+    }
+  }
 
   @override
   void initState() {
@@ -670,8 +704,23 @@ class _JobsPageState extends State<JobsPage> {
             ),
           ),
           Expanded(
-            child: Builder(
-              builder: (_) {
+            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: _favStream(),
+              builder: (context, favSnap) {
+                final favIds = <String>{};
+
+                if (favSnap.hasData) {
+                  for (final doc in favSnap.data!.docs) {
+                    final data = doc.data();
+                    final jobId = (data['JobID'] ?? '').toString().trim();
+                    if (jobId.isNotEmpty) {
+                      favIds.add(jobId);
+                    }
+                  }
+                }
+
+                _saved = favIds;
+
                 if (_allJobs.isEmpty) {
                   return Center(
                     child: Text(
@@ -701,7 +750,15 @@ class _JobsPageState extends State<JobsPage> {
                   itemBuilder: (context, i) {
                     final j = jobs[i];
                     final info = _company[j.userId] ?? const CompanyInfo();
-                    return JobCard(job: j, company: info);
+
+                    return JobCard(
+                      job: j,
+                      company: info,
+                      isSaved: favIds.contains(j.jobId),
+                      onSavedChanged: (bool newValue) {
+                        _handleToggleFavorite(j, newValue);
+                      },
+                    );
                   },
                 );
               },
@@ -727,83 +784,6 @@ class UserProfile {
     this.hasMinimumInfo = false,
     this.savedJobIds = const {},
   });
-}
-
-Widget _infoRow(
-  BuildContext ctx, {
-  required IconData icon,
-  required String label,
-  required String value,
-}) {
-  if (value.trim().isEmpty) return const SizedBox.shrink();
-
-  return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 16),
-        const SizedBox(width: 8),
-        Expanded(
-          child: RichText(
-            text: TextSpan(
-              style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
-                    fontSize: 13.5,
-                    height: 1.3,
-                  ),
-              children: [
-                TextSpan(
-                  text: '$label: ',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                TextSpan(text: value),
-              ],
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-class _ExpandableText extends StatefulWidget {
-  final String text;
-  final int maxLines;
-  const _ExpandableText(this.text, {this.maxLines = 2});
-  @override
-  State<_ExpandableText> createState() => _ExpandableTextState();
-}
-
-class _ExpandableTextState extends State<_ExpandableText> {
-  bool _expanded = false;
-  @override
-  Widget build(BuildContext context) {
-    if (widget.text.trim().isEmpty) {
-      return const Text('No description provided.');
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          widget.text,
-          maxLines: _expanded ? null : widget.maxLines,
-          overflow: _expanded ? TextOverflow.visible : TextOverflow.ellipsis,
-        ),
-        const SizedBox(height: 6),
-        TextButton(
-          style: TextButton.styleFrom(
-            padding: EdgeInsets.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            minimumSize: const Size(40, 28),
-          ),
-          onPressed: () => setState(() => _expanded = !_expanded),
-          child: Text(_expanded ? 'Show less' : 'Show more'),
-        ),
-      ],
-    );
-  }
 }
 
 class _FilterBox extends StatelessWidget {

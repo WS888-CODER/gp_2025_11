@@ -19,39 +19,41 @@ class _FavoritesPageState extends State<FavoritesPage> {
   final Map<String, CompanyInfo> _companies = {};
   bool _loading = true;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _favSub;
-  StreamSubscription<User?>? _authSub; // ✅ إضافة
+  Future<void> _handleToggleFavorite(Job job, bool newValue) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    final favRef = FirebaseFirestore.instance
+        .collection('Favourite')
+        .doc('${uid}_${job.jobId}');
+
+    try {
+      if (newValue) {
+        await favRef.set({'UserID': uid, 'JobID': job.jobId});
+      } else {
+        await favRef.delete();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      SnackHelper.error(context, 'Failed to update favorites: $e');
+    }
+  }
 
   @override
   void initState() {
     super.initState();
-
-    // ✅ استمعي لتغيرات حالة المستخدم
-    _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
-      if (user == null) {
-        // المستخدم سجل خروج
-        _favSub?.cancel();
-        if (mounted) {
-          setState(() {
-            _jobs.clear();
-            _companies.clear();
-            _loading = false;
-          });
-        }
-      } else {
-        // المستخدم سجل دخول
-        _listenFavorites();
-      }
-    });
+    _listenFavorites();
   }
 
   void _listenFavorites() {
     final userId = FirebaseAuth.instance.currentUser?.uid;
 
-    // ✅ إلغاء أي stream سابق
-    _favSub?.cancel();
-
     if (userId == null) {
-      setState(() => _loading = false);
+      setState(() {
+        _loading = false;
+        _jobs.clear();
+        _companies.clear();
+      });
       return;
     }
 
@@ -174,9 +176,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
       if (!mounted) return;
       setState(() => _loading = false);
 
-      // ✅ تجاهل أخطاء الـ permissions بعد تسجيل الخروج
       if (e.toString().contains('permission-denied')) {
-        print('Permission denied - user logged out');
         return;
       }
 
@@ -190,7 +190,6 @@ class _FavoritesPageState extends State<FavoritesPage> {
   @override
   void dispose() {
     _favSub?.cancel();
-    _authSub?.cancel(); // ✅ إلغاء الاستماع لحالة المستخدم
     super.dispose();
   }
 
@@ -252,6 +251,9 @@ class _FavoritesPageState extends State<FavoritesPage> {
                         job: job,
                         company: company,
                         isSaved: true,
+                        onSavedChanged: (newValue) {
+                          _handleToggleFavorite(job, newValue);
+                        },
                       );
                     },
                   ));

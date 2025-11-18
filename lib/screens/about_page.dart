@@ -1,5 +1,6 @@
 // lib/screens/about_page.dart
 import 'package:flutter/material.dart';
+import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:url_launcher/url_launcher.dart'; // for email launch
 
 class AboutPage extends StatelessWidget {
@@ -23,13 +24,17 @@ class AboutPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
-    return Scaffold(
-      backgroundColor: scheme.surface,
+    return ThemedScaffold(
       appBar: AppBar(
-        title: const Text('About'),
+        title: const Text(
+          'About',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
         backgroundColor: _brand,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -102,7 +107,8 @@ class AboutPage extends StatelessWidget {
                   const SizedBox(height: 12),
 
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(.15),
                       borderRadius: BorderRadius.circular(20),
@@ -241,10 +247,6 @@ class _InfoCard extends StatelessWidget {
             offset: const Offset(0, 6),
           ),
         ],
-        border: Border.all(
-          color: scheme.outlineVariant.withOpacity(.4),
-          width: 0.7,
-        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

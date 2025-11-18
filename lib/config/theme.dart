@@ -1,32 +1,29 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // ألوان البراند اللي نبغى نكررها
-  static const Color primaryPurple = Color(0xFF4A5FBC); // البنفسجي حقكم
-  static const Color accentCoral = Color(0xFFFD6C67); // الكورال حقكم
+  static const Color primaryPurple = Color(0xFF4A5FBC);
+  static const Color accentCoral = Color(0xFFFD6C67);
 
-  // Switch theme الأساسي
   static final SwitchThemeData baseSwitchTheme = SwitchThemeData(
     thumbColor: MaterialStateProperty.resolveWith((states) {
       return Colors.white;
     }),
     trackColor: MaterialStateProperty.resolveWith((states) {
       if (states.contains(MaterialState.selected)) {
-        return primaryPurple; // لما يكون ON
+        return primaryPurple;
       }
-      return Colors.grey; // لما يكون OFF
+      return Colors.grey;
     }),
     trackOutlineColor: MaterialStateProperty.all(Colors.transparent),
   );
 
-  // الوضع الفاتح
   static ThemeData get lightTheme {
     return ThemeData(
       brightness: Brightness.light,
       useMaterial3: true,
       primaryColor: primaryPurple,
       scaffoldBackgroundColor: Colors.white,
-      colorScheme: ColorScheme.light(
+      colorScheme: const ColorScheme.light(
         primary: primaryPurple,
         secondary: accentCoral,
         surface: Colors.white,
@@ -58,18 +55,17 @@ class AppTheme {
     );
   }
 
-  // الوضع الداكن
   static ThemeData get darkTheme {
     return ThemeData(
       brightness: Brightness.dark,
       useMaterial3: true,
       primaryColor: primaryPurple,
       scaffoldBackgroundColor: const Color(0xFF121212),
-      colorScheme: ColorScheme.dark(
+      colorScheme: const ColorScheme.dark(
         primary: primaryPurple,
         secondary: accentCoral,
-        background: const Color(0xFF121212),
-        surface: const Color(0xFF1E1E1E),
+        background: Color(0xFF121212),
+        surface: Color(0xFF1E1E1E),
         onSurface: Colors.white70,
       ),
       appBarTheme: const AppBarTheme(

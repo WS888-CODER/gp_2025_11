@@ -108,7 +108,13 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
     return ThemedScaffold(
       appBar: AppBar(
-        title: const Text('Change Password'),
+        title: const Text(
+          'Change Password',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
         backgroundColor: primaryPurple,
         foregroundColor: Colors.white,
       ),

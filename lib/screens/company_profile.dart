@@ -125,18 +125,6 @@ class _CompanyProfileState extends State<CompanyProfile> {
     return null;
   }
 
-  void _showSnackSuccess(String message, {BuildContext? inContext}) {
-    final ctx = inContext ?? context;
-    if (!mounted) return;
-    SnackHelper.success(ctx, message);
-  }
-
-  void _showSnackError(String message, {BuildContext? inContext}) {
-    final ctx = inContext ?? context;
-    if (!mounted) return;
-    SnackHelper.error(ctx, message);
-  }
-
   Future<void> _openWebsite(String raw) async {
     final t = raw.trim();
     final url = t.startsWith(RegExp(r'https?://', caseSensitive: false))
@@ -144,11 +132,11 @@ class _CompanyProfileState extends State<CompanyProfile> {
         : 'https://$t';
     final uri = Uri.tryParse(url);
     if (uri == null) {
-      _showSnackError('Invalid URL');
+      SnackHelper.error(context, 'Invalid URL');
       return;
     }
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!ok) _showSnackError('Could not open the website');
+    if (!ok) SnackHelper.error(context, 'Could not open the website');
   }
 
   @override
@@ -262,7 +250,8 @@ class _CompanyProfileState extends State<CompanyProfile> {
         setState(() {
           _progress = null;
         });
-        _showSnackError(
+        SnackHelper.error(
+          context,
           'Upload failed: ${e.message ?? e.code}',
         );
       }
@@ -286,7 +275,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
       _pendingLogoFile = File(img.path);
     });
 
-    _showSnackSuccess('Logo selected.');
+    SnackHelper.success(context, 'Logo selected.');
   }
 
   bool _hasAnyLogo(Map<String, dynamic> current) {
@@ -310,18 +299,16 @@ class _CompanyProfileState extends State<CompanyProfile> {
         phoneLocal.isNotEmpty && _localSaPhone.hasMatch(phoneLocal);
 
     if (!formOk) {
-      _showSnackError('Please fix the highlighted fields',
-          inContext: inContext ?? context);
+      SnackHelper.error(context, 'Please fix the highlighted fields');
       return false;
     }
     if (!hasLogoNow) {
-      _showSnackError('Company logo is required before updating.',
-          inContext: inContext ?? context);
+      SnackHelper.error(context, 'Company logo is required before updating.');
       return false;
     }
     if (!(hasEmailValid || hasPhoneValid)) {
-      _showSnackError('Provide at least a valid email OR a valid phone number',
-          inContext: inContext ?? context);
+      SnackHelper.error(
+          context, 'Provide at least a valid email OR a valid phone number');
       return false;
     }
 
@@ -419,7 +406,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
       }
 
       if (updates.isEmpty) {
-        _showSnackError('No changes to save', inContext: inContext ?? context);
+        SnackHelper.error(context, 'No changes to save');
         return false;
       }
 
@@ -449,13 +436,11 @@ class _CompanyProfileState extends State<CompanyProfile> {
         await _deleteStorageFile(current[UserFields.photoUrl]?.toString());
       }
 
-      _showSnackSuccess('✅ Profile updated successfully',
-          inContext: inContext ?? context);
+      SnackHelper.success(context, 'Profile updated successfully');
 
       return true;
     } catch (e) {
-      _showSnackError('❌ Failed to update profile',
-          inContext: inContext ?? context);
+      SnackHelper.error(context, 'Failed to update profile');
       return false;
     } finally {
       if (mounted) {

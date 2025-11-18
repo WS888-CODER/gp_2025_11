@@ -336,15 +336,25 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundImage: (company?.logoUrl ?? '').isNotEmpty
-                        ? NetworkImage(company!.logoUrl)
-                        : null,
-                    backgroundColor: const Color(0xFFE8E8FF),
-                    child: (company?.logoUrl ?? '').isEmpty
-                        ? const Icon(Icons.business, size: 28)
-                        : null,
+                  Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Color(0xFF4A5FBC),
+                        width: 3,
+                      ),
+                    ),
+                    child: CircleAvatar(
+                      radius: 28,
+                      backgroundImage: (company?.logoUrl ?? '').isNotEmpty
+                          ? NetworkImage(company!.logoUrl)
+                          : null,
+                      backgroundColor: const Color(0xFFE8E8FF),
+                      child: (company?.logoUrl ?? '').isEmpty
+                          ? const Icon(Icons.business, size: 28)
+                          : null,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -667,12 +677,14 @@ class JobCard extends StatefulWidget {
   final Job job;
   final CompanyInfo company;
   final bool isSaved;
+  final ValueChanged<bool>? onSavedChanged;
 
   const JobCard({
     super.key,
     required this.job,
     required this.company,
     this.isSaved = false,
+    this.onSavedChanged,
   });
 
   @override
@@ -699,36 +711,10 @@ class _JobCardState extends State<JobCard> {
     }
   }
 
-  Future<void> _toggleFavorite() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
-
-    final docId = '${uid}_${widget.job.jobId}';
-    final favRef =
-        FirebaseFirestore.instance.collection('Favourite').doc(docId);
-
-    try {
-      final snap = await favRef.get();
-      if (!mounted) return;
-
-      if (snap.exists) {
-        await favRef.delete();
-        if (!mounted) return;
-        setState(() => _saved = false);
-        SnackHelper.success(context, 'Removed from favorites');
-      } else {
-        await favRef.set({
-          'UserID': uid,
-          'JobID': widget.job.jobId,
-        });
-        if (!mounted) return;
-        setState(() => _saved = true);
-        SnackHelper.success(context, 'Saved to favorites');
-      }
-    } catch (e) {
-      if (!mounted) return;
-      SnackHelper.error(context, 'Failed: $e');
-    }
+  void _toggleFavorite() {
+    final newValue = !_saved;
+    setState(() => _saved = newValue);
+    widget.onSavedChanged?.call(newValue);
   }
 
   @override
@@ -770,14 +756,24 @@ class _JobCardState extends State<JobCard> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundImage: company.logoUrl.isNotEmpty
-                        ? NetworkImage(company.logoUrl)
-                        : null,
-                    child: company.logoUrl.isEmpty
-                        ? const Icon(Icons.business, size: 20)
-                        : null,
+                  Container(
+                    padding: const EdgeInsets.all(2.5),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Color(0xFF4A5FBC),
+                        width: 2.5,
+                      ),
+                    ),
+                    child: CircleAvatar(
+                      radius: 20,
+                      backgroundImage: company.logoUrl.isNotEmpty
+                          ? NetworkImage(company.logoUrl)
+                          : null,
+                      child: company.logoUrl.isEmpty
+                          ? const Icon(Icons.business, size: 20)
+                          : null,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
