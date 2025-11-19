@@ -643,7 +643,7 @@ class _CompanyHomeState extends State<CompanyHome> {
         children: [
           Center(
             child: Text(
-              'Reports – قريبًا',
+              'Reports – soon',
               style: Theme.of(context).textTheme.titleMedium,
             ),
           ),
@@ -651,28 +651,44 @@ class _CompanyHomeState extends State<CompanyHome> {
         ],
       ),
       bottomNavigationBar: Container(
-        height: 70,
-        // ⬇️ إزالة لون الخلفية الثابت والاعتماد على الثيم
-        color: Theme.of(context).colorScheme.surface,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildNavItem(
-              icon: Icons.assessment_outlined,
-              filledIcon: Icons.assessment,
-              label: 'Reports',
-              isSelected: _tab == 0,
-              onTap: () => setState(() => _tab = 0),
-            ),
-            const SizedBox(width: 120),
-            _buildNavItem(
-              icon: Icons.home_outlined,
-              filledIcon: Icons.home,
-              label: 'Home',
-              isSelected: _tab == 1,
-              onTap: () => setState(() => _tab = 1),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 16,
+              offset: const Offset(0, -4),
             ),
           ],
+          border: Border(
+            top: BorderSide(
+              color: Theme.of(context).colorScheme.outline.withOpacity(0.15),
+            ),
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 6),
+        child: SafeArea(
+          top: false,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildNavItem(
+                icon: Icons.assessment_outlined,
+                filledIcon: Icons.assessment,
+                label: 'Reports',
+                isSelected: _tab == 0,
+                onTap: () => setState(() => _tab = 0),
+              ),
+              const SizedBox(width: 120),
+              _buildNavItem(
+                icon: Icons.home_outlined,
+                filledIcon: Icons.home,
+                label: 'Home',
+                isSelected: _tab == 1,
+                onTap: () => setState(() => _tab = 1),
+              ),
+            ],
+          ),
         ),
       ),
     );
