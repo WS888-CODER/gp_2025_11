@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:gp_2025_11/config/theme.dart';
+import 'package:gp_2025_11/screens/favorites_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class JobFields {
@@ -100,7 +101,14 @@ class Job {
 class JobDetailsPage extends StatefulWidget {
   final Job job;
   final CompanyInfo? company;
-  const JobDetailsPage({super.key, required this.job, this.company});
+  final bool isSaved;
+
+  const JobDetailsPage({
+    super.key,
+    required this.job,
+    this.company,
+    this.isSaved = false,
+  });
 
   @override
   State<JobDetailsPage> createState() => _JobDetailsPageState();
@@ -193,7 +201,7 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
   @override
   void initState() {
     super.initState();
-    _loadSaved();
+    _saved = widget.isSaved;
   }
 
   Future<void> _openWebsite(String raw) async {
@@ -207,45 +215,32 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
-  Future<void> _loadSaved() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
-    final favDocId = '${uid}_${widget.job.jobId}';
-    final snap = await FirebaseFirestore.instance
-        .collection('Favourite')
-        .doc(favDocId)
-        .get();
-    if (mounted) setState(() => _saved = snap.exists);
-  }
-
   Future<void> _toggleFavorite() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
+    if (uid == null) {
+      SnackHelper.error(context, 'Please log in first.');
+      return;
+    }
 
-    final docId = '${uid}_${widget.job.jobId}';
-    final favRef =
-        FirebaseFirestore.instance.collection('Favourite').doc(docId);
+    final newValue = !_saved;
+
+    setState(() {
+      _saved = newValue;
+    });
 
     try {
-      final snap = await favRef.get();
+      await FavoritesService.toggleFavorite(widget.job.jobId, newValue);
       if (!mounted) return;
 
-      if (snap.exists) {
-        await favRef.delete();
-        if (!mounted) return;
-        setState(() => _saved = false);
-        SnackHelper.success(context, 'Removed from favorites');
-      } else {
-        await favRef.set({
-          'UserID': uid,
-          'JobID': widget.job.jobId,
-        });
-        if (!mounted) return;
-        setState(() => _saved = true);
-        SnackHelper.success(context, 'Saved to favorites');
-      }
+      SnackHelper.success(
+        context,
+        newValue ? 'Saved to favorites' : 'Removed from favorites',
+      );
     } catch (e) {
       if (!mounted) return;
+      setState(() {
+        _saved = !newValue;
+      });
       SnackHelper.error(context, 'Failed: $e');
     }
   }
@@ -743,6 +738,7 @@ class _JobCardState extends State<JobCard> {
               builder: (_) => JobDetailsPage(
                 job: job,
                 company: company,
+                isSaved: _saved,
               ),
             ),
           );

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
+import 'package:gp_2025_11/screens/favorites_page.dart';
 import 'package:gp_2025_11/screens/job_card.dart';
 
 const kJobsCollection = 'Jobs';
@@ -126,46 +127,20 @@ class _JobsPageState extends State<JobsPage> {
   bool _showProfileReminder = false;
   final TextEditingController _searchController = TextEditingController();
 
-  late Set<String> _saved;
   List<String> _specialties = ['All', ...kSpecialtyOptions];
   List<Job> _allJobs = [];
 
   String _userType = 'JobSeeker';
   bool _isProfileComplete = false;
   UserProfile? _liveProfile;
-  Stream<QuerySnapshot<Map<String, dynamic>>> _favStream() {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) {
-      return const Stream.empty();
-    }
-
-    return FirebaseFirestore.instance
-        .collection('Favourite')
-        .where('UserID', isEqualTo: uid)
-        .snapshots();
-  }
 
   StreamSubscription<List<Job>>? _jobsSub;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userSub;
   final Map<String, CompanyInfo> _company = {};
   bool _loadingCompanies = false;
   Future<void> _handleToggleFavorite(Job job, bool newValue) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
-
-    final favRef = FirebaseFirestore.instance
-        .collection('Favourite')
-        .doc('${uid}_${job.jobId}');
-
     try {
-      if (newValue) {
-        await favRef.set({
-          'UserID': uid,
-          'JobID': job.jobId,
-        });
-      } else {
-        await favRef.delete();
-      }
+      await FavoritesService.toggleFavorite(job.jobId, newValue);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to update favorites: $e')),
@@ -176,7 +151,6 @@ class _JobsPageState extends State<JobsPage> {
   @override
   void initState() {
     super.initState();
-    _saved = {...widget.profile.savedJobIds};
 
     _jobsSub = _jobsStream().listen((jobs) {
       _ensureCompanyNames(jobs.map((j) => j.userId).toSet());
@@ -212,7 +186,6 @@ class _JobsPageState extends State<JobsPage> {
             cvUrl: cv.isEmpty ? null : cv,
             cvKeywords: cvKeys.toSet(),
             hasMinimumInfo: complete,
-            savedJobIds: _saved,
           );
         });
       });
@@ -704,22 +677,10 @@ class _JobsPageState extends State<JobsPage> {
             ),
           ),
           Expanded(
-            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: _favStream(),
+            child: StreamBuilder<Set<String>>(
+              stream: FavoritesService.favoritesStream(),
               builder: (context, favSnap) {
-                final favIds = <String>{};
-
-                if (favSnap.hasData) {
-                  for (final doc in favSnap.data!.docs) {
-                    final data = doc.data();
-                    final jobId = (data['JobID'] ?? '').toString().trim();
-                    if (jobId.isNotEmpty) {
-                      favIds.add(jobId);
-                    }
-                  }
-                }
-
-                _saved = favIds;
+                final favIds = favSnap.data ?? <String>{};
 
                 if (_allJobs.isEmpty) {
                   return Center(
@@ -776,13 +737,11 @@ class UserProfile {
   final String? cvUrl;
   final Set<String> cvKeywords;
   final bool hasMinimumInfo;
-  final Set<String> savedJobIds;
 
   const UserProfile({
     this.cvUrl,
     this.cvKeywords = const {},
     this.hasMinimumInfo = false,
-    this.savedJobIds = const {},
   });
 }
 

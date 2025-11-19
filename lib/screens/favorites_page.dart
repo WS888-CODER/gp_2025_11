@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gp_2025_11/config/theme.dart';
-import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:gp_2025_11/screens/job_card.dart';
 
 class FavoritesPage extends StatefulWidget {
@@ -18,21 +17,12 @@ class _FavoritesPageState extends State<FavoritesPage> {
   final Map<String, Job> _jobs = {};
   final Map<String, CompanyInfo> _companies = {};
   bool _loading = true;
-  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _favSub;
+
+  StreamSubscription<Set<String>>? _favSub;
+
   Future<void> _handleToggleFavorite(Job job, bool newValue) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
-
-    final favRef = FirebaseFirestore.instance
-        .collection('Favourite')
-        .doc('${uid}_${job.jobId}');
-
     try {
-      if (newValue) {
-        await favRef.set({'UserID': uid, 'JobID': job.jobId});
-      } else {
-        await favRef.delete();
-      }
+      await FavoritesService.toggleFavorite(job.jobId, newValue);
     } catch (e) {
       if (!mounted) return;
       SnackHelper.error(context, 'Failed to update favorites: $e');
@@ -57,13 +47,12 @@ class _FavoritesPageState extends State<FavoritesPage> {
       return;
     }
 
-    _favSub = FirebaseFirestore.instance
-        .collection('Favourite')
-        .where('UserID', isEqualTo: userId)
-        .snapshots()
-        .listen((favSnapshot) async {
+    _favSub =
+        FavoritesService.favoritesStream().listen((favoriteJobIdsSet) async {
       try {
-        if (favSnapshot.docs.isEmpty) {
+        final favoriteJobIds = favoriteJobIdsSet.toList();
+
+        if (favoriteJobIds.isEmpty) {
           if (!mounted) return;
           setState(() {
             _jobs.clear();
@@ -72,12 +61,6 @@ class _FavoritesPageState extends State<FavoritesPage> {
           });
           return;
         }
-
-        final favoriteJobIds = favSnapshot.docs
-            .map((d) => (d.data()['JobID'] ?? '').toString().trim())
-            .where((id) => id.isNotEmpty)
-            .toSet()
-            .toList();
 
         final Map<String, Job> newJobs = {};
         final Map<String, CompanyInfo> newCompanies = {};
@@ -195,67 +178,105 @@ class _FavoritesPageState extends State<FavoritesPage> {
 
   @override
   Widget build(BuildContext context) {
-    return ThemedScaffold(
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF4A5FBC),
-          title: const Text(
-            'Favorites',
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_jobs.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.favorite_border,
+              size: 80,
+              color: Colors.grey[400],
             ),
-          ),
-          iconTheme: const IconThemeData(color: Colors.white),
+            const SizedBox(height: 16),
+            Text(
+              'No Favorite Jobs Yet',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Jobs you save will appear here',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
         ),
-        body: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : _jobs.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.favorite_border,
-                          size: 80,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No Favorite Jobs Yet',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Jobs you save will appear here',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.all(12),
-                    itemCount: jobsList.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final job = jobsList[index];
-                      final company =
-                          _companies[job.userId] ?? const CompanyInfo();
-                      return JobCard(
-                        job: job,
-                        company: company,
-                        isSaved: true,
-                        onSavedChanged: (newValue) {
-                          _handleToggleFavorite(job, newValue);
-                        },
-                      );
-                    },
-                  ));
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.all(12),
+      itemCount: jobsList.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final job = jobsList[index];
+        final company = _companies[job.userId] ?? const CompanyInfo();
+        return JobCard(
+          job: job,
+          company: company,
+          isSaved: true,
+          onSavedChanged: (newValue) {
+            _handleToggleFavorite(job, newValue);
+          },
+        );
+      },
+    );
+  }
+}
+
+class FavoritesService {
+  static const String usersCollection = 'Users';
+  static const String favoriteField = 'favorite';
+
+  static DocumentReference<Map<String, dynamic>>? _userDoc() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return null;
+
+    return FirebaseFirestore.instance.collection(usersCollection).doc(uid);
+  }
+
+  static Future<void> toggleFavorite(String jobId, bool newValue) async {
+    final doc = _userDoc();
+    if (doc == null) return;
+
+    await doc.set(
+      {
+        favoriteField: newValue
+            ? FieldValue.arrayUnion([jobId])
+            : FieldValue.arrayRemove([jobId]),
+      },
+      SetOptions(merge: true),
+    );
+  }
+
+  static Stream<Set<String>> favoritesStream() {
+    final doc = _userDoc();
+    if (doc == null) {
+      return const Stream.empty();
+    }
+
+    return doc.snapshots().map((snap) {
+      final data = snap.data();
+      if (data == null) return <String>{};
+
+      final raw = data[favoriteField];
+      if (raw is! List) return <String>{};
+
+      return raw
+          .map((e) => e.toString().trim())
+          .where((id) => id.isNotEmpty)
+          .cast<String>()
+          .toSet();
+    });
   }
 }

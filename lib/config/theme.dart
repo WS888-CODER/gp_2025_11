@@ -1,4 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:gp_2025_11/screens/jobseeker_profile.dart';
 
 class AppTheme {
   static const Color primaryPurple = Color(0xFF4A5FBC);
@@ -240,6 +243,148 @@ class JadeerDialog<T> extends StatelessWidget {
             primaryLabel,
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
+        ),
+      ],
+    );
+  }
+}
+
+class JobSeekerAppBar extends StatelessWidget implements PreferredSizeWidget {
+  final Widget title;
+
+  const JobSeekerAppBar({
+    super.key,
+    required this.title,
+  });
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+
+  Stream<Map<String, dynamic>> _userMiniStream(String userId) {
+    if (userId.isEmpty) {
+      return Stream.value({
+        'name': 'User',
+        'email': '',
+        'photo': '',
+        'complete': false,
+      });
+    }
+    return FirebaseFirestore.instance
+        .collection('Users')
+        .doc(userId)
+        .snapshots()
+        .map((snap) {
+      final d = snap.data() ?? {};
+      return {
+        'name': (d['Name'] ?? '').toString().trim(),
+        'email': (d['Email'] ?? '').toString().trim(),
+        'photo': (d['PhotoURL'] ?? '').toString().trim(),
+        'complete': d['IsProfileComplete'] == true,
+      };
+    });
+  }
+
+  String _initials(String nameOrEmail) {
+    final s = nameOrEmail.trim();
+    if (s.isEmpty) return 'U';
+    final parts = s.split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    final base = s.contains('@') ? s.split('@').first : s;
+    return base.isNotEmpty
+        ? base.substring(0, base.length > 1 ? 2 : 1).toUpperCase()
+        : 'U';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const brand = AppTheme.primaryPurple;
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+    return AppBar(
+      backgroundColor: brand,
+      elevation: 0,
+      leadingWidth: 56,
+      leading: uid.isEmpty
+          ? null
+          : Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: StreamBuilder<Map<String, dynamic>>(
+                stream: _userMiniStream(uid),
+                builder: (context, snap) {
+                  final name = (snap.data?['name'] ?? '').toString();
+                  final email = (snap.data?['email'] ?? '').toString();
+                  final photo = (snap.data?['photo'] ?? '').toString();
+                  final complete = (snap.data?['complete'] == true);
+                  final placeholder = _initials(name.isNotEmpty ? name : email);
+
+                  final avatar = Hero(
+                    tag: 'profileAvatar',
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        CircleAvatar(
+                          radius: 22,
+                          backgroundImage:
+                              photo.isNotEmpty ? NetworkImage(photo) : null,
+                          backgroundColor: const Color(0xFFFF7B7B),
+                          foregroundColor: Colors.white,
+                          child: photo.isEmpty
+                              ? Text(
+                                  placeholder,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                  ),
+                                )
+                              : null,
+                        ),
+                      ],
+                    ),
+                  );
+
+                  return Tooltip(
+                    message:
+                        complete ? 'Profile complete' : 'Profile incomplete',
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const JobSeekerProfile(),
+                          ),
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: avatar,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+      title: title,
+      actions: [
+        IconButton(
+          tooltip: 'Notifications',
+          icon: const Icon(Icons.notifications_none, color: Colors.white),
+          onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Notifications – Soon')),
+          ),
+        ),
+        IconButton(
+          tooltip: 'Settings',
+          icon: const Icon(Icons.settings_outlined, color: Colors.white),
+          onPressed: () {
+            if (uid.isEmpty) return;
+            Navigator.pushNamed(
+              context,
+              '/settings',
+              arguments: {'userType': 'JobSeeker', 'userId': uid},
+            );
+          },
         ),
       ],
     );

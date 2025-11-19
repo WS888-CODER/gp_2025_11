@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:intl/intl.dart';
+import 'package:gp_2025_11/config/theme.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -29,36 +29,37 @@ class _HistoryPageState extends State<HistoryPage>
 
   @override
   Widget build(BuildContext context) {
-    return ThemedScaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF4A5FBC),
-        foregroundColor: Colors.white,
-        title: const Text('History'),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          tabs: const [
-            Tab(text: 'CV Enhancements'),
-            Tab(text: 'Mock Interviews'),
-            Tab(text: 'Job Applications'),
-          ],
+    return Column(
+      children: [
+        Container(
+          color: AppTheme.primaryPurple,
+          child: TabBar(
+            controller: _tabController,
+            indicatorColor: Colors.white,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
+            tabs: const [
+              Tab(text: 'CV Enhancements'),
+              Tab(text: 'Mock Interviews'),
+              Tab(text: 'Job Applications'),
+            ],
+          ),
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: const [
-          CVEnhancementsTab(),
-          MockInterviewsTab(),
-          JobApplicationsTab(),
-        ],
-      ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: const [
+              CVEnhancementsTab(),
+              MockInterviewsTab(),
+              JobApplicationsTab(),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
 
-// ============ CV ENHANCEMENTS TAB ============
 class CVEnhancementsTab extends StatelessWidget {
   const CVEnhancementsTab({super.key});
 
@@ -76,13 +77,11 @@ class CVEnhancementsTab extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-
         if (snapshot.hasError) {
           return Center(child: Text('Error: ${snapshot.error}'));
         }
 
         final docs = snapshot.data?.docs ?? [];
-
         if (docs.isEmpty) {
           return _buildEmptyState(
             icon: Icons.description_outlined,
@@ -116,9 +115,6 @@ class CVEnhancementsTab extends StatelessWidget {
                       : 'Date not available',
                 ),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () {
-                  // TODO: Navigate to CV enhancement details
-                },
               ),
             );
           },
@@ -128,7 +124,6 @@ class CVEnhancementsTab extends StatelessWidget {
   }
 }
 
-// ============ MOCK INTERVIEWS TAB ============
 class MockInterviewsTab extends StatelessWidget {
   const MockInterviewsTab({super.key});
 
@@ -146,13 +141,11 @@ class MockInterviewsTab extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-
         if (snapshot.hasError) {
           return Center(child: Text('Error: ${snapshot.error}'));
         }
 
         final docs = snapshot.data?.docs ?? [];
-
         if (docs.isEmpty) {
           return _buildEmptyState(
             icon: Icons.mic_none,
@@ -186,9 +179,6 @@ class MockInterviewsTab extends StatelessWidget {
                       : 'Date not available',
                 ),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () {
-                  // TODO: Navigate to mock interview details
-                },
               ),
             );
           },
@@ -198,7 +188,6 @@ class MockInterviewsTab extends StatelessWidget {
   }
 }
 
-// ============ JOB APPLICATIONS TAB ============
 class JobApplicationsTab extends StatelessWidget {
   const JobApplicationsTab({super.key});
 
@@ -216,13 +205,11 @@ class JobApplicationsTab extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-
         if (snapshot.hasError) {
           return Center(child: Text('Error: ${snapshot.error}'));
         }
 
         final docs = snapshot.data?.docs ?? [];
-
         if (docs.isEmpty) {
           return _buildEmptyState(
             icon: Icons.work_outline,
@@ -240,7 +227,6 @@ class JobApplicationsTab extends StatelessWidget {
             final jobId = data['JobID'] ?? '';
             final status = data['ApplicationStatus'] ?? 'Pending';
 
-            // Fetch job details
             return FutureBuilder<DocumentSnapshot>(
               future: FirebaseFirestore.instance
                   .collection('Jobs')
@@ -294,9 +280,6 @@ class JobApplicationsTab extends StatelessWidget {
                       ],
                     ),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () {
-                      // TODO: Navigate to application details
-                    },
                   ),
                 );
               },
@@ -321,7 +304,6 @@ class JobApplicationsTab extends StatelessWidget {
   }
 }
 
-// ============ EMPTY STATE WIDGET ============
 Widget _buildEmptyState({
   required IconData icon,
   required String title,
@@ -333,28 +315,20 @@ Widget _buildEmptyState({
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            icon,
-            size: 80,
-            color: Colors.grey[400],
-          ),
+          Icon(icon, size: 80, color: Colors.grey[400]),
           const SizedBox(height: 16),
           Text(
             title,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Colors.grey[700],
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           Text(
             subtitle,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-            ),
+            style: const TextStyle(fontSize: 14),
             textAlign: TextAlign.center,
           ),
         ],

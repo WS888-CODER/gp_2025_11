@@ -2,10 +2,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:gp_2025_11/screens/all_jobs.dart';
 import 'package:gp_2025_11/screens/job_card.dart';
-import 'package:gp_2025_11/screens/jobseeker_profile.dart';
 import 'package:gp_2025_11/screens/cv_enhancement_screen.dart';
 import 'package:gp_2025_11/screens/history_page.dart';
 import 'package:gp_2025_11/screens/favorites_page.dart';
@@ -22,7 +22,7 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
   int _tab = 1;
   final _homeScroll = ScrollController();
 
-  static const _brand = Color(0xFF4A5FBC);
+  static const _brand = AppTheme.primaryPurple;
 
   String get _effectiveUserId {
     final args =
@@ -90,10 +90,37 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
     );
   }
 
+  Widget _buildAppBarTitle(String userId) {
+    switch (_tab) {
+      case 0:
+        return const Text(
+          'History',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+          overflow: TextOverflow.ellipsis,
+        );
+      case 1:
+        return _WelcomeTitle(userId: userId);
+      case 2:
+        return const Text(
+          'Favorites',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+          overflow: TextOverflow.ellipsis,
+        );
+      default:
+        return _WelcomeTitle(userId: userId);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return; // مهم
+      if (!mounted) return;
       final messenger = ScaffoldMessenger.maybeOf(context);
       messenger?.hideCurrentMaterialBanner();
     });
@@ -161,38 +188,8 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
     final userId = _effectiveUserId;
 
     return ThemedScaffold(
-      appBar: AppBar(
-        backgroundColor: _brand,
-        elevation: 0,
-        leadingWidth: 56,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 8),
-          child: _ProfileButton(userId: userId),
-        ),
-        title: _WelcomeTitle(userId: userId),
-        actions: [
-          IconButton(
-            tooltip: 'Notifications',
-            icon: const Icon(Icons.notifications_none, color: Colors.white),
-            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Notifications – Soon')),
-            ),
-          ),
-          IconButton(
-            tooltip: 'Settings',
-            icon: const Icon(Icons.settings_outlined, color: Colors.white),
-            onPressed: () {
-              final uid = FirebaseAuth.instance.currentUser?.uid;
-              if (uid != null) {
-                Navigator.pushNamed(
-                  context,
-                  '/settings',
-                  arguments: {'userType': 'JobSeeker', 'userId': uid},
-                );
-              }
-            },
-          ),
-        ],
+      appBar: JobSeekerAppBar(
+        title: _buildAppBarTitle(userId),
       ),
       body: IndexedStack(
         index: _tab,
@@ -319,104 +316,6 @@ class _WelcomeTitle extends StatelessWidget {
   }
 }
 
-class _ProfileButton extends StatelessWidget {
-  const _ProfileButton({required this.userId});
-  final String userId;
-
-  Stream<Map<String, dynamic>> _userMiniStream() {
-    if (userId.isEmpty) {
-      return Stream.value({
-        'name': 'User',
-        'email': '',
-        'photo': '',
-        'complete': false,
-      });
-    }
-    return FirebaseFirestore.instance
-        .collection('Users')
-        .doc(userId)
-        .snapshots()
-        .map((snap) {
-      final d = snap.data() ?? {};
-      return {
-        'name': (d['Name'] ?? '').toString().trim(),
-        'email': (d['Email'] ?? '').toString().trim(),
-        'photo': (d['PhotoURL'] ?? '').toString().trim(),
-        'complete': d['IsProfileComplete'] == true,
-      };
-    });
-  }
-
-  String _initials(String nameOrEmail) {
-    final s = nameOrEmail.trim();
-    if (s.isEmpty) return 'U';
-    final parts = s.split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
-    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-    final base = s.contains('@') ? s.split('@').first : s;
-    return base.isNotEmpty
-        ? base.substring(0, base.length > 1 ? 2 : 1).toUpperCase()
-        : 'U';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<Map<String, dynamic>>(
-      stream: _userMiniStream(),
-      builder: (context, snap) {
-        final name = (snap.data?['name'] ?? '').toString();
-        final email = (snap.data?['email'] ?? '').toString();
-        final photo = (snap.data?['photo'] ?? '').toString();
-        final complete = (snap.data?['complete'] == true);
-        final placeholder = _initials(name.isNotEmpty ? name : email);
-
-        final avatar = Hero(
-          tag: 'profileAvatar',
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              CircleAvatar(
-                radius: 22,
-                backgroundImage: photo.isNotEmpty ? NetworkImage(photo) : null,
-                backgroundColor: const Color(0xFFFF7B7B),
-                foregroundColor: Colors.white,
-                child: photo.isEmpty
-                    ? Text(
-                        placeholder,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                          fontSize: 16,
-                        ),
-                      )
-                    : null,
-              ),
-            ],
-          ),
-        );
-
-        return Tooltip(
-          message: complete ? 'Profile complete' : 'Profile incomplete',
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const JobSeekerProfile(),
-                ),
-              );
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: avatar,
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
 class _BigTile extends StatelessWidget {
   final String label;
   final IconData icon;
@@ -485,22 +384,8 @@ class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
   bool _loadingCompanies = false;
   String? _error;
   Future<void> _toggleFavoriteForJob(Job job, bool newValue) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
-
-    final favRef = FirebaseFirestore.instance
-        .collection('Favourite')
-        .doc('${uid}_${job.jobId}');
-
     try {
-      if (newValue) {
-        await favRef.set({
-          'UserID': uid,
-          'JobID': job.jobId,
-        });
-      } else {
-        await favRef.delete();
-      }
+      await FavoritesService.toggleFavorite(job.jobId, newValue);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -514,17 +399,6 @@ class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
         .collection('Jobs')
         .orderBy(JobFields.startDate, descending: true)
         .limit(widget.limit * 5)
-        .snapshots();
-  }
-
-  Stream<QuerySnapshot<Map<String, dynamic>>> _favStream() {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) {
-      return const Stream.empty();
-    }
-    return FirebaseFirestore.instance
-        .collection('Favourite')
-        .where('UserID', isEqualTo: uid)
         .snapshots();
   }
 
@@ -678,25 +552,10 @@ class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
           );
         }
 
-        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: _favStream(),
+        return StreamBuilder<Set<String>>(
+          stream: FavoritesService.favoritesStream(),
           builder: (context, favSnap) {
-            final savedIds = <String>{
-              if (favSnap.hasData)
-                ...favSnap.data!.docs
-                    .map((d) => (d.data()['JobID'] ?? '').toString().trim())
-                    .where((id) => id.isNotEmpty),
-            };
-
-            if (_finalJobs.isEmpty) {
-              return Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  'No open jobs',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              );
-            }
+            final savedIds = favSnap.data ?? <String>{};
 
             return Column(
               children: _finalJobs.map((job) {
