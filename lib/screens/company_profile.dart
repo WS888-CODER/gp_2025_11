@@ -1171,7 +1171,7 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                                           if (mounted) setState(() {});
                                         },
                               child: const Text(
-                                'Remove',
+                                'Remove logo',
                                 style: TextStyle(color: Colors.red),
                               ),
                             ),
@@ -1321,7 +1321,7 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                       border: OutlineInputBorder(),
                       hintText: 'https://example.com',
                       helperText:
-                          'Optional. Include http:// or https:// if you like.',
+                          'Optional. You can include http:// or https://.',
                     ),
                     validator: (v) {
                       final t = (v ?? '').trim();
