@@ -137,8 +137,8 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
                 icon: Icons.mic_none,
                 color: _brand,
                 onTap: () {
-                  ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                      const SnackBar(content: Text('Mock Interviews – Soon')));
+                  SnackHelper.error(
+                      context, 'Mock Interviews will be available soon');
                 },
               ),
             ),

@@ -231,11 +231,6 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
     try {
       await FavoritesService.toggleFavorite(widget.job.jobId, newValue);
       if (!mounted) return;
-
-      SnackHelper.success(
-        context,
-        newValue ? 'Saved to favorites' : 'Removed from favorites',
-      );
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -266,13 +261,10 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
         ),
         actions: [
           IconButton(
-            tooltip:
-                isClosed ? 'Closed job' : (_saved ? 'Saved' : 'Save for later'),
-            onPressed: isClosed ? null : _toggleFavorite,
+            onPressed: _toggleFavorite,
             icon: Icon(
               _saved ? Icons.favorite : Icons.favorite_border,
-              color:
-                  isClosed ? Colors.grey : (_saved ? Colors.red : Colors.white),
+              color: (_saved ? Colors.red : Colors.white),
             ),
           ),
           const SizedBox(width: 4),
@@ -295,11 +287,8 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
           child: FilledButton(
             onPressed: isClosed
                 ? null
-                : () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Coming soon')),
-                    );
-                  },
+                : () => SnackHelper.error(
+                    context, 'Application functionality coming soon'),
             style: FilledButton.styleFrom(
               backgroundColor:
                   isClosed ? Colors.grey[400] : const Color(0xFF4A5FBC),
@@ -787,15 +776,10 @@ class _JobCardState extends State<JobCard> {
                     ),
                   ),
                   IconButton(
-                    tooltip: isClosed
-                        ? 'Closed job'
-                        : (_saved ? 'Saved' : 'Save for later'),
-                    onPressed: isClosed ? null : _toggleFavorite,
+                    onPressed: _toggleFavorite,
                     icon: Icon(
                       _saved ? Icons.favorite : Icons.favorite_border,
-                      color: isClosed
-                          ? Colors.grey
-                          : (_saved ? Colors.red : Colors.grey[600]),
+                      color: (_saved ? Colors.red : Colors.grey[600]),
                     ),
                   ),
                 ],
@@ -869,13 +853,8 @@ class _JobCardState extends State<JobCard> {
                   FilledButton(
                     onPressed: isClosed
                         ? null
-                        : () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Coming soon'),
-                              ),
-                            );
-                          },
+                        : () => SnackHelper.error(
+                            context, 'Application functionality coming soon'),
                     style: FilledButton.styleFrom(
                       backgroundColor:
                           isClosed ? Colors.grey[400] : const Color(0xFF4A5FBC),

@@ -187,6 +187,18 @@ class _JobsPageState extends State<JobsPage> {
             cvKeywords: cvKeys.toSet(),
             hasMinimumInfo: complete,
           );
+
+          final hasCv = cv.isNotEmpty;
+          final hasKeywords = cvKeys.isNotEmpty;
+
+          if (!hasCv || !hasKeywords) {
+            // No usable CV -> disable For You and hide reminder
+            _forYou = false;
+            _showProfileReminder = false;
+          } else if (_forYou) {
+            // For You is on and CV is valid -> no reminder needed
+            _showProfileReminder = false;
+          }
         });
       });
     }
@@ -249,11 +261,15 @@ class _JobsPageState extends State<JobsPage> {
     }
 
     if (_forYou) {
-      if (_profile.cvUrl == null) {
+      final hasCv = _profile.cvUrl != null;
+      final hasKeywords = _profile.cvKeywords.isNotEmpty;
+
+      if (!hasCv || !hasKeywords) {
+        // For You is "on" but we don't have usable CV data
         return const <Job>[];
-      } else {
-        res = res.where((j) => _matchesCvKeywords(j, _profile.cvKeywords));
       }
+
+      res = res.where((j) => _matchesCvKeywords(j, _profile.cvKeywords));
     }
 
     if (_search.trim().isNotEmpty) {
@@ -524,6 +540,7 @@ class _JobsPageState extends State<JobsPage> {
                                 _forYou = v;
 
                                 if (v) {
+                                  // Reset filters when turning ON For You
                                   _selectedSpecialty = 'All';
                                   _sort = SortOrder.newestFirst;
                                   _search = '';
@@ -531,7 +548,13 @@ class _JobsPageState extends State<JobsPage> {
                                   _showClosedJobs = false;
                                 }
 
-                                _showProfileReminder = v && !_isProfileComplete;
+                                // Banner logic: يظهر إذا For You ON وما عندنا CV usable
+                                final hasCv = _profile.cvUrl != null;
+                                final hasKeywords =
+                                    _profile.cvKeywords.isNotEmpty;
+
+                                _showProfileReminder =
+                                    _forYou && (!hasCv || !hasKeywords);
                               });
                             },
                           ),
@@ -629,7 +652,7 @@ class _JobsPageState extends State<JobsPage> {
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
-                                      'Complete your profile to get better matches.',
+                                      'Upload your CV to see personalized matches.',
                                       style: TextStyle(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w500,
@@ -694,11 +717,28 @@ class _JobsPageState extends State<JobsPage> {
                 }
 
                 if (jobs.isEmpty) {
+                  String message;
+
+                  if (_forYou) {
+                    final hasCv = _profile.cvUrl != null;
+                    final hasKeywords = _profile.cvKeywords.isNotEmpty;
+
+                    if (!hasCv) {
+                      message = 'Upload your CV to see personalized jobs.';
+                    } else if (!hasKeywords) {
+                      message =
+                          "We couldn't analyze your CV. Try uploading a clearer version.";
+                    } else {
+                      message =
+                          'No strong matches found yet – check All Jobs for more opportunities.';
+                    }
+                  } else {
+                    message = 'No jobs match your filters.';
+                  }
+
                   return Center(
                     child: Text(
-                      _forYou && _profile.cvUrl == null
-                          ? 'Upload your CV to see personalized jobs.'
-                          : 'No jobs match your filters.',
+                      message,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                   );

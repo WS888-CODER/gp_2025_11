@@ -370,9 +370,8 @@ class JobSeekerAppBar extends StatelessWidget implements PreferredSizeWidget {
         IconButton(
           tooltip: 'Notifications',
           icon: const Icon(Icons.notifications_none, color: Colors.white),
-          onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Notifications – Soon')),
-          ),
+          onPressed: () => SnackHelper.error(
+              context, 'Notifications will be available soon'),
         ),
         IconButton(
           tooltip: 'Settings',
