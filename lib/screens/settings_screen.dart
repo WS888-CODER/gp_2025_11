@@ -6,7 +6,6 @@ import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:provider/provider.dart';
 import 'package:gp_2025_11/config/app_settings_notifier.dart';
-import 'package:gp_2025_11/l10n/app_localizations.dart';
 
 class SettingsScreen extends StatefulWidget {
   final String userType;
@@ -28,27 +27,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isDeletingAccount = false;
 
   Future<void> _handleLogout(BuildContext context) async {
-    final l10n = AppLocalizations.of(context)!;
-    final currentLangCode = Localizations.localeOf(context).languageCode;
-
     bool? confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => JadeerDialog<bool>(
-        title:
-            currentLangCode == 'ar' ? 'تأكيد تسجيل الخروج' : 'Confirm Logout',
-        content: Text(
-          currentLangCode == 'ar'
-              ? 'هل أنت متأكد أنك تريد تسجيل الخروج؟'
-              : 'Are you sure you want to log out?',
+        title: 'Confirm Logout',
+        content: const Text(
+          'Are you sure you want to log out?',
           textAlign: TextAlign.center,
-          style: const TextStyle(
+          style: TextStyle(
             color: Colors.white70,
             fontSize: 15,
           ),
         ),
-        secondaryLabel: currentLangCode == 'ar' ? 'إلغاء' : 'Cancel',
+        secondaryLabel: 'Cancel',
         secondaryResult: false,
-        primaryLabel: l10n.logoutOption,
+        primaryLabel: 'Log Out',
         primaryResult: true,
       ),
     );
@@ -63,26 +56,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _handleDeleteAccount(BuildContext context) async {
-    final currentLangCode = Localizations.localeOf(context).languageCode;
-    final isArabic = currentLangCode == 'ar';
     final isJobSeeker = widget.userType == 'JobSeeker';
 
-    final title = isJobSeeker
-        ? (isArabic ? 'حذف الحساب نهائيًا' : 'Delete Account')
-        : (isArabic ? 'حذف حساب الشركة' : 'Delete Company Account');
+    final title = isJobSeeker ? 'Delete Account' : 'Delete Company Account';
 
     final description = isJobSeeker
-        ? (isArabic
-            ? 'سيتم حذف حسابك نهائيًا بما في ذلك بياناتك الشخصية، سيرتك الذاتية، تقاريرك، وبيانات المقابلات. كما سيتم إلغاء جميع طلبات التوظيف النشطة وحذف بياناتها المرتبطة.'
-            : 'Your account will be permanently deleted, including your personal data, CVs, reports, and interview data. All active applications will be cancelled and related data removed.')
-        : (isArabic
-            ? 'سيتم حذف حساب شركتكم نهائيًا بما في ذلك ملف الشركة، إعلانات الوظائف، وبيانات المتقدمين المرتبطة بها. سيتم إغلاق جميع الوظائف النشطة وحذف بيانات المتقدمين، وسيتم إرسال رسالة تأكيد إلى البريد الإلكتروني المسجل.'
-            : 'Your company account will be permanently deleted, including the company profile, job postings, and related applicant data. All active postings will be closed, and a confirmation email will be sent to the registered address.');
+        ? 'Your account will be permanently deleted, including your personal data, CVs, reports, and interview data. All active applications will be cancelled and related data removed.'
+        : 'Your company account will be permanently deleted, including the company profile, job postings, and related applicant data. All active postings will be closed, and a confirmation email will be sent to your registered address.';
 
-    final confirmLabel =
-        isArabic ? 'تأكيد الحذف' : (isJobSeeker ? 'Delete Account' : 'Delete');
-
-    final cancelLabel = isArabic ? 'إلغاء' : 'Cancel';
+    final confirmLabel = isJobSeeker ? 'Delete Account' : 'Delete';
 
     final bool? confirm = await showDialog<bool>(
       context: context,
@@ -91,18 +73,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: title,
         primaryLabel: confirmLabel,
         primaryResult: true,
-        secondaryLabel: cancelLabel,
+        secondaryLabel: 'Cancel',
         secondaryResult: false,
         content: SingleChildScrollView(
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                isArabic
-                    ? 'هل أنت متأكد أنك تريد المتابعة؟ لا يمكن التراجع عن هذه العملية.'
-                    : 'Are you sure you want to proceed? This action cannot be undone.',
-                style: const TextStyle(
+              const Text(
+                'Are you sure you want to proceed? This action cannot be undone.',
+                style: TextStyle(
                   color: Colors.white,
                   fontSize: 15,
                 ),
@@ -121,9 +100,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
 
-    if (confirm != true) {
-      return;
-    }
+    if (confirm != true) return;
 
     setState(() => _isDeletingAccount = true);
 
@@ -144,21 +121,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!success) {
         SnackHelper.error(
           context,
-          isArabic
-              ? 'فشل حذف الحساب. حاول مرة أخرى.'
-              : 'Failed to delete account. Please try again.',
+          'Failed to delete account. Please try again.',
         );
         setState(() => _isDeletingAccount = false);
         return;
       }
 
       final successMessage = isJobSeeker
-          ? (isArabic
-              ? 'تم حذف حسابك بنجاح.'
-              : 'Your account has been deleted successfully.')
-          : (isArabic
-              ? 'تم حذف حساب الشركة بنجاح. تم إرسال رسالة تأكيد إلى بريدكم الإلكتروني.'
-              : 'Your company account has been deleted successfully. A confirmation email has been sent to your registered email.');
+          ? 'Your account has been deleted successfully.'
+          : 'Your company account has been deleted successfully. A confirmation email has been sent.';
 
       SnackHelper.success(context, successMessage);
 
@@ -166,76 +137,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
       await FirebaseAuth.instance.signOut();
       if (!context.mounted) return;
+
       Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
     } catch (e) {
       SnackHelper.error(
         context,
-        isArabic
-            ? 'حدث خطأ أثناء حذف الحساب. حاول مرة أخرى.'
-            : 'An error occurred while deleting your account. Please try again.',
+        'An error occurred while deleting your account. Please try again.',
       );
     } finally {
-      if (mounted) {
-        setState(() => _isDeletingAccount = false);
-      }
+      if (mounted) setState(() => _isDeletingAccount = false);
     }
   }
 
   void _toggleTheme(AppSettingsNotifier settings, bool value) {
     final newMode = value ? ThemeMode.dark : ThemeMode.light;
-    final currentLangCode = Localizations.localeOf(context).languageCode;
     settings.toggleTheme(newMode);
 
-    final themeName = newMode == ThemeMode.light
-        ? (currentLangCode == 'ar' ? 'الوضع الفاتح' : 'Light Mode')
-        : (currentLangCode == 'ar' ? 'الوضع الداكن' : 'Dark Mode');
+    final themeName = newMode == ThemeMode.light ? 'Light Mode' : 'Dark Mode';
 
     SnackHelper.success(
       context,
-      currentLangCode == 'ar'
-          ? 'تم تغيير السمة إلى $themeName'
-          : 'Theme changed to $themeName',
-    );
-  }
-
-  void _changeLanguage(AppSettingsNotifier settings, AppLocalizations l10n) {
-    final targetLangName =
-        settings.currentLanguageName == 'English' ? 'العربية' : 'English';
-    final currentLangCode = Localizations.localeOf(context).languageCode;
-
-    settings.toggleLanguage();
-
-    if (context.mounted) {
-      Navigator.of(context).pushReplacementNamed(
-        '/settings',
-        arguments: {
-          'userType': widget.userType,
-          'userId': widget.userId,
-        },
-      );
-    }
-
-    SnackHelper.success(
-      context,
-      currentLangCode == 'ar'
-          ? 'تم التبديل إلى $targetLangName'
-          : 'Language switched to $targetLangName',
+      'Theme changed to $themeName',
     );
   }
 
   void _toggleNotifications(bool value) {
     setState(() => _isNotificationsEnabled = value);
-    final currentLangCode = Localizations.localeOf(context).languageCode;
 
-    final statusText = _isNotificationsEnabled
-        ? (currentLangCode == 'ar' ? 'قيد التشغيل' : 'ON')
-        : (currentLangCode == 'ar' ? 'متوقفة' : 'OFF');
+    final statusText = value ? 'ON' : 'OFF';
 
     SnackHelper.success(
       context,
-      currentLangCode == 'ar'
-          ? 'الإشعارات الآن $statusText'
-          : 'Notifications are $statusText',
+      'Notifications are $statusText',
     );
   }
 
@@ -251,28 +184,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final settings = Provider.of<AppSettingsNotifier>(context);
-    final l10n = AppLocalizations.of(context)!;
-    final currentLangIsArabic =
-        Localizations.localeOf(context).languageCode == 'ar';
-
-    final targetLangName = currentLangIsArabic ? 'English' : 'العربية';
-    final currentLangName = currentLangIsArabic ? 'العربية' : 'English';
 
     return ThemedScaffold(
       appBar: AppBar(
-        title: Text(l10n.settingsTitle,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            )),
+        title: const Text(
+          'Settings',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         backgroundColor: _brandColor,
       ),
       body: FutureBuilder<Map<String, dynamic>?>(
         future: _fetchUserData(),
         builder: (context, snapshot) {
-          final isLoading = snapshot.connectionState == ConnectionState.waiting;
-
-          if (isLoading) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
@@ -280,21 +207,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             padding: const EdgeInsets.fromLTRB(20.0, 40.0, 20.0, 25.0),
             child: ListView(
               children: [
+                // Theme
                 SettingsSectionCard(
                   child: _SettingsSwitchItem(
-                    icon: Icons.language,
-                    iconColor: Colors.blue,
-                    title: l10n.switchLanguage(targetLangName),
-                    value: settings.locale.languageCode == 'ar',
-                    onChanged: (value) => _changeLanguage(settings, l10n),
-                    switchColor: _brandColor,
-                    subtitle: Text(l10n.currentLanguage(currentLangName)),
-                    isTitleBold: true,
-                  ),
-                ),
-                SettingsSectionCard(
-                  child: _SettingsSwitchItem(
-                    title: l10n.themeOption,
+                    title: 'Appearance',
                     icon: Icons.light_mode,
                     iconColor: Colors.orange,
                     value: settings.themeMode == ThemeMode.dark,
@@ -303,40 +219,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     isTitleBold: true,
                     subtitle: Text(
                       settings.themeMode == ThemeMode.dark
-                          ? (currentLangIsArabic ? 'الوضع الداكن' : 'Dark Mode')
-                          : (currentLangIsArabic
-                              ? 'الوضع الفاتح'
-                              : 'Light Mode'),
+                          ? 'Dark Mode'
+                          : 'Light Mode',
                     ),
                   ),
                 ),
+
+                // Notifications
                 SettingsSectionCard(
                   child: _SettingsSwitchItem(
-                    title: l10n.notificationsOption,
+                    title: 'Notifications',
                     icon: Icons.notifications_none,
                     iconColor: Colors.purple,
                     value: _isNotificationsEnabled,
                     onChanged: _toggleNotifications,
                     switchColor: _brandColor,
-                    subtitle: Text(l10n.manageAlertsSubtitle),
+                    subtitle: const Text('Manage alerts and reminders'),
                     isTitleBold: true,
                   ),
                 ),
+
+                // Change password
                 SettingsSectionCard(
                   child: _SettingsItem(
-                    title: l10n.changePasswordOption,
+                    title: 'Change Password',
                     icon: Icons.lock_outline,
                     iconColor: _brandColor,
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () =>
                         Navigator.pushNamed(context, '/change-password'),
-                    subtitle: Text(l10n.resetPasswordSubtitle),
+                    subtitle: const Text('Reset your password securely'),
                     isTitleBold: true,
                   ),
                 ),
+
+                // Account details
                 SettingsSectionCard(
                   child: _SettingsItem(
-                    title: l10n.myAccountDetailsSection,
+                    title: 'My Account Details',
                     icon: Icons.account_circle,
                     iconColor: Colors.teal,
                     trailing: const Icon(Icons.chevron_right),
@@ -350,46 +270,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         },
                       );
                     },
-                    subtitle: Text(l10n.viewOnlyText),
+                    subtitle: const Text('Account information overview'),
                     isTitleBold: true,
                   ),
                 ),
+
+                // About
                 SettingsSectionCard(
                   child: _SettingsItem(
-                    title: currentLangIsArabic ? 'حول التطبيق' : 'About',
+                    title: 'About',
                     icon: Icons.info_outline,
                     iconColor: Colors.lightGreen,
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () => Navigator.pushNamed(
-                      context,
-                      '/about',
-                    ),
-                    subtitle: Text(
-                      currentLangIsArabic
-                          ? 'إصدار التطبيق والمعلومات'
-                          : 'App version and information',
-                    ),
+                    onTap: () => Navigator.pushNamed(context, '/about'),
+                    subtitle: const Text('App version and information'),
                     isTitleBold: true,
                   ),
                 ),
+
+                // Logout
                 SettingsSectionCard(
                   child: _SettingsItem(
-                    title: l10n.logoutOption,
+                    title: 'Log Out',
                     icon: Icons.logout,
                     iconColor: Colors.red,
                     onTap: () => _handleLogout(context),
                     isTitleBold: true,
                   ),
                 ),
+
+                // Delete account
                 SettingsSectionCard(
                   child: _SettingsItem(
-                    title: currentLangIsArabic
-                        ? (widget.userType == 'JobSeeker'
-                            ? 'حذف الحساب نهائيًا'
-                            : 'حذف حساب الشركة نهائيًا')
-                        : (widget.userType == 'JobSeeker'
-                            ? 'Delete Account'
-                            : 'Delete Company Account'),
+                    title: widget.userType == 'JobSeeker'
+                        ? 'Delete Account'
+                        : 'Delete Company Account',
                     icon: Icons.delete_forever_outlined,
                     iconColor: Colors.red,
                     trailing: _isDeletingAccount
@@ -407,13 +322,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _handleDeleteAccount(context);
                     },
                     subtitle: Text(
-                      currentLangIsArabic
-                          ? (widget.userType == 'JobSeeker'
-                              ? 'سيتم حذف بياناتك وجميع نشاطاتك نهائيًا'
-                              : 'سيتم حذف بيانات الشركة وجميع الوظائف والمتقدمين المرتبطين بها')
-                          : (widget.userType == 'JobSeeker'
-                              ? 'Permanently delete your account and all related data'
-                              : 'Permanently delete your company account and related data'),
+                      widget.userType == 'JobSeeker'
+                          ? 'Permanently delete your account and all related data'
+                          : 'Permanently delete your company account and all related data',
                     ),
                     isTitleBold: true,
                   ),
@@ -428,7 +339,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 }
 
 /* ----------------------------------------------------------------------
-   Card wrapper widget to give each setting its own rounded card
+   Card wrapper
 ---------------------------------------------------------------------- */
 class SettingsSectionCard extends StatelessWidget {
   final Widget child;
@@ -460,7 +371,7 @@ class SettingsSectionCard extends StatelessWidget {
 }
 
 /* ----------------------------------------------------------------------
-   Single tap item (no switch)
+   Basic item
 ---------------------------------------------------------------------- */
 class _SettingsItem extends StatelessWidget {
   final String title;
@@ -470,8 +381,6 @@ class _SettingsItem extends StatelessWidget {
   final VoidCallback onTap;
   final Widget? subtitle;
   final bool isTitleBold;
-
-  static const Color _brandColor = Color(0xFF4A5FBC);
 
   const _SettingsItem({
     required this.title,
@@ -488,7 +397,6 @@ class _SettingsItem extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       onTap: onTap,
-      hoverColor: _brandColor.withOpacity(0.05),
       child: ListTile(
         visualDensity: VisualDensity.compact,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -497,7 +405,6 @@ class _SettingsItem extends StatelessWidget {
           title,
           style: TextStyle(
             fontWeight: isTitleBold ? FontWeight.bold : FontWeight.normal,
-            color: Theme.of(context).textTheme.bodyLarge?.color,
           ),
         ),
         trailing: trailing,
@@ -508,7 +415,7 @@ class _SettingsItem extends StatelessWidget {
 }
 
 /* ----------------------------------------------------------------------
-   Switch item (language / theme / notifications)
+   Switch item
 ---------------------------------------------------------------------- */
 class _SettingsSwitchItem extends StatelessWidget {
   final String title;
@@ -533,12 +440,9 @@ class _SettingsSwitchItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       onTap: () => onChanged(!value),
-      hoverColor: const Color(0xFF4A5FBC).withOpacity(0.05),
       child: ListTile(
         visualDensity: VisualDensity.compact,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -547,43 +451,12 @@ class _SettingsSwitchItem extends StatelessWidget {
           title,
           style: TextStyle(
             fontWeight: isTitleBold ? FontWeight.bold : FontWeight.normal,
-            color: Theme.of(context).textTheme.bodyLarge?.color,
           ),
         ),
         subtitle: subtitle,
-        trailing: Theme(
-          data: Theme.of(context).copyWith(
-            switchTheme: SwitchThemeData(
-              trackColor: MaterialStateProperty.resolveWith((states) {
-                if (states.contains(MaterialState.selected)) {
-                  return scheme.secondary;
-                } else {
-                  return scheme.surface;
-                }
-              }),
-              thumbColor: MaterialStateProperty.resolveWith((states) {
-                if (states.contains(MaterialState.selected)) {
-                  return Colors.white;
-                } else {
-                  return scheme.primary;
-                }
-              }),
-              trackOutlineColor: MaterialStateProperty.resolveWith((states) {
-                if (states.contains(MaterialState.selected)) {
-                  return scheme.secondary;
-                } else {
-                  return scheme.primary;
-                }
-              }),
-            ),
-          ),
-          child: Transform.scale(
-            scale: 0.9,
-            child: Switch.adaptive(
-              value: value,
-              onChanged: onChanged,
-            ),
-          ),
+        trailing: Switch(
+          value: value,
+          onChanged: onChanged,
         ),
       ),
     );

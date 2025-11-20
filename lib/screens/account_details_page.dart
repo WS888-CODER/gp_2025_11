@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
-import 'package:gp_2025_11/l10n/app_localizations.dart';
 
 class AccountDetailsPage extends StatefulWidget {
   final String userId;
@@ -31,9 +30,9 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
     super.dispose();
   }
 
-  // نفس منطق الفالديشن في signup (Full Name):
-  // - حروف ومسافات فقط
-  // - على الأقل كلمتين
+  // Same validation logic as signup (Full Name):
+  // - Letters and spaces only
+  // - At least two words
   bool _isValidFullName(String name) {
     String trimmedName = name.trim();
     final nameRegex = RegExp(r'^[a-zA-Z\s]+$');
@@ -92,15 +91,14 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final isJobSeeker = widget.userType == 'JobSeeker';
     const brandColor = Color(0xFF4A5FBC);
 
     return ThemedScaffold(
       appBar: AppBar(
-        title: Text(
-          l10n.myAccountDetailsSection,
-          style: const TextStyle(
+        title: const Text(
+          'My Account Details',
+          style: TextStyle(
             fontWeight: FontWeight.w600,
             color: Colors.white,
           ),
@@ -149,7 +147,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
           final registeredEmail = userData['Email'] ?? 'N/A';
           final companyName = userData['CompanyName'] ?? 'N/A';
 
-          // لما ندخل وضع التعديل لأول مرة نعبي الكنترولر بالاسم
+          // When entering edit mode for the first time, prefill controller
           if (_isEditing && _nameController.text.isEmpty) {
             _nameController.text = registeredFullName;
           }
@@ -171,23 +169,23 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                   child: _isEditing
                       ? _EditableNameField(
                           controller: _nameController,
-                          label: l10n.fullNameLabel,
+                          label: 'Full Name',
                         )
                       : _DetailTile(
                           icon: Icons.person,
-                          label: l10n.fullNameLabel,
+                          label: 'Full Name',
                           value: registeredFullName,
                         ),
                 ),
 
                 const SizedBox(height: 12),
 
-                // Company name (read-only – للشركات فقط)
+                // Company name (read-only – for companies only)
                 if (!isJobSeeker)
                   _AccountSectionCard(
                     child: _DetailTile(
                       icon: Icons.business,
-                      label: l10n.companyNameLabel,
+                      label: 'Company Name',
                       value: companyName,
                     ),
                   ),
@@ -198,7 +196,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                 _AccountSectionCard(
                   child: _DetailTile(
                     icon: Icons.email_outlined,
-                    label: l10n.registeredEmailLabel,
+                    label: 'Registered Email',
                     value: registeredEmail,
                     subtitle: 'Email address cannot be changed.',
                   ),

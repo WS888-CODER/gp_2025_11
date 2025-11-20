@@ -7,7 +7,6 @@ import 'package:gp_2025_11/config/app_settings_notifier.dart';
 
 // localization
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:gp_2025_11/l10n/app_localizations.dart';
 
 // screens
 import 'package:gp_2025_11/screens/account_details_page.dart';
@@ -57,13 +56,11 @@ class Jadeer extends StatelessWidget {
       darkTheme: AppTheme.darkTheme,
       themeMode: settings.themeMode,
       localizationsDelegates: const [
-        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
       locale: settings.locale,
-      supportedLocales: AppLocalizations.supportedLocales,
       debugShowCheckedModeBanner: false,
       home: StartScreen(),
       routes: {

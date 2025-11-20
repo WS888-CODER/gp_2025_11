@@ -618,9 +618,8 @@ class _CompanyHomeState extends State<CompanyHome> {
           IconButton(
             tooltip: 'Notifications',
             icon: const Icon(Icons.notifications_none, color: Colors.white),
-            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Notifications – قريبًا')),
-            ),
+            onPressed: () => SnackHelper.error(
+                context, 'Notifications will be available soon'),
           ),
           IconButton(
             tooltip: 'Settings',
