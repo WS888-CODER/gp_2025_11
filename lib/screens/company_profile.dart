@@ -290,6 +290,11 @@ class _CompanyProfileState extends State<CompanyProfile> {
       {BuildContext? inContext}) async {
     final formOk = _form.currentState?.validate() ?? false;
 
+    if (!formOk) {
+      SnackHelper.error(context, 'Please fix the highlighted fields');
+      return false;
+    }
+
     final hasLogoNow = _hasAnyLogo(current);
 
     final email = _emailCtrl.text.trim();
@@ -297,20 +302,6 @@ class _CompanyProfileState extends State<CompanyProfile> {
     final hasEmailValid = email.isNotEmpty && _email.hasMatch(email);
     final hasPhoneValid =
         phoneLocal.isNotEmpty && _localSaPhone.hasMatch(phoneLocal);
-
-    if (!formOk) {
-      SnackHelper.error(context, 'Please fix the highlighted fields');
-      return false;
-    }
-    if (!hasLogoNow) {
-      SnackHelper.error(context, 'Company logo is required before updating.');
-      return false;
-    }
-    if (!(hasEmailValid || hasPhoneValid)) {
-      SnackHelper.error(
-          context, 'Provide at least a valid email OR a valid phone number');
-      return false;
-    }
 
     setState(() {
       _saving = true;
@@ -338,6 +329,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
           newPhoneE164 = candidate;
         }
       }
+
       final websiteRaw = _websiteCtrl.text.trim();
       final oldWebsite = (current[UserFields.website] ?? '').toString().trim();
 
@@ -362,7 +354,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
       final complete = desc.length >= 100 &&
           loc.isNotEmpty &&
           (hasEmailValid || hasPhoneValid) &&
-          _hasAnyLogo(current);
+          hasLogoNow;
 
       final updates = <String, dynamic>{
         UserFields.description: desc,
@@ -381,6 +373,8 @@ class _CompanyProfileState extends State<CompanyProfile> {
 
       if (newPhoneE164 != null) {
         updates[UserFields.phone] = newPhoneE164;
+      } else if (phoneLocal.isEmpty && oldPhoneE164.isNotEmpty) {
+        updates[UserFields.phone] = FieldValue.delete();
       }
 
       if (websiteRaw != oldWebsite) {
@@ -394,6 +388,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
           updates[UserFields.website] = normalized;
         }
       }
+
       if (newLogoUrl != null) {
         updates[UserFields.photoUrl] = newLogoUrl;
         if (newLogoPath != null) {
@@ -437,7 +432,6 @@ class _CompanyProfileState extends State<CompanyProfile> {
       }
 
       SnackHelper.success(context, 'Profile updated successfully');
-
       return true;
     } catch (e) {
       SnackHelper.error(context, 'Failed to update profile');
@@ -1212,7 +1206,7 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                   ),
                   const SizedBox(height: 24),
                   const Text(
-                    'Description (min 100 chars)',
+                    'Description',
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                     ),
@@ -1225,11 +1219,12 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                     maxLength: 600,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
+                      helperText:
+                          'Optional, but 100+ characters recommended to complete profile',
                     ),
                     validator: (v) {
                       final t = v?.trim() ?? '';
-                      if (t.isEmpty) return 'Enter description';
-                      if (t.length < 100) return 'Too short';
+                      if (t.isEmpty) return null;
                       if (t.length > 600) {
                         return 'Too long (max 600)';
                       }
@@ -1260,7 +1255,7 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                     ),
                     validator: (v) {
                       final t = parent._cleanLoc(v ?? '');
-                      if (t.isEmpty) return 'Enter location';
+                      if (t.isEmpty) return null;
                       if (!parent._locAllowed.hasMatch(t)) {
                         return '2–40 letters only (Arabic/English), no numbers';
                       }
