@@ -5,7 +5,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:provider/provider.dart';
-import 'package:gp_2025_11/config/app_settings_notifier.dart';
 
 class SettingsScreen extends StatefulWidget {
   final String userType;
@@ -29,9 +28,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _handleLogout(BuildContext context) async {
     bool? confirm = await showDialog<bool>(
       context: context,
-      builder: (ctx) => JadeerDialog<bool>(
+      builder: (ctx) => const JadeerDialog<bool>(
         title: 'Confirm Logout',
-        content: const Text(
+        content: Text(
           'Are you sure you want to log out?',
           textAlign: TextAlign.center,
           style: TextStyle(
@@ -133,8 +132,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
       SnackHelper.success(context, successMessage);
 
-      await Future.delayed(const Duration(seconds: 2));
-
       await FirebaseAuth.instance.signOut();
       if (!context.mounted) return;
 
@@ -152,79 +149,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _toggleTheme(AppSettingsNotifier settings, bool value) {
     final newMode = value ? ThemeMode.dark : ThemeMode.light;
     settings.toggleTheme(newMode);
-
-    final themeName = newMode == ThemeMode.light ? 'Light Mode' : 'Dark Mode';
-
-    SnackHelper.success(
-      context,
-      'Theme changed to $themeName',
-    );
   }
 
   void _toggleNotifications(bool value) {
     setState(() => _isNotificationsEnabled = value);
-
-    final statusText = value ? 'ON' : 'OFF';
-
-    SnackHelper.success(
-      context,
-      'Notifications are $statusText',
-    );
-  }
-
-  Future<Map<String, dynamic>?> _fetchUserData() async {
-    if (widget.userId.isEmpty) return null;
-    final doc = await FirebaseFirestore.instance
-        .collection('Users')
-        .doc(widget.userId)
-        .get();
-    return doc.data();
   }
 
   @override
   Widget build(BuildContext context) {
     final settings = Provider.of<AppSettingsNotifier>(context);
+    final isAdmin = widget.userType == 'Admin';
 
     return ThemedScaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Settings',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
+        appBar: AppBar(
+          title: const Text(
+            'Settings',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
           ),
+          backgroundColor: _brandColor,
         ),
-        backgroundColor: _brandColor,
-      ),
-      body: FutureBuilder<Map<String, dynamic>?>(
-        future: _fetchUserData(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(20.0, 40.0, 20.0, 25.0),
-            child: ListView(
-              children: [
-                // Theme
-                SettingsSectionCard(
-                  child: _SettingsSwitchItem(
-                    title: 'Appearance',
-                    icon: Icons.light_mode,
-                    iconColor: Colors.orange,
-                    value: settings.themeMode == ThemeMode.dark,
-                    onChanged: (value) => _toggleTheme(settings, value),
-                    switchColor: _brandColor,
-                    isTitleBold: true,
-                    subtitle: Text(
-                      settings.themeMode == ThemeMode.dark
-                          ? 'Dark Mode'
-                          : 'Light Mode',
-                    ),
+        body: Padding(
+          padding: const EdgeInsets.fromLTRB(20.0, 40.0, 20.0, 25.0),
+          child: ListView(
+            children: [
+              // ======= Appearance =======
+              SettingsSectionCard(
+                child: _SettingsSwitchItem(
+                  title: 'Appearance',
+                  icon: Icons.light_mode,
+                  iconColor: Colors.orange,
+                  value: settings.themeMode == ThemeMode.dark,
+                  onChanged: (value) => _toggleTheme(settings, value),
+                  switchColor: _brandColor,
+                  isTitleBold: true,
+                  subtitle: Text(
+                    settings.themeMode == ThemeMode.dark
+                        ? 'Dark Mode'
+                        : 'Light Mode',
                   ),
                 ),
+              ),
 
+              if (!isAdmin) ...[
                 // Notifications
                 SettingsSectionCard(
                   child: _SettingsSwitchItem(
@@ -274,32 +243,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     isTitleBold: true,
                   ),
                 ),
+              ],
 
-                // About
-                SettingsSectionCard(
-                  child: _SettingsItem(
-                    title: 'About',
-                    icon: Icons.info_outline,
-                    iconColor: Colors.lightGreen,
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => Navigator.pushNamed(context, '/about'),
-                    subtitle: const Text('App version and information'),
-                    isTitleBold: true,
-                  ),
+              // About
+              SettingsSectionCard(
+                child: _SettingsItem(
+                  title: 'About',
+                  icon: Icons.info_outline,
+                  iconColor: Colors.lightGreen,
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.pushNamed(context, '/about'),
+                  subtitle: const Text('App version and information'),
+                  isTitleBold: true,
                 ),
+              ),
 
-                // Logout
-                SettingsSectionCard(
-                  child: _SettingsItem(
-                    title: 'Log Out',
-                    icon: Icons.logout,
-                    iconColor: Colors.red,
-                    onTap: () => _handleLogout(context),
-                    isTitleBold: true,
-                  ),
+              // Logout
+              SettingsSectionCard(
+                child: _SettingsItem(
+                  title: 'Log Out',
+                  icon: Icons.logout,
+                  iconColor: Colors.red,
+                  onTap: () => _handleLogout(context),
+                  isTitleBold: true,
                 ),
+              ),
 
-                // Delete account
+              // Delete account
+              if (!isAdmin)
                 SettingsSectionCard(
                   child: _SettingsItem(
                     title: widget.userType == 'JobSeeker'
@@ -329,12 +300,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     isTitleBold: true,
                   ),
                 ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
+            ],
+          ),
+        ));
   }
 }
 
@@ -440,6 +408,8 @@ class _SettingsSwitchItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       onTap: () => onChanged(!value),
@@ -454,9 +424,39 @@ class _SettingsSwitchItem extends StatelessWidget {
           ),
         ),
         subtitle: subtitle,
-        trailing: Switch(
-          value: value,
-          onChanged: onChanged,
+        trailing: Theme(
+          data: Theme.of(context).copyWith(
+            switchTheme: SwitchThemeData(
+              trackColor: MaterialStateProperty.resolveWith((states) {
+                if (states.contains(MaterialState.selected)) {
+                  return switchColor;
+                } else {
+                  return scheme.surface;
+                }
+              }),
+              thumbColor: MaterialStateProperty.resolveWith((states) {
+                if (states.contains(MaterialState.selected)) {
+                  return Colors.white;
+                } else {
+                  return scheme.primary;
+                }
+              }),
+              trackOutlineColor: MaterialStateProperty.resolveWith((states) {
+                if (states.contains(MaterialState.selected)) {
+                  return switchColor;
+                } else {
+                  return scheme.primary;
+                }
+              }),
+            ),
+          ),
+          child: Transform.scale(
+            scale: 0.9,
+            child: Switch.adaptive(
+              value: value,
+              onChanged: onChanged,
+            ),
+          ),
         ),
       ),
     );

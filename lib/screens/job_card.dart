@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:gp_2025_11/config/theme.dart';
-import 'package:gp_2025_11/screens/favorites_page.dart';
+import 'package:gp_2025_11/screens/favorites.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class JobFields {
@@ -212,16 +211,23 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
         : 'https://$t';
     final uri = Uri.tryParse(url);
     if (uri == null) return;
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+    await _safeLaunch(uri);
+  }
+
+  Future<void> _safeLaunch(Uri uri) async {
+    try {
+      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!ok && mounted) {
+        SnackHelper.error(context, 'Could not open link.');
+      }
+    } catch (_) {
+      if (mounted) {
+        SnackHelper.error(context, 'Could not open link.');
+      }
+    }
   }
 
   Future<void> _toggleFavorite() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) {
-      SnackHelper.error(context, 'Please log in first.');
-      return;
-    }
-
     final newValue = !_saved;
 
     setState(() {
@@ -242,6 +248,10 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final onSurface = scheme.onSurface;
+    final primary = scheme.primary;
+
     final job = widget.job;
     final company = widget.company;
     final isClosed = job.status.trim().toLowerCase() == 'closed';
@@ -290,8 +300,7 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                 : () => SnackHelper.error(
                     context, 'Application functionality coming soon'),
             style: FilledButton.styleFrom(
-              backgroundColor:
-                  isClosed ? Colors.grey[400] : const Color(0xFF4A5FBC),
+              backgroundColor: isClosed ? onSurface.withOpacity(0.6) : primary,
               disabledBackgroundColor: Colors.grey[400],
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 14),
@@ -355,8 +364,8 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,
                                   color: isClosed
-                                      ? Colors.grey[600]
-                                      : const Color(0xFF4A5FBC),
+                                      ? onSurface.withOpacity(0.6)
+                                      : primary,
                                 ),
                               ),
                             ),
@@ -367,7 +376,7 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.grey[500],
+                                  color: onSurface.withOpacity(0.45),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: const Text(
@@ -385,14 +394,17 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              Icon(Icons.location_on_outlined,
-                                  size: 14, color: Colors.grey[600]),
+                              Icon(
+                                Icons.location_on_outlined,
+                                size: 14,
+                                color: onSurface.withOpacity(0.6),
+                              ),
                               const SizedBox(width: 4),
                               Flexible(
                                 child: Text(
                                   company!.location,
                                   style: TextStyle(
-                                    color: Colors.grey[700],
+                                    color: onSurface.withOpacity(0.75),
                                     fontSize: 13,
                                     height: 1.3,
                                   ),
@@ -410,7 +422,7 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 13,
-                                color: Colors.grey[800],
+                                color: onSurface.withOpacity(0.85),
                                 height: 1.35,
                               ),
                             ),
@@ -418,7 +430,7 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                               company.description,
                               style: TextStyle(
                                 fontSize: 13,
-                                color: Colors.grey[800],
+                                color: onSurface.withOpacity(0.85),
                                 height: 1.35,
                               ),
                             ),
@@ -455,8 +467,7 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                                     scheme: 'mailto',
                                     path: company!.contactEmail,
                                   );
-                                  launchUrl(uri,
-                                      mode: LaunchMode.externalApplication);
+                                  _safeLaunch(uri);
                                 },
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.start,
@@ -480,8 +491,7 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                                     scheme: 'tel',
                                     path: company!.phone,
                                   );
-                                  launchUrl(uri,
-                                      mode: LaunchMode.externalApplication);
+                                  _safeLaunch(uri);
                                 },
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.start,
@@ -548,9 +558,7 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
-                      color: isClosed
-                          ? Colors.grey[700]
-                          : Theme.of(context).primaryColor,
+                      color: isClosed ? onSurface.withOpacity(0.7) : primary,
                       height: 1.2,
                     ),
                     maxLines: 3,
@@ -703,12 +711,14 @@ class _JobCardState extends State<JobCard> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final onSurface = scheme.onSurface;
+    final primary = scheme.primary;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     final job = widget.job;
     final company = widget.company;
     final isClosed = job.status.trim().toLowerCase() == 'closed';
-
-    final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final Color cardBgColor = isClosed
         ? scheme.surface.withOpacity(isDark ? 0.5 : 0.6)
@@ -767,9 +777,7 @@ class _JobCardState extends State<JobCard> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: isClosed
-                            ? Colors.grey[600]
-                            : const Color(0xFF4A5FBC),
+                        color: isClosed ? onSurface.withOpacity(0.6) : primary,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -779,7 +787,7 @@ class _JobCardState extends State<JobCard> {
                     onPressed: _toggleFavorite,
                     icon: Icon(
                       _saved ? Icons.favorite : Icons.favorite_border,
-                      color: (_saved ? Colors.red : Colors.grey[600]),
+                      color: _saved ? Colors.red : onSurface.withOpacity(0.6),
                     ),
                   ),
                 ],
@@ -793,7 +801,7 @@ class _JobCardState extends State<JobCard> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
-                  color: isClosed ? Colors.grey[600] : null,
+                  color: isClosed ? onSurface.withOpacity(0.6) : onSurface,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -805,7 +813,7 @@ class _JobCardState extends State<JobCard> {
               Text(
                 'Posted: ${_fmtDate(job.postedAt)}',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: isClosed ? Colors.grey[600] : null,
+                      color: isClosed ? onSurface.withOpacity(0.6) : onSurface,
                     ),
               ),
 
@@ -837,7 +845,7 @@ class _JobCardState extends State<JobCard> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.grey[500],
+                        color: onSurface.withOpacity(0.45),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Text(
@@ -856,9 +864,10 @@ class _JobCardState extends State<JobCard> {
                         : () => SnackHelper.error(
                             context, 'Application functionality coming soon'),
                     style: FilledButton.styleFrom(
-                      backgroundColor:
-                          isClosed ? Colors.grey[400] : const Color(0xFF4A5FBC),
-                      disabledBackgroundColor: Colors.grey[400],
+                      backgroundColor: isClosed
+                          ? onSurface.withOpacity(0.5)
+                          : const Color(0xFF4A5FBC),
+                      disabledBackgroundColor: onSurface.withOpacity(0.5),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),

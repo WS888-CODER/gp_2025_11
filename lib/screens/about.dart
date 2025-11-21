@@ -1,5 +1,6 @@
 // lib/screens/about_page.dart
 import 'package:flutter/material.dart';
+import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:url_launcher/url_launcher.dart'; // for email launch
 
@@ -9,22 +10,23 @@ class AboutPage extends StatelessWidget {
   static const Color _brand = Color(0xFF4A5FBC);
   static const String _contactEmail = 'jadeergp2025@gmail.com';
 
-  Future<void> _launchEmail() async {
-    final Uri emailUri = Uri(
-      scheme: 'mailto',
-      path: _contactEmail,
-      queryParameters: {
-        'subject': 'Contact from Jadeer App',
-      },
-    );
-    if (await canLaunchUrl(emailUri)) {
-      await launchUrl(emailUri);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    Future<void> launchEmail() async {
+      final Uri emailUri = Uri(
+        scheme: 'mailto',
+        path: _contactEmail,
+        queryParameters: {
+          'subject': 'Contact from Jadeer App',
+        },
+      );
+      if (await canLaunchUrl(emailUri)) {
+        await launchUrl(emailUri);
+      } else {
+        SnackHelper.error(context, 'Unable to open email app.');
+      }
+    }
 
     return ThemedScaffold(
       appBar: AppBar(
@@ -193,7 +195,7 @@ class AboutPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       InkWell(
-                        onTap: _launchEmail,
+                        onTap: launchEmail,
                         child: Text(
                           _contactEmail,
                           style: text.bodyMedium?.copyWith(
@@ -267,7 +269,7 @@ class _InfoCard extends StatelessWidget {
                 title,
                 style: text.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
-                  color: Theme.of(context).colorScheme.primary,
+                  color: scheme.primary,
                 ),
               ),
             ),

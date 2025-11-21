@@ -458,7 +458,6 @@ class _CompanyProfileState extends State<CompanyProfile> {
     if (user == null) {
       return const ThemedScaffold(body: Center(child: Text('Not signed in')));
     }
-    final scheme = Theme.of(context).colorScheme;
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance
           .collection(kUsersCollection)
@@ -520,6 +519,15 @@ class _CompanyProfileState extends State<CompanyProfile> {
             setState(() {});
           });
         }
+        final theme = Theme.of(context);
+        final scheme = Theme.of(context).colorScheme;
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        const brand = Color(0xFF4A5FBC);
+
+        final chipBg = isDark
+            ? scheme.surfaceVariant.withOpacity(0.9)
+            : const Color(0xFFEFF2FF);
+        final chipTextColor = isDark ? scheme.onSurface : brand;
 
         return ThemedScaffold(
           appBar: AppBar(
@@ -545,9 +553,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(
-                        Theme.of(context).brightness == Brightness.dark
-                            ? 0.6
-                            : 0.05,
+                        theme.brightness == Brightness.dark ? 0.25 : 0.05,
                       ),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
@@ -652,50 +658,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
                           ),
                         ],
                       ),
-                    const SizedBox(height: 12),
-                    if (contactEmail.isNotEmpty || prettyPhone.isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEFF2FF),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            if (contactEmail.isNotEmpty)
-                              Text(
-                                contactEmail,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                  color: Color(0xFF4A5FBC),
-                                ),
-                              ),
-                            if (contactEmail.isNotEmpty &&
-                                prettyPhone.isNotEmpty)
-                              const Text(
-                                '  |  ',
-                                style: TextStyle(
-                                  color: Color(0xFF4A5FBC),
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            if (prettyPhone.isNotEmpty)
-                              Text(
-                                prettyPhone,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                  color: Color(0xFF4A5FBC),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     if (website.isNotEmpty)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -721,13 +684,56 @@ class _CompanyProfileState extends State<CompanyProfile> {
                           ),
                         ],
                       ),
+                    const SizedBox(height: 12),
+                    if (contactEmail.isNotEmpty || prettyPhone.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: chipBg,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            if (contactEmail.isNotEmpty)
+                              Text(
+                                contactEmail,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: chipTextColor,
+                                ),
+                              ),
+                            if (contactEmail.isNotEmpty &&
+                                prettyPhone.isNotEmpty)
+                              Text(
+                                '  |  ',
+                                style: TextStyle(
+                                  color: chipTextColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            if (prettyPhone.isNotEmpty)
+                              Text(
+                                prettyPhone,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: chipTextColor,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
                     const SizedBox(height: 16),
                     if (desc.isNotEmpty) _ExpandableDescription(text: desc),
                   ],
                 ),
               ),
               const SizedBox(height: 24),
-              // بطاقة 1: Company Info
+              // Company Info
               Container(
                 decoration: BoxDecoration(
                   color: scheme.surface,
@@ -735,9 +741,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(
-                        Theme.of(context).brightness == Brightness.dark
-                            ? 0.12
-                            : 0.04,
+                        theme.brightness == Brightness.dark ? 0.25 : 0.05,
                       ),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
@@ -767,7 +771,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
 
               const SizedBox(height: 12),
 
-// بطاقة 2: Contact Details
+// Contact Details
               Container(
                 decoration: BoxDecoration(
                   color: scheme.surface,
@@ -775,9 +779,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(
-                        Theme.of(context).brightness == Brightness.dark
-                            ? 0.12
-                            : 0.04,
+                        theme.brightness == Brightness.dark ? 0.25 : 0.05,
                       ),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
@@ -877,6 +879,9 @@ class _SettingsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final onSurface = scheme.onSurface;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -899,9 +904,10 @@ class _SettingsRow extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
+                      color: onSurface,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -909,14 +915,17 @@ class _SettingsRow extends StatelessWidget {
                     subtitle,
                     style: TextStyle(
                       fontSize: 12.5,
-                      color: Colors.grey[600],
+                      color: onSurface.withOpacity(0.7),
                       height: 1.2,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: Colors.black38),
+            Icon(
+              Icons.chevron_right,
+              color: onSurface.withOpacity(0.4),
+            ),
           ],
         ),
       ),
@@ -1000,71 +1009,93 @@ class _EditCompanyPageState extends State<EditCompanyPage>
           ),
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(48 + 4),
-            child: Column(
-              children: [
-                if (parent._progress != null)
-                  LinearProgressIndicator(
-                    value: parent._progress == 0 ? null : parent._progress,
-                    minHeight: 4,
-                    backgroundColor: Colors.black12,
-                    color: Colors.white,
-                  ),
-                const SizedBox(height: 8),
-                Container(
-                  height: 44,
-                  margin: const EdgeInsets.symmetric(horizontal: 16)
-                      .copyWith(bottom: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF3F3FF),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: TabBar(
-                    controller: _tabCtrl,
-                    isScrollable: false,
-                    dividerColor: Colors.transparent,
-                    indicator: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
+            child: Builder(
+              builder: (context) {
+                const brand = Color(0xFF4A5FBC);
+                final theme = Theme.of(context);
+                final scheme = theme.colorScheme;
+                final isDark = theme.brightness == Brightness.dark;
+
+                final tabBg = isDark
+                    ? scheme.surfaceVariant.withOpacity(0.7)
+                    : const Color(0xFFF3F3FF);
+
+                final indicatorColor = isDark ? scheme.surface : Colors.white;
+                final labelColor = isDark ? scheme.onSurface : brand;
+                final unselectedColor = isDark
+                    ? scheme.onSurface.withOpacity(0.7)
+                    : brand.withOpacity(0.85);
+
+                return Column(
+                  children: [
+                    if (widget.parentState._progress != null)
+                      LinearProgressIndicator(
+                        value: widget.parentState._progress == 0
+                            ? null
+                            : widget.parentState._progress,
+                        minHeight: 4,
+                        backgroundColor: Colors.black12,
+                        color: Colors.white,
+                      ),
+                    const SizedBox(height: 8),
+                    Container(
+                      height: 44,
+                      margin: const EdgeInsets.symmetric(horizontal: 16)
+                          .copyWith(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: tabBg,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: TabBar(
+                        controller: _tabCtrl,
+                        isScrollable: false,
+                        dividerColor: Colors.transparent,
+                        indicator: BoxDecoration(
+                          color: indicatorColor,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        labelColor: labelColor,
+                        unselectedLabelColor: unselectedColor,
+                        labelPadding: EdgeInsets.zero,
+                        tabs: const [
+                          Tab(
+                            child: SizedBox.expand(
+                              child: Center(
+                                child: Text(
+                                  'Company Info',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13.5,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Tab(
+                            child: SizedBox.expand(
+                              child: Center(
+                                child: Text(
+                                  'Contact Details',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13.5,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    labelColor: brand,
-                    unselectedLabelColor: brand,
-                    labelPadding: EdgeInsets.zero,
-                    tabs: const [
-                      Tab(
-                        child: SizedBox.expand(
-                          child: Center(
-                            child: Text(
-                              'Company Info',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13.5,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Tab(
-                        child: SizedBox.expand(
-                          child: Center(
-                            child: Text(
-                              'Contact Details',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13.5,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                  ],
+                );
+              },
             ),
           ),
         ),
         body: Form(
           key: parent._form,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
           child: TabBarView(
             controller: _tabCtrl,
             children: [
@@ -1456,7 +1487,6 @@ class _EditCompanyPageState extends State<EditCompanyPage>
             const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
         actionsAlignment: MainAxisAlignment.center,
         actions: [
-          // زر Cancel (أبغى أكمل تعديل، لا تطلعني)
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             style: TextButton.styleFrom(
@@ -1472,9 +1502,7 @@ class _EditCompanyPageState extends State<EditCompanyPage>
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
-
           const SizedBox(width: 12),
-
           TextButton(
             onPressed: () {
               _restoreParentFromOriginal();

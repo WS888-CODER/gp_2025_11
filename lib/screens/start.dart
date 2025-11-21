@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gp_2025_11/screens/welcome_screen.dart';
+import 'package:gp_2025_11/screens/welcome.dart';
 
 class StartScreen extends StatefulWidget {
   @override

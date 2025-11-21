@@ -7,8 +7,8 @@ import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:gp_2025_11/screens/all_jobs.dart';
 import 'package:gp_2025_11/screens/job_card.dart';
 import 'package:gp_2025_11/screens/cv_enhancement_screen.dart';
-import 'package:gp_2025_11/screens/history_page.dart';
-import 'package:gp_2025_11/screens/favorites_page.dart';
+import 'package:gp_2025_11/screens/history.dart';
+import 'package:gp_2025_11/screens/favorites.dart';
 
 class JobSeekerHome extends StatefulWidget {
   const JobSeekerHome({super.key, this.userId});
@@ -388,9 +388,7 @@ class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
       await FavoritesService.toggleFavorite(job.jobId, newValue);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update favorites: $e')),
-      );
+      SnackHelper.error(context, 'Failed to update favorites: $e');
     }
   }
 
@@ -502,8 +500,6 @@ class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
         }();
 
         if (needToFetchCompanies) {
-          _loadingCompanies = true;
-          _error = null;
           _fetchCompaniesForJobs(limitedJobs).then((map) {
             if (!mounted) return;
             setState(() {

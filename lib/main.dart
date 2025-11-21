@@ -2,32 +2,26 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
-
-import 'package:gp_2025_11/config/app_settings_notifier.dart';
-
-// localization
 import 'package:flutter_localizations/flutter_localizations.dart';
-
-// screens
-import 'package:gp_2025_11/screens/account_details_page.dart';
-import 'package:gp_2025_11/screens/settings_screen.dart';
+import 'package:gp_2025_11/screens/account_details.dart';
+import 'package:gp_2025_11/screens/settings.dart';
 import 'package:gp_2025_11/screens/company_profile.dart';
 import 'package:gp_2025_11/screens/jobseeker_profile.dart';
-import 'package:gp_2025_11/screens/about_page.dart';
+import 'package:gp_2025_11/screens/about.dart';
 import 'firebase_options.dart';
 import 'config/theme.dart';
-import 'screens/start_screen.dart';
-import 'screens/login_screen.dart';
-import 'screens/signup_screen.dart';
+import 'screens/start.dart';
+import 'screens/login.dart';
+import 'screens/signup.dart';
 import 'screens/otp_verification_screen.dart';
-import 'screens/forgot_password_screen.dart';
+import 'screens/forgot_password.dart';
 import 'screens/change_password.dart';
 import 'screens/admin_dashboard.dart';
-import 'screens/job_posting_page.dart';
-import 'screens/questions_page.dart';
+import 'screens/job_posting.dart';
+import 'screens/questions.dart';
 import 'screens/jobseeker_home.dart';
 import 'screens/company_home.dart';
-import 'package:gp_2025_11/screens/favorites_page.dart';
+import 'package:gp_2025_11/screens/favorites.dart';
 import 'package:gp_2025_11/screens/cv_next_steps_screen.dart';
 
 void main() async {
@@ -60,7 +54,6 @@ class Jadeer extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      locale: settings.locale,
       debugShowCheckedModeBanner: false,
       home: StartScreen(),
       routes: {

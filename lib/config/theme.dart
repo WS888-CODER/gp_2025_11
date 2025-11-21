@@ -67,7 +67,6 @@ class AppTheme {
       colorScheme: const ColorScheme.dark(
         primary: primaryPurple,
         secondary: accentCoral,
-        background: Color(0xFF121212),
         surface: Color(0xFF1E1E1E),
         onSurface: Colors.white70,
       ),
@@ -107,25 +106,25 @@ class AppTheme {
 }
 
 class SnackHelper {
-  // ✅ Success message
+  // Success message
   static void success(BuildContext context, String message) {
     _show(
       context,
       message,
-      const Color(0xFF4CAF50), // Green
+      const Color(0xFF4CAF50),
     );
   }
 
-  // ✅ Error message
+  // Error message
   static void error(BuildContext context, String message) {
     _show(
       context,
       message,
-      const Color(0xFFFF7B7B), // Red
+      const Color(0xFFFF7B7B),
     );
   }
 
-  // ✅ Base snack builder
+  // Base snack builder
   static void _show(BuildContext context, String message, Color color) {
     if (context.mounted == false) return;
 
@@ -387,5 +386,18 @@ class JobSeekerAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
       ],
     );
+  }
+}
+
+class AppSettingsNotifier extends ChangeNotifier {
+  ThemeMode _themeMode = ThemeMode.light;
+
+  ThemeMode get themeMode => _themeMode;
+
+  void toggleTheme(ThemeMode mode) {
+    if (_themeMode != mode) {
+      _themeMode = mode;
+      notifyListeners();
+    }
   }
 }

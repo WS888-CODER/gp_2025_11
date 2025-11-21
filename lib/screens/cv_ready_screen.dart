@@ -122,7 +122,13 @@ class _PublishScreenState extends State<PublishScreen> {
       onWillPop: _onWillPop,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('CV Enhancement Results'),
+          backgroundColor: AppTheme.primaryPurple,
+          foregroundColor: Colors.white,
+          title: const Text('CV Enhancement Results',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              )),
         ),
         body: StreamBuilder<DocumentSnapshot>(
           stream: FirebaseFirestore.instance

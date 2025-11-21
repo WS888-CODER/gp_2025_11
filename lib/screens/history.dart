@@ -78,7 +78,11 @@ class CVEnhancementsTab extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
+          return _buildEmptyState(
+            icon: Icons.error_outline,
+            title: 'Something went wrong',
+            subtitle: 'We couldn\'t load your history. Please try again later.',
+          );
         }
 
         final docs = snapshot.data?.docs ?? [];
@@ -101,9 +105,9 @@ class CVEnhancementsTab extends StatelessWidget {
             return Card(
               margin: const EdgeInsets.only(bottom: 12),
               child: ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: Color(0xFF4A5FBC),
-                  child: Icon(Icons.description, color: Colors.white),
+                leading: CircleAvatar(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  child: const Icon(Icons.description, color: Colors.white),
                 ),
                 title: Text(
                   jobTitle.isEmpty ? 'CV Enhancement' : jobTitle,
@@ -142,7 +146,11 @@ class MockInterviewsTab extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
+          return _buildEmptyState(
+            icon: Icons.error_outline,
+            title: 'Something went wrong',
+            subtitle: 'We couldn\'t load your history. Please try again later.',
+          );
         }
 
         final docs = snapshot.data?.docs ?? [];
@@ -206,7 +214,11 @@ class JobApplicationsTab extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
+          return _buildEmptyState(
+            icon: Icons.error_outline,
+            title: 'Something went wrong',
+            subtitle: 'We couldn\'t load your history. Please try again later.',
+          );
         }
 
         final docs = snapshot.data?.docs ?? [];
@@ -309,30 +321,44 @@ Widget _buildEmptyState({
   required String title,
   required String subtitle,
 }) {
-  return Center(
-    child: Padding(
-      padding: const EdgeInsets.all(32.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 80, color: Colors.grey[400]),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
+  return Builder(
+    builder: (context) {
+      final scheme = Theme.of(context).colorScheme;
+      final textTheme = Theme.of(context).textTheme;
+
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 80,
+                color: scheme.outlineVariant.withOpacity(0.8),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: textTheme.titleMedium?.copyWith(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                style: textTheme.bodyMedium?.copyWith(
+                  fontSize: 14,
+                  color: scheme.onBackground.withOpacity(0.7),
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: const TextStyle(fontSize: 14),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    ),
+        ),
+      );
+    },
   );
 }

@@ -116,6 +116,11 @@ class JobSeekerProfile extends StatelessWidget {
 
         final scheme = Theme.of(context).colorScheme;
         const brand = Color(0xFF4A5FBC);
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final chipBg = isDark
+            ? scheme.surfaceVariant.withOpacity(0.9)
+            : const Color(0xFFEFF2FF);
+        final chipTextColor = isDark ? scheme.onSurface : brand;
 
         return ThemedScaffold(
           appBar: AppBar(
@@ -221,10 +226,10 @@ class JobSeekerProfile extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.badge_outlined,
                             size: 16,
-                            color: brand,
+                            color: isDark ? scheme.onSurface : brand,
                           ),
                           const SizedBox(width: 4),
                           Flexible(
@@ -234,9 +239,9 @@ class JobSeekerProfile extends StatelessWidget {
                                   nationalityValue,
                                 if (dobValue != 'Not set') dobValue,
                               ].join(' • '),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
-                                color: brand,
+                                color: isDark ? scheme.onSurface : brand,
                                 fontWeight: FontWeight.w500,
                               ),
                               textAlign: TextAlign.center,
@@ -250,7 +255,7 @@ class JobSeekerProfile extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFEFF2FF),
+                          color: chipBg,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Row(
@@ -260,32 +265,32 @@ class JobSeekerProfile extends StatelessWidget {
                             if (phoneValue != 'Not set')
                               Text(
                                 phoneValue,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w500,
-                                  color: brand,
+                                  color: chipTextColor,
                                 ),
                               ),
                             if (phoneValue != 'Not set' && cvOk)
-                              const Text(
+                              Text(
                                 '  |  ',
                                 style: TextStyle(
-                                  color: brand,
+                                  color: chipTextColor,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                             if (cvOk)
                               Text(
                                 cvValue,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w500,
-                                  color: brand,
+                                  color: chipTextColor,
                                 ),
                               ),
                           ],
                         ),
-                      ),
+                      )
                   ],
                 ),
               ),
@@ -351,6 +356,7 @@ class _SettingsRowSeeker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -383,14 +389,17 @@ class _SettingsRowSeeker extends StatelessWidget {
                     subtitle,
                     style: TextStyle(
                       fontSize: 12.5,
-                      color: Colors.grey[600],
+                      color: onSurface.withOpacity(0.7),
                       height: 1.2,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: Colors.black38),
+            Icon(
+              Icons.chevron_right,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+            ),
           ],
         ),
       ),
@@ -960,6 +969,9 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage> {
               contentPadding: EdgeInsets.zero,
               title: Text(dobText),
               trailing: FilledButton.tonal(
+                style: FilledButton.styleFrom(
+                  foregroundColor: Colors.white,
+                ),
                 onPressed: (_saving || _progress != null)
                     ? null
                     : () async {
@@ -982,12 +994,12 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage> {
                       },
                 child: const Text(
                   'Select date',
-                  style: TextStyle(color: Colors.white),
                 ),
               ),
             ),
             const SizedBox(height: 24),
             DropdownButtonFormField<String>(
+              menuMaxHeight: 600,
               value: _countries.contains(_nationality) ? _nationality : null,
               items: _countries
                   .map(
@@ -1007,17 +1019,21 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage> {
                   : (v) => setState(() => _nationality = v),
               style: const TextStyle(color: Color(0xFF4A5FBC)),
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
+                hintText: "Select your Nationality",
                 labelText: 'Nationality',
                 labelStyle: TextStyle(
                   color: Color(0xFF4A5FBC),
                   fontWeight: FontWeight.w800,
                   fontSize: 16,
                 ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Color(0xFF4A5FBC), width: 1.5),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Color(0xFF4A5FBC), width: 1.5),
+                ),
               ),
-              validator: (v) {
-                return null;
-              },
+              validator: (v) => null,
             ),
             const SizedBox(height: 24),
             TextFormField(
@@ -1035,7 +1051,7 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage> {
                   fontSize: 16,
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Color(0xFF4A5FBC)),
+                  borderSide: BorderSide(color: Color(0xFF4A5FBC), width: 1.5),
                 ),
                 hintText: '5XXXXXXXX',
                 prefixText: '+966 ',
@@ -1074,7 +1090,7 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage> {
                   FilledButton.tonal(
                     onPressed: (_saving || _progress != null) ? null : _openCv,
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF4A5FBC),
+                      backgroundColor: brand,
                       foregroundColor: Colors.white,
                     ),
                     child: const Text('View CV'),

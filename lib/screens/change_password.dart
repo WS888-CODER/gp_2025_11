@@ -47,12 +47,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   Future<void> _handleChangePassword() async {
     setState(() {
       _errorMessage = null;
-      _submitted = true; // فعلنا حالة السبمت عشان الليبلات تعرف تظهر الخطأ
+      _submitted = true;
     });
 
-    // أول شيء نتحقق من الحقول الفاضية عن طريق الـ Form
     if (!_formKey.currentState!.validate()) {
-      // هنا الليبلات بتصير حمراء للحقول الفاضية، بدون نص خطأ تحتها
       return;
     }
 
@@ -60,7 +58,6 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     final newPass = _newPasswordController.text.trim();
     final confirm = _confirmPasswordController.text.trim();
 
-    // تحقق من قوة الباسورد الجديد
     if (!_isStrongPassword(newPass)) {
       SnackHelper.error(
         context,
@@ -69,7 +66,6 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       return;
     }
 
-    // ما يكون نفس القديم
     if (newPass == current) {
       SnackHelper.error(
         context,
@@ -78,7 +74,6 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       return;
     }
 
-    // تأكيد الباسورد
     if (confirm != newPass) {
       SnackHelper.error(
         context,
@@ -140,7 +135,6 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     }
   }
 
-  // نفس دالة الليبل من JobPostingPage
   Widget _buildLabel(
     String text,
     bool isInvalid, {
@@ -328,7 +322,6 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     ),
                   ),
                   onChanged: (_) => setState(() {}),
-                  // هنا بس نتأكد إنها مو فاضية، الباقي في _handleChangePassword
                   validator: (value) =>
                       (value == null || value.isEmpty) ? '' : null,
                 ),
@@ -401,7 +394,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Error message box (لأخطاء Firebase)
+              // Error message box
               if (_errorMessage != null)
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -449,7 +442,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                           ),
                         )
                       : const Text(
-                          'Reset Password',
+                          'Change Password',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,

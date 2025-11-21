@@ -19,7 +19,6 @@ class _JobPostingPageState extends State<JobPostingPage> {
   final _jobTitleController = TextEditingController();
   final _jobDescriptionController = TextEditingController();
   final _positionController = TextEditingController();
-  final _specialityController = TextEditingController();
   final _requirementController = TextEditingController();
   final _customSpecialityController = TextEditingController();
 
@@ -420,7 +419,6 @@ class _JobPostingPageState extends State<JobPostingPage> {
     _jobTitleController.dispose();
     _jobDescriptionController.dispose();
     _positionController.dispose();
-    _specialityController.dispose();
     _customSpecialityController.dispose();
     _requirementController.dispose();
     super.dispose();
@@ -442,28 +440,29 @@ class _JobPostingPageState extends State<JobPostingPage> {
       firstDate: today,
       lastDate: DateTime(2100),
       builder: (context, child) {
+        final theme = Theme.of(context);
+        final scheme = theme.colorScheme;
+
         return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-                  primary: const Color(
-                      0xFF4A5FBC), // Selected date background (purple)
-                  onPrimary: Colors.white, // Selected date text
-                  onSurface: Colors.black, // Default text color
-                ),
+          data: theme.copyWith(
+            colorScheme: scheme.copyWith(
+              primary: const Color(0xFF4A5FBC),
+              onPrimary: Colors.white,
+              onSurface: scheme.onSurface,
+            ),
             datePickerTheme: DatePickerThemeData(
               todayBorder: BorderSide.none,
               todayBackgroundColor: MaterialStateColor.resolveWith((states) {
                 if (states.contains(MaterialState.selected)) {
-                  return const Color(
-                      0xFF4A5FBC); // Selected today background (purple)
+                  return const Color(0xFF4A5FBC);
                 }
-                return Colors.grey.shade300; // Unselected today background
+                return scheme.primary.withOpacity(0.15);
               }),
               todayForegroundColor: MaterialStateColor.resolveWith((states) {
                 if (states.contains(MaterialState.selected)) {
-                  return Colors.white; // Selected today text
+                  return Colors.white;
                 }
-                return Colors.black; // Unselected today text
+                return scheme.onSurface;
               }),
             ),
           ),
@@ -495,31 +494,32 @@ class _JobPostingPageState extends State<JobPostingPage> {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: initialDate,
-      firstDate: firstAllowedDate,
+      firstDate: today,
       lastDate: DateTime(2100),
       builder: (context, child) {
+        final theme = Theme.of(context);
+        final scheme = theme.colorScheme;
+
         return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-                  primary: const Color(
-                      0xFF4A5FBC), // Selected date background (purple)
-                  onPrimary: Colors.white, // Selected date text
-                  onSurface: Colors.black, // Default text color
-                ),
+          data: theme.copyWith(
+            colorScheme: scheme.copyWith(
+              primary: const Color(0xFF4A5FBC),
+              onPrimary: Colors.white,
+              onSurface: scheme.onSurface,
+            ),
             datePickerTheme: DatePickerThemeData(
               todayBorder: BorderSide.none,
               todayBackgroundColor: MaterialStateColor.resolveWith((states) {
                 if (states.contains(MaterialState.selected)) {
-                  return const Color(
-                      0xFF4A5FBC); // Selected today background (purple)
+                  return const Color(0xFF4A5FBC);
                 }
-                return Colors.grey.shade300; // Unselected today background
+                return scheme.primary.withOpacity(0.15);
               }),
               todayForegroundColor: MaterialStateColor.resolveWith((states) {
                 if (states.contains(MaterialState.selected)) {
-                  return Colors.white; // Selected today text
+                  return Colors.white;
                 }
-                return Colors.black; // Unselected today text
+                return scheme.onSurface;
               }),
             ),
           ),
@@ -527,6 +527,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
         );
       },
     );
+
     if (picked != null) {
       setState(() => _endDate = picked);
     }
@@ -911,11 +912,16 @@ class _JobPostingPageState extends State<JobPostingPage> {
     bool isBold = false,
     bool required = true,
   }) {
-    final bool showError = _submitted && isInvalid && required;
+    final theme = Theme.of(context);
+    final showError = _submitted && isInvalid && required;
+
+    final baseColor =
+        showError ? theme.colorScheme.error : theme.colorScheme.onSurface;
 
     final baseStyle = TextStyle(
       fontSize: 16,
-      color: showError ? Colors.red : Colors.black,
+      fontWeight: isBold ? FontWeight.w600 : FontWeight.w500,
+      color: baseColor,
     );
 
     if (!required) {
@@ -930,7 +936,9 @@ class _JobPostingPageState extends State<JobPostingPage> {
           TextSpan(
             text: ' *',
             style: TextStyle(
-              color: showError ? Colors.red : Colors.grey[700],
+              color: showError
+                  ? theme.colorScheme.error
+                  : theme.colorScheme.onSurface.withOpacity(0.7),
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -1021,7 +1029,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
             child: Icon(
               Icons.info_outline,
               size: 18,
-              color: Colors.grey[600],
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
           ),
         ),
@@ -1109,6 +1117,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final textColor = Theme.of(context).colorScheme.onSurface;
 
     return WillPopScope(
       onWillPop: _onWillPop,
@@ -1555,7 +1564,13 @@ class _JobPostingPageState extends State<JobPostingPage> {
                             counterText: '',
                             helperText:
                                 '${_jobDescriptionController.text.length}/2000',
-                            helperStyle: const TextStyle(fontSize: 12),
+                            helperStyle: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.6),
+                            ),
                           ),
                           minLines: 6,
                           maxLines: null,
@@ -1754,8 +1769,9 @@ class _JobPostingPageState extends State<JobPostingPage> {
                               ? _fmtDate(_startDate!)
                               : 'Select date',
                           style: TextStyle(
-                            color:
-                                _startDate != null ? Colors.black : Colors.grey,
+                            color: _startDate != null
+                                ? textColor
+                                : textColor.withOpacity(0.6),
                           ),
                         ),
                       ),
@@ -1794,8 +1810,9 @@ class _JobPostingPageState extends State<JobPostingPage> {
                               ? _fmtDate(_endDate!)
                               : 'Select date',
                           style: TextStyle(
-                            color:
-                                _endDate != null ? Colors.black : Colors.grey,
+                            color: _startDate != null
+                                ? textColor
+                                : textColor.withOpacity(0.6),
                           ),
                         ),
                       ),

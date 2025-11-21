@@ -51,9 +51,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'companyName': companyName,
         'status': status,
       });
-      print('✅ Status email sent to $companyEmail');
+      print('Status email sent to $companyEmail');
     } catch (e) {
-      print('❌ Error sending status email: $e');
+      print('Error sending status email: $e');
     }
   }
 
@@ -64,13 +64,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
         .doc(id)
         .update({'AccountStatus': newStatus});
 
-    // إرسال الإيميل فقط إذا كان القرار نهائي (Verified أو Rejected)
     if (newStatus == 'Verified' || newStatus == 'Rejected') {
       final companyEmail = companyData['Email'] ?? '';
       final companyName = companyData['CompanyName'] ?? 'Company';
 
       if (companyEmail.isNotEmpty) {
-        // استخدام "Accepted" بدل "Verified" للإيميل
         final emailStatus = newStatus == 'Verified' ? 'Accepted' : 'Rejected';
         await _sendStatusEmail(companyEmail, companyName, emailStatus);
       }
@@ -91,7 +89,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final bool isSelected = selectedStatus == value;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-
     final Color selectedBg = theme.colorScheme.secondary;
     final Color borderColor = theme.colorScheme.secondary;
     final Color unselectedText =
@@ -113,7 +110,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
       showCheckmark: false,
       onSelected: (sel) async {
-        selectedStatus = value;
+        setState(() {
+          selectedStatus = value;
+        });
         await loadCompanies();
       },
     );
@@ -121,7 +120,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context); // عشان ما نكرر Theme.of(context) مليون مرة
+    final theme = Theme.of(context);
     final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black87;
 
     return ThemedScaffold(
@@ -172,7 +171,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             return _CompanyCard(
                               data: data,
                               onSelected: (newStatus) async {
-                                // ✅ هنا التعديل: تمرير الـ data كـ parameter ثالث
                                 await updateCompanyStatus(
                                     doc.id, newStatus, data);
 
@@ -270,32 +268,6 @@ class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
         '${secs.toString().padLeft(2, '0')}';
   }
 
-  Future<void> _handleLogout() async {
-    bool? confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => const JadeerDialog<bool>(
-        title: 'Confirm Logout',
-        primaryLabel: 'Logout',
-        primaryResult: true,
-        secondaryLabel: 'Cancel',
-        secondaryResult: false,
-        content: Text(
-          'Are you sure you want to log out?',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white),
-        ),
-      ),
-    );
-
-    if (confirm == true) {
-      _sessionTimer?.cancel();
-      await FirebaseAuth.instance.signOut();
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/login');
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -350,9 +322,20 @@ class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
           ),
         ),
         IconButton(
-          icon: const Icon(Icons.logout, color: Colors.white),
-          tooltip: 'Logout',
-          onPressed: _handleLogout,
+          icon: const Icon(Icons.settings, color: Colors.white),
+          tooltip: 'Settings',
+          onPressed: () {
+            final user = FirebaseAuth.instance.currentUser;
+
+            Navigator.pushNamed(
+              context,
+              '/settings',
+              arguments: {
+                'userId': user?.uid ?? '',
+                'userType': 'Admin',
+              },
+            );
+          },
         ),
       ],
     );

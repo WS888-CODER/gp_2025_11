@@ -257,7 +257,6 @@ class _CompanyHomeState extends State<CompanyHome> {
     final homeBody = ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // زر Create (يمين)
         Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
@@ -295,12 +294,8 @@ class _CompanyHomeState extends State<CompanyHome> {
             ),
           ],
         ),
-
         const SizedBox(height: 20),
-
         const _SectionTitle(),
-
-        // قائمة الوظائف
         StreamBuilder<List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
           stream: _jobsStream(companyId),
           builder: (context, snap) {
@@ -319,9 +314,39 @@ class _CompanyHomeState extends State<CompanyHome> {
 
             final jobs = snap.data ?? const [];
             if (jobs.isEmpty) {
-              return const Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(child: Text('No job posts yet')),
+              return Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.work_outline,
+                      size: 40,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.4),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'No job posts yet',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Tap "Create Job Post" to add your first opening.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.7),
+                          ),
+                    ),
+                  ],
+                ),
               );
             }
 
@@ -343,22 +368,28 @@ class _CompanyHomeState extends State<CompanyHome> {
                 final isClosed = jobStatus == 'Closed' ||
                     (endDate != null && endDate.isBefore(now));
 
-                // ⬇️ تحديد لون الخلفية الديناميكي للعنصر
+                final theme = Theme.of(context);
+                final scheme = theme.colorScheme;
+
                 final cardBackgroundColor = isClosed
-                    ? Theme.of(context).colorScheme.surface.withOpacity(0.5)
-                    : Theme.of(context).colorScheme.surface;
+                    ? scheme.surface.withOpacity(
+                        theme.brightness == Brightness.dark ? 0.7 : 0.5)
+                    : scheme.surface;
+                final titleColorBase =
+                    theme.textTheme.bodyLarge?.color ?? scheme.onSurface;
 
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
                   padding:
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  // ⬇️ تم وضع اللون الآن داخل BoxDecoration (لحظ التضارب)
                   decoration: BoxDecoration(
                     color: cardBackgroundColor,
                     borderRadius: BorderRadius.circular(14),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(.05),
+                        color: Colors.black.withOpacity(
+                          theme.brightness == Brightness.dark ? 0.3 : 0.05,
+                        ),
                         blurRadius: 10,
                         offset: const Offset(0, 3),
                       ),
@@ -366,7 +397,6 @@ class _CompanyHomeState extends State<CompanyHome> {
                   ),
                   child: Row(
                     children: [
-                      // نصوص الوظيفة
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -376,17 +406,9 @@ class _CompanyHomeState extends State<CompanyHome> {
                               style: TextStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 16,
-                                // ⬇️ ألوان النصوص تصبح ديناميكية وتتبع الثيم
                                 color: isClosed
-                                    ? Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
-                                        ?.color
-                                        ?.withOpacity(0.7)
-                                    : Theme.of(context)
-                                        .textTheme
-                                        .bodyLarge
-                                        ?.color,
+                                    ? titleColorBase.withOpacity(0.65)
+                                    : titleColorBase,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -396,16 +418,8 @@ class _CompanyHomeState extends State<CompanyHome> {
                                   .join(' • '),
                               style: TextStyle(
                                 color: isClosed
-                                    ? Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
-                                        ?.color
-                                        ?.withOpacity(0.7)
-                                    : Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.color
-                                        ?.withOpacity(0.7),
+                                    ? titleColorBase.withOpacity(0.65)
+                                    : titleColorBase,
                               ),
                             ),
                             // Closed badge at bottom left
@@ -585,7 +599,6 @@ class _CompanyHomeState extends State<CompanyHome> {
             );
           },
         ),
-
         const SizedBox(height: 12),
       ],
     );

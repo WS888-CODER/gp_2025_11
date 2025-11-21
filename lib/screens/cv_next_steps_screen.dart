@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_functions/cloud_functions.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../config/theme.dart';
-import 'cv_ready_screen.dart'; // ← ضيفي هذا
+import 'cv_ready_screen.dart';
 
 class CVNextStepsScreen extends StatefulWidget {
   final String? cvHistoryId;
@@ -189,11 +188,17 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
           backgroundColor: AppTheme.primaryPurple,
           foregroundColor: Colors.white,
-          title: Text(_isEnhancing ? 'Enhancing CV' : 'Complete Your CV'),
+          title: Text(
+            _isEnhancing ? 'Enhancing CV' : 'Complete Your CV',
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
           elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
@@ -228,6 +233,8 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
   }
 
   Widget _buildLoadingState(String message) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -237,7 +244,10 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 16, color: Colors.grey),
+            style: TextStyle(
+              fontSize: 16,
+              color: scheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),
@@ -245,15 +255,26 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
   }
 
   Widget _buildMissingSectionForm() {
+    final scheme = Theme.of(context).colorScheme;
+
     final sectionName = _missingSections[_currentSectionIndex];
     final progress = (_currentSectionIndex + 1) / _missingSections.length;
 
     return Column(
       children: [
-        // Progress indicator
         Container(
           padding: const EdgeInsets.all(16),
-          color: Colors.grey[100],
+          decoration: BoxDecoration(
+            color: scheme.brightness == Brightness.dark
+                ? scheme.surfaceVariant.withOpacity(0.6)
+                : AppTheme.primaryPurple.withOpacity(0.04),
+            border: Border(
+              bottom: BorderSide(
+                color: scheme.outline.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+          ),
           child: Column(
             children: [
               Row(
@@ -272,10 +293,16 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
                     const SizedBox.shrink(),
                   Text(
                     'Section ${_currentSectionIndex + 1} of ${_missingSections.length}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: scheme.onSurface,
+                    ),
                   ),
                   TextButton(
                     onPressed: _skipAll,
+                    style: TextButton.styleFrom(
+                      foregroundColor: scheme.onSurfaceVariant,
+                    ),
                     child: const Text('Skip All'),
                   ),
                 ],
@@ -283,14 +310,14 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
               const SizedBox(height: 8),
               LinearProgressIndicator(
                 value: progress,
-                backgroundColor: Colors.grey[300],
-                valueColor:
-                    const AlwaysStoppedAnimation<Color>(AppTheme.primaryPurple),
+                backgroundColor: scheme.surface.withOpacity(0.5),
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  AppTheme.primaryPurple,
+                ),
               ),
             ],
           ),
         ),
-        // Form content
         Expanded(
           child: _buildSectionForm(sectionName),
         ),
@@ -405,111 +432,151 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Personal Information',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.primaryPurple,
+    final scheme = Theme.of(context).colorScheme;
+
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Personal Information',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryPurple,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Fill in your personal details.',
+                  style: TextStyle(color: scheme.onSurfaceVariant),
+                ),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: _fullNameController,
+                  decoration: InputDecoration(
+                    labelText: 'Full Name',
+                    hintText: 'e.g., John Doe',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: AppTheme.primaryPurple,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    labelText: 'Email',
+                    hintText: 'e.g., john@example.com',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: AppTheme.primaryPurple,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _phoneController,
+                  keyboardType: TextInputType.phone,
+                  decoration: InputDecoration(
+                    labelText: 'Phone',
+                    hintText: 'e.g., +1 234 567 8900',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: AppTheme.primaryPurple,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _locationController,
+                  decoration: InputDecoration(
+                    labelText: 'Location',
+                    hintText: 'e.g., New York, USA',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: AppTheme.primaryPurple,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _linksController,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    labelText: 'Links (LinkedIn, Portfolio, etc.)',
+                    hintText:
+                        'e.g., linkedin.com/in/johndoe, github.com/johndoe',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: AppTheme.primaryPurple,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Fill in your personal details.',
-            style: TextStyle(color: Colors.grey),
-          ),
-          const SizedBox(height: 20),
-          TextField(
-            controller: _fullNameController,
-            decoration: InputDecoration(
-              labelText: 'Full Name',
-              hintText: 'e.g., John Doe',
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide:
-                    const BorderSide(color: AppTheme.primaryPurple, width: 2),
+        ),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            boxShadow: [
+              BoxShadow(
+                color: scheme.shadow.withOpacity(0.2),
+                spreadRadius: 1,
+                blurRadius: 5,
+                offset: const Offset(0, -3),
               ),
-            ),
+            ],
           ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _emailController,
-            keyboardType: TextInputType.emailAddress,
-            decoration: InputDecoration(
-              labelText: 'Email',
-              hintText: 'e.g., john@example.com',
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide:
-                    const BorderSide(color: AppTheme.primaryPurple, width: 2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _phoneController,
-            keyboardType: TextInputType.phone,
-            decoration: InputDecoration(
-              labelText: 'Phone',
-              hintText: 'e.g., +1 234 567 8900',
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide:
-                    const BorderSide(color: AppTheme.primaryPurple, width: 2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _locationController,
-            decoration: InputDecoration(
-              labelText: 'Location',
-              hintText: 'e.g., New York, USA',
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide:
-                    const BorderSide(color: AppTheme.primaryPurple, width: 2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _linksController,
-            decoration: InputDecoration(
-              labelText: 'Links (LinkedIn, Portfolio, etc.)',
-              hintText: 'e.g., linkedin.com/in/johndoe, github.com/johndoe',
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide:
-                    const BorderSide(color: AppTheme.primaryPurple, width: 2),
-              ),
-            ),
-            maxLines: 2,
-          ),
-          const SizedBox(height: 24),
-          Row(
+          child: Row(
             children: [
               Expanded(
                 child: OutlinedButton(
                   onPressed: widget.onSkip,
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: const BorderSide(color: AppTheme.primaryPurple),
+                    side: const BorderSide(
+                      color: AppTheme.primaryPurple,
+                      width: 2,
+                    ),
                   ),
                   child: const Text('Skip'),
                 ),
@@ -524,10 +591,12 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
                         _locationController.text.trim().isEmpty &&
                         _linksController.text.trim().isEmpty) {
                       SnackHelper.error(
-                          context, 'Please fill at least one field or skip');
+                        context,
+                        'Please fill at least one field or skip',
+                      );
                       return;
                     }
-                    // Split links by comma or newline
+
                     final linksText = _linksController.text.trim();
                     final links = linksText.isEmpty
                         ? <String>[]
@@ -557,8 +626,8 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
               ),
             ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -598,48 +667,81 @@ class _SummaryFormState extends State<_SummaryForm> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Summary',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.primaryPurple,
+    final scheme = Theme.of(context).colorScheme;
+
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Summary',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryPurple,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Write a brief summary about yourself and your career goals.',
+                  style: TextStyle(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: _controller,
+                  maxLines: 6,
+                  decoration: InputDecoration(
+                    hintText:
+                        'e.g., Experienced software engineer with 5+ years...',
+                    hintStyle: TextStyle(
+                      color: scheme.onSurfaceVariant.withOpacity(0.7),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: AppTheme.primaryPurple,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Write a brief summary about yourself and your career goals.',
-            style: TextStyle(color: Colors.grey),
-          ),
-          const SizedBox(height: 20),
-          TextField(
-            controller: _controller,
-            maxLines: 6,
-            decoration: InputDecoration(
-              hintText: 'e.g., Experienced software engineer with 5+ years...',
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide:
-                    const BorderSide(color: AppTheme.primaryPurple, width: 2),
+        ),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            boxShadow: [
+              BoxShadow(
+                color: scheme.shadow.withOpacity(0.2),
+                spreadRadius: 1,
+                blurRadius: 5,
+                offset: const Offset(0, -3),
               ),
-            ),
+            ],
           ),
-          const SizedBox(height: 24),
-          Row(
+          child: Row(
             children: [
               Expanded(
                 child: OutlinedButton(
                   onPressed: widget.onSkip,
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: const BorderSide(color: AppTheme.primaryPurple),
+                    side: const BorderSide(
+                      color: AppTheme.primaryPurple,
+                      width: 2,
+                    ),
                   ),
                   child: const Text('Skip'),
                 ),
@@ -650,7 +752,9 @@ class _SummaryFormState extends State<_SummaryForm> {
                   onPressed: () {
                     if (_controller.text.trim().isEmpty) {
                       SnackHelper.error(
-                          context, 'Please enter a summary or skip');
+                        context,
+                        'Please enter a summary or skip',
+                      );
                       return;
                     }
                     widget.onSave({'content': _controller.text.trim()});
@@ -665,8 +769,8 @@ class _SummaryFormState extends State<_SummaryForm> {
               ),
             ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -743,6 +847,8 @@ class _ExperienceFormState extends State<_ExperienceForm> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Column(
       children: [
         Expanded(
@@ -762,7 +868,7 @@ class _ExperienceFormState extends State<_ExperienceForm> {
                 const SizedBox(height: 8),
                 Text(
                   'Add up to ${10 - _experiences.length} more experience(s)',
-                  style: const TextStyle(color: Colors.grey),
+                  style: TextStyle(color: scheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 20),
                 if (_experiences.length < 10)
@@ -775,7 +881,8 @@ class _ExperienceFormState extends State<_ExperienceForm> {
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                             vertical: 12, horizontal: 16),
-                        side: const BorderSide(color: AppTheme.primaryPurple),
+                        side: const BorderSide(
+                            color: AppTheme.primaryPurple, width: 1.5),
                         foregroundColor: AppTheme.primaryPurple,
                       ),
                     ),
@@ -792,10 +899,10 @@ class _ExperienceFormState extends State<_ExperienceForm> {
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: scheme.surface,
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.2),
+                color: scheme.shadow.withOpacity(0.2),
                 spreadRadius: 1,
                 blurRadius: 5,
                 offset: const Offset(0, -3),
@@ -809,7 +916,8 @@ class _ExperienceFormState extends State<_ExperienceForm> {
                   onPressed: widget.onSkip,
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: const BorderSide(color: AppTheme.primaryPurple),
+                    side: const BorderSide(
+                        color: AppTheme.primaryPurple, width: 2),
                   ),
                   child: const Text('Skip'),
                 ),
@@ -835,7 +943,9 @@ class _ExperienceFormState extends State<_ExperienceForm> {
 
   Widget _buildExperienceEntry(
       int index, Map<String, TextEditingController> exp) {
+    final scheme = Theme.of(context).colorScheme;
     return Card(
+      color: scheme.surface,
       margin: const EdgeInsets.only(bottom: 16),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -991,6 +1101,8 @@ class _EducationFormState extends State<_EducationForm> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Column(
       children: [
         Expanded(
@@ -1010,7 +1122,7 @@ class _EducationFormState extends State<_EducationForm> {
                 const SizedBox(height: 8),
                 Text(
                   'Add up to ${10 - _education.length} more education entries',
-                  style: const TextStyle(color: Colors.grey),
+                  style: TextStyle(color: scheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 20),
                 if (_education.length < 10)
@@ -1040,10 +1152,10 @@ class _EducationFormState extends State<_EducationForm> {
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: scheme.surface,
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.2),
+                color: scheme.shadow.withOpacity(0.2),
                 spreadRadius: 1,
                 blurRadius: 5,
                 offset: const Offset(0, -3),
@@ -1083,7 +1195,9 @@ class _EducationFormState extends State<_EducationForm> {
 
   Widget _buildEducationEntry(
       int index, Map<String, TextEditingController> edu) {
+    final scheme = Theme.of(context).colorScheme;
     return Card(
+      color: scheme.surface,
       margin: const EdgeInsets.only(bottom: 16),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1240,6 +1354,8 @@ class _SkillsFormState extends State<_SkillsForm> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     final hasSuggestions =
         widget.suggestedSkills != null && widget.suggestedSkills!.isNotEmpty;
 
@@ -1261,7 +1377,7 @@ class _SkillsFormState extends State<_SkillsForm> {
             hasSuggestions
                 ? 'Add custom skills or select from suggestions below (max 20)'
                 : 'Add your skills (max 20)',
-            style: const TextStyle(color: Colors.grey),
+            style: TextStyle(color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: 20),
 
@@ -1488,6 +1604,8 @@ class _CertificationsFormState extends State<_CertificationsForm> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Column(
       children: [
         Expanded(
@@ -1507,7 +1625,7 @@ class _CertificationsFormState extends State<_CertificationsForm> {
                 const SizedBox(height: 8),
                 Text(
                   'Add up to ${10 - _certifications.length} more certifications',
-                  style: const TextStyle(color: Colors.grey),
+                  style: TextStyle(color: scheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 20),
                 if (_certifications.length < 10)
@@ -1537,10 +1655,10 @@ class _CertificationsFormState extends State<_CertificationsForm> {
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: scheme.surface,
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.2),
+                color: scheme.shadow.withOpacity(0.2),
                 spreadRadius: 1,
                 blurRadius: 5,
                 offset: const Offset(0, -3),
@@ -1554,7 +1672,8 @@ class _CertificationsFormState extends State<_CertificationsForm> {
                   onPressed: widget.onSkip,
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: const BorderSide(color: AppTheme.primaryPurple),
+                    side: const BorderSide(
+                        color: AppTheme.primaryPurple, width: 2),
                   ),
                   child: const Text('Skip'),
                 ),
@@ -1580,7 +1699,9 @@ class _CertificationsFormState extends State<_CertificationsForm> {
 
   Widget _buildCertificationEntry(
       int index, Map<String, TextEditingController> cert) {
+    final scheme = Theme.of(context).colorScheme;
     return Card(
+      color: scheme.surface,
       margin: const EdgeInsets.only(bottom: 16),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1723,6 +1844,8 @@ class _LanguagesFormState extends State<_LanguagesForm> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Column(
       children: [
         Expanded(
@@ -1742,7 +1865,7 @@ class _LanguagesFormState extends State<_LanguagesForm> {
                 const SizedBox(height: 8),
                 Text(
                   'Add up to ${10 - _languages.length} more languages',
-                  style: const TextStyle(color: Colors.grey),
+                  style: TextStyle(color: scheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 20),
                 if (_languages.length < 10)
@@ -1755,7 +1878,8 @@ class _LanguagesFormState extends State<_LanguagesForm> {
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                             vertical: 12, horizontal: 16),
-                        side: const BorderSide(color: AppTheme.primaryPurple),
+                        side: const BorderSide(
+                            color: AppTheme.primaryPurple, width: 1.5),
                         foregroundColor: AppTheme.primaryPurple,
                       ),
                     ),
@@ -1772,10 +1896,10 @@ class _LanguagesFormState extends State<_LanguagesForm> {
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: scheme.surface,
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.2),
+                color: scheme.shadow.withOpacity(0.2),
                 spreadRadius: 1,
                 blurRadius: 5,
                 offset: const Offset(0, -3),
@@ -1789,7 +1913,8 @@ class _LanguagesFormState extends State<_LanguagesForm> {
                   onPressed: widget.onSkip,
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: const BorderSide(color: AppTheme.primaryPurple),
+                    side: const BorderSide(
+                        color: AppTheme.primaryPurple, width: 2),
                   ),
                   child: const Text('Skip'),
                 ),
@@ -1815,7 +1940,9 @@ class _LanguagesFormState extends State<_LanguagesForm> {
 
   Widget _buildLanguageEntry(
       int index, Map<String, TextEditingController> lang) {
+    final scheme = Theme.of(context).colorScheme;
     return Card(
+      color: scheme.surface,
       margin: const EdgeInsets.only(bottom: 16),
       child: Padding(
         padding: const EdgeInsets.all(16),

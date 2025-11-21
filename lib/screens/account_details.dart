@@ -92,7 +92,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
   @override
   Widget build(BuildContext context) {
     final isJobSeeker = widget.userType == 'JobSeeker';
-    const brandColor = Color(0xFF4A5FBC);
+    const brandColor = AppTheme.primaryPurple;
 
     return ThemedScaffold(
       appBar: AppBar(
@@ -146,6 +146,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
           final registeredFullName = userData['Name'] ?? 'N/A';
           final registeredEmail = userData['Email'] ?? 'N/A';
           final companyName = userData['CompanyName'] ?? 'N/A';
+          final photoUrl = (userData['PhotoURL'] ?? '') as String;
 
           // When entering edit mode for the first time, prefill controller
           if (_isEditing && _nameController.text.isEmpty) {
@@ -161,6 +162,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                   fullName: registeredFullName,
                   email: registeredEmail,
                   userType: widget.userType,
+                  photoUrl: photoUrl,
                 ),
                 const SizedBox(height: 20),
 
@@ -252,11 +254,13 @@ class _AccountHeader extends StatelessWidget {
   final String fullName;
   final String email;
   final String userType;
+  final String photoUrl;
 
   const _AccountHeader({
     required this.fullName,
     required this.email,
     required this.userType,
+    required this.photoUrl,
   });
 
   @override
@@ -289,14 +293,18 @@ class _AccountHeader extends StatelessWidget {
           CircleAvatar(
             radius: 28,
             backgroundColor: Colors.white.withOpacity(0.15),
-            child: Text(
-              initial,
-              style: const TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
+            backgroundImage:
+                photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
+            child: photoUrl.isEmpty
+                ? Text(
+                    initial,
+                    style: const TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  )
+                : null,
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -443,7 +451,7 @@ class _EditableNameField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const brandColor = Color(0xFF4A5FBC);
+    const brandColor = AppTheme.primaryPurple;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),

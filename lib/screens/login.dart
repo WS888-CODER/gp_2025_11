@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:gp_2025_11/config/theme.dart';
-import 'package:gp_2025_11/screens/welcome_screen.dart';
+import 'package:gp_2025_11/screens/welcome.dart';
 
 class LoginScreen extends StatefulWidget {
   @override

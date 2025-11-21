@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
-import 'package:gp_2025_11/screens/favorites_page.dart';
+import 'package:gp_2025_11/screens/favorites.dart';
 import 'package:gp_2025_11/screens/job_card.dart';
 
 const kJobsCollection = 'Jobs';
@@ -131,7 +132,6 @@ class _JobsPageState extends State<JobsPage> {
   List<Job> _allJobs = [];
 
   String _userType = 'JobSeeker';
-  bool _isProfileComplete = false;
   UserProfile? _liveProfile;
 
   StreamSubscription<List<Job>>? _jobsSub;
@@ -142,9 +142,8 @@ class _JobsPageState extends State<JobsPage> {
     try {
       await FavoritesService.toggleFavorite(job.jobId, newValue);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update favorites: $e')),
-      );
+      SnackHelper.error(
+          context, 'Failed to update favorites. Please try again.');
     }
   }
 
@@ -181,7 +180,6 @@ class _JobsPageState extends State<JobsPage> {
         if (!mounted) return;
         setState(() {
           _userType = type;
-          _isProfileComplete = complete;
           _liveProfile = UserProfile(
             cvUrl: cv.isEmpty ? null : cv,
             cvKeywords: cvKeys.toSet(),
@@ -548,7 +546,6 @@ class _JobsPageState extends State<JobsPage> {
                                   _showClosedJobs = false;
                                 }
 
-                                // Banner logic: يظهر إذا For You ON وما عندنا CV usable
                                 final hasCv = _profile.cvUrl != null;
                                 final hasKeywords =
                                     _profile.cvKeywords.isNotEmpty;

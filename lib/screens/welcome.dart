@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:gp_2025_11/screens/login_screen.dart';
-import 'package:gp_2025_11/screens/signup_screen.dart';
+import 'package:gp_2025_11/screens/login.dart';
+import 'package:gp_2025_11/screens/signup.dart';
 import 'dart:math';
 
 class WelcomeScreen extends StatefulWidget {

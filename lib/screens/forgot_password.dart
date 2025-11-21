@@ -103,7 +103,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       }
       return false;
     } catch (e) {
-      print('âŒ Error sending OTP: $e');
       return false;
     }
   }
@@ -337,7 +336,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         });
       }
     } catch (e) {
-      print('❌ Error: $e');
       setState(() {
         _passwordError = 'An error occurred: ${e.toString()}';
       });
