@@ -220,35 +220,43 @@ class _JobsPageState extends State<JobsPage> {
     return inSpec || inTags;
   }
 
-  bool _matchesCvKeywords(Job j, Set<String> userCvKeywords) {
-    if (userCvKeywords.isEmpty) return false;
+  int _cvMatchScore(Job j, Set<String> userCvKeywords) {
+    if (userCvKeywords.isEmpty) return 0;
 
     final jobBagRaw = {
       j.specialty.toLowerCase().trim(),
+      j.title.toLowerCase().trim(),
+      j.position.toLowerCase().trim(),
       ...j.keywords.map((k) => k.toLowerCase().trim()),
     };
 
     final Set<String> jobTokens = {
       for (final chunk in jobBagRaw)
-        ...chunk.split(RegExp(r'[^a-z0-9+#]+')).where((t) => t.isNotEmpty)
+        ...chunk.split(RegExp(r'[^a-z0-9+#]+')).where((t) => t.isNotEmpty),
     };
 
-    int matchCount = 0;
+    int score = 0;
 
     for (final kw in userCvKeywords) {
       final cleanKw = kw.toLowerCase().trim();
       if (cleanKw.isEmpty) continue;
 
       if (jobTokens.contains(cleanKw)) {
-        matchCount += 1;
+        // base match
+        score += 2;
 
-        if (matchCount >= 2) {
-          return true;
+        // extra weight if it appears in specialty text
+        if (j.specialty.toLowerCase().contains(cleanKw)) {
+          score += 1;
         }
       }
     }
 
-    return false;
+    return score;
+  }
+
+  bool _matchesCvKeywords(Job j, Set<String> userCvKeywords) {
+    return _cvMatchScore(j, userCvKeywords) >= 2;
   }
 
   List<Job> _applyFilters(List<Job> jobs) {
@@ -263,7 +271,6 @@ class _JobsPageState extends State<JobsPage> {
       final hasKeywords = _profile.cvKeywords.isNotEmpty;
 
       if (!hasCv || !hasKeywords) {
-        // For You is "on" but we don't have usable CV data
         return const <Job>[];
       }
 
@@ -287,11 +294,28 @@ class _JobsPageState extends State<JobsPage> {
     }
 
     final list = res.toList();
-    list.sort(
-      (a, b) => _sort == SortOrder.newestFirst
+
+    Map<String, int> relevanceScores = {};
+    if (_forYou) {
+      for (final j in list) {
+        relevanceScores[j.jobId] = _cvMatchScore(j, _profile.cvKeywords);
+      }
+    }
+
+    list.sort((a, b) {
+      if (_forYou) {
+        final scoreA = relevanceScores[a.jobId] ?? 0;
+        final scoreB = relevanceScores[b.jobId] ?? 0;
+
+        if (scoreA != scoreB) {
+          return scoreB.compareTo(scoreA);
+        }
+      }
+
+      return _sort == SortOrder.newestFirst
           ? b.postedAt.compareTo(a.postedAt)
-          : a.postedAt.compareTo(b.postedAt),
-    );
+          : a.postedAt.compareTo(b.postedAt);
+    });
 
     return list;
   }
@@ -743,10 +767,39 @@ class _JobsPageState extends State<JobsPage> {
                     message = 'No jobs match your filters.';
                   }
 
-                  return Center(
-                    child: Text(
-                      message,
-                      style: Theme.of(context).textTheme.titleMedium,
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 28),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.work_off_rounded,
+                          size: 56,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.30),
+                        ),
+                        const SizedBox(height: 16),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            maxWidth: 300,
+                          ),
+                          child: Text(
+                            message,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14.5,
+                              height: 1.45,
+                              fontWeight: FontWeight.w500,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.75),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   );
                 }
