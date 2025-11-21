@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import '../config/theme.dart';
-import 'cv_ready_screen.dart';
+import 'cv_ready.dart';
 
 class CVNextStepsScreen extends StatefulWidget {
   final String? cvHistoryId;

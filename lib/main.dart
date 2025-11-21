@@ -13,7 +13,7 @@ import 'config/theme.dart';
 import 'screens/start.dart';
 import 'screens/login.dart';
 import 'screens/signup.dart';
-import 'screens/otp_verification_screen.dart';
+import 'screens/otp_verification.dart';
 import 'screens/forgot_password.dart';
 import 'screens/change_password.dart';
 import 'screens/admin_dashboard.dart';
@@ -22,7 +22,7 @@ import 'screens/questions.dart';
 import 'screens/jobseeker_home.dart';
 import 'screens/company_home.dart';
 import 'package:gp_2025_11/screens/favorites.dart';
-import 'package:gp_2025_11/screens/cv_next_steps_screen.dart';
+import 'package:gp_2025_11/screens/cv_next_steps.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

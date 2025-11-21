@@ -78,6 +78,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
   bool _saving = false;
   double? _progress;
   bool _filledFromServer = false;
+  final ValueNotifier<double?> progressNotifier = ValueNotifier<double?>(null);
 
   final _locAllowed =
       RegExp(r"^[A-Za-z\u0600-\u06FF][A-Za-z\u0600-\u06FF\s\.'-]{1,39}$");
@@ -220,6 +221,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
     setState(() {
       _progress = 0;
     });
+    progressNotifier.value = 0;
 
     final task = ref.putFile(file);
 
@@ -230,6 +232,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
         setState(() {
           _progress = s.bytesTransferred / total;
         });
+        progressNotifier.value = s.bytesTransferred / total;
       }
     });
 
@@ -242,6 +245,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
         setState(() {
           _progress = null;
         });
+        progressNotifier.value = null;
       }
 
       return {'url': url, 'path': path};
@@ -250,6 +254,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
         setState(() {
           _progress = null;
         });
+        progressNotifier.value = null;
         SnackHelper.error(
           context,
           'Upload failed: ${e.message ?? e.code}',
@@ -262,6 +267,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
           _progress = null;
         });
       }
+      progressNotifier.value = null;
       rethrow;
     }
   }
@@ -306,6 +312,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
     setState(() {
       _saving = true;
       _progress = 0;
+      progressNotifier.value = 0;
     });
 
     try {
@@ -442,6 +449,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
           _progress = null;
           _saving = false;
         });
+        progressNotifier.value = null;
       }
     }
   }
@@ -1002,10 +1010,9 @@ class _EditCompanyPageState extends State<EditCompanyPage>
             },
           ),
           bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(48 + 4),
+            preferredSize: const Size.fromHeight(4 + 8 + 44),
             child: Builder(
               builder: (context) {
-                const brand = Color(0xFF4A5FBC);
                 final theme = Theme.of(context);
                 final scheme = theme.colorScheme;
                 final isDark = theme.brightness == Brightness.dark;
@@ -1020,68 +1027,73 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                     ? scheme.onSurface.withOpacity(0.7)
                     : brand.withOpacity(0.85);
 
-                return Column(
-                  children: [
-                    if (widget.parentState._progress != null)
-                      LinearProgressIndicator(
-                        value: widget.parentState._progress == 0
-                            ? null
-                            : widget.parentState._progress,
-                        minHeight: 4,
-                        backgroundColor: Colors.black12,
-                        color: Colors.white,
-                      ),
-                    const SizedBox(height: 8),
-                    Container(
-                      height: 44,
-                      margin: const EdgeInsets.symmetric(horizontal: 16)
-                          .copyWith(bottom: 8),
-                      decoration: BoxDecoration(
-                        color: tabBg,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: TabBar(
-                        controller: _tabCtrl,
-                        isScrollable: false,
-                        dividerColor: Colors.transparent,
-                        indicator: BoxDecoration(
-                          color: indicatorColor,
-                          borderRadius: BorderRadius.circular(10),
+                return ValueListenableBuilder<double?>(
+                  valueListenable: parent.progressNotifier,
+                  builder: (context, progress, _) {
+                    final showBar = progress != null;
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (showBar)
+                          LinearProgressIndicator(
+                            value: (progress ?? 0) == 0 ? null : progress,
+                            minHeight: 4,
+                            backgroundColor: Colors.black12,
+                            color: Colors.white,
+                          ),
+                        if (showBar) const SizedBox(height: 8),
+                        Container(
+                          height: 44,
+                          margin: const EdgeInsets.symmetric(horizontal: 16)
+                              .copyWith(bottom: 8),
+                          decoration: BoxDecoration(
+                            color: tabBg,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: TabBar(
+                            controller: _tabCtrl,
+                            isScrollable: false,
+                            dividerColor: Colors.transparent,
+                            indicator: BoxDecoration(
+                              color: indicatorColor,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            labelColor: labelColor,
+                            unselectedLabelColor: unselectedColor,
+                            labelPadding: EdgeInsets.zero,
+                            tabs: const [
+                              Tab(
+                                child: SizedBox.expand(
+                                  child: Center(
+                                    child: Text(
+                                      'Company Info',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13.5,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Tab(
+                                child: SizedBox.expand(
+                                  child: Center(
+                                    child: Text(
+                                      'Contact Details',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13.5,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        labelColor: labelColor,
-                        unselectedLabelColor: unselectedColor,
-                        labelPadding: EdgeInsets.zero,
-                        tabs: const [
-                          Tab(
-                            child: SizedBox.expand(
-                              child: Center(
-                                child: Text(
-                                  'Company Info',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 13.5,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Tab(
-                            child: SizedBox.expand(
-                              child: Center(
-                                child: Text(
-                                  'Contact Details',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 13.5,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                      ],
+                    );
+                  },
                 );
               },
             ),

@@ -8,7 +8,7 @@ import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:gp_2025_11/screens/all_jobs.dart';
 import 'package:gp_2025_11/screens/job_card.dart';
-import 'package:gp_2025_11/screens/cv_enhancement_screen.dart';
+import 'package:gp_2025_11/screens/cv_enhancement.dart';
 import 'package:gp_2025_11/screens/history.dart';
 import 'package:gp_2025_11/screens/favorites.dart';
 
