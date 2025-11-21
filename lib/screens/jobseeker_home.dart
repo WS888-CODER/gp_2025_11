@@ -1,4 +1,6 @@
 // lib/screens/jobseeker_home.dart
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -126,6 +128,7 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
       final messenger = ScaffoldMessenger.maybeOf(context);
       messenger?.hideCurrentMaterialBanner();
     });
+    final userId = _effectiveUserId;
 
     final homeBody = ListView(
       controller: _homeScroll,
@@ -184,12 +187,13 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
           ],
         ),
         const SizedBox(height: 8),
-        const _JobsPreviewCompact(limit: 3),
+        _JobsPreviewCompact(
+          limit: 3,
+          userId: userId,
+        ),
         const SizedBox(height: 16),
       ],
     );
-
-    final userId = _effectiveUserId;
 
     return ThemedScaffold(
       appBar: JobSeekerAppBar(
@@ -376,7 +380,12 @@ class _BigTile extends StatelessWidget {
 
 class _JobsPreviewCompact extends StatefulWidget {
   final int limit;
-  const _JobsPreviewCompact({this.limit = 2});
+  final String userId;
+
+  const _JobsPreviewCompact({
+    this.limit = 2,
+    required this.userId,
+  });
 
   @override
   State<_JobsPreviewCompact> createState() => _JobsPreviewCompactState();
@@ -387,6 +396,45 @@ class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
   Map<String, CompanyInfo> _companyByUserId = {};
   bool _loadingCompanies = false;
   String? _error;
+  String? _cvUrl;
+  Set<String> _cvKeywords = {};
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _profileSub;
+  bool get _hasCv => _cvUrl != null && _cvUrl!.isNotEmpty;
+  bool get _hasKeywords => _cvKeywords.isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null && uid.isNotEmpty) {
+      _profileSub = FirebaseFirestore.instance
+          .collection('Users')
+          .doc(uid)
+          .snapshots()
+          .listen((doc) {
+        final data = doc.data() ?? {};
+
+        final cv = (data[UserDocFields.cvUrl] ?? '').toString().trim();
+        final rawKeywords = data[UserDocFields.cvKeywords];
+
+        final Set<String> cvKeys = {};
+        if (rawKeywords is List) {
+          for (final e in rawKeywords) {
+            final s = e.toString().trim().toLowerCase();
+            if (s.isNotEmpty) cvKeys.add(s);
+          }
+        }
+
+        if (!mounted) return;
+        setState(() {
+          _cvUrl = cv.isNotEmpty ? cv : null;
+          _cvKeywords = cvKeys;
+        });
+      });
+    }
+  }
+
   Future<void> _toggleFavoriteForJob(Job job, bool newValue) async {
     try {
       await FavoritesService.toggleFavorite(job.jobId, newValue);
@@ -396,10 +444,44 @@ class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
     }
   }
 
+  int _cvMatchScore(Job j) {
+    if (_cvKeywords.isEmpty) return 0;
+
+    final jobBagRaw = {
+      j.specialty.toLowerCase().trim(),
+      j.title.toLowerCase().trim(),
+      j.position.toLowerCase().trim(),
+      ...j.keywords.map((k) => k.toLowerCase().trim()),
+    };
+
+    final Set<String> jobTokens = {
+      for (final chunk in jobBagRaw)
+        ...chunk.split(RegExp(r'[^a-z0-9+#]+')).where((t) => t.isNotEmpty),
+    };
+
+    int score = 0;
+
+    for (final kw in _cvKeywords) {
+      final cleanKw = kw.toLowerCase().trim();
+      if (cleanKw.isEmpty) continue;
+
+      if (jobTokens.contains(cleanKw)) {
+        // base match
+        score += 2;
+
+        if (j.specialty.toLowerCase().contains(cleanKw)) {
+          score += 1;
+        }
+      }
+    }
+
+    return score;
+  }
+
   Stream<QuerySnapshot<Map<String, dynamic>>> _jobsStream() {
     return FirebaseFirestore.instance
         .collection('Jobs')
-        .orderBy(JobFields.startDate, descending: true)
+        .orderBy(JobFields.postedAt, descending: true)
         .limit(widget.limit * 5)
         .snapshots();
   }
@@ -446,6 +528,12 @@ class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
   }
 
   @override
+  void dispose() {
+    _profileSub?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: _jobsStream(),
@@ -488,7 +576,40 @@ class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
             .where((j) => j.status.trim().toLowerCase() != 'closed')
             .toList();
 
-        final limitedJobs = openJobs.take(widget.limit).toList();
+        List<Job> prioritized = [];
+
+        if (_hasCv && _hasKeywords) {
+          final List<Job> strongMatches = [];
+          final List<Job> otherJobs = [];
+
+          for (final j in openJobs) {
+            final score = _cvMatchScore(j);
+            if (score >= 2) {
+              strongMatches.add(j);
+            } else {
+              otherJobs.add(j);
+            }
+          }
+
+          strongMatches.sort((a, b) {
+            final sa = _cvMatchScore(a);
+            final sb = _cvMatchScore(b);
+
+            if (sa != sb) {
+              return sb.compareTo(sa);
+            }
+            return b.postedAt.compareTo(a.postedAt);
+          });
+
+          otherJobs.sort((a, b) => b.postedAt.compareTo(a.postedAt));
+
+          prioritized = [...strongMatches, ...otherJobs];
+        } else {
+          prioritized = List<Job>.from(openJobs)
+            ..sort((a, b) => b.postedAt.compareTo(a.postedAt));
+        }
+
+        final limitedJobs = prioritized.take(widget.limit).toList();
 
         final needToFetchCompanies = () {
           if (_loadingCompanies) return false;

@@ -18,6 +18,7 @@ class JobFields {
   static const specialty = 'Specialty';
   static const userId = 'UserID';
   static const company = 'Company';
+  static const postedAt = 'PostedAt';
 }
 
 class CompanyInfo {
@@ -46,8 +47,14 @@ class Job {
   final String title;
   final String position;
   final List<String> keywords;
+
+  /// تاريخ نشر الوظيفة (اللي بنرتّب عليه)
   final DateTime postedAt;
+
+  /// تقدرِ تخليه nullable إذا في وظائف قديمة ما فيها StartDate
+  final DateTime? startDate;
   final DateTime? endDate;
+
   final String description;
   final String status;
   final List<String> requirements;
@@ -61,6 +68,7 @@ class Job {
     required this.position,
     required this.keywords,
     required this.postedAt,
+    this.startDate,
     this.endDate,
     required this.description,
     required this.status,
@@ -72,22 +80,35 @@ class Job {
   factory Job.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data() ?? {};
 
-    DateTime? asDate(dynamic v) =>
-        v is Timestamp ? v.toDate() : (v is DateTime ? v : null);
+    DateTime? asDate(dynamic v) {
+      if (v == null) return null;
+      if (v is Timestamp) return v.toDate();
+      if (v is DateTime) return v;
+      if (v is String && v.isNotEmpty) return DateTime.tryParse(v);
+      return null;
+    }
 
     List<String> asStringList(dynamic v) =>
         v is List ? v.map((e) => e.toString()).toList() : <String>[];
 
+    final startDate = asDate(d[JobFields.startDate]);
+    final endDate = asDate(d[JobFields.endDate]);
+
+    // 🔥 الأولوية لـ PostedAt، ولو مو موجود نطيح على StartDate، ولو برضو مو موجود نخلي تاريخ قديم
+    final postedAt =
+        asDate(d[JobFields.postedAt]) ?? startDate ?? DateTime(2000);
+
     return Job(
       id: doc.id,
-      jobId: doc.id,
+      jobId: (d[JobFields.jobId] ?? doc.id).toString(),
       title: (d[JobFields.title] ?? '').toString(),
       position: (d[JobFields.position] ?? '').toString(),
       keywords: asStringList(d[JobFields.keywords]),
-      postedAt: asDate(d[JobFields.startDate]) ?? DateTime.now(),
-      endDate: asDate(d[JobFields.endDate]),
+      postedAt: postedAt,
+      startDate: startDate,
+      endDate: endDate,
       description: (d[JobFields.description] ?? '').toString(),
-      status: (d[JobFields.status] ?? '').toString(),
+      status: (d[JobFields.status] ?? 'Open').toString(),
       requirements: asStringList(d[JobFields.requirements]),
       specialty: (d[JobFields.specialty] ?? '').toString(),
       userId: (d[JobFields.userId] ?? '').toString(),

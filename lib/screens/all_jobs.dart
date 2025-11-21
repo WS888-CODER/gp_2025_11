@@ -26,50 +26,68 @@ List<String> kSpecialtyOptions = [
   "IT Support / System Administration",
   "Product Management",
   "UI/UX Design",
-  "QA / Testing",
+  "QA / Software Testing",
 
   // --- Engineering ---
-  "Engineering",
+  "Mechanical Engineering",
+  "Electrical Engineering",
+  "Industrial Engineering",
+  "Chemical Engineering",
+  "Civil Engineering",
 
   // --- Business & Operations ---
-  "Business / Operations",
+  "Business Administration",
+  "Operations Management",
   "Project Management",
-  "Supply Chain / Logistics",
+  "Supply Chain & Logistics",
   "Procurement",
   "Quality Management",
-  "Strategy / Consulting",
+  "Strategy & Consulting",
 
   // --- Sales & Marketing ---
-  "Sales & Business Development",
+  "Sales",
+  "Business Development",
   "Digital Marketing",
-  "Content Creation / Copywriting",
-  "Branding / Creative",
-  "Advertising / PR",
+  "Content Creation",
+  "Copywriting",
+  "Branding",
+  "Creative Direction",
+  "Advertising & Public Relations",
 
   // --- Finance & Legal ---
-  "Accounting / Auditing",
-  "Finance / Investment",
-  "Legal / Compliance",
+  "Accounting",
+  "Auditing",
+  "Finance & Investment",
+  "Legal & Compliance",
+  "Risk Management",
 
   // --- HR ---
   "Human Resources",
 
-  // --- Healthcare ---
-  "Healthcare / Medical",
+  // --- Environment & Safety ---
+  "Health, Safety & Environment (HSE)",
+  "Environmental Management",
 
-  // --- Education ---
-  "Teaching / Training",
+  // --- Manufacturing & Production ---
+  "Manufacturing & Production",
+  "Quality Assurance (Industrial)",
+  "Research & Development (R&D)",
 
   // --- Media & Creative ---
-  "Media / Journalism",
-  "Graphic / Motion Design",
-  "Photography / Videography",
+  "Media & Journalism",
+  "Graphic Design",
+  "Motion Design",
+  "Photography & Videography",
 
-  // --- Customer Service ---
-  "Customer Support / Service",
+  // --- Customer Service & Admin ---
+  "Customer Support",
+  "Office Administration",
 
   // --- Hospitality ---
   "Hospitality & Tourism",
+
+  // --- Education ---
+  "Teaching & Training",
 
   // --- Other ---
   "Other",
@@ -98,7 +116,7 @@ class UserDocFields {
 Stream<List<Job>> _jobsStream() {
   return FirebaseFirestore.instance
       .collection(kJobsCollection)
-      .orderBy(JobFields.startDate, descending: true)
+      .orderBy(JobFields.postedAt, descending: true)
       .snapshots()
       .map((qs) => qs.docs.map((d) => Job.fromDoc(d)).toList());
 }
