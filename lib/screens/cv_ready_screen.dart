@@ -136,6 +136,8 @@ class _PublishScreenState extends State<PublishScreen> {
               .doc(widget.cvUrl)
               .snapshots(),
           builder: (context, snapshot) {
+            final scheme = Theme.of(context).colorScheme;
+
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
@@ -192,19 +194,23 @@ class _PublishScreenState extends State<PublishScreen> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
+                        color: scheme.surfaceVariant.withOpacity(0.4),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade300),
+                        border:
+                            Border.all(color: scheme.outline.withOpacity(0.4)),
                       ),
-                      child: const Column(
+                      child: Column(
                         children: [
-                          CircularProgressIndicator(),
-                          SizedBox(height: 12),
+                          const CircularProgressIndicator(
+                            valueColor:
+                                AlwaysStoppedAnimation(AppTheme.primaryPurple),
+                          ),
+                          const SizedBox(height: 12),
                           Text(
                             'Generating your enhanced CV...',
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.grey,
+                              color: scheme.onSurfaceVariant,
                             ),
                           ),
                         ],
@@ -215,7 +221,7 @@ class _PublishScreenState extends State<PublishScreen> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryPurple.withOpacity(0.05),
+                        color: scheme.surfaceVariant.withOpacity(0.4),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: AppTheme.primaryPurple.withOpacity(0.3),
@@ -224,7 +230,6 @@ class _PublishScreenState extends State<PublishScreen> {
                       ),
                       child: Column(
                         children: [
-                          // PDF Icon
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
@@ -238,8 +243,6 @@ class _PublishScreenState extends State<PublishScreen> {
                             ),
                           ),
                           const SizedBox(height: 12),
-
-                          // PDF Title
                           const Text(
                             'Enhanced CV (PDF)',
                             style: TextStyle(
@@ -249,13 +252,12 @@ class _PublishScreenState extends State<PublishScreen> {
                             ),
                           ),
                           const SizedBox(height: 8),
-
-                          const Text(
+                          Text(
                             'Your professionally enhanced CV is ready!',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.grey,
+                              color: scheme.onSurfaceVariant,
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -290,7 +292,7 @@ class _PublishScreenState extends State<PublishScreen> {
                                 child: ElevatedButton.icon(
                                   onPressed: () => _openPDF(pdfUrl),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.orange,
+                                    backgroundColor: Color(0xFFFD6C67),
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(
                                         vertical: 12),
@@ -341,20 +343,25 @@ class _PublishScreenState extends State<PublishScreen> {
                       ? Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade50,
+                            color: scheme.surfaceVariant.withOpacity(0.4),
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.grey.shade300),
+                            border: Border.all(
+                                color: scheme.outline.withOpacity(0.4)),
                           ),
-                          child: const Center(
-                            child: Text('No suggestions available yet.'),
+                          child: Center(
+                            child: Text(
+                              'No suggestions available yet.',
+                              style: TextStyle(color: scheme.onSurfaceVariant),
+                            ),
                           ),
                         )
                       : Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade50,
+                            color: scheme.surfaceVariant.withOpacity(0.4),
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.grey.shade300),
+                            border: Border.all(
+                                color: scheme.outline.withOpacity(0.4)),
                           ),
                           child: ListView.builder(
                             shrinkWrap: true,
@@ -366,9 +373,9 @@ class _PublishScreenState extends State<PublishScreen> {
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      '${index + 1}. ',
-                                      style: const TextStyle(
+                                    const Text(
+                                      '• ',
+                                      style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         color: AppTheme.primaryPurple,
                                       ),
@@ -376,9 +383,10 @@ class _PublishScreenState extends State<PublishScreen> {
                                     Expanded(
                                       child: Text(
                                         suggestions[index].toString(),
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 15,
                                           height: 1.5,
+                                          color: scheme.onSurface,
                                         ),
                                       ),
                                     ),
@@ -387,7 +395,7 @@ class _PublishScreenState extends State<PublishScreen> {
                               );
                             },
                           ),
-                        ),
+                        )
                 ],
               ),
             );

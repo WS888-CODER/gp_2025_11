@@ -154,22 +154,20 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
 
     final shouldPop = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Leave CV Enhancement?'),
-        content: const Text(
+      builder: (context) => const JadeerDialog<bool>(
+        title: 'Leave CV Enhancement?',
+        content: Text(
           'Your progress will be lost. Are you sure you want to leave?',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 15,
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Leave'),
-          ),
-        ],
+        secondaryLabel: 'Cancel',
+        secondaryResult: false,
+        primaryLabel: 'Leave',
+        primaryResult: true,
       ),
     );
 
