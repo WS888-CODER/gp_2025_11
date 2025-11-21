@@ -109,10 +109,12 @@ enum SortOrder { newestFirst, oldestFirst }
 
 class JobsPage extends StatefulWidget {
   final UserProfile profile;
+  final bool autoFocusSearch;
 
   const JobsPage({
     super.key,
     this.profile = const UserProfile(),
+    this.autoFocusSearch = false,
   });
 
   @override
@@ -127,6 +129,7 @@ class _JobsPageState extends State<JobsPage> {
   bool _showClosedJobs = false;
   bool _showProfileReminder = false;
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
 
   List<String> _specialties = ['All', ...kSpecialtyOptions];
   List<Job> _allJobs = [];
@@ -150,6 +153,13 @@ class _JobsPageState extends State<JobsPage> {
   @override
   void initState() {
     super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (widget.autoFocusSearch) {
+        _searchFocusNode.requestFocus();
+      }
+    });
 
     _jobsSub = _jobsStream().listen((jobs) {
       _ensureCompanyNames(jobs.map((j) => j.userId).toSet());
@@ -190,24 +200,14 @@ class _JobsPageState extends State<JobsPage> {
           final hasKeywords = cvKeys.isNotEmpty;
 
           if (!hasCv || !hasKeywords) {
-            // No usable CV -> disable For You and hide reminder
             _forYou = false;
             _showProfileReminder = false;
           } else if (_forYou) {
-            // For You is on and CV is valid -> no reminder needed
             _showProfileReminder = false;
           }
         });
       });
     }
-  }
-
-  @override
-  void dispose() {
-    _jobsSub?.cancel();
-    _userSub?.cancel();
-    _searchController.dispose();
-    super.dispose();
   }
 
   UserProfile get _profile => _liveProfile ?? widget.profile;
@@ -344,6 +344,15 @@ class _JobsPageState extends State<JobsPage> {
   }
 
   @override
+  void dispose() {
+    _jobsSub?.cancel();
+    _userSub?.cancel();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final jobs = _applyFilters(_allJobs);
 
@@ -384,6 +393,7 @@ class _JobsPageState extends State<JobsPage> {
                   ),
                   child: TextField(
                     controller: _searchController,
+                    focusNode: _searchFocusNode,
                     style: TextStyle(
                       fontSize: 14,
                       color: scheme.onSurface,

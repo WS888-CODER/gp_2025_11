@@ -21,6 +21,7 @@ class JobSeekerHome extends StatefulWidget {
 class _JobSeekerHomeState extends State<JobSeekerHome> {
   int _tab = 1;
   final _homeScroll = ScrollController();
+  final TextEditingController _homeSearchController = TextEditingController();
 
   static const _brand = AppTheme.primaryPurple;
 
@@ -39,6 +40,7 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
   @override
   void dispose() {
     _homeScroll.dispose();
+    _homeSearchController.dispose();
     super.dispose();
   }
 
@@ -129,6 +131,8 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
       controller: _homeScroll,
       padding: const EdgeInsets.all(16),
       children: [
+        const _JobsSearchShortcut(),
+        const SizedBox(height: 16),
         Row(
           children: [
             Expanded(
@@ -574,6 +578,67 @@ class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
           },
         );
       },
+    );
+  }
+}
+
+class _JobsSearchShortcut extends StatelessWidget {
+  const _JobsSearchShortcut();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final shadowColor =
+        isDark ? Colors.black.withOpacity(0.6) : Colors.black.withOpacity(0.07);
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const JobsPage(
+              autoFocusSearch: true,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: shadowColor,
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            Icon(
+              Icons.search,
+              color: isDark ? Colors.grey[400] : Colors.grey[600],
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Search jobs, companies or keywords…',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? Colors.grey[500] : Colors.grey[600],
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
