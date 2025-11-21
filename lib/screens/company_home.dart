@@ -169,35 +169,42 @@ class _CompanyHomeState extends State<CompanyHome> {
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Outer layer for bold outline (coral orange)
-          if (isSelected)
-            Icon(
-              filledIcon,
-              size: 34,
-              color: const Color(0xFFFC686A),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                if (isSelected)
+                  Icon(
+                    filledIcon,
+                    size: 34,
+                    color: const Color(0xFFFC686A),
+                  ),
+                if (isSelected)
+                  Icon(
+                    filledIcon,
+                    size: 32,
+                    color: const Color(0xFFFFDADD),
+                  ),
+                Icon(
+                  icon,
+                  size: 32,
+                  color: isSelected
+                      ? const Color(0xFFFC686A)
+                      : Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.color
+                          ?.withOpacity(0.6),
+                ),
+              ],
             ),
-          // Middle layer filled icon (light coral)
-          if (isSelected)
-            Icon(
-              filledIcon,
-              size: 32,
-              color: const Color(0xFFFFDADD),
-            ),
-          // Foreground outlined icon (coral orange or lighter grey)
-          Icon(
-            icon,
-            size: 32,
-            color: isSelected
-                ? const Color(0xFFFC686A)
-                : Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.color, // Use theme color for better dark mode support
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

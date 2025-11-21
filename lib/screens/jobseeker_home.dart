@@ -55,8 +55,9 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
   }) {
     return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
