@@ -544,6 +544,38 @@ CRITICAL RULES - READ CAREFULLY:
 4. If ALL sections are empty, return ONLY empty arrays/objects for each section
 5. You can improve grammar and formatting of EXISTING content, but NEVER add new content that wasn't there
 
+CV TAILORING RULES (when job title/description is provided):
+
+1. SMART SELECTION:
+   - Include items that are RELEVANT to the target job
+   - It's OK to REMOVE or OMIT items that are not relevant to the position
+   - Keep major achievements (awards, patents, publications, significant recognitions) even if not directly related
+   - Keep all education and core work experience
+   - Can remove: minor projects, irrelevant volunteer work, hobbies that don't add value, outdated skills
+
+2. CONTENT OPTIMIZATION:
+   - For relevant items: Write detailed, impactful descriptions (2-3 bullet points)
+   - For less relevant items you decide to keep: Make them brief (1 short line)
+   - Rewrite descriptions to emphasize skills/outcomes that match the job requirements
+   - Use keywords from the job description where naturally applicable
+
+3. ONE-PAGE FOCUS:
+   - Be selective - quality over quantity
+   - Keep descriptions concise and impactful
+   - Use bullet points, not paragraphs
+   - Remove fluff and redundancy
+   - Aim to keep the CV content that would fit on approximately one page
+
+4. WHEN NO JOB IS PROVIDED:
+   - Keep ALL sections and items
+   - Just enhance grammar, formatting, and professionalism
+   - Don't remove or condense anything
+
+5. IN SUGGESTIONS:
+   - Mention which items you removed and why (too brief, not relevant to target role)
+   - Mention which sections you emphasized
+   - Be transparent about your tailoring decisions
+
 Enhance the following CV text to make it:
 - Professional and grammatically correct
 - Optimized for ATS (Applicant Tracking Systems)
@@ -611,6 +643,100 @@ Return ONLY valid JSON in the following structure:
       "section": "Languages",
       "content": [
         {"language": "...", "proficiency": "..."}
+      ]
+    },
+    {
+      "section": "Projects",
+      "content": [
+        {"name": "...", "description": "...", "technologies": "...", "year": "..."}
+      ]
+    },
+    {
+      "section": "VolunteerWork",
+      "content": [
+        {"role": "...", "organization": "...", "years": "..."}
+      ]
+    },
+    {
+      "section": "Awards",
+      "content": [
+        {"name": "...", "issuer": "...", "year": "..."}
+      ]
+    },
+    {
+      "section": "Publications",
+      "content": [
+        {"title": "...", "publisher": "...", "year": "..."}
+      ]
+    },
+    {
+      "section": "Courses",
+      "content": [
+        {"name": "...", "institution": "...", "year": "..."}
+      ]
+    },
+    {
+      "section": "Achievements",
+      "content": [
+        {"name": "...", "year": "..."}
+      ]
+    },
+    {
+      "section": "ExtracurricularActivities",
+      "content": [
+        {"activity": "...", "role": "...", "years": "..."}
+      ]
+    },
+    {
+      "section": "Research",
+      "content": [
+        {"title": "...", "institution": "...", "years": "..."}
+      ]
+    },
+    {
+      "section": "Internships",
+      "content": [
+        {"title": "...", "company": "...", "years": "..."}
+      ]
+    },
+    {
+      "section": "Interests",
+      "content": ["Interest1", "Interest2", "Interest3"]
+    },
+    {
+      "section": "Portfolio",
+      "content": [
+        {"name": "...", "url": "..."}
+      ]
+    },
+    {
+      "section": "Conferences",
+      "content": [
+        {"name": "...", "role": "...", "year": "..."}
+      ]
+    },
+    {
+      "section": "Workshops",
+      "content": [
+        {"name": "...", "organizer": "...", "year": "..."}
+      ]
+    },
+    {
+      "section": "Training",
+      "content": [
+        {"name": "...", "provider": "...", "year": "..."}
+      ]
+    },
+    {
+      "section": "ProfessionalMemberships",
+      "content": [
+        {"organization": "...", "role": "...", "years": "..."}
+      ]
+    },
+    {
+      "section": "Patents",
+      "content": [
+        {"title": "...", "patent_number": "...", "year": "..."}
       ]
     }
   ],
