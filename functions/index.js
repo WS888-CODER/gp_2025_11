@@ -193,26 +193,29 @@ export const sendSignupOtp = functions.https.onCall(async (data, context) => {
 /**
  * 3️⃣ Notify Admin about new Company registration
  */
-export const notifyAdminNewCompany = functions.https.onCall(async (data, context) => {
-  console.log("📥 Admin notification - Full data:", data);
+export const notifyAdminNewCompany = functions.https.onCall(
+  async (data, context) => {
+    console.log("📥 Admin notification - Full data:", data);
 
-  const actualData = data.data || data;
-  const companyName = actualData.companyName || actualData["companyName"] || "";
-  const companyEmail = actualData.companyEmail || actualData["companyEmail"] || "";
+    const actualData = data.data || data;
+    const companyName =
+      actualData.companyName || actualData["companyName"] || "";
+    const companyEmail =
+      actualData.companyEmail || actualData["companyEmail"] || "";
 
-  if (!companyName || !companyEmail) {
-    throw new functions.https.HttpsError(
-      "invalid-argument",
-      "Company name and email are required"
-    );
-  }
+    if (!companyName || !companyEmail) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "Company name and email are required"
+      );
+    }
 
-  try {
-    const mailOptions = {
-      from: `"Jadeer System" <${EMAIL_USER}>`,
-      to: ADMIN_EMAIL,
-      subject: "🚀 New Company Registration - Action Required",
-      html: `
+    try {
+      const mailOptions = {
+        from: `"Jadeer System" <${EMAIL_USER}>`,
+        to: ADMIN_EMAIL,
+        subject: "🚀 New Company Registration - Action Required",
+        html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
           <div style="background-color: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
             <h2 style="color: #333; font-size: 20px;">New Company Registered!</h2>
@@ -222,41 +225,47 @@ export const notifyAdminNewCompany = functions.https.onCall(async (data, context
           </div>
         </div>
       `,
-    };
+      };
 
-    await transporter.sendMail(mailOptions);
-    console.log(`✅ Admin notified about: ${companyName}`);
+      await transporter.sendMail(mailOptions);
+      console.log(`✅ Admin notified about: ${companyName}`);
 
-    return { success: true, message: "Admin notification sent successfully" };
-  } catch (error) {
-    console.error("❌ Error sending admin notification:", error);
-    throw new functions.https.HttpsError(
-      "internal",
-      "Failed to send notification: " + error.message
-    );
+      return { success: true, message: "Admin notification sent successfully" };
+    } catch (error) {
+      console.error("❌ Error sending admin notification:", error);
+      throw new functions.https.HttpsError(
+        "internal",
+        "Failed to send notification: " + error.message
+      );
+    }
   }
-});
+);
 
 /**
  * 4️⃣ Send Company Document Request Email
  */
-export const sendCompanyDocumentRequest = functions.https.onCall(async (data, context) => {
-  console.log("📥 Document request - Full data:", data);
+export const sendCompanyDocumentRequest = functions.https.onCall(
+  async (data, context) => {
+    console.log("📥 Document request - Full data:", data);
 
-  const actualData = data.data || data;
-  const email = actualData.email || actualData["email"] || "";
-  const companyName = actualData.companyName || actualData["companyName"] || "";
+    const actualData = data.data || data;
+    const email = actualData.email || actualData["email"] || "";
+    const companyName =
+      actualData.companyName || actualData["companyName"] || "";
 
-  if (!email) {
-    throw new functions.https.HttpsError("invalid-argument", "Email is required");
-  }
+    if (!email) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "Email is required"
+      );
+    }
 
-  try {
-    const mailOptions = {
-      from: `"Jadeer Recruitment" <${EMAIL_USER}>`,
-      to: email,
-      subject: "Action Required - Company Verification Documents",
-      html: `
+    try {
+      const mailOptions = {
+        from: `"Jadeer Recruitment" <${EMAIL_USER}>`,
+        to: email,
+        subject: "Action Required - Company Verification Documents",
+        html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
           <div style="background-color: white; padding: 40px; border-radius: 10px;">
             <p>Dear ${companyName || "Company Representative"},</p>
@@ -270,58 +279,67 @@ export const sendCompanyDocumentRequest = functions.https.onCall(async (data, co
           </div>
         </div>
       `,
-    };
+      };
 
-    await transporter.sendMail(mailOptions);
-    console.log(`✅ Document request sent to: ${email}`);
+      await transporter.sendMail(mailOptions);
+      console.log(`✅ Document request sent to: ${email}`);
 
-    return { success: true, message: "Document request email sent successfully" };
-  } catch (error) {
-    console.error("❌ Error sending document request:", error);
-    throw new functions.https.HttpsError(
-      "internal",
-      "Failed to send email: " + error.message
-    );
+      return {
+        success: true,
+        message: "Document request email sent successfully",
+      };
+    } catch (error) {
+      console.error("❌ Error sending document request:", error);
+      throw new functions.https.HttpsError(
+        "internal",
+        "Failed to send email: " + error.message
+      );
+    }
   }
-});
+);
 
 /**
  * 🔔 Notify Company of Account Status Change (Accepted/Rejected)
  */
-export const notifyCompanyStatusChange = functions.https.onCall(async (data, context) => {
-  console.log("📥 Company status notification - Full data:", data);
+export const notifyCompanyStatusChange = functions.https.onCall(
+  async (data, context) => {
+    console.log("📥 Company status notification - Full data:", data);
 
-  const actualData = data.data || data;
-  const companyEmail = actualData.companyEmail || actualData["companyEmail"] || "";
-  const companyName = actualData.companyName || actualData["companyName"] || "";
-  const status = actualData.status || actualData["status"] || "";
+    const actualData = data.data || data;
+    const companyEmail =
+      actualData.companyEmail || actualData["companyEmail"] || "";
+    const companyName =
+      actualData.companyName || actualData["companyName"] || "";
+    const status = actualData.status || actualData["status"] || "";
 
-  if (!companyEmail || !status) {
-    throw new functions.https.HttpsError(
-      "invalid-argument",
-      "Company email and status are required"
+    if (!companyEmail || !status) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "Company email and status are required"
+      );
+    }
+
+    if (status !== "Accepted" && status !== "Rejected") {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "Status must be either Accepted or Rejected"
+      );
+    }
+
+    console.log(
+      `📧 Sending ${status} email to ${companyName} (${companyEmail})`
     );
-  }
 
-  if (status !== "Accepted" && status !== "Rejected") {
-    throw new functions.https.HttpsError(
-      "invalid-argument",
-      "Status must be either Accepted or Rejected"
-    );
-  }
+    try {
+      let mailOptions;
 
-  console.log(`📧 Sending ${status} email to ${companyName} (${companyEmail})`);
-
-  try {
-    let mailOptions;
-
-    if (status === "Accepted") {
-      // ✅ Acceptance Email
-      mailOptions = {
-        from: `"Jadeer Recruitment" <${EMAIL_USER}>`,
-        to: companyEmail,
-        subject: "Your Registration Has Been Accepted - Jadeer",
-        html: `
+      if (status === "Accepted") {
+        // ✅ Acceptance Email
+        mailOptions = {
+          from: `"Jadeer Recruitment" <${EMAIL_USER}>`,
+          to: companyEmail,
+          subject: "Your Registration Has Been Accepted - Jadeer",
+          html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
             <div style="background-color: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
               <div style="text-align: center; margin-bottom: 30px;">
@@ -362,14 +380,14 @@ export const notifyCompanyStatusChange = functions.https.onCall(async (data, con
             </div>
           </div>
         `,
-      };
-    } else {
-      // ❌ Rejection Email
-      mailOptions = {
-        from: `"Jadeer Recruitment" <${EMAIL_USER}>`,
-        to: companyEmail,
-        subject: "Registration Status - Jadeer Application",
-        html: `
+        };
+      } else {
+        // ❌ Rejection Email
+        mailOptions = {
+          from: `"Jadeer Recruitment" <${EMAIL_USER}>`,
+          to: companyEmail,
+          subject: "Registration Status - Jadeer Application",
+          html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
             <div style="background-color: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
               <div style="text-align: center; margin-bottom: 30px;">
@@ -411,23 +429,22 @@ export const notifyCompanyStatusChange = functions.https.onCall(async (data, con
             </div>
           </div>
         `,
-      };
+        };
+      }
+
+      await transporter.sendMail(mailOptions);
+      console.log(`✅ ${status} email sent to ${companyEmail}`);
+
+      return { success: true, message: `${status} email sent successfully` };
+    } catch (error) {
+      console.error(`❌ Error sending ${status} email:`, error);
+      throw new functions.https.HttpsError(
+        "internal",
+        "Failed to send email: " + error.message
+      );
     }
-
-    await transporter.sendMail(mailOptions);
-    console.log(`✅ ${status} email sent to ${companyEmail}`);
-
-    return { success: true, message: `${status} email sent successfully` };
-  } catch (error) {
-    console.error(`❌ Error sending ${status} email:`, error);
-    throw new functions.https.HttpsError(
-      "internal",
-      "Failed to send email: " + error.message
-    );
   }
-});
-
-
+);
 
 // ============================================
 // 🤖 OPENAI API (SAFE FIXED VERSION)
@@ -489,7 +506,10 @@ export const enhanceCV = v2.https.onCall(
     console.log("📝 Has additional sections:", !!additionalSections);
 
     if (!cvHistoryId || cvHistoryId.trim() === "") {
-      throw new v2.https.HttpsError("invalid-argument", "cvHistoryId is required");
+      throw new v2.https.HttpsError(
+        "invalid-argument",
+        "cvHistoryId is required"
+      );
     }
 
     if (request.auth) {
@@ -500,7 +520,11 @@ export const enhanceCV = v2.https.onCall(
 
     try {
       // Get CV data from Firestore
-      const cvDoc = await admin.firestore().collection("CVHistory").doc(cvHistoryId).get();
+      const cvDoc = await admin
+        .firestore()
+        .collection("CVHistory")
+        .doc(cvHistoryId)
+        .get();
 
       if (!cvDoc.exists) {
         throw new v2.https.HttpsError("not-found", "CV not found");
@@ -600,7 +624,11 @@ Enhance the following CV text to make it:
 TARGET JOB INFORMATION:
 Job Title: ${jobTitle || "Not specified"}
 ${jobDescription ? `Job Description: ${jobDescription}` : ""}
-${(!jobTitle && !jobDescription) ? "(No specific job provided - enhance CV for general use)" : ""}
+${
+  !jobTitle && !jobDescription
+    ? "(No specific job provided - enhance CV for general use)"
+    : ""
+}
 
 Original CV Text:
 ${oldCVText}
@@ -775,16 +803,17 @@ Do not include explanations or commentary outside this JSON.`;
         messages: [
           {
             role: "system",
-            content: "You are a professional CV enhancement assistant. Always return valid JSON. CRITICAL: Never invent or create fake data - only use information that exists in the provided CV. If sections are empty, return empty values, NOT fake examples."
+            content:
+              "You are a professional CV enhancement assistant. Always return valid JSON. CRITICAL: Never invent or create fake data - only use information that exists in the provided CV. If sections are empty, return empty values, NOT fake examples.",
           },
           {
             role: "user",
-            content: prompt
-          }
+            content: prompt,
+          },
         ],
         response_format: { type: "json_object" },
         temperature: 0.7,
-        max_tokens: 4000
+        max_tokens: 4000,
       });
 
       const gptResponse = response.choices[0].message.content;
@@ -833,10 +862,14 @@ Do not include explanations or commentary outside this JSON.`;
         console.log(`✅ PDF URL: ${pdfUrl}`);
 
         // Update Firestore
-        await admin.firestore().collection("CVHistory").doc(cvHistoryId).update({
-          NewCVURL: pdfUrl,
-          PDFGeneratedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
+        await admin
+          .firestore()
+          .collection("CVHistory")
+          .doc(cvHistoryId)
+          .update({
+            NewCVURL: pdfUrl,
+            PDFGeneratedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
         console.log(`✅ Firestore updated with PDF URL`);
 
         return {
@@ -844,9 +877,8 @@ Do not include explanations or commentary outside this JSON.`;
           message: "CV enhanced and PDF generated successfully",
           sectionsCount: enhanced_cv.length,
           suggestionsCount: suggestions.length,
-          pdfUrl: pdfUrl
+          pdfUrl: pdfUrl,
         };
-
       } catch (pdfError) {
         console.error(`❌ PDF generation error:`, pdfError);
 
@@ -856,10 +888,9 @@ Do not include explanations or commentary outside this JSON.`;
           message: "CV enhanced successfully (PDF generation failed)",
           sectionsCount: enhanced_cv.length,
           suggestionsCount: suggestions.length,
-          pdfError: pdfError.message
+          pdfError: pdfError.message,
         };
       }
-
     } catch (error) {
       console.error("❌ Error enhancing CV:", error);
       throw new v2.https.HttpsError(
@@ -882,12 +913,19 @@ export const detectMissingSections = v2.https.onCall(
     const cvHistoryId = request.data.cvHistoryId || "";
 
     if (!cvHistoryId || cvHistoryId.trim() === "") {
-      throw new v2.https.HttpsError("invalid-argument", "cvHistoryId is required");
+      throw new v2.https.HttpsError(
+        "invalid-argument",
+        "cvHistoryId is required"
+      );
     }
 
     try {
       // Get CV data from Firestore
-      const cvDoc = await admin.firestore().collection("CVHistory").doc(cvHistoryId).get();
+      const cvDoc = await admin
+        .firestore()
+        .collection("CVHistory")
+        .doc(cvHistoryId)
+        .get();
 
       if (!cvDoc.exists) {
         throw new v2.https.HttpsError("not-found", "CV not found");
@@ -975,16 +1013,17 @@ Rules:
         messages: [
           {
             role: "system",
-            content: "You are a CV analysis assistant. Always return valid JSON."
+            content:
+              "You are a CV analysis assistant. Always return valid JSON.",
           },
           {
             role: "user",
-            content: prompt
-          }
+            content: prompt,
+          },
         ],
         response_format: { type: "json_object" },
         temperature: 0.3,
-        max_tokens: 500
+        max_tokens: 500,
       });
 
       const gptResponse = response.choices[0].message.content;
@@ -994,7 +1033,9 @@ Rules:
       const parsedData = JSON.parse(gptResponse);
       const missingSections = parsedData.missingSections || [];
 
-      console.log(`🔍 Missing sections detected: ${missingSections.join(", ") || "None"}`);
+      console.log(
+        `🔍 Missing sections detected: ${missingSections.join(", ") || "None"}`
+      );
 
       // Generate suggested skills if there's a job
       let suggestedSkills = null;
@@ -1022,19 +1063,22 @@ Keep each skill concise (1-3 words). Return 15-20 skills.`;
           messages: [
             {
               role: "system",
-              content: "You are a career expert assistant. Always return valid JSON."
+              content:
+                "You are a career expert assistant. Always return valid JSON.",
             },
             {
               role: "user",
-              content: skillsPrompt
-            }
+              content: skillsPrompt,
+            },
           ],
           response_format: { type: "json_object" },
           temperature: 0.5,
-          max_tokens: 800
+          max_tokens: 800,
         });
 
-        const skillsData = JSON.parse(skillsResponse.choices[0].message.content);
+        const skillsData = JSON.parse(
+          skillsResponse.choices[0].message.content
+        );
         suggestedSkills = skillsData.skills || [];
         console.log(`✅ Generated ${suggestedSkills.length} suggested skills`);
       }
@@ -1043,9 +1087,8 @@ Keep each skill concise (1-3 words). Return 15-20 skills.`;
         success: true,
         missingSections: missingSections,
         hasMissingSections: missingSections.length > 0,
-        suggestedSkills: suggestedSkills
+        suggestedSkills: suggestedSkills,
       };
-
     } catch (error) {
       console.error("❌ Error detecting missing sections:", error);
       throw new v2.https.HttpsError(
@@ -1059,37 +1102,38 @@ Keep each skill concise (1-3 words). Return 15-20 skills.`;
 /**
  * 8️⃣ Send Password Reset OTP
  */
-export const sendPasswordResetOtp = functions.https.onCall(async (data, context) => {
-  console.log("📥 Password reset OTP - Full data:", data);
+export const sendPasswordResetOtp = functions.https.onCall(
+  async (data, context) => {
+    console.log("📥 Password reset OTP - Full data:", data);
 
-  const actualData = data.data || data;
-  const email = actualData.email || actualData["email"] || "";
-  const otp = actualData.otp || actualData["otp"] || "";
+    const actualData = data.data || data;
+    const email = actualData.email || actualData["email"] || "";
+    const otp = actualData.otp || actualData["otp"] || "";
 
-  if (!email || !otp) {
-    throw new functions.https.HttpsError(
-      "invalid-argument",
-      "Email and OTP are required"
-    );
-  }
-
-  try {
-    const usersSnapshot = await admin
-      .firestore()
-      .collection("Users")
-      .where("Email", "==", email.toLowerCase())
-      .limit(1)
-      .get();
-
-    if (usersSnapshot.empty) {
-      throw new functions.https.HttpsError("not-found", "Email not found");
+    if (!email || !otp) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "Email and OTP are required"
+      );
     }
 
-    const mailOptions = {
-      from: `"Jadeer System" <${EMAIL_USER}>`,
-      to: email,
-      subject: "🔐 Password Reset Code - Jadeer",
-      html: `
+    try {
+      const usersSnapshot = await admin
+        .firestore()
+        .collection("Users")
+        .where("Email", "==", email.toLowerCase())
+        .limit(1)
+        .get();
+
+      if (usersSnapshot.empty) {
+        throw new functions.https.HttpsError("not-found", "Email not found");
+      }
+
+      const mailOptions = {
+        from: `"Jadeer System" <${EMAIL_USER}>`,
+        to: email,
+        subject: "🔐 Password Reset Code - Jadeer",
+        html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
           <div style="background-color: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
             <div style="text-align: center; margin-bottom: 30px;">
@@ -1118,241 +1162,234 @@ export const sendPasswordResetOtp = functions.https.onCall(async (data, context)
           </div>
         </div>
       `,
-    };
+      };
 
-    await transporter.sendMail(mailOptions);
-    console.log(`✅ Password reset OTP sent to: ${email}`);
+      await transporter.sendMail(mailOptions);
+      console.log(`✅ Password reset OTP sent to: ${email}`);
 
-    return { success: true, message: "Password reset code sent successfully" };
-  } catch (error) {
-    console.error("❌ Error sending password reset OTP:", error);
-    throw new functions.https.HttpsError(
-      "internal",
-      "Failed to send password reset code: " + error.message
-    );
+      return {
+        success: true,
+        message: "Password reset code sent successfully",
+      };
+    } catch (error) {
+      console.error("❌ Error sending password reset OTP:", error);
+      throw new functions.https.HttpsError(
+        "internal",
+        "Failed to send password reset code: " + error.message
+      );
+    }
   }
-});
+);
 
 /**
  * 8️⃣ Reset User Password + Unlock Account (Admin SDK)
  */
-export const resetUserPassword = functions.https.onCall(async (data, context) => {
-  console.log("📥 Reset password - Full data:", data);
+export const resetUserPassword = functions.https.onCall(
+  async (data, context) => {
+    console.log("📥 Reset password - Full data:", data);
 
-  const actualData = data.data || data;
-  const email = actualData.email || actualData["email"] || "";
-  const newPassword = actualData.newPassword || actualData["newPassword"] || "";
+    const actualData = data.data || data;
+    const email = actualData.email || actualData["email"] || "";
+    const newPassword =
+      actualData.newPassword || actualData["newPassword"] || "";
 
-  if (!email || !newPassword) {
-    throw new functions.https.HttpsError(
-      "invalid-argument",
-      "Email and new password are required"
-    );
-  }
-
-  try {
-    const userRecord = await admin.auth().getUserByEmail(email.toLowerCase());
-    
-    await admin.auth().updateUser(userRecord.uid, {
-      password: newPassword,
-    });
-
-    await admin.firestore().collection("Users").doc(userRecord.uid).update({
-      failedLoginAttempts: 0,
-      lastFailedLoginDate: null,
-      accountLocked: false,
-      mustResetPassword: false,
-    });
-
-    console.log(`Password updated and account unlocked for: ${email}`);
-
-    return { success: true, message: "Password reset and account unlocked successfully" };
-  } catch (error) {
-    console.error("Error resetting password:", error);
-    throw new functions.https.HttpsError(
-      "internal",
-      "Failed to reset password: " + error.message
-    );
-  }
-});
-
-export const deleteUserAccount = functions.https.onCall(async (data, context) => {
-  console.log("📥 Delete user account - Full data:", data);
-
-  const actualData = (data && data.data) || data || {};
-  const userId = actualData.userId || actualData["userId"] || "";
-  const userType = actualData.userType || actualData["userType"] || "";
-
-  if (!userId || !userType) {
-    throw new functions.https.HttpsError(
-      "invalid-argument",
-      "userId and userType are required."
-    );
-  }
-
-  const requesterUid = context.auth?.uid;
-
-  if (requesterUid && requesterUid !== userId) {
-    throw new functions.https.HttpsError(
-      "permission-denied",
-      "You can only delete your own account."
-    );
-  }
-
-  try {
-    const userDocRef = db.collection("Users").doc(userId);
-    const userSnap = await userDocRef.get();
-
-    let photoPath;
-    let cvPath;
-
-    if (userSnap.exists) {
-      const userData = userSnap.data() || {};
-      photoPath =
-        userData.PhotoPath ||
-        userData.photoPath ||
-        userData.profilePhotoPath ||
-        null;
-      cvPath =
-        userData.CVPath ||
-        userData.CvPath ||
-        userData.cvPath ||
-        null;
+    if (!email || !newPassword) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "Email and new password are required"
+      );
     }
 
-    const deleteUserScopedCollection = async (collectionName, fieldNames) => {
-      for (const field of fieldNames) {
-        await deleteByQuery(
-          db.collection(collectionName).where(field, "==", userId)
-        );
-      }
-    };
+    try {
+      const userRecord = await admin.auth().getUserByEmail(email.toLowerCase());
 
-    // User-scoped collections
-    await deleteUserScopedCollection("CVHistory", ["UserID", "userID"]);
-    await deleteUserScopedCollection("CVEnhancement", ["UserID", "userID"]);
-    await deleteUserScopedCollection("MockInterview", ["UserID", "userID"]);
-    await deleteUserScopedCollection("MockInterviews", ["UserID", "userID"]);
-    await deleteUserScopedCollection("Interview", ["UserID", "userID"]);
-    await deleteUserScopedCollection("Interviews", ["UserID", "userID"]);
-    await deleteUserScopedCollection("ReportGenerator", ["UserID", "userID"]);
-    await deleteUserScopedCollection("Reports", ["UserID", "userID"]);
-    await deleteUserScopedCollection("WebSchedule", ["UserID", "userID"]);
-    await deleteUserScopedCollection("WebSchedules", ["UserID", "userID"]);
-    await deleteUserScopedCollection("Favorites", ["UserID", "userID"]);
-    await deleteUserScopedCollection("Applications", ["UserID", "userID"]);
-    await deleteUserScopedCollection("AIServiceRequests", ["UserID", "userID"]);
-
-    // Company-specific: delete its jobs and related data
-if (userType === "Company") {
-  const jobsSnap = await db
-    .collection("Jobs")
-    .where("UserID", "==", userId)
-    .get();
-
-  console.log(
-    `Found ${jobsSnap.size} jobs for company ${userId} using Jobs.UserID`
-  );
-
-  for (const jobDoc of jobsSnap.docs) {
-    const jobId = jobDoc.id;
-    console.log(`🔹 Deleting job ${jobId} for company ${userId}`);
-
-    // Delete related Applications
-    await deleteByQuery(
-      db.collection("Applications").where("jobID", "==", jobId)
-    );
-    await deleteByQuery(
-      db.collection("Applications").where("JobID", "==", jobId)
-    );
-    await deleteByQuery(
-      db.collection("Applications").where("jobId", "==", jobId)
-    );
-    await deleteByQuery(
-      db.collection("Applications").where("JobId", "==", jobId)
-    );
-
-    // Delete related MockInterview
-    await deleteByQuery(
-      db.collection("MockInterview").where("jobID", "==", jobId)
-    );
-    await deleteByQuery(
-      db.collection("MockInterview").where("JobID", "==", jobId)
-    );
-    await deleteByQuery(
-      db.collection("MockInterview").where("jobId", "==", jobId)
-    );
-    await deleteByQuery(
-      db.collection("MockInterview").where("JobId", "==", jobId)
-    );
-
-    // Delete related Interview
-    await deleteByQuery(
-      db.collection("Interview").where("jobID", "==", jobId)
-    );
-    await deleteByQuery(
-      db.collection("Interview").where("JobID", "==", jobId)
-    );
-    await deleteByQuery(
-      db.collection("Interview").where("jobId", "==", jobId)
-    );
-    await deleteByQuery(
-      db.collection("Interview").where("JobId", "==", jobId)
-    );
-
-    await jobDoc.ref.delete();
-    console.log(`Deleted job ${jobId} for company ${userId}`);
-  }
-}
-
-
-    await userDocRef.delete().catch((err) => {
-      console.warn("User document delete warning:", err);
-    });
-
-    const bucket = admin.storage().bucket();
-
-    if (photoPath) {
-      try {
-        await bucket.file(photoPath).delete();
-        console.log("Deleted profile photo:", photoPath);
-      } catch (err) {
-        console.warn("Profile photo delete warning:", err);
-      }
-    }
-
-    if (cvPath) {
-      try {
-        await bucket.file(cvPath).delete();
-        console.log("Deleted CV file:", cvPath);
-      } catch (err) {
-        console.warn("CV file delete warning:", err);
-      }
-    }
-
-    await admin
-      .auth()
-      .deleteUser(userId)
-      .catch((err) => {
-        console.warn("Auth delete warning:", err);
+      await admin.auth().updateUser(userRecord.uid, {
+        password: newPassword,
       });
 
-    console.log(`Account deleted for user: ${userId}`);
+      await admin.firestore().collection("Users").doc(userRecord.uid).update({
+        failedLoginAttempts: 0,
+        lastFailedLoginDate: null,
+        accountLocked: false,
+        mustResetPassword: false,
+      });
 
-    return {
-      success: true,
-      status: "ok",
-      message: "User account and related data deleted successfully.",
-    };
-  } catch (error) {
-    console.error("Error deleting user account:", error);
-    throw new functions.https.HttpsError(
-      "internal",
-      "Failed to delete user account: " + error.message
-    );
+      console.log(`Password updated and account unlocked for: ${email}`);
+
+      return {
+        success: true,
+        message: "Password reset and account unlocked successfully",
+      };
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      throw new functions.https.HttpsError(
+        "internal",
+        "Failed to reset password: " + error.message
+      );
+    }
   }
-});
+);
 
+export const deleteUserAccount = functions.https.onCall(
+  async (data, context) => {
+    console.log("📥 Delete user account - Full data:", data);
+
+    const actualData = (data && data.data) || data || {};
+    const userId = actualData.userId || actualData["userId"] || "";
+    const userType = actualData.userType || actualData["userType"] || "";
+
+    if (!userId || !userType) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "userId and userType are required."
+      );
+    }
+
+    const requesterUid = context.auth?.uid;
+
+    if (requesterUid && requesterUid !== userId) {
+      throw new functions.https.HttpsError(
+        "permission-denied",
+        "You can only delete your own account."
+      );
+    }
+
+    try {
+      const userDocRef = db.collection("Users").doc(userId);
+      const userSnap = await userDocRef.get();
+
+      let photoPath;
+      let cvPath;
+
+      if (userSnap.exists) {
+        const userData = userSnap.data() || {};
+        photoPath =
+          userData.PhotoPath ||
+          userData.photoPath ||
+          userData.profilePhotoPath ||
+          null;
+        cvPath = userData.CVPath || userData.CvPath || userData.cvPath || null;
+      }
+
+      const deleteUserScopedCollection = async (collectionName, fieldNames) => {
+        for (const field of fieldNames) {
+          await deleteByQuery(
+            db.collection(collectionName).where(field, "==", userId)
+          );
+        }
+      };
+
+      // User-scoped collections
+      await deleteUserScopedCollection("CVHistory", ["UserID", "userID"]);
+      await deleteUserScopedCollection("CVEnhancement", ["UserID", "userID"]);
+      await deleteUserScopedCollection("MockInterview", ["UserID", "userID"]);
+      await deleteUserScopedCollection("MockInterviews", ["UserID", "userID"]);
+      await deleteUserScopedCollection("Interview", ["UserID", "userID"]);
+      await deleteUserScopedCollection("Interviews", ["UserID", "userID"]);
+      await deleteUserScopedCollection("ReportGenerator", ["UserID", "userID"]);
+      await deleteUserScopedCollection("Reports", ["UserID", "userID"]);
+      await deleteUserScopedCollection("WebSchedule", ["UserID", "userID"]);
+      await deleteUserScopedCollection("WebSchedules", ["UserID", "userID"]);
+      await deleteUserScopedCollection("Favorites", ["UserID", "userID"]);
+      await deleteUserScopedCollection("Applications", ["UserID", "userID"]);
+      await deleteUserScopedCollection("AIServiceRequests", [
+        "UserID",
+        "userID",
+      ]);
+
+      // Company-specific: delete its jobs and related data
+      if (userType === "Company") {
+        const jobQueries = [
+          db.collection("Jobs").where("UserID", "==", userId),
+          db.collection("Jobs").where("userId", "==", userId),
+        ];
+
+        for (const jobQuery of jobQueries) {
+          const jobsSnap = await jobQuery.get();
+
+          for (const jobDoc of jobsSnap.docs) {
+            const jobId = jobDoc.id;
+
+            await deleteByQuery(
+              db.collection("Applications").where("JobID", "==", jobId)
+            );
+            await deleteByQuery(
+              db.collection("Applications").where("jobID", "==", jobId)
+            );
+
+            await deleteByQuery(
+              db.collection("MockInterviews").where("JobID", "==", jobId)
+            );
+            await deleteByQuery(
+              db.collection("MockInterviews").where("jobID", "==", jobId)
+            );
+
+            await deleteByQuery(
+              db.collection("Interviews").where("JobID", "==", jobId)
+            );
+            await deleteByQuery(
+              db.collection("Interviews").where("jobID", "==", jobId)
+            );
+
+            await deleteByQuery(
+              db.collection("Favourite").where("JobID", "==", jobId)
+            );
+            await deleteByQuery(
+              db.collection("Favorite").where("JobID", "==", jobId)
+            );
+
+            await jobDoc.ref.delete();
+          }
+        }
+      }
+
+      await userDocRef.delete().catch((err) => {
+        console.warn("User document delete warning:", err);
+      });
+
+      const bucket = admin.storage().bucket();
+
+      if (photoPath) {
+        try {
+          await bucket.file(photoPath).delete();
+          console.log("Deleted profile photo:", photoPath);
+        } catch (err) {
+          console.warn("Profile photo delete warning:", err);
+        }
+      }
+
+      if (cvPath) {
+        try {
+          await bucket.file(cvPath).delete();
+          console.log("Deleted CV file:", cvPath);
+        } catch (err) {
+          console.warn("CV file delete warning:", err);
+        }
+      }
+
+      await admin
+        .auth()
+        .deleteUser(userId)
+        .catch((err) => {
+          console.warn("Auth delete warning:", err);
+        });
+
+      console.log(`Account deleted for user: ${userId}`);
+
+      return {
+        success: true,
+        status: "ok",
+        message: "User account and related data deleted successfully.",
+      };
+    } catch (error) {
+      console.error("Error deleting user account:", error);
+      throw new functions.https.HttpsError(
+        "internal",
+        "Failed to delete user account: " + error.message
+      );
+    }
+  }
+);
 
 // ============================================
 // 📄 CV TEXT EXTRACTION - FIXED VERSION
@@ -1361,108 +1398,127 @@ if (userType === "Company") {
 /**
  * 9️⃣ Extract text from uploaded CV (PDF or DOCX) - FIXED
  */
-export const extractCVTextEnhancement = v2.storage.onObjectFinalized(async (event) => {
-  const filePath = event.data.name;
-  const contentType = event.data.contentType;
+export const extractCVTextEnhancement = v2.storage.onObjectFinalized(
+  async (event) => {
+    const filePath = event.data.name;
+    const contentType = event.data.contentType;
 
-  if (!filePath || !filePath.startsWith('temp_cv_extraction/')) {
-    console.log('⏭️ Skipping - not a CV extraction file');
-    return null;
-  }
-
-  console.log(`📄 Processing CV: ${filePath}`);
-  console.log(`📋 Content type: ${contentType}`);
-
-  try {
-    const metadata = event.data.metadata || {};
-    const cvHistoryId = metadata.cvHistoryId;
-    const userId = metadata.userId;
-
-    if (!cvHistoryId) {
-      console.error('❌ No cvHistoryId found in metadata');
+    if (!filePath || !filePath.startsWith("temp_cv_extraction/")) {
+      console.log("⏭️ Skipping - not a CV extraction file");
       return null;
     }
 
-    console.log(`📝 CVHistoryID: ${cvHistoryId}`);
-    console.log(`👤 UserID: ${userId}`);
-
-    const bucket = admin.storage().bucket();
-    const file = bucket.file(filePath);
-    const tempFilePath = path.join(os.tmpdir(), path.basename(filePath));
-
-    await file.download({ destination: tempFilePath });
-    console.log(`⬇️ Downloaded to: ${tempFilePath}`);
-
-    let extractedText = '';
-
-    // Extract text based on file type
-    if (contentType === 'application/pdf' || filePath.toLowerCase().endsWith('.pdf')) {
-      console.log('📕 Extracting from PDF...');
-      const dataBuffer = fs.readFileSync(tempFilePath);
-
-      // ✅ Using dynamic import with named export for pdf-parse v2.4.5
-      const { PDFParse } = await import('pdf-parse');
-      const parser = new PDFParse({ data: dataBuffer });
-      const result = await parser.getText();
-      extractedText = (result.text || '').trim();
-      await parser.destroy();
-
-      console.log(`📊 Extracted ${extractedText.length} characters`);
-    } else if (
-      contentType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-      contentType === 'application/msword' ||
-      filePath.toLowerCase().endsWith('.docx') ||
-      filePath.toLowerCase().endsWith('.doc')
-    ) {
-      console.log('📘 Extracting from DOCX...');
-      const result = await mammoth.extractRawText({ path: tempFilePath });
-      extractedText = result.value;
-    } else {
-      console.error(`❌ Unsupported file type: ${contentType}`);
-      extractedText = 'Error: Unsupported file format. Please upload PDF or DOCX.';
-    }
-
-    // Clean up temp file
-    fs.unlinkSync(tempFilePath);
-    console.log('🗑️ Temp file deleted');
-
-    // Update Firestore
-    if (extractedText.trim()) {
-      await admin.firestore().collection('CVHistory').doc(cvHistoryId).update({
-        OldCVText: extractedText.trim(),
-      });
-      console.log(`✅ Text extracted and saved to CVHistory/${cvHistoryId}`);
-      console.log(`📊 Extracted ${extractedText.length} characters`);
-    } else {
-      console.warn('⚠️ No text extracted from file');
-      await admin.firestore().collection('CVHistory').doc(cvHistoryId).update({
-        OldCVText: 'Error: No text could be extracted from the file.',
-      });
-    }
-
-    // Delete temp file from Storage
-    await file.delete();
-    console.log(`🗑️ Deleted temp file from Storage: ${filePath}`);
-
-    return null;
-  } catch (error) {
-    console.error('❌ Error extracting CV text:', error);
+    console.log(`📄 Processing CV: ${filePath}`);
+    console.log(`📋 Content type: ${contentType}`);
 
     try {
       const metadata = event.data.metadata || {};
       const cvHistoryId = metadata.cvHistoryId;
-      if (cvHistoryId) {
-        await admin.firestore().collection('CVHistory').doc(cvHistoryId).update({
-          OldCVText: `Error extracting text: ${error.message}`,
-        });
-      }
-    } catch (updateError) {
-      console.error('❌ Failed to update Firestore with error:', updateError);
-    }
+      const userId = metadata.userId;
 
-    return null;
+      if (!cvHistoryId) {
+        console.error("❌ No cvHistoryId found in metadata");
+        return null;
+      }
+
+      console.log(`📝 CVHistoryID: ${cvHistoryId}`);
+      console.log(`👤 UserID: ${userId}`);
+
+      const bucket = admin.storage().bucket();
+      const file = bucket.file(filePath);
+      const tempFilePath = path.join(os.tmpdir(), path.basename(filePath));
+
+      await file.download({ destination: tempFilePath });
+      console.log(`⬇️ Downloaded to: ${tempFilePath}`);
+
+      let extractedText = "";
+
+      // Extract text based on file type
+      if (
+        contentType === "application/pdf" ||
+        filePath.toLowerCase().endsWith(".pdf")
+      ) {
+        console.log("📕 Extracting from PDF...");
+        const dataBuffer = fs.readFileSync(tempFilePath);
+
+        // ✅ Using dynamic import with named export for pdf-parse v2.4.5
+        const { PDFParse } = await import("pdf-parse");
+        const parser = new PDFParse({ data: dataBuffer });
+        const result = await parser.getText();
+        extractedText = (result.text || "").trim();
+        await parser.destroy();
+
+        console.log(`📊 Extracted ${extractedText.length} characters`);
+      } else if (
+        contentType ===
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+        contentType === "application/msword" ||
+        filePath.toLowerCase().endsWith(".docx") ||
+        filePath.toLowerCase().endsWith(".doc")
+      ) {
+        console.log("📘 Extracting from DOCX...");
+        const result = await mammoth.extractRawText({ path: tempFilePath });
+        extractedText = result.value;
+      } else {
+        console.error(`❌ Unsupported file type: ${contentType}`);
+        extractedText =
+          "Error: Unsupported file format. Please upload PDF or DOCX.";
+      }
+
+      // Clean up temp file
+      fs.unlinkSync(tempFilePath);
+      console.log("🗑️ Temp file deleted");
+
+      // Update Firestore
+      if (extractedText.trim()) {
+        await admin
+          .firestore()
+          .collection("CVHistory")
+          .doc(cvHistoryId)
+          .update({
+            OldCVText: extractedText.trim(),
+          });
+        console.log(`✅ Text extracted and saved to CVHistory/${cvHistoryId}`);
+        console.log(`📊 Extracted ${extractedText.length} characters`);
+      } else {
+        console.warn("⚠️ No text extracted from file");
+        await admin
+          .firestore()
+          .collection("CVHistory")
+          .doc(cvHistoryId)
+          .update({
+            OldCVText: "Error: No text could be extracted from the file.",
+          });
+      }
+
+      // Delete temp file from Storage
+      await file.delete();
+      console.log(`🗑️ Deleted temp file from Storage: ${filePath}`);
+
+      return null;
+    } catch (error) {
+      console.error("❌ Error extracting CV text:", error);
+
+      try {
+        const metadata = event.data.metadata || {};
+        const cvHistoryId = metadata.cvHistoryId;
+        if (cvHistoryId) {
+          await admin
+            .firestore()
+            .collection("CVHistory")
+            .doc(cvHistoryId)
+            .update({
+              OldCVText: `Error extracting text: ${error.message}`,
+            });
+        }
+      } catch (updateError) {
+        console.error("❌ Failed to update Firestore with error:", updateError);
+      }
+
+      return null;
+    }
   }
-});
+);
 
 // ============================================
 // 📄 CV PDF GENERATION
@@ -1609,7 +1665,10 @@ async function createProfessionalCV(newCVText) {
 
         if (sectionName === "PersonalInformation") {
           currentY = renderPersonalInfo(doc, content, colors, fonts, currentY);
-        } else if (sectionName === "Summary" || sectionName === "ProfessionalSummary") {
+        } else if (
+          sectionName === "Summary" ||
+          sectionName === "ProfessionalSummary"
+        ) {
           currentY = renderSection(
             doc,
             "PROFESSIONAL SUMMARY",
@@ -1625,7 +1684,13 @@ async function createProfessionalCV(newCVText) {
         } else if (sectionName === "Skills") {
           currentY = renderSkills(doc, content, colors, fonts, currentY);
         } else if (sectionName === "Certifications") {
-          currentY = renderCertifications(doc, content, colors, fonts, currentY);
+          currentY = renderCertifications(
+            doc,
+            content,
+            colors,
+            fonts,
+            currentY
+          );
         } else if (sectionName === "Languages") {
           currentY = renderLanguages(doc, content, colors, fonts, currentY);
         }
@@ -1706,11 +1771,7 @@ function renderPersonalInfo(doc, content, colors, fonts, startY) {
 function renderSection(doc, title, content, colors, fonts, startY) {
   let y = startY;
 
-  doc
-    .font(fonts.bold)
-    .fontSize(14)
-    .fillColor(colors.accent)
-    .text(title, 50, y);
+  doc.font(fonts.bold).fontSize(14).fillColor(colors.accent).text(title, 50, y);
 
   y = doc.y + 8;
 
@@ -1790,8 +1851,10 @@ function renderExperience(doc, content, colors, fonts, startY) {
 
     // Description with bullet points
     if (description) {
-      const descriptions = Array.isArray(description) ? description : [description];
-      
+      const descriptions = Array.isArray(description)
+        ? description
+        : [description];
+
       descriptions.forEach((desc) => {
         if (desc && desc.trim()) {
           // Page break check for bullets
