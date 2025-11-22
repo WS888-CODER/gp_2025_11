@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
 import '../config/theme.dart';
 import 'cv_ready.dart';
 
@@ -285,21 +286,25 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
     final sectionName = _missingSections[_currentSectionIndex];
     final progress = (_currentSectionIndex + 1) / _missingSections.length;
 
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: scheme.brightness == Brightness.dark
-                ? scheme.surfaceVariant.withOpacity(0.6)
-                : AppTheme.primaryPurple.withOpacity(0.04),
-            border: Border(
-              bottom: BorderSide(
-                color: scheme.outline.withOpacity(0.3),
-                width: 1,
+    return Container(
+      color: scheme.brightness == Brightness.dark
+          ? scheme.surfaceVariant.withOpacity(0.3)
+          : AppTheme.primaryPurple.withOpacity(0.08),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: scheme.brightness == Brightness.dark
+                  ? scheme.surfaceVariant.withOpacity(0.3)
+                  : AppTheme.primaryPurple.withOpacity(0.08),
+              border: Border(
+                bottom: BorderSide(
+                  color: scheme.outline.withOpacity(0.3),
+                  width: 1,
+                ),
               ),
             ),
-          ),
           child: Column(
             children: [
               Row(
@@ -315,20 +320,27 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
                       ),
                     )
                   else
-                    const SizedBox.shrink(),
-                  Text(
-                    'Section ${_currentSectionIndex + 1} of ${_missingSections.length}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: scheme.onSurface,
+                    const SizedBox(width: 80),
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        'Section ${_currentSectionIndex + 1} of ${_missingSections.length}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: scheme.onSurface,
+                        ),
+                      ),
                     ),
                   ),
-                  TextButton(
-                    onPressed: _skipAll,
-                    style: TextButton.styleFrom(
-                      foregroundColor: scheme.onSurfaceVariant,
+                  SizedBox(
+                    width: 80,
+                    child: TextButton(
+                      onPressed: _skipAll,
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppTheme.primaryPurple,
+                      ),
+                      child: const Text('Skip All'),
                     ),
-                    child: const Text('Skip All'),
                   ),
                 ],
               ),
@@ -343,10 +355,59 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
             ],
           ),
         ),
-        Expanded(
-          child: _buildSectionForm(sectionName),
+          Expanded(
+            child: _buildSectionForm(sectionName),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStyledTextField({
+    required TextEditingController controller,
+    required String labelText,
+    required String hintText,
+    TextInputType? keyboardType,
+    int? maxLines,
+    ColorScheme? scheme,
+  }) {
+    final colorScheme = scheme ?? Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        maxLines: maxLines ?? 1,
+        decoration: InputDecoration(
+          labelText: labelText,
+          hintText: hintText,
+          hintStyle: const TextStyle(color: Colors.grey),
+          filled: true,
+          fillColor: Colors.transparent,
+          border: const OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: const OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: const OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+            borderSide: BorderSide.none,
+          ),
         ),
-      ],
+      ),
     );
   }
 
@@ -481,95 +542,189 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
                   style: TextStyle(color: scheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 20),
-                TextField(
-                  controller: _fullNameController,
-                  decoration: InputDecoration(
-                    labelText: 'Full Name',
-                    hintText: 'e.g., John Doe',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: AppTheme.primaryPurple,
-                        width: 2,
+                Container(
+                  decoration: BoxDecoration(
+                    color: scheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _fullNameController,
+                    decoration: InputDecoration(
+                      labelText: 'Full Name',
+                      labelStyle: TextStyle(color: Colors.grey[600]),
+                      hintText: 'e.g., John Doe',
+                      hintStyle: const TextStyle(color: Colors.grey),
+                      filled: true,
+                      fillColor: Colors.transparent,
+                      border: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        borderSide: BorderSide.none,
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
-                TextField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: InputDecoration(
-                    labelText: 'Email',
-                    hintText: 'e.g., john@example.com',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: AppTheme.primaryPurple,
-                        width: 2,
+                Container(
+                  decoration: BoxDecoration(
+                    color: scheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: InputDecoration(
+                      labelText: 'Email',
+                      labelStyle: TextStyle(color: Colors.grey[600]),
+                      hintText: 'e.g., john@example.com',
+                      hintStyle: const TextStyle(color: Colors.grey),
+                      filled: true,
+                      fillColor: Colors.transparent,
+                      border: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        borderSide: BorderSide.none,
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
-                TextField(
-                  controller: _phoneController,
-                  keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(
-                    labelText: 'Phone',
-                    hintText: 'e.g., +1 234 567 8900',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: AppTheme.primaryPurple,
-                        width: 2,
+                Container(
+                  decoration: BoxDecoration(
+                    color: scheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    decoration: InputDecoration(
+                      labelText: 'Phone',
+                      labelStyle: TextStyle(color: Colors.grey[600]),
+                      hintText: 'e.g., +1 234 567 8900',
+                      hintStyle: const TextStyle(color: Colors.grey),
+                      filled: true,
+                      fillColor: Colors.transparent,
+                      border: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        borderSide: BorderSide.none,
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
-                TextField(
-                  controller: _locationController,
-                  decoration: InputDecoration(
-                    labelText: 'Location',
-                    hintText: 'e.g., New York, USA',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: AppTheme.primaryPurple,
-                        width: 2,
+                Container(
+                  decoration: BoxDecoration(
+                    color: scheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _locationController,
+                    decoration: InputDecoration(
+                      labelText: 'Location',
+                      labelStyle: TextStyle(color: Colors.grey[600]),
+                      hintText: 'e.g., New York, USA',
+                      hintStyle: const TextStyle(color: Colors.grey),
+                      filled: true,
+                      fillColor: Colors.transparent,
+                      border: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        borderSide: BorderSide.none,
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
-                TextField(
-                  controller: _linksController,
-                  maxLines: 2,
-                  decoration: InputDecoration(
-                    labelText: 'Links (LinkedIn, Portfolio, etc.)',
-                    hintText:
-                        'e.g., linkedin.com/in/johndoe, github.com/johndoe',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: AppTheme.primaryPurple,
-                        width: 2,
+                Container(
+                  decoration: BoxDecoration(
+                    color: scheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _linksController,
+                    maxLines: 2,
+                    decoration: InputDecoration(
+                      labelText: 'Links (LinkedIn, Portfolio, etc.)',
+                      labelStyle: TextStyle(color: Colors.grey[600]),
+                      hintText: 'e.g., linkedin.com/in/johndoe, github.com/johndoe',
+                      hintStyle: const TextStyle(color: Colors.grey),
+                      filled: true,
+                      fillColor: Colors.transparent,
+                      border: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        borderSide: BorderSide.none,
                       ),
                     ),
                   ),
@@ -718,23 +873,37 @@ class _SummaryFormState extends State<_SummaryForm> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                TextField(
-                  controller: _controller,
-                  maxLines: 6,
-                  decoration: InputDecoration(
-                    hintText:
-                        'e.g., Experienced software engineer with 5+ years...',
-                    hintStyle: TextStyle(
-                      color: scheme.onSurfaceVariant.withOpacity(0.7),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: AppTheme.primaryPurple,
-                        width: 2,
+                Container(
+                  decoration: BoxDecoration(
+                    color: scheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _controller,
+                    maxLines: 6,
+                    decoration: InputDecoration(
+                      hintText: 'e.g., Experienced software engineer with 5+ years...',
+                      hintStyle: const TextStyle(color: Colors.grey),
+                      filled: true,
+                      fillColor: Colors.transparent,
+                      border: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        borderSide: BorderSide.none,
                       ),
                     ),
                   ),
@@ -882,13 +1051,24 @@ class _ExperienceFormState extends State<_ExperienceForm> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Work Experience',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryPurple,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Work Experience',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryPurple,
+                      ),
+                    ),
+                    if (_experiences.length < 10)
+                      IconButton(
+                        onPressed: _addExperience,
+                        icon: const Icon(Icons.add_circle, size: 32),
+                        color: AppTheme.primaryPurple,
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -896,22 +1076,6 @@ class _ExperienceFormState extends State<_ExperienceForm> {
                   style: TextStyle(color: scheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 20),
-                if (_experiences.length < 10)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    child: OutlinedButton.icon(
-                      onPressed: _addExperience,
-                      icon: const Icon(Icons.add),
-                      label: const Text('Add Another Experience'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 12, horizontal: 16),
-                        side: const BorderSide(
-                            color: AppTheme.primaryPurple, width: 1.5),
-                        foregroundColor: AppTheme.primaryPurple,
-                      ),
-                    ),
-                  ),
                 ..._experiences.asMap().entries.map((entry) {
                   final index = entry.key;
                   final exp = entry.value;
@@ -992,40 +1156,168 @@ class _ExperienceFormState extends State<_ExperienceForm> {
               ],
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: exp['title'],
-              decoration: const InputDecoration(
-                labelText: 'Job Title',
-                hintText: 'e.g., Software Engineer',
-                border: OutlineInputBorder(),
+            Container(
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: scheme.outline.withOpacity(0.2),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: exp['title'],
+                decoration: InputDecoration(
+                  labelText: 'Job Title',
+                  labelStyle: TextStyle(color: Colors.grey[600]),
+                  hintText: 'e.g., Software Engineer',
+                  hintStyle: const TextStyle(color: Colors.grey),
+                  filled: true,
+                  fillColor: Colors.transparent,
+                  border: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: exp['company'],
-              decoration: const InputDecoration(
-                labelText: 'Company',
-                hintText: 'e.g., Google',
-                border: OutlineInputBorder(),
+            Container(
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: scheme.outline.withOpacity(0.2),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: exp['company'],
+                decoration: InputDecoration(
+                  labelText: 'Company',
+                  labelStyle: TextStyle(color: Colors.grey[600]),
+                  hintText: 'e.g., Google',
+                  hintStyle: const TextStyle(color: Colors.grey),
+                  filled: true,
+                  fillColor: Colors.transparent,
+                  border: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: exp['years'],
-              decoration: const InputDecoration(
-                labelText: 'Years',
-                hintText: 'e.g., 2020-2023',
-                border: OutlineInputBorder(),
+            Container(
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: scheme.outline.withOpacity(0.2),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: exp['years'],
+                decoration: InputDecoration(
+                  labelText: 'Years',
+                  labelStyle: TextStyle(color: Colors.grey[600]),
+                  hintText: 'e.g., 2020-2023',
+                  hintStyle: const TextStyle(color: Colors.grey),
+                  filled: true,
+                  fillColor: Colors.transparent,
+                  border: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: exp['description'],
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Description',
-                hintText: 'Describe your responsibilities and achievements',
-                border: OutlineInputBorder(),
+            Container(
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: scheme.outline.withOpacity(0.2),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: exp['description'],
+                maxLines: 3,
+                decoration: InputDecoration(
+                  labelText: 'Description',
+                  labelStyle: TextStyle(color: Colors.grey[600]),
+                  hintText: 'Describe your responsibilities and achievements',
+                  hintStyle: const TextStyle(color: Colors.grey),
+                  filled: true,
+                  fillColor: Colors.transparent,
+                  border: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
               ),
             ),
           ],
@@ -1136,13 +1428,24 @@ class _EducationFormState extends State<_EducationForm> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Education',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryPurple,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Education',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryPurple,
+                      ),
+                    ),
+                    if (_education.length < 10)
+                      IconButton(
+                        onPressed: _addEducation,
+                        icon: const Icon(Icons.add_circle, size: 32),
+                        color: AppTheme.primaryPurple,
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -1150,21 +1453,6 @@ class _EducationFormState extends State<_EducationForm> {
                   style: TextStyle(color: scheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 20),
-                if (_education.length < 10)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    child: OutlinedButton.icon(
-                      onPressed: _addEducation,
-                      icon: const Icon(Icons.add),
-                      label: const Text('Add Another Education'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 12, horizontal: 16),
-                        side: const BorderSide(color: AppTheme.primaryPurple),
-                        foregroundColor: AppTheme.primaryPurple,
-                      ),
-                    ),
-                  ),
                 ..._education.asMap().entries.map((entry) {
                   final index = entry.key;
                   final edu = entry.value;
@@ -1194,7 +1482,7 @@ class _EducationFormState extends State<_EducationForm> {
                   onPressed: widget.onSkip,
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: const BorderSide(color: AppTheme.primaryPurple),
+                    side: const BorderSide(color: AppTheme.primaryPurple, width: 2),
                   ),
                   child: const Text('Skip'),
                 ),
@@ -1244,30 +1532,126 @@ class _EducationFormState extends State<_EducationForm> {
               ],
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: edu['degree'],
-              decoration: const InputDecoration(
-                labelText: 'Degree',
-                hintText: 'e.g., Bachelor of Computer Science',
-                border: OutlineInputBorder(),
+            Container(
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: scheme.outline.withOpacity(0.2),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: edu['degree'],
+                decoration: InputDecoration(
+                  labelText: 'Degree',
+                  labelStyle: TextStyle(color: Colors.grey[600]),
+                  hintText: 'e.g., Bachelor of Computer Science',
+                  hintStyle: const TextStyle(color: Colors.grey),
+                  filled: true,
+                  fillColor: Colors.transparent,
+                  border: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: edu['institution'],
-              decoration: const InputDecoration(
-                labelText: 'Institution',
-                hintText: 'e.g., MIT',
-                border: OutlineInputBorder(),
+            Container(
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: scheme.outline.withOpacity(0.2),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: edu['institution'],
+                decoration: InputDecoration(
+                  labelText: 'Institution',
+                  labelStyle: TextStyle(color: Colors.grey[600]),
+                  hintText: 'e.g., MIT',
+                  hintStyle: const TextStyle(color: Colors.grey),
+                  filled: true,
+                  fillColor: Colors.transparent,
+                  border: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: edu['years'],
-              decoration: const InputDecoration(
-                labelText: 'Years',
-                hintText: 'e.g., 2016-2020',
-                border: OutlineInputBorder(),
+            Container(
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: scheme.outline.withOpacity(0.2),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: edu['years'],
+                decoration: InputDecoration(
+                  labelText: 'Years',
+                  labelStyle: TextStyle(color: Colors.grey[600]),
+                  hintText: 'e.g., 2016-2020',
+                  hintStyle: const TextStyle(color: Colors.grey),
+                  filled: true,
+                  fillColor: Colors.transparent,
+                  border: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
               ),
             ),
           ],
@@ -1384,11 +1768,14 @@ class _SkillsFormState extends State<_SkillsForm> {
     final hasSuggestions =
         widget.suggestedSkills != null && widget.suggestedSkills!.isNotEmpty;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
           const Text(
             'Skills',
             style: TextStyle(
@@ -1407,30 +1794,43 @@ class _SkillsFormState extends State<_SkillsForm> {
           const SizedBox(height: 20),
 
           // Custom Skills Section (moved to top)
-          Text(
-            hasSuggestions ? 'Add Custom Skills:' : 'Your Skills:',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
-                child: TextField(
-                  controller: _controller,
-                  decoration: InputDecoration(
-                    hintText: 'e.g., JavaScript, Python',
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                          color: AppTheme.primaryPurple, width: 2),
-                    ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: scheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  onSubmitted: (_) => _addCustomSkill(),
+                  child: TextField(
+                    controller: _controller,
+                    decoration: const InputDecoration(
+                      hintText: 'e.g., JavaScript, Python',
+                      hintStyle: TextStyle(color: Colors.grey),
+                      filled: true,
+                      fillColor: Colors.transparent,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    onSubmitted: (_) => _addCustomSkill(),
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -1461,7 +1861,9 @@ class _SkillsFormState extends State<_SkillsForm> {
                   label: Text(skill),
                   deleteIcon: const Icon(Icons.close, size: 18),
                   onDeleted: () => _removeCustomSkill(index),
-                  backgroundColor: AppTheme.primaryPurple.withOpacity(0.1),
+                  backgroundColor: scheme.brightness == Brightness.dark
+                      ? scheme.surfaceContainerHighest
+                      : Colors.white,
                   side: BorderSide.none,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
@@ -1473,8 +1875,6 @@ class _SkillsFormState extends State<_SkillsForm> {
           // Suggested Skills Section (moved to bottom)
           if (hasSuggestions) ...[
             const SizedBox(height: 24),
-            const Divider(),
-            const SizedBox(height: 16),
             const Text(
               'Or select from suggested skills:',
               style: TextStyle(
@@ -1497,12 +1897,16 @@ class _SkillsFormState extends State<_SkillsForm> {
                   selectedColor: AppTheme.primaryPurple,
                   checkmarkColor: Colors.white,
                   labelStyle: TextStyle(
-                    color: isSelected ? Colors.white : Colors.black87,
+                    color: isSelected ? Colors.white : scheme.onSurface,
                     fontWeight:
                         isSelected ? FontWeight.w500 : FontWeight.normal,
                   ),
-                  backgroundColor: AppTheme.primaryPurple.withOpacity(0.1),
-                  disabledColor: AppTheme.primaryPurple.withOpacity(0.05),
+                  backgroundColor: scheme.brightness == Brightness.dark
+                      ? scheme.surfaceContainerHighest
+                      : Colors.white,
+                  disabledColor: scheme.brightness == Brightness.dark
+                      ? scheme.surfaceContainer
+                      : Colors.grey[200],
                   side: BorderSide.none,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
@@ -1513,16 +1917,31 @@ class _SkillsFormState extends State<_SkillsForm> {
               }).toList(),
             ),
           ],
-
-          const SizedBox(height: 24),
-          Row(
+              ],
+            ),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            boxShadow: [
+              BoxShadow(
+                color: scheme.shadow.withOpacity(0.2),
+                spreadRadius: 1,
+                blurRadius: 5,
+                offset: const Offset(0, -3),
+              ),
+            ],
+          ),
+          child: Row(
             children: [
               Expanded(
                 child: OutlinedButton(
                   onPressed: widget.onSkip,
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: const BorderSide(color: AppTheme.primaryPurple),
+                    side: const BorderSide(color: AppTheme.primaryPurple, width: 2),
                   ),
                   child: const Text('Skip'),
                 ),
@@ -1553,8 +1972,8 @@ class _SkillsFormState extends State<_SkillsForm> {
               ),
             ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -1639,13 +2058,24 @@ class _CertificationsFormState extends State<_CertificationsForm> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Certifications',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryPurple,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Certifications',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryPurple,
+                      ),
+                    ),
+                    if (_certifications.length < 10)
+                      IconButton(
+                        onPressed: _addCertification,
+                        icon: const Icon(Icons.add_circle, size: 32),
+                        color: AppTheme.primaryPurple,
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -1653,21 +2083,6 @@ class _CertificationsFormState extends State<_CertificationsForm> {
                   style: TextStyle(color: scheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 20),
-                if (_certifications.length < 10)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    child: OutlinedButton.icon(
-                      onPressed: _addCertification,
-                      icon: const Icon(Icons.add),
-                      label: const Text('Add Another Certification'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 12, horizontal: 16),
-                        side: const BorderSide(color: AppTheme.primaryPurple),
-                        foregroundColor: AppTheme.primaryPurple,
-                      ),
-                    ),
-                  ),
                 ..._certifications.asMap().entries.map((entry) {
                   final index = entry.key;
                   final cert = entry.value;
@@ -1748,30 +2163,126 @@ class _CertificationsFormState extends State<_CertificationsForm> {
               ],
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: cert['name'],
-              decoration: const InputDecoration(
-                labelText: 'Certification Name',
-                hintText: 'e.g., AWS Certified Solutions Architect',
-                border: OutlineInputBorder(),
+            Container(
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: scheme.outline.withOpacity(0.2),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: cert['name'],
+                decoration: InputDecoration(
+                  labelText: 'Certification Name',
+                  labelStyle: TextStyle(color: Colors.grey[600]),
+                  hintText: 'e.g., AWS Certified Solutions Architect',
+                  hintStyle: const TextStyle(color: Colors.grey),
+                  filled: true,
+                  fillColor: Colors.transparent,
+                  border: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: cert['issuer'],
-              decoration: const InputDecoration(
-                labelText: 'Issuer',
-                hintText: 'e.g., Amazon Web Services',
-                border: OutlineInputBorder(),
+            Container(
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: scheme.outline.withOpacity(0.2),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: cert['issuer'],
+                decoration: InputDecoration(
+                  labelText: 'Issuer',
+                  labelStyle: TextStyle(color: Colors.grey[600]),
+                  hintText: 'e.g., Amazon Web Services',
+                  hintStyle: const TextStyle(color: Colors.grey),
+                  filled: true,
+                  fillColor: Colors.transparent,
+                  border: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: cert['year'],
-              decoration: const InputDecoration(
-                labelText: 'Year',
-                hintText: 'e.g., 2023',
-                border: OutlineInputBorder(),
+            Container(
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: scheme.outline.withOpacity(0.2),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: cert['year'],
+                decoration: InputDecoration(
+                  labelText: 'Year',
+                  labelStyle: TextStyle(color: Colors.grey[600]),
+                  hintText: 'e.g., 2023',
+                  hintStyle: const TextStyle(color: Colors.grey),
+                  filled: true,
+                  fillColor: Colors.transparent,
+                  border: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
               ),
             ),
           ],
@@ -1818,7 +2329,43 @@ class _LanguagesForm extends StatefulWidget {
 }
 
 class _LanguagesFormState extends State<_LanguagesForm> {
-  final List<Map<String, TextEditingController>> _languages = [];
+  static const List<String> _proficiencyLevels = [
+    'Native',
+    'Fluent',
+    'Advanced',
+    'Intermediate',
+    'Basic',
+  ];
+
+  static const List<String> _worldLanguages = [
+    'Afrikaans', 'Albanian', 'Amharic', 'Arabic', 'Armenian', 'Azerbaijani',
+    'Basque', 'Belarusian', 'Bengali', 'Bosnian', 'Bulgarian', 'Burmese',
+    'Catalan', 'Cebuano', 'Chinese (Simplified)', 'Chinese (Traditional)', 'Corsican', 'Croatian', 'Czech',
+    'Danish', 'Dutch',
+    'English', 'Esperanto', 'Estonian',
+    'Finnish', 'French', 'Frisian',
+    'Galician', 'Georgian', 'German', 'Greek', 'Gujarati',
+    'Haitian Creole', 'Hausa', 'Hawaiian', 'Hebrew', 'Hindi', 'Hmong', 'Hungarian',
+    'Icelandic', 'Igbo', 'Indonesian', 'Irish', 'Italian',
+    'Japanese', 'Javanese',
+    'Kannada', 'Kazakh', 'Khmer', 'Kinyarwanda', 'Korean', 'Kurdish',
+    'Kyrgyz',
+    'Lao', 'Latin', 'Latvian', 'Lithuanian', 'Luxembourgish',
+    'Macedonian', 'Malagasy', 'Malay', 'Malayalam', 'Maltese', 'Maori', 'Marathi', 'Mongolian',
+    'Nepali', 'Norwegian',
+    'Odia', 'Pashto', 'Persian', 'Polish', 'Portuguese', 'Punjabi',
+    'Romanian', 'Russian',
+    'Samoan', 'Scots Gaelic', 'Serbian', 'Sesotho', 'Shona', 'Sindhi', 'Sinhala', 'Slovak', 'Slovenian', 'Somali', 'Spanish', 'Sundanese', 'Swahili', 'Swedish',
+    'Tagalog', 'Tajik', 'Tamil', 'Tatar', 'Telugu', 'Thai', 'Turkish', 'Turkmen',
+    'Ukrainian', 'Urdu', 'Uyghur', 'Uzbek',
+    'Vietnamese',
+    'Welsh',
+    'Xhosa',
+    'Yiddish', 'Yoruba',
+    'Zulu',
+  ];
+
+  final List<Map<String, String?>> _languages = [];
 
   @override
   void initState() {
@@ -1830,8 +2377,8 @@ class _LanguagesFormState extends State<_LanguagesForm> {
           [];
       for (final lang in existingLangs) {
         _languages.add({
-          'language': TextEditingController(text: lang['language'] ?? ''),
-          'proficiency': TextEditingController(text: lang['proficiency'] ?? ''),
+          'language': lang['language'] as String?,
+          'proficiency': lang['proficiency'] as String?,
         });
       }
     }
@@ -1845,8 +2392,8 @@ class _LanguagesFormState extends State<_LanguagesForm> {
     if (_languages.length < 10) {
       setState(() {
         _languages.add({
-          'language': TextEditingController(),
-          'proficiency': TextEditingController(),
+          'language': null,
+          'proficiency': null,
         });
       });
     }
@@ -1854,16 +2401,12 @@ class _LanguagesFormState extends State<_LanguagesForm> {
 
   void _removeLanguage(int index) {
     setState(() {
-      _languages[index].forEach((key, controller) => controller.dispose());
       _languages.removeAt(index);
     });
   }
 
   @override
   void dispose() {
-    for (var lang in _languages) {
-      lang.forEach((key, controller) => controller.dispose());
-    }
     super.dispose();
   }
 
@@ -1879,13 +2422,24 @@ class _LanguagesFormState extends State<_LanguagesForm> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Languages',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryPurple,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Languages',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryPurple,
+                      ),
+                    ),
+                    if (_languages.length < 10)
+                      IconButton(
+                        onPressed: _addLanguage,
+                        icon: const Icon(Icons.add_circle, size: 32),
+                        color: AppTheme.primaryPurple,
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -1893,22 +2447,6 @@ class _LanguagesFormState extends State<_LanguagesForm> {
                   style: TextStyle(color: scheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 20),
-                if (_languages.length < 10)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    child: OutlinedButton.icon(
-                      onPressed: _addLanguage,
-                      icon: const Icon(Icons.add),
-                      label: const Text('Add Another Language'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 12, horizontal: 16),
-                        side: const BorderSide(
-                            color: AppTheme.primaryPurple, width: 1.5),
-                        foregroundColor: AppTheme.primaryPurple,
-                      ),
-                    ),
-                  ),
                 ..._languages.asMap().entries.map((entry) {
                   final index = entry.key;
                   final lang = entry.value;
@@ -1964,7 +2502,7 @@ class _LanguagesFormState extends State<_LanguagesForm> {
   }
 
   Widget _buildLanguageEntry(
-      int index, Map<String, TextEditingController> lang) {
+      int index, Map<String, String?> lang) {
     final scheme = Theme.of(context).colorScheme;
     return Card(
       color: scheme.surface,
@@ -1989,21 +2527,141 @@ class _LanguagesFormState extends State<_LanguagesForm> {
               ],
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: lang['language'],
-              decoration: const InputDecoration(
-                labelText: 'Language',
-                hintText: 'e.g., English, Arabic',
-                border: OutlineInputBorder(),
+            Container(
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: scheme.outline.withOpacity(0.2),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: DropdownButtonFormField2<String>(
+                value: lang['language'],
+                decoration: InputDecoration(
+                  labelText: 'Language',
+                  labelStyle: TextStyle(color: Colors.grey[600]),
+                  hintText: 'Select a language',
+                  hintStyle: const TextStyle(color: Colors.grey),
+                  filled: true,
+                  fillColor: Colors.transparent,
+                  border: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                ),
+                items: _worldLanguages.map((language) {
+                  return DropdownMenuItem<String>(
+                    value: language,
+                    child: Text(language),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    lang['language'] = value;
+                  });
+                },
+                buttonStyleData: const ButtonStyleData(
+                  padding: EdgeInsets.only(right: 8),
+                ),
+                iconStyleData: const IconStyleData(
+                  icon: Icon(Icons.arrow_drop_down),
+                  iconSize: 24,
+                ),
+                dropdownStyleData: DropdownStyleData(
+                  maxHeight: 200,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                menuItemStyleData: const MenuItemStyleData(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                ),
               ),
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: lang['proficiency'],
-              decoration: const InputDecoration(
-                labelText: 'Proficiency',
-                hintText: 'e.g., Native, Fluent, Intermediate',
-                border: OutlineInputBorder(),
+            Container(
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: scheme.outline.withOpacity(0.2),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: DropdownButtonFormField2<String>(
+                value: lang['proficiency'],
+                decoration: InputDecoration(
+                  labelText: 'Proficiency',
+                  labelStyle: TextStyle(color: Colors.grey[600]),
+                  hintText: 'Select proficiency level',
+                  hintStyle: const TextStyle(color: Colors.grey),
+                  filled: true,
+                  fillColor: Colors.transparent,
+                  border: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                ),
+                items: _proficiencyLevels.map((level) {
+                  return DropdownMenuItem<String>(
+                    value: level,
+                    child: Text(level),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    lang['proficiency'] = value;
+                  });
+                },
+                buttonStyleData: const ButtonStyleData(
+                  padding: EdgeInsets.only(right: 8),
+                ),
+                iconStyleData: const IconStyleData(
+                  icon: Icon(Icons.arrow_drop_down),
+                  iconSize: 24,
+                ),
+                dropdownStyleData: DropdownStyleData(
+                  maxHeight: 200,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                menuItemStyleData: const MenuItemStyleData(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                ),
               ),
             ),
           ],
@@ -2015,8 +2673,8 @@ class _LanguagesFormState extends State<_LanguagesForm> {
   void _saveLanguages() {
     final languages = _languages.map((lang) {
       return {
-        'language': lang['language']!.text.trim(),
-        'proficiency': lang['proficiency']!.text.trim(),
+        'language': lang['language'] ?? '',
+        'proficiency': lang['proficiency'] ?? '',
       };
     }).where((lang) {
       return lang['language']!.isNotEmpty;
