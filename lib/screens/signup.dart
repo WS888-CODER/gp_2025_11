@@ -4,8 +4,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'dart:math';
 
-import 'package:gp_2025_11/config/theme.dart';
-
 class SignupScreen extends StatefulWidget {
   @override
   _SignupScreenState createState() => _SignupScreenState();
@@ -58,20 +56,44 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   void _showErrorDialog(String message) {
-    showDialog<void>(
+    showDialog(
       context: context,
-      builder: (ctx) => JadeerDialog<void>(
-        title: 'Error',
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: const [
+            Icon(Icons.error_outline, color: Colors.white, size: 28),
+            SizedBox(width: 10),
+            Text('Error',
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold)),
+          ],
+        ),
         content: Text(
           message,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 15,
-          ),
+          style: const TextStyle(color: Colors.white),
           textAlign: TextAlign.center,
         ),
-        primaryLabel: 'OK',
-        // ما نحتاج نرجّع قيمة، بس نسكر الديالوج
+        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+        actionsPadding:
+            const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.white.withOpacity(0.9),
+              foregroundColor: const Color(0xFF4A5FBC),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            child: const Text('OK'),
+          ),
+        ],
       ),
     );
   }
@@ -147,27 +169,27 @@ class _SignupScreenState extends State<SignupScreen> {
   Future<bool> _isEmailUnique(String email) async {
     try {
       String trimmedEmail = email.trim().toLowerCase();
-      print('ðŸ”µ Checking email: $trimmedEmail');
+      print('Ã°Å¸â€Âµ Checking email: $trimmedEmail');
       final querySnapshot1 = await _firestore
           .collection('Users')
           .where('Email', isEqualTo: trimmedEmail)
           .get();
-      print('ðŸ”µ Method 1 (where): ${querySnapshot1.docs.length} docs');
+      print('Ã°Å¸â€Âµ Method 1 (where): ${querySnapshot1.docs.length} docs');
       final allUsers = await _firestore.collection('Users').get();
       final matchingDocs = allUsers.docs.where((doc) {
         final data = doc.data();
         final docEmail = data['Email']?.toString().toLowerCase() ?? '';
         return docEmail == trimmedEmail;
       }).toList();
-      print('ðŸ”µ Method 2 (filter): ${matchingDocs.length} docs');
+      print('Ã°Å¸â€Âµ Method 2 (filter): ${matchingDocs.length} docs');
       if (querySnapshot1.docs.isNotEmpty || matchingDocs.isNotEmpty) {
-        print('âŒ Email EXISTS!');
+        print('Ã¢ÂÅ’ Email EXISTS!');
         return false;
       }
-      print('âœ… Email is UNIQUE');
+      print('Ã¢Å“â€¦ Email is UNIQUE');
       return true;
     } catch (e) {
-      print('âŒ ERROR: $e');
+      print('Ã¢ÂÅ’ ERROR: $e');
       return false;
     }
   }
@@ -192,7 +214,7 @@ class _SignupScreenState extends State<SignupScreen> {
       }
       return false;
     } catch (e) {
-      print('âŒ Error sending OTP: $e');
+      print('Ã¢ÂÅ’ Error sending OTP: $e');
       return false;
     }
   }
@@ -321,8 +343,9 @@ class _SignupScreenState extends State<SignupScreen> {
       await _firestore.collection('Users').doc(userId).set({
         'UserID': userId,
         'UserType': 'Company',
-        'Email':
-            _companyEmailController.text.trim().toLowerCase(), // âœ… lowercase
+        'Email': _companyEmailController.text
+            .trim()
+            .toLowerCase(), // Ã¢Å“â€¦ lowercase
         'Name': _companyFullNameController.text.trim(),
         'CompanyName': _companyNameController.text.trim(),
         'Phone': null,
@@ -387,8 +410,9 @@ class _SignupScreenState extends State<SignupScreen> {
       await _firestore.collection('Users').doc(userId).set({
         'UserID': userId,
         'UserType': 'JobSeeker',
-        'Email':
-            _seekerEmailController.text.trim().toLowerCase(), // âœ… lowercase
+        'Email': _seekerEmailController.text
+            .trim()
+            .toLowerCase(), // Ã¢Å“â€¦ lowercase
         'Name': _seekerNameController.text.trim(),
         'DoB': null,
         'Nationality': null,
@@ -1044,61 +1068,15 @@ class _SignupScreenState extends State<SignupScreen> {
                           _currentStep == 0
                               ? _buildJobSeekerStep1()
                               : _buildJobSeekerStep2(),
-                        const SizedBox(height: 30),
-                        _buildStepIndicator(),
-                        const SizedBox(height: 30),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            if (_currentStep > 0)
-                              Container(
-                                width: 45,
-                                height: 45,
-                                decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                        color: Colors.white, width: 2)),
-                                child: IconButton(
-                                  padding: EdgeInsets.zero,
-                                  onPressed: _handleBackButton,
-                                  icon: const Icon(Icons.arrow_back,
-                                      color: Colors.white, size: 20),
-                                ),
-                              )
-                            else
-                              const SizedBox(width: 45),
-                            Container(
-                              width: 45,
-                              height: 45,
-                              decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                      color: Colors.white, width: 2)),
-                              child: IconButton(
-                                padding: EdgeInsets.zero,
-                                onPressed:
-                                    _isLoading ? null : _handleNextButton,
-                                icon: _isLoading
-                                    ? const SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(
-                                            color: Colors.white,
-                                            strokeWidth: 2))
-                                    : const Icon(Icons.arrow_forward,
-                                        color: Colors.white, size: 20),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 40),
+                        // مساحة فاضية عشان المحتوى ما يتداخل مع الأزرار الثابتة
+                        const SizedBox(height: 120),
                       ],
                     ),
                   ),
                 ),
               ),
             ),
-            // âœ… Ø¥Ø¶Ø§ÙØ© Ø³Ù‡Ù… Ø§Ù„Ø±Ø¬ÙˆØ¹ Ù„Ù„Ø®Ù„Ù ÙÙŠ Ø£Ø¹Ù„Ù‰ Ø§Ù„ÙŠØ³Ø§Ø± - Ø¢Ø®Ø± Ø¹Ù†ØµØ± ÙÙŠ Stack
+            // Ã¢Å“â€¦ Ã˜Â¥Ã˜Â¶Ã˜Â§Ã™ÂÃ˜Â© Ã˜Â³Ã™â€¡Ã™â€¦ Ã˜Â§Ã™â€žÃ˜Â±Ã˜Â¬Ã™Ë†Ã˜Â¹ Ã™â€žÃ™â€žÃ˜Â®Ã™â€žÃ™Â Ã™ÂÃ™Å  Ã˜Â£Ã˜Â¹Ã™â€žÃ™â€° Ã˜Â§Ã™â€žÃ™Å Ã˜Â³Ã˜Â§Ã˜Â± - Ã˜Â¢Ã˜Â®Ã˜Â± Ã˜Â¹Ã™â€ Ã˜ÂµÃ˜Â± Ã™ÂÃ™Å  Stack
             Positioned(
               top: 50,
               left: 30,
@@ -1112,6 +1090,60 @@ class _SignupScreenState extends State<SignupScreen> {
                   color: Color(0xFFFF7B7B),
                   size: 32,
                 ),
+              ),
+            ),
+            // Fixed bottom navigation (step indicator + arrows)
+            Positioned(
+              bottom: 40,
+              left: 40,
+              right: 40,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildStepIndicator(),
+                  const SizedBox(height: 25),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      if (_currentStep > 0)
+                        Container(
+                          width: 45,
+                          height: 45,
+                          decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border:
+                                  Border.all(color: Colors.white, width: 2)),
+                          child: IconButton(
+                            padding: EdgeInsets.zero,
+                            onPressed: _handleBackButton,
+                            icon: const Icon(Icons.arrow_back,
+                                color: Colors.white, size: 20),
+                          ),
+                        )
+                      else
+                        const SizedBox(width: 45),
+                      Container(
+                        width: 45,
+                        height: 45,
+                        decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2)),
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          onPressed: _isLoading ? null : _handleNextButton,
+                          icon: _isLoading
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                      color: Colors.white, strokeWidth: 2))
+                              : const Icon(Icons.arrow_forward,
+                                  color: Colors.white, size: 20),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ],

@@ -6,7 +6,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -41,38 +40,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
   }
 
-  Future<void> _sendStatusEmail(
-      String companyEmail, String companyName, String status) async {
-    try {
-      final callable =
-          FirebaseFunctions.instance.httpsCallable('notifyCompanyStatusChange');
-      await callable.call({
-        'companyEmail': companyEmail,
-        'companyName': companyName,
-        'status': status,
-      });
-      print('Status email sent to $companyEmail');
-    } catch (e) {
-      print('Error sending status email: $e');
-    }
-  }
-
-  Future<void> updateCompanyStatus(
-      String id, String newStatus, Map<String, dynamic> companyData) async {
+  Future<void> updateCompanyStatus(String id, String newStatus) async {
     await FirebaseFirestore.instance
         .collection('Users')
         .doc(id)
         .update({'AccountStatus': newStatus});
-
-    if (newStatus == 'Verified' || newStatus == 'Rejected') {
-      final companyEmail = companyData['Email'] ?? '';
-      final companyName = companyData['CompanyName'] ?? 'Company';
-
-      if (companyEmail.isNotEmpty) {
-        final emailStatus = newStatus == 'Verified' ? 'Accepted' : 'Rejected';
-        await _sendStatusEmail(companyEmail, companyName, emailStatus);
-      }
-    }
   }
 
   Future<void> loadCompanies() async {
@@ -89,6 +61,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final bool isSelected = selectedStatus == value;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+
     final Color selectedBg = theme.colorScheme.secondary;
     final Color borderColor = theme.colorScheme.secondary;
     final Color unselectedText =
@@ -110,9 +83,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
       showCheckmark: false,
       onSelected: (sel) async {
-        setState(() {
-          selectedStatus = value;
-        });
+        selectedStatus = value;
         await loadCompanies();
       },
     );
@@ -120,7 +91,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final theme = Theme.of(
+        context); // Ø¹Ø´Ø§Ù† Ù…Ø§ Ù†ÙƒØ±Ø± Theme.of(context) Ù…Ù„ÙŠÙˆÙ† Ù…Ø±Ø©
     final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black87;
 
     return ThemedScaffold(
@@ -171,11 +143,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             return _CompanyCard(
                               data: data,
                               onSelected: (newStatus) async {
-                                await updateCompanyStatus(
-                                    doc.id, newStatus, data);
+                                await updateCompanyStatus(doc.id, newStatus);
 
-                                if (!mounted) return;
-
+                                if (!context.mounted) return;
                                 SnackHelper.success(
                                     context, 'Status updated to "$newStatus"');
 
@@ -237,25 +207,56 @@ class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
     await FirebaseAuth.instance.signOut();
 
     if (mounted) {
-      showDialog<void>(
+      final theme = Theme.of(context);
+
+      showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (ctx) => const JadeerDialog<void>(
-          title: 'Session Expired',
-          primaryLabel: 'OK',
-          primaryResult: null,
-          content: Text(
+        builder: (ctx) => AlertDialog(
+          backgroundColor: theme.colorScheme.primary.withOpacity(0.7),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25),
+          ),
+          title: const Text(
+            'Session Expired',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: const Text(
             'You have been automatically logged out after 1 hour.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: Colors.white70),
           ),
+          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+          actionsPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                Navigator.pushReplacementNamed(context, '/login');
+              },
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: theme.colorScheme.primary,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(25),
+                ),
+              ),
+              child: const Text(
+                'OK',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
         ),
-      ).then((_) {
-        // Navigate after dialog is closed
-        if (mounted) {
-          Navigator.pushReplacementNamed(context, '/login');
-        }
-      });
+      );
     }
   }
 
@@ -268,6 +269,77 @@ class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
         '${secs.toString().padLeft(2, '0')}';
   }
 
+  Future<void> _handleLogout() async {
+    final theme = Theme.of(context);
+
+    bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: theme.colorScheme.primary.withOpacity(0.7),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(30),
+        ),
+        title: const Text(
+          'Confirm Logout',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: const Text(
+          'Are you sure you want to log out?',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white),
+        ),
+        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+        actionsPadding:
+            const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.white.withOpacity(0.9),
+              foregroundColor: theme.colorScheme.primary,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 12,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 12,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      _sessionTimer?.cancel();
+      await FirebaseAuth.instance.signOut();
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/login');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -276,24 +348,14 @@ class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
     return AppBar(
       backgroundColor: theme.colorScheme.primary,
       elevation: 0,
-      leadingWidth: 0,
-      leading: const SizedBox(),
-      centerTitle: false,
-      title: const Text(
-        'Admin Dashboard',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      actions: [
-        // Timer bubble
-        Center(
+      leadingWidth: 105,
+      leading: Container(
+        margin: const EdgeInsets.only(left: 12),
+        child: Center(
           child: Container(
-            margin: const EdgeInsets.only(right: 12),
             padding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 6,
+              horizontal: 10,
+              vertical: 5,
             ),
             decoration: BoxDecoration(
               color:
@@ -306,32 +368,40 @@ class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
                 Icon(
                   Icons.timer,
                   color: isLowTime ? Colors.red[700] : Colors.white,
-                  size: 18,
+                  size: 16,
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 5),
                 Text(
                   _formatTime(_remainingSeconds),
                   style: TextStyle(
                     color: isLowTime ? Colors.red[700] : Colors.white,
                     fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                    fontSize: 12,
                   ),
                 ),
               ],
             ),
           ),
         ),
+      ),
+      centerTitle: true,
+      title: const Text(
+        'Admin Dashboard',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      actions: [
         IconButton(
           icon: const Icon(Icons.settings, color: Colors.white),
           tooltip: 'Settings',
           onPressed: () {
-            final user = FirebaseAuth.instance.currentUser;
-
             Navigator.pushNamed(
               context,
               '/settings',
               arguments: {
-                'userId': user?.uid ?? '',
+                'userId': FirebaseAuth.instance.currentUser?.uid ?? '',
                 'userType': 'Admin',
               },
             );
