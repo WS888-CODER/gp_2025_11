@@ -634,27 +634,9 @@ Return ONLY valid JSON in the following structure:
       "content": ["Skill1", "Skill2", "Skill3"]
     },
     {
-      "section": "Certifications",
-      "content": [
-        {"name": "...", "issuer": "...", "year": "..."}
-      ]
-    },
-    {
-      "section": "Languages",
-      "content": [
-        {"language": "...", "proficiency": "..."}
-      ]
-    },
-    {
       "section": "Projects",
       "content": [
-        {"name": "...", "description": "...", "technologies": "...", "year": "..."}
-      ]
-    },
-    {
-      "section": "VolunteerWork",
-      "content": [
-        {"role": "...", "organization": "...", "years": "..."}
+        {"name": "...", "year": "..."}
       ]
     },
     {
@@ -670,21 +652,9 @@ Return ONLY valid JSON in the following structure:
       ]
     },
     {
-      "section": "Courses",
+      "section": "Patents",
       "content": [
-        {"name": "...", "institution": "...", "year": "..."}
-      ]
-    },
-    {
-      "section": "Achievements",
-      "content": [
-        {"name": "...", "year": "..."}
-      ]
-    },
-    {
-      "section": "ExtracurricularActivities",
-      "content": [
-        {"activity": "...", "role": "...", "years": "..."}
+        {"title": "...", "patent_number": "...", "year": "..."}
       ]
     },
     {
@@ -694,31 +664,27 @@ Return ONLY valid JSON in the following structure:
       ]
     },
     {
+      "section": "Certifications",
+      "content": [
+        {"name": "...", "issuer": "...", "year": "..."}
+      ]
+    },
+    {
       "section": "Internships",
       "content": [
         {"title": "...", "company": "...", "years": "..."}
       ]
     },
     {
-      "section": "Interests",
-      "content": ["Interest1", "Interest2", "Interest3"]
-    },
-    {
-      "section": "Portfolio",
+      "section": "VolunteerWork",
       "content": [
-        {"name": "...", "url": "..."}
+        {"role": "...", "organization": "...", "years": "..."}
       ]
     },
     {
-      "section": "Conferences",
+      "section": "Courses",
       "content": [
-        {"name": "...", "role": "...", "year": "..."}
-      ]
-    },
-    {
-      "section": "Workshops",
-      "content": [
-        {"name": "...", "organizer": "...", "year": "..."}
+        {"name": "...", "institution": "...", "year": "..."}
       ]
     },
     {
@@ -728,16 +694,50 @@ Return ONLY valid JSON in the following structure:
       ]
     },
     {
+      "section": "Workshops",
+      "content": [
+        {"name": "...", "organizer": "...", "year": "..."}
+      ]
+    },
+    {
+      "section": "Conferences",
+      "content": [
+        {"name": "...", "role": "...", "year": "..."}
+      ]
+    },
+    {
+      "section": "Achievements",
+      "content": [
+        {"name": "...", "year": "..."}
+      ]
+    },
+    {
       "section": "ProfessionalMemberships",
       "content": [
         {"organization": "...", "role": "...", "years": "..."}
       ]
     },
     {
-      "section": "Patents",
+      "section": "Portfolio",
       "content": [
-        {"title": "...", "patent_number": "...", "year": "..."}
+        {"name": "...", "url": "..."}
       ]
+    },
+    {
+      "section": "Languages",
+      "content": [
+        {"language": "...", "proficiency": "..."}
+      ]
+    },
+    {
+      "section": "ExtracurricularActivities",
+      "content": [
+        {"activity": "...", "role": "...", "years": "..."}
+      ]
+    },
+    {
+      "section": "Interests",
+      "content": ["Interest1", "Interest2", "Interest3"]
     }
   ],
   "suggestions": [
