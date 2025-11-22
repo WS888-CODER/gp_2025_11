@@ -933,9 +933,14 @@ SPECIFIC DETECTION RULES:
 - Certifications EXISTS if there are certification names or credential mentions
 - Languages EXISTS if languages are mentioned with or without proficiency levels
 
-A section is MISSING ONLY if:
-  * The content truly does not exist anywhere in the CV
-  * NOT because it lacks a header or specific formatting
+A section is MISSING if:
+  * The content truly does not exist anywhere in the CV, OR
+  * It has ONLY a header/title but NO actual content (e.g., "Skills:" with no skills listed)
+  * Example: "Experience:" with no job entries = MISSING
+
+A section EXISTS if:
+  * It has actual content/data, even without a section header
+  * Example: Contact info at top without "Personal Info:" header = EXISTS
 
 CV Text:
 ${oldCVText}
