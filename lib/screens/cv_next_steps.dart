@@ -58,6 +58,9 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
       // If no missing sections, automatically enhance CV
       if (missingSections.isEmpty) {
         _enhanceCV();
+      } else {
+        // Show info dialog about missing sections
+        _showMissingSectionsDialog();
       }
     } catch (e) {
       setState(() {
@@ -65,6 +68,30 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
       });
       SnackHelper.error(context, 'Error detecting missing sections: $e');
     }
+  }
+
+  void _showMissingSectionsDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const JadeerDialog<void>(
+        title: 'Complete Your CV',
+        content: Padding(
+          padding: EdgeInsets.only(top: 8),
+          child: Text(
+            'We\'ve analyzed your CV and found some sections that could strengthen your application.\n\nPlease fill in the missing information to create a complete professional CV.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              height: 1.4,
+            ),
+          ),
+        ),
+        primaryLabel: 'Continue',
+        primaryResult: null,
+      ),
+    );
   }
 
   Future<void> _enhanceCV() async {
