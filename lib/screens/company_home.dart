@@ -261,354 +261,322 @@ class _CompanyHomeState extends State<CompanyHome> {
   Widget build(BuildContext context) {
     final companyId = _effectiveCompanyId;
 
-    final homeBody = ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(right: 8.0, top: 8),
-              child: ElevatedButton(
-                onPressed: () async {
-                  // Check profile completion first
-                  final canProceed = await _checkProfileComplete();
-                  if (canProceed && mounted) {
-                    await Navigator.pushNamed(context, '/job-posting');
-                    // Refresh the page after returning
-                    if (mounted) {
-                      setState(() {});
-                    }
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _brand,
-                  foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                ),
-                child: const Text(
-                  'Create Job Post',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        const _SectionTitle(),
-        StreamBuilder<List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
-          stream: _jobsStream(companyId),
-          builder: (context, snap) {
-            if (snap.connectionState == ConnectionState.waiting) {
-              return const Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(child: CircularProgressIndicator()),
-              );
-            }
-            if (snap.hasError) {
-              return Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text('Error: ${snap.error}'),
-              );
-            }
+    final homeBody = ListView(padding: const EdgeInsets.all(16), children: [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          const _SectionTitle(),
+          const SizedBox(height: 12),
+          StreamBuilder<List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
+            stream: _jobsStream(companyId),
+            builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              if (snap.hasError) {
+                return Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text('Error: ${snap.error}'),
+                );
+              }
 
-            final jobs = snap.data ?? const [];
-            if (jobs.isEmpty) {
-              return Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.work_outline,
-                      size: 40,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withOpacity(0.4),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'No job posts yet',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Tap "Create Job Post" to add your first opening.',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withOpacity(0.7),
-                          ),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            return Column(
-              children: jobs.map((doc) {
-                final data = doc.data();
-
-                final title = (data['JobTitle'] ?? 'Untitled').toString();
-                final position = (data['Position'] ?? '').toString();
-                final specialty = (data['Specialty'] ?? '').toString();
-                final endDateField = data['EndDate'];
-                DateTime? endDate;
-                if (endDateField is Timestamp) {
-                  endDate = endDateField.toDate();
-                }
-                final now = DateTime.now();
-
-                final jobStatus = (data['JobStatus'] ?? 'Open').toString();
-                final isClosed = jobStatus == 'Closed' ||
-                    (endDate != null && endDate.isBefore(now));
-
-                final theme = Theme.of(context);
-                final scheme = theme.colorScheme;
-
-                final cardBackgroundColor = isClosed
-                    ? scheme.surface.withOpacity(
-                        theme.brightness == Brightness.dark ? 0.7 : 0.5)
-                    : scheme.surface;
-                final titleColorBase =
-                    theme.textTheme.bodyLarge?.color ?? scheme.onSurface;
-
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: cardBackgroundColor,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(
-                          theme.brightness == Brightness.dark ? 0.3 : 0.05,
-                        ),
-                        blurRadius: 10,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Row(
+              final jobs = snap.data ?? const [];
+              if (jobs.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              title,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 16,
-                                color: isClosed
-                                    ? titleColorBase.withOpacity(0.65)
-                                    : titleColorBase,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              [position, specialty]
-                                  .where((e) => e.isNotEmpty)
-                                  .join(' • '),
-                              style: TextStyle(
-                                color: isClosed
-                                    ? titleColorBase.withOpacity(0.65)
-                                    : titleColorBase,
-                              ),
-                            ),
-                            // Closed badge at bottom left
-                            if (isClosed)
-                              Container(
-                                margin: const EdgeInsets.only(top: 8),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .error
-                                      .withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  'Closed',
-                                  style: TextStyle(
-                                    color: Theme.of(context).colorScheme.error,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
+                      Icon(
+                        Icons.work_outline,
+                        size: 40,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.4),
                       ),
-                      const SizedBox(width: 10),
-
-                      // Edit button
-                      Row(
-                        children: [
-                          // ===== Edit Icon =====
-                          IconButton(
-                            onPressed: () async {
-                              final canProceed = await _checkProfileComplete();
-                              if (!canProceed || !mounted) return;
-
-                              final desc = data['JobDescription'] ??
-                                  data['Description'] ??
-                                  '';
-                              final req = data['Requirements'] ??
-                                  data['Requirments'] ??
-                                  [];
-                              final start = data['StartDate'];
-                              final end = data['EndDate'];
-
-                              await Navigator.pushNamed(
-                                context,
-                                '/job-posting',
-                                arguments: <String, dynamic>{
-                                  'jobId': doc.id,
-                                  'title': title,
-                                  'position': position,
-                                  'specialty': specialty,
-                                  'description': desc,
-                                  'requirements':
-                                      req is List ? req : <String>[],
-                                  'startDate': start,
-                                  'endDate': end,
-                                },
-                              );
-
-                              if (mounted) setState(() {});
-                            },
-                            icon: const Icon(Icons.edit),
-                            color: _brand,
-                            iconSize: 26,
-                            tooltip: 'Edit',
-                          ),
-
-                          // Space
-                          const SizedBox(width: 4),
-
-                          // ===== View Icon =====
-                          IconButton(
-                            onPressed: () {
-                              Navigator.pushNamed(
-                                context,
-                                '/questions',
-                                arguments: {
-                                  'jobId': doc.id,
-                                  'locked': true,
-                                },
-                              );
-                            },
-                            icon: const Icon(Icons.visibility),
-                            color: _brand,
-                            iconSize: 26,
-                            tooltip: 'View',
-                          ),
-                        ],
+                      const SizedBox(height: 12),
+                      Text(
+                        'No job posts yet',
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
                       ),
-
-                      // More options menu (using IconButton + Dialog)
-                      IconButton(
-                        icon: Icon(Icons.more_vert,
-                            color:
-                                Theme.of(context).textTheme.bodyLarge?.color),
-                        onPressed: () {
-                          final safeCtx = _scaffoldKey.currentContext;
-                          if (safeCtx == null) return;
-
-                          showDialog(
-                            context: safeCtx,
-                            builder: (dialogContext) => AlertDialog(
-                              backgroundColor:
-                                  Theme.of(context).colorScheme.surface,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              contentPadding:
-                                  const EdgeInsets.symmetric(vertical: 10),
-                              content: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  // Close/Reopen Option
-                                  ListTile(
-                                    leading: Icon(
-                                      isClosed
-                                          ? Icons.lock_open_outlined
-                                          : Icons.lock_outline,
-                                      color: isClosed
-                                          ? Colors.green
-                                          : Theme.of(context)
-                                              .textTheme
-                                              .bodySmall
-                                              ?.color, // ديناميكي
-                                      size: 20,
-                                    ),
-                                    title: Text(
-                                      isClosed ? 'Reopen Job' : 'Close Job',
-                                      style: TextStyle(
-                                        color: isClosed
-                                            ? Colors.green
-                                            : Theme.of(context)
-                                                .textTheme
-                                                .bodyLarge
-                                                ?.color, // ديناميكي
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    onTap: () {
-                                      Navigator.pop(dialogContext);
-                                      _closeJob(doc.id, isClosed, safeCtx);
-                                    },
-                                  ),
-                                  // Delete Option
-                                  ListTile(
-                                    leading: const Icon(
-                                      Icons.delete_outline,
-                                      color: Color(0xFFFF7B7B),
-                                      size: 20,
-                                    ),
-                                    title: const Text(
-                                      'Delete Job',
-                                      style: TextStyle(
-                                        color: Color(0xFFFF7B7B),
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    onTap: () {
-                                      Navigator.pop(dialogContext);
-                                      _deleteJob(doc.id, title, safeCtx);
-                                    },
-                                  ),
-                                ],
-                              ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Tap "Create Job Post" to add your first opening.',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.7),
                             ),
-                          );
-                        },
                       ),
                     ],
                   ),
                 );
-              }).toList(),
-            );
-          },
-        ),
-        const SizedBox(height: 12),
-      ],
-    );
+              }
+
+              return Column(
+                children: jobs.map((doc) {
+                  final data = doc.data();
+
+                  final title = (data['JobTitle'] ?? 'Untitled').toString();
+                  final position = (data['Position'] ?? '').toString();
+                  final specialty = (data['Specialty'] ?? '').toString();
+                  final endDateField = data['EndDate'];
+                  DateTime? endDate;
+                  if (endDateField is Timestamp) {
+                    endDate = endDateField.toDate();
+                  }
+                  final now = DateTime.now();
+
+                  final jobStatus = (data['JobStatus'] ?? 'Open').toString();
+                  final isClosed = jobStatus == 'Closed' ||
+                      (endDate != null && endDate.isBefore(now));
+
+                  final theme = Theme.of(context);
+                  final scheme = theme.colorScheme;
+
+                  final cardBackgroundColor = isClosed
+                      ? scheme.surface.withOpacity(
+                          theme.brightness == Brightness.dark ? 0.7 : 0.5)
+                      : scheme.surface;
+                  final titleColorBase =
+                      theme.textTheme.bodyLarge?.color ?? scheme.onSurface;
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: cardBackgroundColor,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(
+                            theme.brightness == Brightness.dark ? 0.3 : 0.05,
+                          ),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                title,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16,
+                                  color: isClosed
+                                      ? titleColorBase.withOpacity(0.65)
+                                      : titleColorBase,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                [position, specialty]
+                                    .where((e) => e.isNotEmpty)
+                                    .join(' • '),
+                                style: TextStyle(
+                                  color: isClosed
+                                      ? titleColorBase.withOpacity(0.65)
+                                      : titleColorBase,
+                                ),
+                              ),
+                              // Closed badge at bottom left
+                              if (isClosed)
+                                Container(
+                                  margin: const EdgeInsets.only(top: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .error
+                                        .withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    'Closed',
+                                    style: TextStyle(
+                                      color:
+                                          Theme.of(context).colorScheme.error,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+
+                        // Edit button
+                        Row(
+                          children: [
+                            // ===== Edit Icon =====
+                            IconButton(
+                              onPressed: () async {
+                                final canProceed =
+                                    await _checkProfileComplete();
+                                if (!canProceed || !mounted) return;
+
+                                final desc = data['JobDescription'] ??
+                                    data['Description'] ??
+                                    '';
+                                final req = data['Requirements'] ??
+                                    data['Requirments'] ??
+                                    [];
+                                final start = data['StartDate'];
+                                final end = data['EndDate'];
+
+                                await Navigator.pushNamed(
+                                  context,
+                                  '/job-posting',
+                                  arguments: <String, dynamic>{
+                                    'jobId': doc.id,
+                                    'title': title,
+                                    'position': position,
+                                    'specialty': specialty,
+                                    'description': desc,
+                                    'requirements':
+                                        req is List ? req : <String>[],
+                                    'startDate': start,
+                                    'endDate': end,
+                                  },
+                                );
+
+                                if (mounted) setState(() {});
+                              },
+                              icon: const Icon(Icons.edit),
+                              color: _brand,
+                              iconSize: 26,
+                              tooltip: 'Edit',
+                            ),
+
+                            // Space
+                            const SizedBox(width: 4),
+
+                            // ===== View Icon =====
+                            IconButton(
+                              onPressed: () {
+                                Navigator.pushNamed(
+                                  context,
+                                  '/questions',
+                                  arguments: {
+                                    'jobId': doc.id,
+                                    'locked': true,
+                                  },
+                                );
+                              },
+                              icon: const Icon(Icons.visibility),
+                              color: _brand,
+                              iconSize: 26,
+                              tooltip: 'View',
+                            ),
+                          ],
+                        ),
+
+                        // More options menu (using IconButton + Dialog)
+                        IconButton(
+                          icon: Icon(Icons.more_vert,
+                              color:
+                                  Theme.of(context).textTheme.bodyLarge?.color),
+                          onPressed: () {
+                            final safeCtx = _scaffoldKey.currentContext;
+                            if (safeCtx == null) return;
+
+                            showDialog(
+                              context: safeCtx,
+                              builder: (dialogContext) => AlertDialog(
+                                backgroundColor:
+                                    Theme.of(context).colorScheme.surface,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                contentPadding:
+                                    const EdgeInsets.symmetric(vertical: 10),
+                                content: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // Close/Reopen Option
+                                    ListTile(
+                                      leading: Icon(
+                                        isClosed
+                                            ? Icons.lock_open_outlined
+                                            : Icons.lock_outline,
+                                        color: isClosed
+                                            ? Colors.green
+                                            : Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.color, // ديناميكي
+                                        size: 20,
+                                      ),
+                                      title: Text(
+                                        isClosed ? 'Reopen Job' : 'Close Job',
+                                        style: TextStyle(
+                                          color: isClosed
+                                              ? Colors.green
+                                              : Theme.of(context)
+                                                  .textTheme
+                                                  .bodyLarge
+                                                  ?.color, // ديناميكي
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      onTap: () {
+                                        Navigator.pop(dialogContext);
+                                        _closeJob(doc.id, isClosed, safeCtx);
+                                      },
+                                    ),
+                                    // Delete Option
+                                    ListTile(
+                                      leading: const Icon(
+                                        Icons.delete_outline,
+                                        color: Color(0xFFFF7B7B),
+                                        size: 20,
+                                      ),
+                                      title: const Text(
+                                        'Delete Job',
+                                        style: TextStyle(
+                                          color: Color(0xFFFF7B7B),
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      onTap: () {
+                                        Navigator.pop(dialogContext);
+                                        _deleteJob(doc.id, title, safeCtx);
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+        ],
+      )
+    ]);
 
     return ThemedScaffold(
       key: _scaffoldKey,

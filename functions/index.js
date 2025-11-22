@@ -21,6 +21,16 @@ app.use(express.json());
 if (!admin.apps.length) {
   admin.initializeApp();
 }
+const db = admin.firestore();
+
+async function deleteByQuery(query) {
+  const snap = await query.get();
+  if (snap.empty) return;
+
+  const batch = db.batch();
+  snap.docs.forEach((doc) => batch.delete(doc.ref));
+  await batch.commit();
+}
 
 // ============================================
 // 📧 EMAIL CONFIGURATION
@@ -1143,17 +1153,178 @@ export const resetUserPassword = functions.https.onCall(async (data, context) =>
       mustResetPassword: false,
     });
 
-    console.log(`✅ Password updated and account unlocked for: ${email}`);
+    console.log(`Password updated and account unlocked for: ${email}`);
 
     return { success: true, message: "Password reset and account unlocked successfully" };
   } catch (error) {
-    console.error("❌ Error resetting password:", error);
+    console.error("Error resetting password:", error);
     throw new functions.https.HttpsError(
       "internal",
       "Failed to reset password: " + error.message
     );
   }
 });
+
+export const deleteUserAccount = functions.https.onCall(async (data, context) => {
+  console.log("📥 Delete user account - Full data:", data);
+
+  const actualData = (data && data.data) || data || {};
+  const userId = actualData.userId || actualData["userId"] || "";
+  const userType = actualData.userType || actualData["userType"] || "";
+
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      "unauthenticated",
+      "You must be authenticated to delete an account."
+    );
+  }
+
+  if (!userId || !userType) {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "userId and userType are required."
+    );
+  }
+
+  const requesterUid = context.auth.uid;
+  const isSelfDelete = requesterUid === userId;
+
+  if (!isSelfDelete) {
+    throw new functions.https.HttpsError(
+      "permission-denied",
+      "You can only delete your own account."
+    );
+  }
+
+  try {
+    const userDocRef = db.collection("Users").doc(userId);
+    const userSnap = await userDocRef.get();
+
+    let photoPath;
+    let cvPath;
+
+    if (userSnap.exists) {
+      const userData = userSnap.data() || {};
+      photoPath =
+        userData.PhotoPath ||
+        userData.photoPath ||
+        userData.profilePhotoPath ||
+        null;
+      cvPath =
+        userData.CVPath ||
+        userData.CvPath ||
+        userData.cvPath ||
+        null;
+    }
+
+    const deleteUserScopedCollection = async (collectionName, fieldNames) => {
+      for (const field of fieldNames) {
+        await deleteByQuery(
+          db.collection(collectionName).where(field, "==", userId)
+        );
+      }
+    };
+
+    // User-scoped collections
+    await deleteUserScopedCollection("CVHistory", ["UserID", "userID"]);
+    await deleteUserScopedCollection("CVEnhancement", ["UserID", "userID"]);
+    await deleteUserScopedCollection("MockInterview", ["UserID", "userID"]);
+    await deleteUserScopedCollection("MockInterviews", ["UserID", "userID"]);
+    await deleteUserScopedCollection("Interview", ["UserID", "userID"]);
+    await deleteUserScopedCollection("Interviews", ["UserID", "userID"]);
+    await deleteUserScopedCollection("ReportGenerator", ["UserID", "userID"]);
+    await deleteUserScopedCollection("Reports", ["UserID", "userID"]);
+    await deleteUserScopedCollection("WebSchedule", ["UserID", "userID"]);
+    await deleteUserScopedCollection("WebSchedules", ["UserID", "userID"]);
+    await deleteUserScopedCollection("Favorites", ["UserID", "userID"]);
+    await deleteUserScopedCollection("Applications", ["UserID", "userID"]);
+    await deleteUserScopedCollection("AIServiceRequests", ["UserID", "userID"]);
+
+    // Company-specific: delete its jobs and related data
+    if (userType === "Company") {
+      const jobQueries = [
+        db.collection("Jobs").where("companyID", "==", userId),
+        db.collection("Jobs").where("CompanyID", "==", userId),
+      ];
+
+      for (const jobQuery of jobQueries) {
+        const jobsSnap = await jobQuery.get();
+
+        for (const jobDoc of jobsSnap.docs) {
+          const jobId = jobDoc.id;
+
+          await deleteByQuery(
+            db.collection("Applications").where("jobID", "==", jobId)
+          );
+          await deleteByQuery(
+            db.collection("Applications").where("JobID", "==", jobId)
+          );
+          await deleteByQuery(
+            db.collection("MockInterview").where("jobID", "==", jobId)
+          );
+          await deleteByQuery(
+            db.collection("MockInterview").where("JobID", "==", jobId)
+          );
+          await deleteByQuery(
+            db.collection("Interview").where("jobID", "==", jobId)
+          );
+          await deleteByQuery(
+            db.collection("Interview").where("JobID", "==", jobId)
+          );
+
+          // This removes the whole job document including PostedAt, createdAt, etc.
+          await jobDoc.ref.delete();
+        }
+      }
+    }
+
+    await userDocRef.delete().catch((err) => {
+      console.warn("User document delete warning:", err);
+    });
+
+    const bucket = admin.storage().bucket();
+
+    if (photoPath) {
+      try {
+        await bucket.file(photoPath).delete();
+        console.log("Deleted profile photo:", photoPath);
+      } catch (err) {
+        console.warn("Profile photo delete warning:", err);
+      }
+    }
+
+    if (cvPath) {
+      try {
+        await bucket.file(cvPath).delete();
+        console.log("Deleted CV file:", cvPath);
+      } catch (err) {
+        console.warn("CV file delete warning:", err);
+      }
+    }
+
+    await admin
+      .auth()
+      .deleteUser(userId)
+      .catch((err) => {
+        console.warn("Auth delete warning:", err);
+      });
+
+    console.log(`Account deleted for user: ${userId}`);
+
+    return {
+      success: true,
+      status: "ok",
+      message: "User account and related data deleted successfully.",
+    };
+  } catch (error) {
+    console.error("Error deleting user account:", error);
+    throw new functions.https.HttpsError(
+      "internal",
+      "Failed to delete user account: " + error.message
+    );
+  }
+});
+
 
 // ============================================
 // 📄 CV TEXT EXTRACTION - FIXED VERSION

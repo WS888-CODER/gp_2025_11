@@ -8,6 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
@@ -24,30 +25,109 @@ class UserFields {
   static const isProfileComplete = 'IsProfileComplete';
   static const cvPath = 'CVPath';
   static const photoPath = 'PhotoPath';
+
+  // NEW: contact email field
+  static const contactEmail = 'ContactEmail';
 }
+
+final _email =
+    RegExp(r"^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$", caseSensitive: false);
 
 final _localSaPhone = RegExp(r'^5\d{8}$');
 const _saPrefix = '+966';
 
-const _countries = <String>[
-  'Saudi Arabia',
-  'United Arab Emirates',
-  'Kuwait',
-  'Qatar',
-  'Bahrain',
-  'Oman',
-  'Jordan',
-  'Egypt',
-  'Morocco',
-  'Tunisia',
-  'Turkey',
-  'United States',
-  'United Kingdom',
-  'Germany',
-  'France',
-  'India',
-  'Pakistan',
-  'Philippines',
+const nationalities = <String>[
+  // Gulf
+  "Saudi",
+  "Emirati",
+  "Kuwaiti",
+  "Qatari",
+  "Bahraini",
+  "Omani",
+
+  // Middle East & North Africa
+  "Egyptian",
+  "Jordanian",
+  "Lebanese",
+  "Syrian",
+  "Iraqi",
+  "Palestinian",
+  "Sudanese",
+  "Yemeni",
+  "Moroccan",
+  "Tunisian",
+  "Algerian",
+  "Libyan",
+  "Somali",
+
+  // Asia
+  "Indian",
+  "Pakistani",
+  "Bangladeshi",
+  "Filipino",
+  "Indonesian",
+  "Malaysian",
+  "Singaporean",
+  "Turkish",
+  "Chinese",
+  "Japanese",
+  "Korean",
+  "Thai",
+  "Vietnamese",
+  "Cambodian",
+  "Laotian",
+  "Afghan",
+  "Nepalese",
+  "Sri Lankan",
+
+  // Europe
+  "British",
+  "Irish",
+  "French",
+  "German",
+  "Italian",
+  "Spanish",
+  "Portuguese",
+  "Dutch",
+  "Belgian",
+  "Swiss",
+  "Swedish",
+  "Norwegian",
+  "Finnish",
+  "Danish",
+  "Austrian",
+  "Greek",
+  "Romanian",
+  "Bulgarian",
+  "Polish",
+  "Czech",
+  "Slovak",
+  "Hungarian",
+  "Ukrainian",
+  "Russian",
+
+  // North & South America
+  "American",
+  "Canadian",
+  "Mexican",
+  "Brazilian",
+  "Argentinian",
+  "Colombian",
+  "Chilean",
+  "Peruvian",
+  "Venezuelan",
+
+  // Africa
+  "Nigerian",
+  "Ethiopian",
+  "Kenyan",
+  "Ghanaian",
+  "Rwandan",
+  "South African",
+
+  // Oceania
+  "Australian",
+  "New Zealander",
 ];
 
 class JobSeekerProfile extends StatelessWidget {
@@ -103,14 +183,18 @@ class JobSeekerProfile extends StatelessWidget {
         final cvOk = cvUrl.isNotEmpty;
         final photoOk = photoUrl.isNotEmpty;
 
+        final contactEmail =
+            (data[UserFields.contactEmail] ?? '').toString().trim();
+        final emailValid =
+            contactEmail.isNotEmpty && _email.hasMatch(contactEmail);
+        final contactPhoneLabel = phoneValid ? '+966 $phoneLocal' : '';
+        final hasAnyContact = emailValid || phoneValid;
         final profileComplete = data[UserFields.isProfileComplete] == true ||
-            (cvOk && photoOk && dobOk && natOk && phoneValid);
+            (cvOk && photoOk && dobOk && natOk && (emailValid || phoneValid));
 
         final nationalityValue = natOk ? nationality : 'Not set';
         final dobValue =
             dobOk ? DateFormat('yyyy/MM/dd').format(dobCurrent!) : 'Not set';
-        final phoneValue = phoneValid ? '+966 $phoneLocal' : 'Not set';
-        final cvValue = cvOk ? 'CV uploaded' : 'CV not uploaded';
 
         final photoSource = photoUrl;
 
@@ -137,6 +221,7 @@ class JobSeekerProfile extends StatelessWidget {
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              // Header card
               Container(
                 decoration: BoxDecoration(
                   color: scheme.surface,
@@ -249,8 +334,50 @@ class JobSeekerProfile extends StatelessWidget {
                           ),
                         ],
                       ),
+                    const SizedBox(height: 10),
+                    if (cvOk) ...[
+                      const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.description_outlined,
+                            size: 16,
+                            color: brand,
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            'CV uploaded',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: brand,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ] else ...[
+                      const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.description_outlined,
+                            size: 16,
+                            color: Colors.grey,
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            'CV not uploaded',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 12),
-                    if (phoneValue != 'Not set' || cvOk)
+                    if (hasAnyContact)
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 6),
@@ -262,16 +389,16 @@ class JobSeekerProfile extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            if (phoneValue != 'Not set')
+                            if (emailValid)
                               Text(
-                                phoneValue,
+                                contactEmail,
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w500,
                                   color: chipTextColor,
                                 ),
                               ),
-                            if (phoneValue != 'Not set' && cvOk)
+                            if (emailValid && phoneValid)
                               Text(
                                 '  |  ',
                                 style: TextStyle(
@@ -279,9 +406,9 @@ class JobSeekerProfile extends StatelessWidget {
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            if (cvOk)
+                            if (phoneValid)
                               Text(
-                                cvValue,
+                                contactPhoneLabel,
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w500,
@@ -290,11 +417,13 @@ class JobSeekerProfile extends StatelessWidget {
                               ),
                           ],
                         ),
-                      )
+                      ),
                   ],
                 ),
               ),
               const SizedBox(height: 24),
+
+              // Section: Profile Information
               Container(
                 decoration: BoxDecoration(
                   color: scheme.surface,
@@ -311,14 +440,14 @@ class JobSeekerProfile extends StatelessWidget {
                     ),
                   ],
                   border: Border.all(
-                    color: const Color(0xFF4A5FBC).withOpacity(0.08),
+                    color: const Color(0xFFFD6C67).withOpacity(0.08),
                   ),
                 ),
                 child: _SettingsRowSeeker(
                   icon: Icons.person_outline,
-                  color: brand,
+                  color: const Color(0xFFFD6C67),
                   title: 'Profile Information',
-                  subtitle: 'Profile basics, contact info, and CV',
+                  subtitle: 'Photo, nationality, date of birth, and CV',
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
@@ -330,6 +459,45 @@ class JobSeekerProfile extends StatelessWidget {
                   },
                 ),
               ),
+              const SizedBox(height: 12),
+
+              // Section: Contact Information
+              Container(
+                decoration: BoxDecoration(
+                  color: scheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(
+                        Theme.of(context).brightness == Brightness.dark
+                            ? 0.12
+                            : 0.04,
+                      ),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: const Color(0xFFFD6C67).withOpacity(0.08),
+                  ),
+                ),
+                child: _SettingsRowSeeker(
+                  icon: Icons.mail_outline,
+                  color: const Color(0xFFFD6C67),
+                  title: 'Contact Information',
+                  subtitle: 'Email and phone number',
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => EditJobSeekerPage(
+                          data: data,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
               const SizedBox(height: 32),
             ],
           ),
@@ -419,9 +587,11 @@ class EditJobSeekerPage extends StatefulWidget {
   State<EditJobSeekerPage> createState() => _EditJobSeekerPageState();
 }
 
-class _EditJobSeekerPageState extends State<EditJobSeekerPage> {
+class _EditJobSeekerPageState extends State<EditJobSeekerPage>
+    with SingleTickerProviderStateMixin {
   final _form = GlobalKey<FormState>();
   final _phone = TextEditingController();
+  final _emailCtrl = TextEditingController();
 
   String? _nationality;
   DateTime? _dob;
@@ -439,10 +609,65 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage> {
   static const int _kMaxImageBytes = 5 * 1024 * 1024;
   static const int _kMaxCvBytes = 10 * 1024 * 1024;
 
+  late TabController _tabController;
+  void _showProfileRequirements() {
+    showDialog(
+      context: context,
+      builder: (ctx) => const JadeerDialog<void>(
+        title: 'Profile completion',
+        primaryLabel: 'Got it',
+        primaryResult: null,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Your profile is marked as complete when:',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                height: 1.4,
+              ),
+            ),
+            SizedBox(height: 12),
+            Text(
+              '• A profile photo is uploaded\n'
+              '• Date of birth is set\n'
+              '• Nationality is set\n'
+              '• A CV file is uploaded',
+              style: TextStyle(
+                color: Colors.white,
+                height: 1.4,
+              ),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'And at least one contact method:',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                height: 1.4,
+              ),
+            ),
+            SizedBox(height: 6),
+            Text(
+              '• A valid contact email, or\n'
+              '• A valid Saudi mobile number (+966 5XXXXXXXX)',
+              style: TextStyle(
+                color: Colors.white,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
-
+    _tabController = TabController(length: 2, vsync: this);
     final data = widget.data;
 
     final phoneE164 = (data[UserFields.phone] ?? '').toString().trim();
@@ -452,6 +677,8 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage> {
         _phone.text = local;
       }
     }
+
+    _emailCtrl.text = (data[UserFields.contactEmail] ?? '').toString().trim();
 
     final nat = (data[UserFields.nationality] ?? '').toString().trim();
     _nationality = nat.isEmpty ? null : nat;
@@ -466,8 +693,10 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage> {
 
   @override
   void dispose() {
+    _tabController.dispose();
     _uploadSub?.cancel();
     _phone.dispose();
+    _emailCtrl.dispose();
     super.dispose();
   }
 
@@ -667,6 +896,9 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage> {
       return;
     }
 
+    final email = _emailCtrl.text.trim();
+    final emailValid = email.isNotEmpty && _email.hasMatch(email);
+
     final updates = <String, dynamic>{};
     String? newPhotoUrl, newPhotoPath;
     String? newCvUrl, newCvPath;
@@ -727,6 +959,15 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage> {
       updates[UserFields.nationality] = newNat;
     }
 
+    // email updates (Email OR phone logic)
+    final currentEmail =
+        (current[UserFields.contactEmail] ?? '').toString().trim();
+    if (email.isEmpty && currentEmail.isNotEmpty) {
+      updates[UserFields.contactEmail] = FieldValue.delete();
+    } else if (email.isNotEmpty && email != currentEmail) {
+      updates[UserFields.contactEmail] = email;
+    }
+
     final currentPhone = (current[UserFields.phone] ?? '').toString().trim();
     if (local.isNotEmpty && _localSaPhone.hasMatch(local)) {
       final e164 = '$_saPrefix$local';
@@ -769,7 +1010,9 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage> {
     final phoneOk =
         phoneLocalMerged.isNotEmpty && _localSaPhone.hasMatch(phoneLocalMerged);
 
-    final complete = cvOk && photoOk && dobOk && natOk && phoneOk;
+    // NEW COMPLETE LOGIC: email OR phone
+    final complete =
+        cvOk && photoOk && dobOk && natOk && (emailValid || phoneOk);
     updates[UserFields.isProfileComplete] = complete;
 
     final uid = FirebaseAuth.instance.currentUser!.uid;
@@ -832,8 +1075,94 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage> {
 
   @override
   Widget build(BuildContext context) {
-    const brand = Color(0xFF4A5FBC);
+    bool _hasUnsavedChanges() {
+      final current = widget.data;
 
+      final origPhone = (current[UserFields.phone] ?? '').toString().trim();
+      String origLocal = '';
+      if (origPhone.startsWith(_saPrefix)) {
+        origLocal = origPhone.substring(_saPrefix.length);
+      } else {
+        origLocal = origPhone;
+      }
+
+      final origEmail =
+          (current[UserFields.contactEmail] ?? '').toString().trim();
+      final origNat = (current[UserFields.nationality] ?? '').toString().trim();
+
+      DateTime? origDob;
+      if (current[UserFields.dob] is Timestamp) {
+        final d = (current[UserFields.dob] as Timestamp).toDate();
+        origDob = DateTime(d.year, d.month, d.day);
+      }
+
+      final origPhotoUrl =
+          (current[UserFields.photoUrl] ?? '').toString().trim();
+      final origCvUrl = (current[UserFields.cvUrl] ?? '').toString().trim();
+
+      final uiPhone = _phone.text.trim();
+      final uiEmail = _emailCtrl.text.trim();
+      final uiNat = (_nationality ?? '').trim();
+
+      DateTime? uiDob = _dob;
+      if (uiDob != null) {
+        uiDob = DateTime(uiDob.year, uiDob.month, uiDob.day);
+      }
+
+      final phoneChanged = uiPhone != origLocal;
+      final emailChanged = uiEmail != origEmail;
+      final natChanged = uiNat != origNat;
+
+      bool dobChanged;
+      if (origDob == null && uiDob == null) {
+        dobChanged = false;
+      } else if (origDob == null || uiDob == null) {
+        dobChanged = true;
+      } else {
+        dobChanged = uiDob != origDob;
+      }
+
+      final photoChanged =
+          _pendingPhotoFile != null || (_photoUrl ?? '').trim() != origPhotoUrl;
+      final cvChanged =
+          _pendingCvFile != null || (_cvUrl ?? '').trim() != origCvUrl;
+
+      return phoneChanged ||
+          emailChanged ||
+          natChanged ||
+          dobChanged ||
+          photoChanged ||
+          cvChanged;
+    }
+
+    Future<bool> _onWillPop() async {
+      if (!_hasUnsavedChanges()) {
+        return true;
+      }
+
+      final shouldLeave = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => const JadeerDialog<bool>(
+          title: 'Discard changes?',
+          content: Text(
+            'You have unsaved changes. Are you sure you want to leave without saving?',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+            ),
+          ),
+          secondaryLabel: 'Stay',
+          secondaryResult: false,
+          primaryLabel: 'Leave',
+          primaryResult: true,
+        ),
+      );
+
+      return shouldLeave == true;
+    }
+
+    const brand = Color(0xFF4A5FBC);
     final dobText = _dob == null
         ? ((_dobFromData() == null)
             ? 'Select date'
@@ -843,322 +1172,650 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage> {
     final hasCV = _pendingCvFile != null || ((_cvUrl ?? '').isNotEmpty);
     final hasPhoto =
         _pendingPhotoFile != null || ((_photoUrl ?? '').isNotEmpty);
-    final canViewCv = (_cvUrl ?? '').isNotEmpty && _pendingCvFile == null;
 
-    return ThemedScaffold(
-      appBar: AppBar(
-        backgroundColor: brand,
-        title: const Text(
-          'Edit Profile',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: ThemedScaffold(
+        appBar: AppBar(
+          backgroundColor: brand,
+          title: const Text(
+            'Edit Profile',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        bottom: _progress != null
-            ? PreferredSize(
-                preferredSize: const Size.fromHeight(4),
-                child: LinearProgressIndicator(
-                  value: _progress == 0 ? null : _progress,
-                  minHeight: 4,
-                  backgroundColor: Colors.black12,
-                  color: Colors.white,
-                ),
-              )
-            : null,
-      ),
-      body: Form(
-        key: _form,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
-        child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          children: [
-            const Text(
-              'Profile Photo',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-              ),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () async {
+              final shouldPop = await _onWillPop();
+              if (shouldPop && mounted) {
+                Navigator.of(context).pop();
+              }
+            },
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.info_outline, color: Colors.white),
+              tooltip: 'Profile requirements',
+              onPressed: _showProfileRequirements,
             ),
-            const SizedBox(height: 8),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: brand,
-                      width: 2,
-                    ),
-                  ),
-                  child: CircleAvatar(
-                    radius: 32,
-                    backgroundColor: Colors.white,
-                    backgroundImage: _pendingPhotoFile != null
-                        ? FileImage(_pendingPhotoFile!) as ImageProvider
-                        : ((_photoUrl ?? '').isNotEmpty
-                            ? NetworkImage(_photoUrl!)
-                            : null),
-                    child:
-                        (_pendingPhotoFile == null && (_photoUrl ?? '').isEmpty)
-                            ? const Icon(
-                                Icons.person,
-                                color: brand,
-                                size: 28,
-                              )
-                            : null,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Row(
-                  children: [
-                    FilledButton(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFFFD6C67),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                      ),
-                      onPressed:
-                          (_saving || _progress != null) ? null : _pickPhoto,
-                      child: const Text(
-                        'Upload Photo',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    if (hasPhoto)
-                      TextButton(
-                        onPressed: (_saving || _progress != null)
-                            ? null
-                            : () {
-                                setState(() {
-                                  _pendingPhotoFile = null;
-                                  _photoUrl = '';
-                                });
-                              },
-                        child: const Text(
-                          'Remove photo',
-                          style: TextStyle(color: Colors.red),
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Date of Birth',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(dobText),
-              trailing: FilledButton.tonal(
-                style: FilledButton.styleFrom(
-                  foregroundColor: Colors.white,
-                ),
-                onPressed: (_saving || _progress != null)
-                    ? null
-                    : () async {
-                        final now = DateTime.now();
-                        final initial = _dob ??
-                            _dobFromData() ??
-                            DateTime(now.year - 20, now.month, now.day);
-                        final first = DateTime(now.year - 80, 1, 1);
-                        final last =
-                            DateTime(now.year - 18, now.month, now.day);
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: initial,
-                          firstDate: first,
-                          lastDate: last,
-                        );
-                        if (picked != null) {
-                          setState(() => _dob = picked);
-                        }
-                      },
-                child: const Text(
-                  'Select date',
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            DropdownButtonFormField<String>(
-              menuMaxHeight: 600,
-              value: _countries.contains(_nationality) ? _nationality : null,
-              items: _countries
-                  .map(
-                    (c) => DropdownMenuItem(
-                      value: c,
-                      child: Text(
-                        c,
-                        style: const TextStyle(
-                          color: Color(0xFF4A5FBC),
-                        ),
-                      ),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (_saving || _progress != null)
-                  ? null
-                  : (v) => setState(() => _nationality = v),
-              style: const TextStyle(color: Color(0xFF4A5FBC)),
-              decoration: const InputDecoration(
-                hintText: "Select your Nationality",
-                labelText: 'Nationality',
-                labelStyle: TextStyle(
-                  color: Color(0xFF4A5FBC),
-                  fontWeight: FontWeight.w800,
-                  fontSize: 16,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Color(0xFF4A5FBC), width: 1.5),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Color(0xFF4A5FBC), width: 1.5),
-                ),
-              ),
-              validator: (v) => null,
-            ),
-            const SizedBox(height: 24),
-            TextFormField(
-              controller: _phone,
-              keyboardType: TextInputType.phone,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(9),
-              ],
-              decoration: const InputDecoration(
-                labelText: 'Phone',
-                labelStyle: TextStyle(
-                  color: Color(0xFF4A5FBC),
-                  fontWeight: FontWeight.w800,
-                  fontSize: 16,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Color(0xFF4A5FBC), width: 1.5),
-                ),
-                hintText: '5XXXXXXXX',
-                prefixText: '+966 ',
-                border: OutlineInputBorder(),
-              ),
-              validator: (v) {
-                final t = v?.trim() ?? '';
-                if (t.isEmpty) {
-                  return null;
-                }
-                if (!_localSaPhone.hasMatch(t)) {
-                  return 'Must start with 5 and be 9 digits';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 32),
-            const Text(
-              'CV File',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    hasCV ? 'CV uploaded' : 'CV not uploaded',
-                    style: const TextStyle(
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-                if (canViewCv) ...[
-                  FilledButton.tonal(
-                    onPressed: (_saving || _progress != null) ? null : _openCv,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: brand,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text('View CV'),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                if (hasCV)
-                  TextButton(
-                    onPressed: (_saving || _progress != null)
-                        ? null
-                        : () {
-                            setState(() {
-                              _pendingCvFile = null;
-                              _cvUrl = '';
-                            });
-                          },
-                    child: const Text(
-                      'Remove CV',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  )
-                else
-                  FilledButton.tonal(
-                    onPressed: (_saving || _progress != null) ? null : _pickCV,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFFFD6C67),
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text('Upload CV'),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 120),
           ],
         ),
-      ),
-      bottomNavigationBar: SafeArea(
-        minimum:
-            const EdgeInsets.symmetric(horizontal: 16).copyWith(bottom: 16),
-        child: SizedBox(
-          width: double.infinity,
-          child: FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: brand,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(28),
+        body: Column(
+          children: [
+            if (_progress != null)
+              LinearProgressIndicator(
+                value: (_progress ?? 0) == 0 ? null : _progress,
+                minHeight: 4,
+                backgroundColor: Colors.black12,
+                color: brand,
               ),
-              textStyle: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+            if (_progress != null) const SizedBox(height: 8),
+            Container(
+              color: brand,
+              child: TabBar(
+                controller: _tabController,
+                indicatorColor: Colors.white,
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.white70,
+                tabs: const [
+                  Tab(
+                    child: Text(
+                      'Profile Info',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  Tab(
+                    child: Text(
+                      'Contact Info',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            onPressed: (_saving || _progress != null) ? null : _save,
-            child: _saving
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
+            Expanded(
+              child: Form(
+                key: _form,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    // ====== TAB 0: Profile Info ======
+                    ListView(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
+                      children: [
+                        const Text(
+                          'Profile Photo',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: brand,
+                                  width: 2,
+                                ),
+                              ),
+                              child: CircleAvatar(
+                                radius: 32,
+                                backgroundColor: Colors.white,
+                                backgroundImage: _pendingPhotoFile != null
+                                    ? FileImage(_pendingPhotoFile!)
+                                        as ImageProvider
+                                    : ((_photoUrl ?? '').isNotEmpty
+                                        ? NetworkImage(_photoUrl!)
+                                        : null),
+                                child: (_pendingPhotoFile == null &&
+                                        (_photoUrl ?? '').isEmpty)
+                                    ? const Icon(
+                                        Icons.person,
+                                        color: brand,
+                                        size: 28,
+                                      )
+                                    : null,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Row(
+                              children: [
+                                FilledButton(
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: const Color(0xFFFD6C67),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(24),
+                                    ),
+                                  ),
+                                  onPressed: (_saving || _progress != null)
+                                      ? null
+                                      : _pickPhoto,
+                                  child: const Text(
+                                    'Upload Photo',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                if (hasPhoto)
+                                  TextButton(
+                                    onPressed: (_saving || _progress != null)
+                                        ? null
+                                        : () {
+                                            setState(() {
+                                              _pendingPhotoFile = null;
+                                              _photoUrl = '';
+                                            });
+                                          },
+                                    child: const Text(
+                                      'Remove photo',
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        const Text(
+                          'Date of Birth',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        buildJadeerInputCard(
+                          context: context,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: (_saving || _progress != null)
+                                ? null
+                                : () async {
+                                    final now = DateTime.now();
+                                    final initial = _dob ??
+                                        _dobFromData() ??
+                                        DateTime(
+                                          now.year - 20,
+                                          now.month,
+                                          now.day,
+                                        );
+                                    final first = DateTime(now.year - 80, 1, 1);
+                                    final last = DateTime(
+                                      now.year - 18,
+                                      now.month,
+                                      now.day,
+                                    );
+                                    final picked = await showDatePicker(
+                                      context: context,
+                                      initialDate: initial,
+                                      firstDate: first,
+                                      lastDate: last,
+                                    );
+                                    if (picked != null) {
+                                      setState(() => _dob = picked);
+                                    }
+                                  },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 14,
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    dobText,
+                                    style: TextStyle(
+                                      color: dobText == 'Select date'
+                                          ? Colors.grey
+                                          : Theme.of(context)
+                                              .colorScheme
+                                              .onSurface,
+                                    ),
+                                  ),
+                                  const Icon(
+                                    Icons.calendar_today_outlined,
+                                    size: 18,
+                                    color: Color(0xFFFD6C67),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        const Text(
+                          'Nationality',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        buildJadeerInputCard(
+                          context: context,
+                          child: Autocomplete<String>(
+                            initialValue: _nationality != null
+                                ? TextEditingValue(text: _nationality!)
+                                : null,
+                            optionsBuilder: (TextEditingValue value) {
+                              if (value.text.isEmpty) {
+                                return nationalities;
+                              }
+                              return nationalities.where(
+                                (c) => c
+                                    .toLowerCase()
+                                    .contains(value.text.toLowerCase()),
+                              );
+                            },
+                            onSelected: (selection) {
+                              setState(() => _nationality = selection);
+                            },
+                            fieldViewBuilder: (context, textController,
+                                focusNode, onFieldSubmitted) {
+                              return TextFormField(
+                                controller: textController,
+                                focusNode: focusNode,
+                                decoration: const InputDecoration(
+                                  hintText: 'Select your nationality',
+                                  hintStyle: TextStyle(color: Colors.grey),
+                                  border: OutlineInputBorder(
+                                    borderSide: BorderSide.none,
+                                    borderRadius: BorderRadius.all(
+                                      Radius.circular(12),
+                                    ),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.transparent,
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 14,
+                                  ),
+                                ),
+                              );
+                            },
+                            optionsViewBuilder: (context, onSelected, options) {
+                              final scheme = Theme.of(context).colorScheme;
+                              return Align(
+                                alignment: Alignment.topLeft,
+                                child: Material(
+                                  elevation: 6,
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    constraints:
+                                        const BoxConstraints(maxHeight: 250),
+                                    decoration: BoxDecoration(
+                                      color: scheme.surface,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: ListView.builder(
+                                      padding: EdgeInsets.zero,
+                                      itemCount: options.length,
+                                      itemBuilder: (context, index) {
+                                        final option = options.elementAt(index);
+                                        return InkWell(
+                                          onTap: () => onSelected(option),
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 16,
+                                              vertical: 12,
+                                            ),
+                                            child: Text(option),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                        const Text(
+                          'CV File',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.06),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                            border: Border.all(
+                              color: AppTheme.primaryPurple.withOpacity(0.08),
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color:
+                                      AppTheme.primaryPurple.withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Iconsax.document_text,
+                                  size: 40,
+                                  color: AppTheme.primaryPurple,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                hasCV ? 'CV (PDF)' : 'No CV uploaded',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.primaryPurple,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                hasCV
+                                    ? 'Your CV is saved to your profile and ready to use.'
+                                    : 'Upload your CV to get more accurate job recommendations.',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              if (hasCV) ...[
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    // View
+                                    SizedBox(
+                                      width: 140,
+                                      child: ElevatedButton.icon(
+                                        onPressed:
+                                            (_saving || _progress != null)
+                                                ? null
+                                                : _openCv,
+                                        style: FilledButton.styleFrom(
+                                          backgroundColor:
+                                              AppTheme.primaryPurple,
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 12,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(24),
+                                          ),
+                                        ),
+                                        icon: const Icon(Iconsax.eye, size: 20),
+                                        label: const Text('View'),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+
+                                    // Replace
+                                    SizedBox(
+                                      width: 140,
+                                      child: ElevatedButton.icon(
+                                        onPressed:
+                                            (_saving || _progress != null)
+                                                ? null
+                                                : _pickCV,
+                                        style: FilledButton.styleFrom(
+                                          backgroundColor:
+                                              const Color(0xFFFD6C67),
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 12,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(24),
+                                          ),
+                                        ),
+                                        icon: const Icon(
+                                            Iconsax.document_upload,
+                                            size: 20),
+                                        label: const Text('Replace'),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                TextButton(
+                                  onPressed: (_saving || _progress != null)
+                                      ? null
+                                      : () {
+                                          setState(() {
+                                            _pendingCvFile = null;
+                                            _cvUrl = '';
+                                          });
+                                        },
+                                  child: const Text(
+                                    'Remove CV',
+                                    style: TextStyle(
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                              ] else ...[
+                                SizedBox(
+                                  width: 160,
+                                  child: ElevatedButton.icon(
+                                    onPressed: (_saving || _progress != null)
+                                        ? null
+                                        : _pickCV,
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: const Color(0xFFFD6C67),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 12,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(24),
+                                      ),
+                                    ),
+                                    icon: const Icon(Iconsax.document_upload,
+                                        size: 20),
+                                    label: const Text('Upload CV'),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  )
-                : const Text('Save changes'),
+
+                    // ====== TAB 1: Contact Info ======
+                    ListView(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
+                      children: [
+                        const Text(
+                          'Email',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        buildJadeerInputCard(
+                          context: context,
+                          child: TextFormField(
+                            controller: _emailCtrl,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: const InputDecoration(
+                              hintText: 'Enter contact email',
+                              hintStyle: TextStyle(color: Colors.grey),
+                              filled: true,
+                              fillColor: Colors.transparent,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(12),
+                                ),
+                                borderSide: BorderSide.none,
+                              ),
+                              errorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(12),
+                                ),
+                                borderSide: BorderSide.none,
+                              ),
+                              focusedErrorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(12),
+                                ),
+                                borderSide: BorderSide.none,
+                              ),
+                              errorStyle: TextStyle(height: 0, fontSize: 0),
+                              counterText: '',
+                            ),
+                            validator: (v) {
+                              final t = v?.trim() ?? '';
+                              if (t.isEmpty) return null;
+                              if (!_email.hasMatch(t)) return 'Invalid email';
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        const Text(
+                          'Phone',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        buildJadeerInputCard(
+                          context: context,
+                          child: TextFormField(
+                            controller: _phone,
+                            keyboardType: TextInputType.phone,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(9),
+                            ],
+                            decoration: const InputDecoration(
+                              hintText: '5XXXXXXXX',
+                              hintStyle: TextStyle(color: Colors.grey),
+                              prefixText: '+966 ',
+                              filled: true,
+                              fillColor: Colors.transparent,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(12),
+                                ),
+                                borderSide: BorderSide.none,
+                              ),
+                              errorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(12),
+                                ),
+                                borderSide: BorderSide.none,
+                              ),
+                              focusedErrorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(12),
+                                ),
+                                borderSide: BorderSide.none,
+                              ),
+                              errorStyle: TextStyle(height: 0, fontSize: 0),
+                              counterText: '',
+                            ),
+                            validator: (v) {
+                              final t = v?.trim() ?? '';
+                              if (t.isEmpty) return null;
+                              if (!_localSaPhone.hasMatch(t)) {
+                                return 'Must start with 5 and be 9 digits';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 120),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        bottomNavigationBar: SafeArea(
+          minimum:
+              const EdgeInsets.symmetric(horizontal: 16).copyWith(bottom: 16),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: brand,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              onPressed: (_saving || _progress != null) ? null : _save,
+              child: _saving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Save changes'),
+            ),
           ),
         ),
       ),
@@ -1170,4 +1827,26 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage> {
     if (d is Timestamp) return d.toDate();
     return null;
   }
+}
+
+Widget buildJadeerInputCard({
+  required BuildContext context,
+  required Widget child,
+}) {
+  final scheme = Theme.of(context).colorScheme;
+
+  return Container(
+    decoration: BoxDecoration(
+      color: scheme.surface,
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.08),
+          blurRadius: 8,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    ),
+    child: child,
+  );
 }

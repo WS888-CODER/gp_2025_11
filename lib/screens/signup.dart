@@ -1068,7 +1068,6 @@ class _SignupScreenState extends State<SignupScreen> {
                           _currentStep == 0
                               ? _buildJobSeekerStep1()
                               : _buildJobSeekerStep2(),
-                        // مساحة فاضية عشان المحتوى ما يتداخل مع الأزرار الثابتة
                         const SizedBox(height: 120),
                       ],
                     ),
@@ -1076,7 +1075,6 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
               ),
             ),
-            // Ã¢Å“â€¦ Ã˜Â¥Ã˜Â¶Ã˜Â§Ã™ÂÃ˜Â© Ã˜Â³Ã™â€¡Ã™â€¦ Ã˜Â§Ã™â€žÃ˜Â±Ã˜Â¬Ã™Ë†Ã˜Â¹ Ã™â€žÃ™â€žÃ˜Â®Ã™â€žÃ™Â Ã™ÂÃ™Å  Ã˜Â£Ã˜Â¹Ã™â€žÃ™â€° Ã˜Â§Ã™â€žÃ™Å Ã˜Â³Ã˜Â§Ã˜Â± - Ã˜Â¢Ã˜Â®Ã˜Â± Ã˜Â¹Ã™â€ Ã˜ÂµÃ˜Â± Ã™ÂÃ™Å  Stack
             Positioned(
               top: 50,
               left: 30,

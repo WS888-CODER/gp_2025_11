@@ -1,7 +1,6 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:provider/provider.dart';
@@ -65,7 +64,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     final confirmLabel = isJobSeeker ? 'Delete Account' : 'Delete';
 
-    final bool? confirm = await showDialog<bool>(
+    final bool? firstConfirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => const JadeerDialog<bool>(
+        title: 'Are you sure?',
+        content: Text(
+          'Are you sure you want to delete this account?',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 15,
+          ),
+        ),
+        primaryLabel: 'Continue',
+        primaryResult: true,
+        secondaryLabel: 'Cancel',
+        secondaryResult: false,
+      ),
+    );
+
+    if (firstConfirm != true) return;
+
+    final bool? secondConfirm = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => JadeerDialog<bool>(
@@ -76,10 +96,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         secondaryResult: false,
         content: SingleChildScrollView(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const Text(
                 'Are you sure you want to proceed? This action cannot be undone.',
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 15,
@@ -88,6 +109,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: 12),
               Text(
                 description,
+                textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: Colors.white70,
                   fontSize: 14,
@@ -99,7 +121,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
 
-    if (confirm != true) return;
+    if (secondConfirm != true) return;
 
     setState(() => _isDeletingAccount = true);
 
@@ -172,7 +194,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           backgroundColor: _brandColor,
         ),
         body: Padding(
-          padding: const EdgeInsets.fromLTRB(20.0, 40.0, 20.0, 25.0),
+          padding: const EdgeInsets.fromLTRB(20.0, 30.0, 20.0, 0),
           child: ListView(
             children: [
               // ======= Appearance =======
@@ -183,7 +205,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   iconColor: Colors.orange,
                   value: settings.themeMode == ThemeMode.dark,
                   onChanged: (value) => _toggleTheme(settings, value),
-                  switchColor: _brandColor,
+                  switchColor: const Color(0xFFFD6C67),
                   isTitleBold: true,
                   subtitle: Text(
                     settings.themeMode == ThemeMode.dark
@@ -202,7 +224,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     iconColor: Colors.purple,
                     value: _isNotificationsEnabled,
                     onChanged: _toggleNotifications,
-                    switchColor: _brandColor,
+                    switchColor: const Color(0xFFFD6C67),
                     subtitle: const Text('Manage alerts and reminders'),
                     isTitleBold: true,
                   ),
@@ -320,7 +342,11 @@ class SettingsSectionCard extends StatelessWidget {
     final Color borderColor = const Color(0xFF4A5FBC).withOpacity(0.08);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      alignment: Alignment.center,
+      margin: const EdgeInsets.only(bottom: 8, top: 4),
+      constraints: const BoxConstraints(
+        minHeight: 80,
+      ),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(20),
@@ -360,6 +386,8 @@ class _SettingsItem extends StatelessWidget {
     this.isTitleBold = false,
   });
 
+  bool get isDelete => title.contains('Delete');
+
   @override
   Widget build(BuildContext context) {
     return InkWell(
@@ -375,8 +403,16 @@ class _SettingsItem extends StatelessWidget {
             fontWeight: isTitleBold ? FontWeight.bold : FontWeight.normal,
           ),
         ),
-        trailing: trailing,
-        subtitle: subtitle,
+        subtitle: subtitle == null
+            ? null
+            : DefaultTextStyle.merge(
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 13,
+                ),
+                child: subtitle!,
+              ),
+        trailing: isDelete ? null : trailing,
       ),
     );
   }
@@ -423,7 +459,15 @@ class _SettingsSwitchItem extends StatelessWidget {
             fontWeight: isTitleBold ? FontWeight.bold : FontWeight.normal,
           ),
         ),
-        subtitle: subtitle,
+        subtitle: subtitle == null
+            ? null
+            : DefaultTextStyle.merge(
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 13,
+                ),
+                child: subtitle!,
+              ),
         trailing: Theme(
           data: Theme.of(context).copyWith(
             switchTheme: SwitchThemeData(
