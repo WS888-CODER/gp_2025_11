@@ -920,16 +920,22 @@ The CV should ideally contain these sections:
 Review the CV text below and return the names of sections that are MISSING or have NO ACTUAL CONTENT.
 
 CRITICAL RULES:
-- A section is MISSING if:
-  * It doesn't exist at all in the CV, OR
-  * It only has a title/header but NO actual content
-  * For example, if the CV has "Experience:" or "Skills:" as a header but no actual experience entries or skills listed, that section is MISSING
+- BE SMART about recognizing sections even WITHOUT explicit headers
+- A section EXISTS if the information is present ANYWHERE in the CV, regardless of formatting
 
-- A section EXISTS and should NOT be included if:
-  * It has actual data/content (not just the section title)
-  * For example: actual job entries for Experience, actual skills listed for Skills, etc.
+SPECIFIC DETECTION RULES:
+- PersonalInformation EXISTS if you can find: name, email, phone, OR location in the CV (even without a "Personal Info" header)
+  * Contact info at the top of a CV = PersonalInformation section EXISTS
+- Summary EXISTS if there's a professional summary/objective paragraph (even without "Summary:" header)
+- Experience EXISTS if there are job titles, company names, or work descriptions
+- Education EXISTS if there are degree names, universities, or graduation years
+- Skills EXISTS if there's a list of skills/technologies/competencies (even without "Skills:" header)
+- Certifications EXISTS if there are certification names or credential mentions
+- Languages EXISTS if languages are mentioned with or without proficiency levels
 
-- Ignore section titles/headers - only check if there's actual content in each section
+A section is MISSING ONLY if:
+  * The content truly does not exist anywhere in the CV
+  * NOT because it lacks a header or specific formatting
 
 CV Text:
 ${oldCVText}
