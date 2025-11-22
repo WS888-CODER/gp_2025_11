@@ -333,7 +333,7 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            child: Text(isClosed ? 'Closed' : 'Apply'),
+            child: const Text('Apply'),
           ),
         ),
       ),
@@ -903,9 +903,9 @@ class _JobCardState extends State<JobCard> {
                         vertical: 10,
                       ),
                     ),
-                    child: Text(
-                      isClosed ? 'Closed' : 'Apply',
-                      style: const TextStyle(
+                    child: const Text(
+                      'Apply',
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
                       ),

@@ -408,10 +408,11 @@ class _JobsPageState extends State<JobsPage> {
             color: Colors.white,
           ),
         ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(64),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
             child: Builder(
               builder: (context) {
                 final scheme = Theme.of(context).colorScheme;
@@ -457,19 +458,13 @@ class _JobsPageState extends State<JobsPage> {
                       ),
                     ),
                     onChanged: (v) {
-                      setState(() {
-                        _search = v;
-                      });
+                      setState(() => _search = v);
                     },
                   ),
                 );
               },
             ),
           ),
-        ),
-      ),
-      body: Column(
-        children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Builder(
