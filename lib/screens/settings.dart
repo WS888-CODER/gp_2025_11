@@ -25,7 +25,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isDeletingAccount = false;
 
   Future<void> _handleLogout(BuildContext context) async {
-    bool? confirm = await showDialog<bool>(
+    final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => const JadeerDialog<bool>(
         title: 'Confirm Logout',
@@ -60,7 +60,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     final description = isJobSeeker
         ? 'Your account will be permanently deleted, including your personal data, CVs, reports, and interview data. All active applications will be cancelled and related data removed.'
-        : 'Your company account will be permanently deleted, including the company profile, job postings, and related applicant data. All active postings will be closed, and a confirmation email will be sent to your registered address.';
+        : 'Your company account will be permanently deleted, including the company profile, job postings, and related applicant data. All active postings will be closed.';
 
     final confirmLabel = isJobSeeker ? 'Delete Account' : 'Delete';
 
@@ -130,7 +130,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final callable = functions.httpsCallable('deleteUserAccount');
 
       final result = await callable.call(<String, dynamic>{
-        'userId': widget.userId,
+        'userId': FirebaseAuth.instance.currentUser!.uid,
         'userType': widget.userType,
       });
 
@@ -150,7 +150,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
       final successMessage = isJobSeeker
           ? 'Your account has been deleted successfully.'
-          : 'Your company account has been deleted successfully. A confirmation email has been sent.';
+          : 'Your company account has been deleted successfully.';
 
       SnackHelper.success(context, successMessage);
 
@@ -158,7 +158,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!context.mounted) return;
 
       Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-    } catch (e) {
+    } on FirebaseFunctionsException catch (e) {
+      SnackHelper.error(
+        context,
+        e.message ??
+            'An error occurred while deleting your account. Please try again.',
+      );
+    } catch (_) {
       SnackHelper.error(
         context,
         'An error occurred while deleting your account. Please try again.',
@@ -183,154 +189,138 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final isAdmin = widget.userType == 'Admin';
 
     return ThemedScaffold(
-        appBar: AppBar(
-          title: const Text(
-            'Settings',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
+      appBar: AppBar(
+        title: const Text(
+          'Settings',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
           ),
-          backgroundColor: _brandColor,
         ),
-        body: Padding(
-          padding: const EdgeInsets.fromLTRB(20.0, 30.0, 20.0, 0),
-          child: ListView(
-            children: [
-              // ======= Appearance =======
+        backgroundColor: _brandColor,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.fromLTRB(20.0, 30.0, 20.0, 0),
+        child: ListView(
+          children: [
+            SettingsSectionCard(
+              child: _SettingsSwitchItem(
+                title: 'Appearance',
+                icon: Icons.light_mode,
+                iconColor: Colors.orange,
+                value: settings.themeMode == ThemeMode.dark,
+                onChanged: (value) => _toggleTheme(settings, value),
+                switchColor: const Color(0xFFFD6C67),
+                isTitleBold: true,
+                subtitle: Text(
+                  settings.themeMode == ThemeMode.dark
+                      ? 'Dark Mode'
+                      : 'Light Mode',
+                ),
+              ),
+            ),
+            if (!isAdmin) ...[
               SettingsSectionCard(
                 child: _SettingsSwitchItem(
-                  title: 'Appearance',
-                  icon: Icons.light_mode,
-                  iconColor: Colors.orange,
-                  value: settings.themeMode == ThemeMode.dark,
-                  onChanged: (value) => _toggleTheme(settings, value),
+                  title: 'Notifications',
+                  icon: Icons.notifications_none,
+                  iconColor: Colors.purple,
+                  value: _isNotificationsEnabled,
+                  onChanged: _toggleNotifications,
                   switchColor: const Color(0xFFFD6C67),
+                  subtitle: const Text('Manage alerts and reminders'),
                   isTitleBold: true,
-                  subtitle: Text(
-                    settings.themeMode == ThemeMode.dark
-                        ? 'Dark Mode'
-                        : 'Light Mode',
-                  ),
                 ),
               ),
-
-              if (!isAdmin) ...[
-                // Notifications
-                SettingsSectionCard(
-                  child: _SettingsSwitchItem(
-                    title: 'Notifications',
-                    icon: Icons.notifications_none,
-                    iconColor: Colors.purple,
-                    value: _isNotificationsEnabled,
-                    onChanged: _toggleNotifications,
-                    switchColor: const Color(0xFFFD6C67),
-                    subtitle: const Text('Manage alerts and reminders'),
-                    isTitleBold: true,
-                  ),
-                ),
-
-                // Change password
-                SettingsSectionCard(
-                  child: _SettingsItem(
-                    title: 'Change Password',
-                    icon: Icons.lock_outline,
-                    iconColor: _brandColor,
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () =>
-                        Navigator.pushNamed(context, '/change-password'),
-                    subtitle: const Text('Reset your password securely'),
-                    isTitleBold: true,
-                  ),
-                ),
-
-                // Account details
-                SettingsSectionCard(
-                  child: _SettingsItem(
-                    title: 'My Account Details',
-                    icon: Icons.account_circle,
-                    iconColor: Colors.teal,
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      Navigator.pushNamed(
-                        context,
-                        '/account-details',
-                        arguments: {
-                          'userId': widget.userId,
-                          'userType': widget.userType,
-                        },
-                      );
-                    },
-                    subtitle: const Text('Account information overview'),
-                    isTitleBold: true,
-                  ),
-                ),
-              ],
-
-              // About
               SettingsSectionCard(
                 child: _SettingsItem(
-                  title: 'About',
-                  icon: Icons.info_outline,
-                  iconColor: Colors.lightGreen,
+                  title: 'Change Password',
+                  icon: Icons.lock_outline,
+                  iconColor: _brandColor,
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.pushNamed(context, '/about'),
-                  subtitle: const Text('App version and information'),
+                  onTap: () => Navigator.pushNamed(context, '/change-password'),
+                  subtitle: const Text('Reset your password securely'),
                   isTitleBold: true,
                 ),
               ),
-
-              // Logout
               SettingsSectionCard(
                 child: _SettingsItem(
-                  title: 'Log Out',
-                  icon: Icons.logout,
-                  iconColor: Colors.red,
-                  onTap: () => _handleLogout(context),
+                  title: 'My Account Details',
+                  icon: Icons.account_circle,
+                  iconColor: Colors.teal,
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.pushNamed(
+                      context,
+                      '/account-details',
+                      arguments: {
+                        'userId': FirebaseAuth.instance.currentUser!.uid,
+                        'userType': widget.userType,
+                      },
+                    );
+                  },
+                  subtitle: const Text('Account information overview'),
                   isTitleBold: true,
                 ),
               ),
-
-              // Delete account
-              if (!isAdmin)
-                SettingsSectionCard(
-                  child: _SettingsItem(
-                    title: widget.userType == 'JobSeeker'
-                        ? 'Delete Account'
-                        : 'Delete Company Account',
-                    icon: Icons.delete_forever_outlined,
-                    iconColor: Colors.red,
-                    trailing: _isDeletingAccount
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.red,
-                            ),
-                          )
-                        : const Icon(Icons.chevron_right),
-                    onTap: () {
-                      if (_isDeletingAccount) return;
-                      _handleDeleteAccount(context);
-                    },
-                    subtitle: Text(
-                      widget.userType == 'JobSeeker'
-                          ? 'Permanently delete your account and all related data'
-                          : 'Permanently delete your company account and all related data',
-                    ),
-                    isTitleBold: true,
-                  ),
-                ),
             ],
-          ),
-        ));
+            SettingsSectionCard(
+              child: _SettingsItem(
+                title: 'About',
+                icon: Icons.info_outline,
+                iconColor: Colors.lightGreen,
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.pushNamed(context, '/about'),
+                subtitle: const Text('App version and information'),
+                isTitleBold: true,
+              ),
+            ),
+            SettingsSectionCard(
+              child: _SettingsItem(
+                title: 'Log Out',
+                icon: Icons.logout,
+                iconColor: Colors.red,
+                onTap: () => _handleLogout(context),
+                isTitleBold: true,
+              ),
+            ),
+            if (!isAdmin)
+              SettingsSectionCard(
+                child: _SettingsItem(
+                  title: widget.userType == 'JobSeeker'
+                      ? 'Delete Account'
+                      : 'Delete Company Account',
+                  icon: Icons.delete_forever_outlined,
+                  iconColor: Colors.red,
+                  trailing: _isDeletingAccount
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.red,
+                          ),
+                        )
+                      : const Icon(Icons.chevron_right),
+                  onTap: () {
+                    if (_isDeletingAccount) return;
+                    _handleDeleteAccount(context);
+                  },
+                  subtitle: Text(
+                    widget.userType == 'JobSeeker'
+                        ? 'Permanently delete your account and all related data'
+                        : 'Permanently delete your company account and all related data',
+                  ),
+                  isTitleBold: true,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
-/* ----------------------------------------------------------------------
-   Card wrapper
----------------------------------------------------------------------- */
 class SettingsSectionCard extends StatelessWidget {
   final Widget child;
 
@@ -364,9 +354,6 @@ class SettingsSectionCard extends StatelessWidget {
   }
 }
 
-/* ----------------------------------------------------------------------
-   Basic item
----------------------------------------------------------------------- */
 class _SettingsItem extends StatelessWidget {
   final String title;
   final IconData icon;
@@ -418,9 +405,6 @@ class _SettingsItem extends StatelessWidget {
   }
 }
 
-/* ----------------------------------------------------------------------
-   Switch item
----------------------------------------------------------------------- */
 class _SettingsSwitchItem extends StatelessWidget {
   final String title;
   final IconData icon;

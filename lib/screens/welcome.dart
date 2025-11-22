@@ -4,6 +4,8 @@ import 'package:gp_2025_11/screens/signup.dart';
 import 'dart:math';
 
 class WelcomeScreen extends StatefulWidget {
+  const WelcomeScreen({super.key});
+
   @override
   _WelcomeScreenState createState() => _WelcomeScreenState();
 }
@@ -139,7 +141,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                 setState(() {
                   _positions[index] = _getRandomPositionWithoutOverlap(index);
                 });
-                Future.delayed(Duration(milliseconds: 500), () {
+                Future.delayed(const Duration(milliseconds: 500), () {
                   if (mounted) {
                     _startAnimation(index);
                   }
@@ -168,14 +170,12 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     return Scaffold(
       body: Stack(
         children: [
-          // خلفية office.png
           Positioned.fill(
             child: Image.asset(
               'assets/images/office.png',
               fit: BoxFit.cover,
             ),
           ),
-          // الأيقونات المتحركة
           ...List.generate(10, (index) {
             return AnimatedBuilder(
               animation: _animations[index],
@@ -191,7 +191,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                       height: 80,
                       fit: BoxFit.contain,
                       errorBuilder: (context, error, stackTrace) {
-                        return SizedBox.shrink();
+                        return const SizedBox.shrink();
                       },
                     ),
                   ),
@@ -199,7 +199,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
               },
             );
           }),
-          // لوجو j_filled في أعلى اليمين
           Positioned(
             top: 50,
             right: 30,
@@ -210,22 +209,20 @@ class _WelcomeScreenState extends State<WelcomeScreen>
               fit: BoxFit.contain,
             ),
           ),
-          // المحتوى الرئيسي
           Positioned(
             left: 0,
             right: 0,
             bottom: 100,
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 40),
+              padding: const EdgeInsets.symmetric(horizontal: 40),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // زر Log In البنفسجي
                   Container(
                     width: double.infinity,
                     height: 56,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
+                      gradient: const LinearGradient(
                         colors: [Color(0xFF4A5FBC), Color(0xFF6B7FDB)],
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
@@ -233,9 +230,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                       borderRadius: BorderRadius.circular(28),
                       boxShadow: [
                         BoxShadow(
-                          color: Color(0xFF4A5FBC).withOpacity(0.3),
+                          color: const Color(0xFF4A5FBC).withOpacity(0.3),
                           blurRadius: 12,
-                          offset: Offset(0, 6),
+                          offset: const Offset(0, 6),
                         ),
                       ],
                     ),
@@ -252,7 +249,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                           borderRadius: BorderRadius.circular(28),
                         ),
                       ),
-                      child: Text(
+                      child: const Text(
                         'Log In',
                         style: TextStyle(
                           fontSize: 18,
@@ -262,8 +259,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                       ),
                     ),
                   ),
-                  SizedBox(height: 20),
-                  // جملة Sign Up
+                  const SizedBox(height: 20),
                   Wrap(
                     alignment: WrapAlignment.center,
                     children: [
@@ -271,7 +267,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                         "Don't have an account? ",
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.grey[400], // رمادي أفتح
+                          color: Colors.grey[400],
                         ),
                       ),
                       GestureDetector(
@@ -282,13 +278,12 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                 builder: (context) => SignupScreen()),
                           );
                         },
-                        child: Text(
+                        child: const Text(
                           'Sign Up',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Color(0xFFFF7B7B), // البرتقالي
+                            color: Color(0xFFFF7B7B),
                             fontWeight: FontWeight.w600,
-                            // شلت الـ underline
                           ),
                         ),
                       ),

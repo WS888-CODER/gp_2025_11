@@ -1183,13 +1183,6 @@ export const deleteUserAccount = functions.https.onCall(async (data, context) =>
   const userId = actualData.userId || actualData["userId"] || "";
   const userType = actualData.userType || actualData["userType"] || "";
 
-  if (!context.auth) {
-    throw new functions.https.HttpsError(
-      "unauthenticated",
-      "You must be authenticated to delete an account."
-    );
-  }
-
   if (!userId || !userType) {
     throw new functions.https.HttpsError(
       "invalid-argument",
@@ -1197,10 +1190,9 @@ export const deleteUserAccount = functions.https.onCall(async (data, context) =>
     );
   }
 
-  const requesterUid = context.auth.uid;
-  const isSelfDelete = requesterUid === userId;
+  const requesterUid = context.auth?.uid;
 
-  if (!isSelfDelete) {
+  if (requesterUid && requesterUid !== userId) {
     throw new functions.https.HttpsError(
       "permission-denied",
       "You can only delete your own account."
@@ -1252,42 +1244,67 @@ export const deleteUserAccount = functions.https.onCall(async (data, context) =>
     await deleteUserScopedCollection("AIServiceRequests", ["UserID", "userID"]);
 
     // Company-specific: delete its jobs and related data
-    if (userType === "Company") {
-      const jobQueries = [
-        db.collection("Jobs").where("companyID", "==", userId),
-        db.collection("Jobs").where("CompanyID", "==", userId),
-      ];
+if (userType === "Company") {
+  const jobsSnap = await db
+    .collection("Jobs")
+    .where("UserID", "==", userId)
+    .get();
 
-      for (const jobQuery of jobQueries) {
-        const jobsSnap = await jobQuery.get();
+  console.log(
+    `Found ${jobsSnap.size} jobs for company ${userId} using Jobs.UserID`
+  );
 
-        for (const jobDoc of jobsSnap.docs) {
-          const jobId = jobDoc.id;
+  for (const jobDoc of jobsSnap.docs) {
+    const jobId = jobDoc.id;
+    console.log(`🔹 Deleting job ${jobId} for company ${userId}`);
 
-          await deleteByQuery(
-            db.collection("Applications").where("jobID", "==", jobId)
-          );
-          await deleteByQuery(
-            db.collection("Applications").where("JobID", "==", jobId)
-          );
-          await deleteByQuery(
-            db.collection("MockInterview").where("jobID", "==", jobId)
-          );
-          await deleteByQuery(
-            db.collection("MockInterview").where("JobID", "==", jobId)
-          );
-          await deleteByQuery(
-            db.collection("Interview").where("jobID", "==", jobId)
-          );
-          await deleteByQuery(
-            db.collection("Interview").where("JobID", "==", jobId)
-          );
+    // Delete related Applications
+    await deleteByQuery(
+      db.collection("Applications").where("jobID", "==", jobId)
+    );
+    await deleteByQuery(
+      db.collection("Applications").where("JobID", "==", jobId)
+    );
+    await deleteByQuery(
+      db.collection("Applications").where("jobId", "==", jobId)
+    );
+    await deleteByQuery(
+      db.collection("Applications").where("JobId", "==", jobId)
+    );
 
-          // This removes the whole job document including PostedAt, createdAt, etc.
-          await jobDoc.ref.delete();
-        }
-      }
-    }
+    // Delete related MockInterview
+    await deleteByQuery(
+      db.collection("MockInterview").where("jobID", "==", jobId)
+    );
+    await deleteByQuery(
+      db.collection("MockInterview").where("JobID", "==", jobId)
+    );
+    await deleteByQuery(
+      db.collection("MockInterview").where("jobId", "==", jobId)
+    );
+    await deleteByQuery(
+      db.collection("MockInterview").where("JobId", "==", jobId)
+    );
+
+    // Delete related Interview
+    await deleteByQuery(
+      db.collection("Interview").where("jobID", "==", jobId)
+    );
+    await deleteByQuery(
+      db.collection("Interview").where("JobID", "==", jobId)
+    );
+    await deleteByQuery(
+      db.collection("Interview").where("jobId", "==", jobId)
+    );
+    await deleteByQuery(
+      db.collection("Interview").where("JobId", "==", jobId)
+    );
+
+    await jobDoc.ref.delete();
+    console.log(`Deleted job ${jobId} for company ${userId}`);
+  }
+}
+
 
     await userDocRef.delete().catch((err) => {
       console.warn("User document delete warning:", err);

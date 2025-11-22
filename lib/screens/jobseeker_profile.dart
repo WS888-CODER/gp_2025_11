@@ -1075,7 +1075,7 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
 
   @override
   Widget build(BuildContext context) {
-    bool _hasUnsavedChanges() {
+    bool hasUnsavedChanges() {
       final current = widget.data;
 
       final origPhone = (current[UserFields.phone] ?? '').toString().trim();
@@ -1135,8 +1135,8 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
           cvChanged;
     }
 
-    Future<bool> _onWillPop() async {
-      if (!_hasUnsavedChanges()) {
+    Future<bool> onWillPop() async {
+      if (!hasUnsavedChanges()) {
         return true;
       }
 
@@ -1174,7 +1174,7 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
         _pendingPhotoFile != null || ((_photoUrl ?? '').isNotEmpty);
 
     return WillPopScope(
-      onWillPop: _onWillPop,
+      onWillPop: onWillPop,
       child: ThemedScaffold(
         appBar: AppBar(
           backgroundColor: brand,
@@ -1188,7 +1188,7 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () async {
-              final shouldPop = await _onWillPop();
+              final shouldPop = await onWillPop();
               if (shouldPop && mounted) {
                 Navigator.of(context).pop();
               }
