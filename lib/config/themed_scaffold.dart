@@ -26,11 +26,8 @@ class ThemedScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // خلفية الصفحة統一
     final Color pageBgColor = overridePageBgColor ??
-        (isDark
-            ? const Color(0xFF0F0F12) // دارك ناعم
-            : const Color(0xFFF7F6FC)); // لايت وردي/رمادي خفيف تحبينه
+        (isDark ? const Color(0xFF0F0F12) : const Color(0xFFF7F6FC));
 
     return Scaffold(
       backgroundColor: pageBgColor,
