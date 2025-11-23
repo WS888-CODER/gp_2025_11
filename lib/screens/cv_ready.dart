@@ -3,6 +3,11 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:http/http.dart' as http;
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../config/theme.dart';
 import '../config/themed_scaffold.dart';
@@ -114,6 +119,46 @@ class _PublishScreenState extends State<PublishScreen> {
 
       if (mounted) {
         SnackHelper.error(context, 'Could not open PDF: ${e.toString()}');
+      }
+    }
+  }
+
+  // Download PDF and save to device
+  Future<void> _downloadPDF(String url) async {
+    try {
+      // Show loading indicator
+      if (mounted) {
+        SnackHelper.success(context, 'Downloading CV...');
+      }
+
+      // Download the file
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        // Get temporary directory
+        final directory = await getTemporaryDirectory();
+        final filePath = '${directory.path}/Enhanced_CV.pdf';
+
+        // Save file
+        final file = File(filePath);
+        await file.writeAsBytes(response.bodyBytes);
+
+        // Share the file (which allows user to save it)
+        await Share.shareXFiles(
+          [XFile(filePath)],
+          text: 'My Enhanced CV',
+        );
+
+        if (mounted) {
+          SnackHelper.success(context, 'CV downloaded successfully!');
+        }
+      } else {
+        throw Exception('Failed to download PDF');
+      }
+    } catch (e) {
+      print('Error downloading PDF: $e');
+      if (mounted) {
+        SnackHelper.error(context, 'Failed to download CV');
       }
     }
   }
@@ -271,7 +316,15 @@ class _PublishScreenState extends State<PublishScreen> {
                               SizedBox(
                                 width: 140,
                                 child: ElevatedButton.icon(
-                                  onPressed: () => _openPDF(pdfUrl),
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            PDFViewerScreen(pdfUrl: pdfUrl),
+                                      ),
+                                    );
+                                  },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: AppTheme.primaryPurple,
                                     foregroundColor: Colors.white,
@@ -291,7 +344,7 @@ class _PublishScreenState extends State<PublishScreen> {
                               SizedBox(
                                 width: 140,
                                 child: ElevatedButton.icon(
-                                  onPressed: () => _openPDF(pdfUrl),
+                                  onPressed: () => _downloadPDF(pdfUrl),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Color(0xFFFD6C67),
                                     foregroundColor: Colors.white,
@@ -433,6 +486,58 @@ class _PublishScreenState extends State<PublishScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// PDF Viewer Screen
+class PDFViewerScreen extends StatelessWidget {
+  final String pdfUrl;
+
+  const PDFViewerScreen({super.key, required this.pdfUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return ThemedScaffold(
+      appBar: AppBar(
+        backgroundColor: AppTheme.primaryPurple,
+        foregroundColor: Colors.white,
+        title: const Text(
+          'Enhanced CV',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.download, color: Colors.white),
+            onPressed: () async {
+              try {
+                final uri = Uri.parse(pdfUrl);
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(
+                    uri,
+                    mode: LaunchMode.externalApplication,
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: ${e.toString()}')),
+                  );
+                }
+              }
+            },
+          ),
+        ],
+      ),
+      body: SfPdfViewer.network(
+        pdfUrl,
+        canShowScrollHead: true,
+        canShowScrollStatus: true,
+        enableDoubleTapZooming: true,
       ),
     );
   }

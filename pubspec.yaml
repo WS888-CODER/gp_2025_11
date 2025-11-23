@@ -30,7 +30,9 @@ dependencies:
   dotted_border: ^3.1.0
   awesome_dialog: ^3.3.0
   dropdown_button2: ^2.3.9
-  share_plus: ^10.1.2  
+  share_plus: ^10.1.2
+  syncfusion_flutter_pdfviewer: ^28.1.33
+  path_provider: ^2.1.5  
 
 
 dev_dependencies:
