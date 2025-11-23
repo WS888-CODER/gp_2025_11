@@ -19,6 +19,7 @@ import 'screens/change_password.dart';
 import 'screens/admin_dashboard.dart';
 import 'screens/job_posting.dart';
 import 'screens/questions.dart';
+import 'screens/job_details_view.dart';
 import 'screens/jobseeker_home.dart';
 import 'screens/company_home.dart';
 import 'package:gp_2025_11/screens/favorites.dart';
@@ -65,6 +66,7 @@ class Jadeer extends StatelessWidget {
         '/job-posting': (context) => const JobPostingPage(),
         '/job_posting': (context) => const JobPostingPage(),
         '/questions': (context) => const QuestionsPage(),
+        '/job-details-view': (context) => const JobDetailsView(),
         '/forgot-password': (context) => ForgotPasswordScreen(),
         '/change-password': (context) => ChangePasswordScreen(),
         '/profile/jobseeker': (context) => const JobSeekerProfile(),
