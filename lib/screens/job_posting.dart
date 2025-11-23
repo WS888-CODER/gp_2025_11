@@ -990,26 +990,18 @@ class _JobPostingPageState extends State<JobPostingPage> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
-                title: Row(
-                  children: [
-                    const Icon(
-                      Icons.info_outline,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      text,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                    ),
-                  ],
+                title: Text(
+                  text,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
                 ),
                 content: Text(
                   tooltipMessage,
+                  textAlign: TextAlign.center,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
@@ -1020,8 +1012,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
                   TextButton(
                     onPressed: () => Navigator.pop(context),
                     style: TextButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: const Color(0xFF4A5FBC),
+                      backgroundColor: const Color(0xFFFD6C67),
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 24,
                         vertical: 12,
@@ -1044,10 +1036,10 @@ class _JobPostingPageState extends State<JobPostingPage> {
           borderRadius: BorderRadius.circular(12),
           child: Padding(
             padding: const EdgeInsets.all(4.0),
-            child: Icon(
+            child: const Icon(
               Icons.info_outline,
               size: 18,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              color: Color(0xFFFD6C67),
             ),
           ),
         ),
@@ -1198,8 +1190,12 @@ class _JobPostingPageState extends State<JobPostingPage> {
                     children: [
                       Padding(
                         padding: const EdgeInsets.only(left: 4, bottom: 8),
-                        child: _buildLabel(
-                            'Job Title', _jobTitleController.text.isEmpty),
+                        child: _buildLabelWithInfo(
+                          'Job Title',
+                          'The job title is the name of the position you are hiring for. It tells candidates exactly what role the company wants to fill.\n\nEnter a clear, descriptive title that accurately reflects the role and responsibilities.',
+                          isInvalid: _jobTitleController.text.isEmpty,
+                          required: true,
+                        ),
                       ),
                       Container(
                         decoration: BoxDecoration(
