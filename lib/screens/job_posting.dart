@@ -512,7 +512,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: initialDate,
-      firstDate: today,
+      firstDate: firstAllowedDate,
       lastDate: DateTime(2100),
       builder: (context, child) {
         final theme = Theme.of(context);
@@ -990,26 +990,18 @@ class _JobPostingPageState extends State<JobPostingPage> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
-                title: Row(
-                  children: [
-                    const Icon(
-                      Icons.info_outline,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      text,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                    ),
-                  ],
+                title: Text(
+                  text,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
                 ),
                 content: Text(
                   tooltipMessage,
+                  textAlign: TextAlign.center,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
@@ -1020,8 +1012,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
                   TextButton(
                     onPressed: () => Navigator.pop(context),
                     style: TextButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: const Color(0xFF4A5FBC),
+                      backgroundColor: const Color(0xFFFD6C67),
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 24,
                         vertical: 12,
@@ -1044,10 +1036,10 @@ class _JobPostingPageState extends State<JobPostingPage> {
           borderRadius: BorderRadius.circular(12),
           child: Padding(
             padding: const EdgeInsets.all(4.0),
-            child: Icon(
+            child: const Icon(
               Icons.info_outline,
               size: 18,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              color: Color(0xFFFD6C67),
             ),
           ),
         ),
@@ -1158,14 +1150,52 @@ class _JobPostingPageState extends State<JobPostingPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Job Title
-                  Column(
+                  // Edit mode info banner
+                  if (_isEdit)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF4A5FBC).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: const Color(0xFF4A5FBC).withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.info_outline,
+                            color: Color(0xFF4A5FBC),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'You can only edit the application period dates for this job.',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: textColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  // Job Title (hide in edit mode)
+                  if (!_isEdit)
+                    Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Padding(
                         padding: const EdgeInsets.only(left: 4, bottom: 8),
-                        child: _buildLabel(
-                            'Job Title', _jobTitleController.text.isEmpty),
+                        child: _buildLabelWithInfo(
+                          'Job Title',
+                          'The job title is the name of the position you are hiring for. It tells candidates exactly what role the company wants to fill.\n\nEnter a clear, descriptive title that accurately reflects the role and responsibilities.',
+                          isInvalid: _jobTitleController.text.isEmpty,
+                          required: true,
+                        ),
                       ),
                       Container(
                         decoration: BoxDecoration(
@@ -1213,10 +1243,11 @@ class _JobPostingPageState extends State<JobPostingPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  if (!_isEdit) const SizedBox(height: 16),
 
-                  // Position
-                  Column(
+                  // Position (hide in edit mode)
+                  if (!_isEdit)
+                    Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Padding(
@@ -1271,10 +1302,11 @@ class _JobPostingPageState extends State<JobPostingPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  if (!_isEdit) const SizedBox(height: 16),
 
-                  // Speciality
-                  Column(
+                  // Speciality (hide in edit mode)
+                  if (!_isEdit)
+                    Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Padding(
@@ -1432,7 +1464,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  if (!_isEdit) const SizedBox(height: 16),
 
                   // AI Generate Button (only show in create mode)
                   if (!_isEdit) ...[
@@ -1531,8 +1563,9 @@ class _JobPostingPageState extends State<JobPostingPage> {
                     const SizedBox(height: 12),
                   ],
 
-                  // Job Description
-                  Column(
+                  // Job Description (hide in edit mode)
+                  if (!_isEdit)
+                    Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Padding(
@@ -1600,9 +1633,9 @@ class _JobPostingPageState extends State<JobPostingPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  if (!_isEdit) const SizedBox(height: 16),
 
-                  // Requirements (only show in create mode, display read-only in edit mode)
+                  // Requirements (only show in create mode)
                   if (!_isEdit)
                     Card(
                       shape: RoundedRectangleBorder(
@@ -1709,52 +1742,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
                           ],
                         ),
                       ),
-                    )
-                  else
-                    // Read-only requirements display in edit mode
-                    Card(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Requirements',
-                              style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey),
-                            ),
-                            const SizedBox(height: 12),
-                            if (_requirements.isEmpty)
-                              const Text('No requirements',
-                                  style: TextStyle(color: Colors.grey))
-                            else
-                              ListView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: _requirements.length,
-                                itemBuilder: (context, index) {
-                                  return Card(
-                                    color: Colors.grey[100],
-                                    child: ListTile(
-                                      title: Text(
-                                        _requirements[index],
-                                        style: const TextStyle(
-                                            color: Colors.black87),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                          ],
-                        ),
-                      ),
                     ),
-                  const SizedBox(height: 16),
+                  if (!_isEdit) const SizedBox(height: 16),
 
                   // Start Date
                   Container(

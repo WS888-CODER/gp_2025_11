@@ -708,7 +708,19 @@ class _QuestionsPageState extends State<QuestionsPage> {
                     children: [
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                        child: _JobHeaderCard(jobData: _jobData!),
+                        child: _JobHeaderCard(
+                          jobData: _jobData!,
+                          jobId: _jobId,
+                          onTap: _jobId != null && _jobId!.isNotEmpty
+                              ? () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/job-details-view',
+                                    arguments: {'jobId': _jobId},
+                                  );
+                                }
+                              : null,
+                        ),
                       ),
                       Expanded(
                         child: _questions.isEmpty
@@ -915,8 +927,14 @@ class _EmptyState extends StatelessWidget {
 
 class _JobHeaderCard extends StatelessWidget {
   final Map<String, dynamic> jobData;
+  final String? jobId;
+  final VoidCallback? onTap;
 
-  const _JobHeaderCard({required this.jobData});
+  const _JobHeaderCard({
+    required this.jobData,
+    this.jobId,
+    this.onTap,
+  });
 
   DateTime? _asDate(dynamic v) {
     if (v == null) return null;
@@ -963,25 +981,32 @@ class _JobHeaderCard extends StatelessWidget {
         statusColor = scheme.primary;
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(
-              Theme.of(context).brightness == Brightness.dark ? 0.3 : 0.06,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(
+                Theme.of(context).brightness == Brightness.dark ? 0.3 : 0.06,
+              ),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+          ],
+          border: Border.all(
+            color: const Color(0xFF4A5FBC).withOpacity(0.1),
           ),
-        ],
-        border: Border.all(
-          color: const Color(0xFF4A5FBC).withOpacity(0.1),
         ),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      child: Column(
+        clipBehavior: Clip.none,
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Title + status chip
@@ -1075,6 +1100,27 @@ class _JobHeaderCard extends StatelessWidget {
               ],
             ),
         ],
+      ),
+            // Orange arrow button positioned at bottom right
+            if (onTap != null)
+              Positioned(
+                bottom: -8,
+                right: 8,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFD6C67),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.arrow_forward,
+                    size: 18,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

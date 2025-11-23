@@ -89,6 +89,265 @@ class _CompanyHomeState extends State<CompanyHome> {
     }
   }
 
+  /// Show dialog to edit job dates
+  Future<void> _showEditDatesDialog(
+    String jobId,
+    String jobTitle,
+    dynamic startDateData,
+    dynamic endDateData,
+    BuildContext ctx,
+  ) async {
+    DateTime? _asDate(dynamic v) {
+      if (v == null) return null;
+      if (v is DateTime) return v;
+      if (v is Timestamp) return v.toDate();
+      if (v is String && v.isNotEmpty) {
+        return DateTime.tryParse(v);
+      }
+      return null;
+    }
+
+    String _fmtDate(DateTime d) => '${d.day}/${d.month}/${d.year}';
+
+    DateTime? startDate = _asDate(startDateData);
+    DateTime? endDate = _asDate(endDateData);
+
+    final result = await showDialog<Map<String, DateTime?>>(
+      context: ctx,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          Future<void> selectStartDate() async {
+            final now = DateTime.now();
+            final today = DateTime(now.year, now.month, now.day);
+            final initialDate =
+                startDate != null && !startDate!.isBefore(today)
+                    ? startDate!
+                    : today;
+
+            final picked = await showDatePicker(
+              context: context,
+              initialDate: initialDate,
+              firstDate: today,
+              lastDate: DateTime(2100),
+              builder: (context, child) {
+                final theme = Theme.of(context);
+                final scheme = theme.colorScheme;
+
+                return Theme(
+                  data: theme.copyWith(
+                    colorScheme: scheme.copyWith(
+                      primary: const Color(0xFF4A5FBC),
+                      onPrimary: Colors.white,
+                      onSurface: scheme.onSurface,
+                    ),
+                    datePickerTheme: DatePickerThemeData(
+                      todayBorder: BorderSide.none,
+                      todayBackgroundColor:
+                          MaterialStateColor.resolveWith((states) {
+                        if (states.contains(MaterialState.selected)) {
+                          return const Color(0xFF4A5FBC);
+                        }
+                        return scheme.primary.withOpacity(0.15);
+                      }),
+                      todayForegroundColor:
+                          MaterialStateColor.resolveWith((states) {
+                        if (states.contains(MaterialState.selected)) {
+                          return Colors.white;
+                        }
+                        return scheme.onSurface;
+                      }),
+                    ),
+                  ),
+                  child: child!,
+                );
+              },
+            );
+
+            if (picked != null) {
+              setDialogState(() => startDate = picked);
+            }
+          }
+
+          Future<void> selectEndDate() async {
+            final now = DateTime.now();
+            final today = DateTime(now.year, now.month, now.day);
+            final firstAllowedDate = (startDate != null &&
+                !startDate!.isBefore(today))
+                    ? startDate!
+                    : today;
+            final initialDate = (endDate != null &&
+                !endDate!.isBefore(firstAllowedDate))
+                    ? endDate!
+                    : firstAllowedDate;
+
+            final picked = await showDatePicker(
+              context: context,
+              initialDate: initialDate,
+              firstDate: firstAllowedDate,
+              lastDate: DateTime(2100),
+              builder: (context, child) {
+                final theme = Theme.of(context);
+                final scheme = theme.colorScheme;
+
+                return Theme(
+                  data: theme.copyWith(
+                    colorScheme: scheme.copyWith(
+                      primary: const Color(0xFF4A5FBC),
+                      onPrimary: Colors.white,
+                      onSurface: scheme.onSurface,
+                    ),
+                    datePickerTheme: DatePickerThemeData(
+                      todayBorder: BorderSide.none,
+                      todayBackgroundColor:
+                          MaterialStateColor.resolveWith((states) {
+                        if (states.contains(MaterialState.selected)) {
+                          return const Color(0xFF4A5FBC);
+                        }
+                        return scheme.primary.withOpacity(0.15);
+                      }),
+                      todayForegroundColor:
+                          MaterialStateColor.resolveWith((states) {
+                        if (states.contains(MaterialState.selected)) {
+                          return Colors.white;
+                        }
+                        return scheme.onSurface;
+                      }),
+                    ),
+                  ),
+                  child: child!,
+                );
+              },
+            );
+
+            if (picked != null) {
+              setDialogState(() => endDate = picked);
+            }
+          }
+
+          return AlertDialog(
+            backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.95),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: Text(
+              'Edit Dates - $jobTitle',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 18,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Start Date
+                InkWell(
+                  onTap: selectStartDate,
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Start Date',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          startDate != null
+                              ? _fmtDate(startDate!)
+                              : 'Not set',
+                          style: const TextStyle(color: Colors.white70),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // End Date
+                InkWell(
+                  onTap: selectEndDate,
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'End Date',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          endDate != null ? _fmtDate(endDate!) : 'Not set',
+                          style: const TextStyle(color: Colors.white70),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(color: Colors.white70),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext, {
+                    'startDate': startDate,
+                    'endDate': endDate,
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFF4A5FBC),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    if (result != null) {
+      try {
+        await FirebaseFirestore.instance.collection('Jobs').doc(jobId).update({
+          'StartDate': result['startDate'],
+          'EndDate': result['endDate'],
+        });
+
+        if (!mounted) return;
+        SnackHelper.success(ctx, 'Job dates updated successfully');
+      } catch (e) {
+        if (!mounted) return;
+        SnackHelper.error(ctx, 'Error updating dates: $e');
+      }
+    }
+  }
+
   /// Close or reopen a job
   Future<void> _closeJob(String jobId, bool isClosed, BuildContext ctx) async {
     try {
@@ -424,32 +683,16 @@ class _CompanyHomeState extends State<CompanyHome> {
                               final canProceed = await _checkProfileComplete();
                               if (!canProceed || !mounted) return;
 
-                              final desc = data['JobDescription'] ??
-                                  data['Description'] ??
-                                  '';
-                              final req = data['Requirements'] ??
-                                  data['Requirments'] ??
-                                  [];
                               final start = data['StartDate'];
                               final end = data['EndDate'];
 
-                              await Navigator.pushNamed(
+                              await _showEditDatesDialog(
+                                doc.id,
+                                title,
+                                start,
+                                end,
                                 context,
-                                '/job-posting',
-                                arguments: <String, dynamic>{
-                                  'jobId': doc.id,
-                                  'title': title,
-                                  'position': position,
-                                  'specialty': specialty,
-                                  'description': desc,
-                                  'requirements':
-                                      req is List ? req : <String>[],
-                                  'startDate': start,
-                                  'endDate': end,
-                                },
                               );
-
-                              if (mounted) setState(() {});
                             },
                             icon: const Icon(Icons.edit),
                             color: _brand,
@@ -486,7 +729,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                             context: safeCtx,
                             builder: (dialogContext) => AlertDialog(
                               backgroundColor:
-                                  Theme.of(context).colorScheme.surface,
+                                  const Color(0xFF4A5FBC).withOpacity(0.95),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(20),
                               ),
@@ -500,23 +743,13 @@ class _CompanyHomeState extends State<CompanyHome> {
                                       isClosed
                                           ? Icons.lock_open_outlined
                                           : Icons.lock_outline,
-                                      color: isClosed
-                                          ? Colors.green
-                                          : Theme.of(context)
-                                              .textTheme
-                                              .bodySmall
-                                              ?.color,
-                                      size: 20,
+                                      color: Colors.white,
+                                      size: 22,
                                     ),
                                     title: Text(
                                       isClosed ? 'Reopen Job' : 'Close Job',
-                                      style: TextStyle(
-                                        color: isClosed
-                                            ? Colors.green
-                                            : Theme.of(context)
-                                                .textTheme
-                                                .bodyLarge
-                                                ?.color,
+                                      style: const TextStyle(
+                                        color: Colors.white,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
@@ -525,11 +758,15 @@ class _CompanyHomeState extends State<CompanyHome> {
                                       _closeJob(doc.id, isClosed, safeCtx);
                                     },
                                   ),
+                                  const Divider(
+                                    color: Colors.white24,
+                                    height: 1,
+                                  ),
                                   ListTile(
                                     leading: const Icon(
                                       Icons.delete_outline,
                                       color: Color(0xFFFF7B7B),
-                                      size: 20,
+                                      size: 22,
                                     ),
                                     title: const Text(
                                       'Delete Job',
