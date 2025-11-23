@@ -92,7 +92,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(
-        context); // Ø¹Ø´Ø§Ù† Ù…Ø§ Ù†ÙƒØ±Ø± Theme.of(context) Ù…Ù„ÙŠÙˆÙ† Ù…Ø±Ø©
+        context); // Ã˜Â¹Ã˜Â´Ã˜Â§Ã™â€  Ã™â€¦Ã˜Â§ Ã™â€ Ã™Æ’Ã˜Â±Ã˜Â± Theme.of(context) Ã™â€¦Ã™â€žÃ™Å Ã™Ë†Ã™â€  Ã™â€¦Ã˜Â±Ã˜Â©
     final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black87;
 
     return ThemedScaffold(
@@ -517,11 +517,6 @@ class _CompanyCard extends StatelessWidget {
               icon: Iconsax.sms_copy,
               label: email,
               labelColor: textColor,
-              trailing: Icon(
-                isEmailVerified ? Icons.verified : Iconsax.close_circle,
-                color: isEmailVerified ? Colors.green : secondaryColor,
-                size: 16,
-              ),
             ),
 
             const SizedBox(height: 5),
