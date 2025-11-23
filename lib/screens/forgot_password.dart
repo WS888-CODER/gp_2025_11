@@ -147,15 +147,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         return;
       }
 
-      // 🔒 Check if user is Admin - they cannot reset password themselves
+      // ðŸ”’ Check if user is Admin - they cannot reset password themselves
       Map<String, dynamic> userData =
           userSnapshot.docs.first.data() as Map<String, dynamic>;
       String userType = userData['UserType'] ?? userData['userType'] ?? '';
 
       if (userType == 'Admin') {
         setState(() {
-          _emailError =
-              'Cannot reset password. Please contact system administrator.';
+          _emailError = 'Email not found. Please check and try again.';
           _isLoading = false;
         });
         return;
@@ -321,7 +320,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       });
 
       if (result.data != null && result.data['success'] == true) {
-        // ✅ Delete OTP document
+        // âœ… Delete OTP document
         await _firestore
             .collection('PasswordResetOTPs')
             .doc(_userEmail)
@@ -405,7 +404,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       body: SizedBox.expand(
         child: Stack(
           children: [
-            // Ø®Ù„ÙÙŠØ© office.png
+            // Ã˜Â®Ã™â€žÃ™ÂÃ™Å Ã˜Â© office.png
             Positioned.fill(
               child: Image.asset(
                 'assets/images/office.png',
@@ -413,7 +412,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ),
             ),
 
-            // Ù„ÙˆØ¬Ùˆ j_filled ÙÙŠ Ø£Ø¹Ù„Ù‰ Ø§Ù„ÙŠÙ…ÙŠÙ†
+            // Ã™â€žÃ™Ë†Ã˜Â¬Ã™Ë† j_filled Ã™ÂÃ™Å  Ã˜Â£Ã˜Â¹Ã™â€žÃ™â€° Ã˜Â§Ã™â€žÃ™Å Ã™â€¦Ã™Å Ã™â€
             Positioned(
               top: 50,
               right: 30,
@@ -425,7 +424,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ),
             ),
 
-            // Ø§Ù„Ù…Ø±Ø¨Ø¹ Ø§Ù„Ø¨Ù†ÙØ³Ø¬ÙŠ ÙÙŠ Ù…Ù†ØªØµÙ Ø§Ù„Ø´Ø§Ø´Ø©
+            // Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â±Ã˜Â¨Ã˜Â¹ Ã˜Â§Ã™â€žÃ˜Â¨Ã™â€ Ã™ÂÃ˜Â³Ã˜Â¬Ã™Å  Ã™ÂÃ™Å  Ã™â€¦Ã™â€ Ã˜ÂªÃ˜ÂµÃ™Â Ã˜Â§Ã™â€žÃ˜Â´Ã˜Â§Ã˜Â´Ã˜Â©
             Center(
               child: Container(
                 width: MediaQuery.of(context).size.width * 0.85,
@@ -441,7 +440,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // Ø§Ù„Ø¹Ù†ÙˆØ§Ù† Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ
+                        // Ã˜Â§Ã™â€žÃ˜Â¹Ã™â€ Ã™Ë†Ã˜Â§Ã™â€  Ã˜Â§Ã™â€žÃ˜Â±Ã˜Â¦Ã™Å Ã˜Â³Ã™Å
                         Text(
                           _currentStep == 1
                               ? 'Forgot Password?'
@@ -458,7 +457,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
                         const SizedBox(height: 16),
 
-                        // Ø§Ù„Ù†Øµ Ø§Ù„ØªÙˆØ¶ÙŠØ­ÙŠ
+                        // Ã˜Â§Ã™â€žÃ™â€ Ã˜Âµ Ã˜Â§Ã™â€žÃ˜ÂªÃ™Ë†Ã˜Â¶Ã™Å Ã˜Â­Ã™Å
                         Text(
                           _currentStep == 1
                               ? 'Enter your email address and we\'ll send you a verification code.'
@@ -474,7 +473,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
                         const SizedBox(height: 40),
 
-                        // ========== Ø§Ù„Ù…Ø±Ø­Ù„Ø© 1: Ø¥Ø¯Ø®Ø§Ù„ Ø§Ù„Ø¥ÙŠÙ…ÙŠÙ„ ==========
+                        // ========== Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â±Ã˜Â­Ã™â€žÃ˜Â© 1: Ã˜Â¥Ã˜Â¯Ã˜Â®Ã˜Â§Ã™â€ž Ã˜Â§Ã™â€žÃ˜Â¥Ã™Å Ã™â€¦Ã™Å Ã™â€ž ==========
                         if (_currentStep == 1) ...[
                           TextFormField(
                             controller: _emailController,
@@ -529,6 +528,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                 style: const TextStyle(
                                   color: Colors.red,
                                   fontSize: 12,
+                                  fontWeight: FontWeight.bold,
                                 ),
                                 textAlign: TextAlign.center,
                               ),
@@ -562,7 +562,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           ),
                         ],
 
-                        // ========== Ø§Ù„Ù…Ø±Ø­Ù„Ø© 2: Ø¥Ø¯Ø®Ø§Ù„ OTP ==========
+                        // ========== Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â±Ã˜Â­Ã™â€žÃ˜Â© 2: Ã˜Â¥Ã˜Â¯Ã˜Â®Ã˜Â§Ã™â€ž OTP ==========
                         if (_currentStep == 2) ...[
                           TextFormField(
                             controller: _otpController,
@@ -621,6 +621,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                 style: const TextStyle(
                                   color: Colors.red,
                                   fontSize: 12,
+                                  fontWeight: FontWeight.bold,
                                 ),
                                 textAlign: TextAlign.center,
                               ),
@@ -715,7 +716,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           ),
                         ],
 
-                        // ========== Ø§Ù„Ù…Ø±Ø­Ù„Ø© 3: Ø¥Ø¯Ø®Ø§Ù„ ÙƒÙ„Ù…Ø© Ø§Ù„Ø³Ø± Ø§Ù„Ø¬Ø¯ÙŠØ¯Ø© ==========
+                        // ========== Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â±Ã˜Â­Ã™â€žÃ˜Â© 3: Ã˜Â¥Ã˜Â¯Ã˜Â®Ã˜Â§Ã™â€ž Ã™Æ’Ã™â€žÃ™â€¦Ã˜Â© Ã˜Â§Ã™â€žÃ˜Â³Ã˜Â± Ã˜Â§Ã™â€žÃ˜Â¬Ã˜Â¯Ã™Å Ã˜Â¯Ã˜Â© ==========
                         if (_currentStep == 3) ...[
                           TextFormField(
                             controller: _newPasswordController,
@@ -853,6 +854,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                 style: const TextStyle(
                                   color: Colors.red,
                                   fontSize: 12,
+                                  fontWeight: FontWeight.bold,
                                 ),
                                 textAlign: TextAlign.center,
                               ),
@@ -892,7 +894,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ),
               ),
             ),
-            // ✅ سهم الرجوع في أعلى اليسار
+            // âœ… Ø³Ù‡Ù… Ø§Ù„Ø±Ø¬ÙˆØ¹ ÙÙŠ Ø£Ø¹Ù„Ù‰ Ø§Ù„ÙŠØ³Ø§Ø±
             Positioned(
               top: 50,
               left: 30,

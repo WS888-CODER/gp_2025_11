@@ -16,7 +16,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   final _otpController = TextEditingController();
   bool _isLoading = false;
   bool _isResending = false;
-  String? _otpError; // لحفظ رسالة الخطأ
+  String? _otpError; // Ù„Ø­ÙØ¸ Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ø®Ø·Ø£
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseFunctions _functions =
       FirebaseFunctions.instanceFor(region: 'us-central1');
@@ -91,7 +91,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
 
     setState(() {
       _isResending = true;
-      _otpError = null; // مسح أي خطأ سابق
+      _otpError = null; // Ù…Ø³Ø­ Ø£ÙŠ Ø®Ø·Ø£ Ø³Ø§Ø¨Ù‚
     });
 
     try {
@@ -158,17 +158,17 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
 
       print('Company emails sent successfully');
     } catch (e) {
-      print('⚠️ Error sending company emails: $e');
+      print('âš ï¸ Error sending company emails: $e');
     }
   }
 
   Future<void> _verifyOTP(String email, String userId, String userType) async {
-    // مسح أي خطأ سابق
+    // Ù…Ø³Ø­ Ø£ÙŠ Ø®Ø·Ø£ Ø³Ø§Ø¨Ù‚
     setState(() {
       _otpError = null;
     });
 
-    // التحقق من أن الحقل غير فارغ
+    // Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø£Ù† Ø§Ù„Ø­Ù‚Ù„ ØºÙŠØ± ÙØ§Ø±Øº
     if (_otpController.text.isEmpty) {
       setState(() {
         _otpError = 'Please enter the verification code.';
@@ -176,7 +176,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       return;
     }
 
-    // التحقق من أن الكود 6 أرقام
+    // Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø£Ù† Ø§Ù„ÙƒÙˆØ¯ 6 Ø£Ø±Ù‚Ø§Ù…
     if (_otpController.text.length != 6) {
       setState(() {
         _otpError = 'The verification code must be 6 digits.';
@@ -340,7 +340,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       body: SizedBox.expand(
         child: Stack(
           children: [
-            // خلفية office.png
+            // Ø®Ù„ÙÙŠØ© office.png
             Positioned.fill(
               child: Image.asset(
                 'assets/images/office.png',
@@ -348,7 +348,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
               ),
             ),
 
-            // لوجو j_filled في أعلى اليمين
+            // Ù„ÙˆØ¬Ùˆ j_filled ÙÙŠ Ø£Ø¹Ù„Ù‰ Ø§Ù„ÙŠÙ…ÙŠÙ†
             Positioned(
               top: 50,
               right: 30,
@@ -360,22 +360,22 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
               ),
             ),
 
-            // المربع البنفسجي في منتصف الشاشة
+            // Ø§Ù„Ù…Ø±Ø¨Ø¹ Ø§Ù„Ø¨Ù†ÙØ³Ø¬ÙŠ ÙÙŠ Ù…Ù†ØªØµÙ Ø§Ù„Ø´Ø§Ø´Ø©
             Center(
               child: Container(
                 width: MediaQuery.of(context).size.width * 0.85,
                 padding: EdgeInsets.all(40),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF4A5FBC).withOpacity(0.7),
+                  color: const Color(0xFF4A5FBC).withOpacity(0.8),
                   borderRadius: BorderRadius.circular(30),
                 ),
                 child: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment:
-                        CrossAxisAlignment.center, // تغيير من start إلى center
+                    crossAxisAlignment: CrossAxisAlignment
+                        .center, // ØªØºÙŠÙŠØ± Ù…Ù† start Ø¥Ù„Ù‰ center
                     children: [
-                      // العنوان الرئيسي
+                      // Ø§Ù„Ø¹Ù†ÙˆØ§Ù† Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ
                       const Text(
                         'Enter Verification Code',
                         style: TextStyle(
@@ -383,19 +383,19 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
-                        textAlign: TextAlign.center, // إضافة textAlign
+                        textAlign: TextAlign.center, // Ø¥Ø¶Ø§ÙØ© textAlign
                       ),
 
                       const SizedBox(height: 16),
 
-                      // النص التوضيحي
+                      // Ø§Ù„Ù†Øµ Ø§Ù„ØªÙˆØ¶ÙŠØ­ÙŠ
                       Text(
                         'A 6-digit verification code has been sent to your email.',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.white.withOpacity(0.8),
                         ),
-                        textAlign: TextAlign.center, // إضافة textAlign
+                        textAlign: TextAlign.center, // Ø¥Ø¶Ø§ÙØ© textAlign
                       ),
 
                       const SizedBox(height: 40),
@@ -440,7 +440,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                           contentPadding: EdgeInsets.symmetric(vertical: 20),
                         ),
                         onChanged: (value) {
-                          // مسح الخطأ عند بداية الكتابة
+                          // Ù…Ø³Ø­ Ø§Ù„Ø®Ø·Ø£ Ø¹Ù†Ø¯ Ø¨Ø¯Ø§ÙŠØ© Ø§Ù„ÙƒØªØ§Ø¨Ø©
                           if (_otpError != null) {
                             setState(() {
                               _otpError = null;
@@ -449,7 +449,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                         },
                       ),
 
-                      // رسالة الخطأ
+                      // Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ø®Ø·Ø£
                       if (_otpError != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
@@ -458,6 +458,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                             style: const TextStyle(
                               color: Colors.red,
                               fontSize: 12,
+                              fontWeight: FontWeight.bold,
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -465,7 +466,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
 
                       const SizedBox(height: 16),
 
-                      // مؤقت إعادة الإرسال
+                      // Ù…Ø¤Ù‚Øª Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„Ø¥Ø±Ø³Ø§Ù„
                       if (_resendCountdown > 0)
                         Center(
                           child: Text(
@@ -479,11 +480,11 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
 
                       const SizedBox(height: 40),
 
-                      // الأزرار - Resend Code والسهم
+                      // Ø§Ù„Ø£Ø²Ø±Ø§Ø± - Resend Code ÙˆØ§Ù„Ø³Ù‡Ù…
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // زر Resend Code (بدون إطار)
+                          // Ø²Ø± Resend Code (Ø¨Ø¯ÙˆÙ† Ø¥Ø·Ø§Ø±)
                           TextButton.icon(
                             onPressed: (_isResending || _resendCountdown > 0)
                                 ? null
@@ -521,7 +522,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                             ),
                           ),
 
-                          // زر Verify (السهم)
+                          // Ø²Ø± Verify (Ø§Ù„Ø³Ù‡Ù…)
                           Container(
                             width: 45,
                             height: 45,
@@ -557,7 +558,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                 ),
               ),
             ),
-            // ✅ إضافة سهم الرجوع للخلف في أعلى اليسار - آخر عنصر في Stack
+            // âœ… Ø¥Ø¶Ø§ÙØ© Ø³Ù‡Ù… Ø§Ù„Ø±Ø¬ÙˆØ¹ Ù„Ù„Ø®Ù„Ù ÙÙŠ Ø£Ø¹Ù„Ù‰ Ø§Ù„ÙŠØ³Ø§Ø± - Ø¢Ø®Ø± Ø¹Ù†ØµØ± ÙÙŠ Stack
             Positioned(
               top: 50,
               left: 30,

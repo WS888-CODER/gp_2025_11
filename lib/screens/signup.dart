@@ -169,27 +169,29 @@ class _SignupScreenState extends State<SignupScreen> {
   Future<bool> _isEmailUnique(String email) async {
     try {
       String trimmedEmail = email.trim().toLowerCase();
-      print('Ã°Å¸â€Âµ Checking email: $trimmedEmail');
+      print('ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Âµ Checking email: $trimmedEmail');
       final querySnapshot1 = await _firestore
           .collection('Users')
           .where('Email', isEqualTo: trimmedEmail)
           .get();
-      print('Ã°Å¸â€Âµ Method 1 (where): ${querySnapshot1.docs.length} docs');
+      print(
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Âµ Method 1 (where): ${querySnapshot1.docs.length} docs');
       final allUsers = await _firestore.collection('Users').get();
       final matchingDocs = allUsers.docs.where((doc) {
         final data = doc.data();
         final docEmail = data['Email']?.toString().toLowerCase() ?? '';
         return docEmail == trimmedEmail;
       }).toList();
-      print('Ã°Å¸â€Âµ Method 2 (filter): ${matchingDocs.length} docs');
+      print(
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Âµ Method 2 (filter): ${matchingDocs.length} docs');
       if (querySnapshot1.docs.isNotEmpty || matchingDocs.isNotEmpty) {
-        print('Ã¢ÂÅ’ Email EXISTS!');
+        print('ÃƒÂ¢Ã‚ÂÃ…â€™ Email EXISTS!');
         return false;
       }
-      print('Ã¢Å“â€¦ Email is UNIQUE');
+      print('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Email is UNIQUE');
       return true;
     } catch (e) {
-      print('Ã¢ÂÅ’ ERROR: $e');
+      print('ÃƒÂ¢Ã‚ÂÃ…â€™ ERROR: $e');
       return false;
     }
   }
@@ -214,7 +216,7 @@ class _SignupScreenState extends State<SignupScreen> {
       }
       return false;
     } catch (e) {
-      print('Ã¢ÂÅ’ Error sending OTP: $e');
+      print('ÃƒÂ¢Ã‚ÂÃ…â€™ Error sending OTP: $e');
       return false;
     }
   }
@@ -230,105 +232,102 @@ class _SignupScreenState extends State<SignupScreen> {
       _seekerPasswordError = null;
     });
 
+    bool hasErrors = false;
+
     if (_selectedTab == 0) {
       // Company validation
       if (_currentStep == 0) {
         // Step 1: Company Name only
         if (_companyNameController.text.trim().isEmpty) {
           setState(() => _companyNameError = 'Please enter company name');
-          return false;
+          hasErrors = true;
         }
       } else if (_currentStep == 1) {
-        // Step 2: Full Name + Email
+        // Step 2: Full Name + Email - validate all fields at once
         if (_companyFullNameController.text.trim().isEmpty) {
           setState(() => _companyFullNameError = 'Please enter your full name');
-          return false;
-        }
-        if (!_isValidFullName(_companyFullNameController.text.trim())) {
+          hasErrors = true;
+        } else if (!_isValidFullName(_companyFullNameController.text.trim())) {
           setState(
               () => _companyFullNameError = 'At least 2 words (letters only)');
-          return false;
+          hasErrors = true;
         }
+
         if (_companyEmailController.text.trim().isEmpty) {
           setState(() => _companyEmailError = 'Please enter your email');
-          return false;
-        }
-        if (!_isValidEmail(_companyEmailController.text.trim())) {
+          hasErrors = true;
+        } else if (!_isValidEmail(_companyEmailController.text.trim())) {
           setState(() => _companyEmailError = 'Invalid email format');
-          return false;
-        }
-        if (_isPublicEmailDomain(_companyEmailController.text.trim())) {
+          hasErrors = true;
+        } else if (_isPublicEmailDomain(_companyEmailController.text.trim())) {
           setState(() => _companyEmailError =
               'Please use your company email, not a public domain');
-          return false;
-        }
-        bool isUnique = await _isEmailUnique(_companyEmailController.text);
-        if (!isUnique) {
-          setState(() =>
-              _companyEmailError = 'Email already in use. Please log in.');
-          return false;
+          hasErrors = true;
+        } else {
+          bool isUnique = await _isEmailUnique(_companyEmailController.text);
+          if (!isUnique) {
+            setState(() =>
+                _companyEmailError = 'Email already in use. Please log in.');
+            hasErrors = true;
+          }
         }
       } else if (_currentStep == 2) {
         // Step 3: Password validation
         if (_companyPasswordController.text.isEmpty) {
           setState(() => _companyPasswordError = 'Please enter a password');
-          return false;
-        }
-        if (!_isStrongPassword(_companyPasswordController.text)) {
+          hasErrors = true;
+        } else if (!_isStrongPassword(_companyPasswordController.text)) {
           String req =
               _getPasswordRequirements(_companyPasswordController.text);
           setState(() => _companyPasswordError = req);
-          return false;
-        }
-        if (_companyPasswordController.text !=
+          hasErrors = true;
+        } else if (_companyPasswordController.text !=
             _companyConfirmPasswordController.text) {
           setState(() => _companyPasswordError = 'Passwords do not match');
-          return false;
+          hasErrors = true;
         }
       }
     } else {
-      // JobSeeker validation
+      // JobSeeker validation - validate all fields at once
       if (_currentStep == 0) {
         if (_seekerNameController.text.trim().isEmpty) {
           setState(() => _seekerNameError = 'Please enter your full name');
-          return false;
-        }
-        if (!_isValidFullName(_seekerNameController.text.trim())) {
+          hasErrors = true;
+        } else if (!_isValidFullName(_seekerNameController.text.trim())) {
           setState(() => _seekerNameError = 'At least 2 words (letters only)');
-          return false;
+          hasErrors = true;
         }
+
         if (_seekerEmailController.text.trim().isEmpty) {
           setState(() => _seekerEmailError = 'Please enter your email');
-          return false;
-        }
-        if (!_isValidEmail(_seekerEmailController.text.trim())) {
+          hasErrors = true;
+        } else if (!_isValidEmail(_seekerEmailController.text.trim())) {
           setState(() => _seekerEmailError = 'Invalid email format');
-          return false;
-        }
-        bool isUnique = await _isEmailUnique(_seekerEmailController.text);
-        if (!isUnique) {
-          setState(
-              () => _seekerEmailError = 'Email already in use. Please log in.');
-          return false;
+          hasErrors = true;
+        } else {
+          bool isUnique = await _isEmailUnique(_seekerEmailController.text);
+          if (!isUnique) {
+            setState(() =>
+                _seekerEmailError = 'Email already in use. Please log in.');
+            hasErrors = true;
+          }
         }
       } else if (_currentStep == 1) {
         if (_seekerPasswordController.text.isEmpty) {
           setState(() => _seekerPasswordError = 'Please enter a password');
-          return false;
-        }
-        if (!_isStrongPassword(_seekerPasswordController.text)) {
+          hasErrors = true;
+        } else if (!_isStrongPassword(_seekerPasswordController.text)) {
           String req = _getPasswordRequirements(_seekerPasswordController.text);
           setState(() => _seekerPasswordError = req);
-          return false;
-        }
-        if (_seekerPasswordController.text !=
+          hasErrors = true;
+        } else if (_seekerPasswordController.text !=
             _seekerConfirmPasswordController.text) {
           setState(() => _seekerPasswordError = 'Passwords do not match');
-          return false;
+          hasErrors = true;
         }
       }
     }
-    return true;
+    return !hasErrors;
   }
 
   Future<void> _handleCompanySignup() async {
@@ -345,7 +344,7 @@ class _SignupScreenState extends State<SignupScreen> {
         'UserType': 'Company',
         'Email': _companyEmailController.text
             .trim()
-            .toLowerCase(), // Ã¢Å“â€¦ lowercase
+            .toLowerCase(), // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ lowercase
         'Name': _companyFullNameController.text.trim(),
         'CompanyName': _companyNameController.text.trim(),
         'Phone': null,
@@ -412,7 +411,7 @@ class _SignupScreenState extends State<SignupScreen> {
         'UserType': 'JobSeeker',
         'Email': _seekerEmailController.text
             .trim()
-            .toLowerCase(), // Ã¢Å“â€¦ lowercase
+            .toLowerCase(), // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ lowercase
         'Name': _seekerNameController.text.trim(),
         'DoB': null,
         'Nationality': null,
@@ -504,7 +503,10 @@ class _SignupScreenState extends State<SignupScreen> {
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(_companyNameError!,
-                style: const TextStyle(color: Colors.red, fontSize: 12)),
+                style: const TextStyle(
+                    color: Colors.red,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold)),
           ),
       ],
     );
@@ -555,7 +557,10 @@ class _SignupScreenState extends State<SignupScreen> {
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(_companyFullNameError!,
-                style: const TextStyle(color: Colors.red, fontSize: 12)),
+                style: const TextStyle(
+                    color: Colors.red,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold)),
           ),
         const SizedBox(height: 30),
         const Text('Email',
@@ -599,7 +604,10 @@ class _SignupScreenState extends State<SignupScreen> {
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(_companyEmailError!,
-                style: const TextStyle(color: Colors.red, fontSize: 12)),
+                style: const TextStyle(
+                    color: Colors.red,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold)),
           ),
       ],
     );
@@ -657,7 +665,10 @@ class _SignupScreenState extends State<SignupScreen> {
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(_companyPasswordError!,
-                style: const TextStyle(color: Colors.red, fontSize: 12)),
+                style: const TextStyle(
+                    color: Colors.red,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold)),
           ),
         const SizedBox(height: 30),
         const Text('Confirm Password',
@@ -753,7 +764,10 @@ class _SignupScreenState extends State<SignupScreen> {
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(_seekerNameError!,
-                style: const TextStyle(color: Colors.red, fontSize: 12)),
+                style: const TextStyle(
+                    color: Colors.red,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold)),
           ),
         const SizedBox(height: 30),
         const Text('Email',
@@ -796,7 +810,10 @@ class _SignupScreenState extends State<SignupScreen> {
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(_seekerEmailError!,
-                style: const TextStyle(color: Colors.red, fontSize: 12)),
+                style: const TextStyle(
+                    color: Colors.red,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold)),
           ),
       ],
     );
@@ -854,7 +871,10 @@ class _SignupScreenState extends State<SignupScreen> {
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(_seekerPasswordError!,
-                style: const TextStyle(color: Colors.red, fontSize: 12)),
+                style: const TextStyle(
+                    color: Colors.red,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold)),
           ),
         const SizedBox(height: 30),
         const Text('Confirm Password',

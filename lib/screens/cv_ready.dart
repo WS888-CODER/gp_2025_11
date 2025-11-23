@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../config/theme.dart';
+import '../config/themed_scaffold.dart';
 
 class PublishScreen extends StatefulWidget {
   final String cvUrl; // Actually cvHistoryId
@@ -43,7 +45,7 @@ class _PublishScreenState extends State<PublishScreen> {
             const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         actionsAlignment: MainAxisAlignment.center,
         actions: [
-          // ✅ Fixed: Removed Expanded from Dialog actions
+          // âœ… Fixed: Removed Expanded from Dialog actions
           SizedBox(
             width: 120,
             child: TextButton(
@@ -87,7 +89,7 @@ class _PublishScreenState extends State<PublishScreen> {
     return result ?? false;
   }
 
-  // ✅ Fixed: Better PDF opening with fallback
+  // âœ… Fixed: Better PDF opening with fallback
   Future<void> _openPDF(String url) async {
     try {
       final uri = Uri.parse(url);
@@ -108,7 +110,7 @@ class _PublishScreenState extends State<PublishScreen> {
         );
       }
     } catch (e) {
-      print('❌ Error opening PDF: $e');
+      print('âŒ Error opening PDF: $e');
 
       if (mounted) {
         SnackHelper.error(context, 'Could not open PDF: ${e.toString()}');
@@ -120,7 +122,7 @@ class _PublishScreenState extends State<PublishScreen> {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: _onWillPop,
-      child: Scaffold(
+      child: ThemedScaffold(
         appBar: AppBar(
           backgroundColor: AppTheme.primaryPurple,
           foregroundColor: Colors.white,
@@ -129,6 +131,7 @@ class _PublishScreenState extends State<PublishScreen> {
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
               )),
+          automaticallyImplyLeading: false,
         ),
         body: StreamBuilder<DocumentSnapshot>(
           stream: FirebaseFirestore.instance
@@ -156,7 +159,7 @@ class _PublishScreenState extends State<PublishScreen> {
 
             final cvData = snapshot.data!.data() as Map<String, dynamic>;
 
-            // ✅ Handle both String and List types for Suggestions
+            // âœ… Handle both String and List types for Suggestions
             final suggestionsRaw = cvData['Suggestions'];
             final List<dynamic> suggestions;
 
@@ -178,26 +181,21 @@ class _PublishScreenState extends State<PublishScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Job Title
-                  Text(
-                    'Job Title: $jobTitle',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // 📄 PDF Preview Box
+                  // ðŸ“„ PDF Preview Box
                   if (pdfUrl == null || pdfUrl.isEmpty)
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: scheme.surfaceVariant.withOpacity(0.4),
+                        color: scheme.surface,
                         borderRadius: BorderRadius.circular(12),
-                        border:
-                            Border.all(color: scheme.outline.withOpacity(0.4)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Column(
                         children: [
@@ -221,12 +219,15 @@ class _PublishScreenState extends State<PublishScreen> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: scheme.surfaceVariant.withOpacity(0.4),
+                        color: scheme.surface,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: AppTheme.primaryPurple.withOpacity(0.3),
-                          width: 2,
-                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Column(
                         children: [
@@ -262,7 +263,7 @@ class _PublishScreenState extends State<PublishScreen> {
                           ),
                           const SizedBox(height: 16),
 
-                          // ✅ Fixed: Removed Expanded from Row
+                          // âœ… Fixed: Removed Expanded from Row
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -308,19 +309,8 @@ class _PublishScreenState extends State<PublishScreen> {
                             ],
                           ),
 
-                          // ✅ NEW: Debug URL button
+                          // âœ… NEW: Debug URL button
                           const SizedBox(height: 8),
-                          TextButton(
-                            onPressed: () {
-                              print('📋 PDF URL: $pdfUrl');
-                              SnackHelper.success(
-                                  context, 'URL copied to console');
-                            },
-                            child: const Text(
-                              'Show URL (Debug)',
-                              style: TextStyle(fontSize: 12),
-                            ),
-                          ),
                         ],
                       ),
                     ),
@@ -343,10 +333,15 @@ class _PublishScreenState extends State<PublishScreen> {
                       ? Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: scheme.surfaceVariant.withOpacity(0.4),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                                color: scheme.outline.withOpacity(0.4)),
+                            color: scheme.surface,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.08),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
                           child: Center(
                             child: Text(
@@ -356,12 +351,17 @@ class _PublishScreenState extends State<PublishScreen> {
                           ),
                         )
                       : Container(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: scheme.surfaceVariant.withOpacity(0.4),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                                color: scheme.outline.withOpacity(0.4)),
+                            color: scheme.surface,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.08),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
                           child: ListView.builder(
                             shrinkWrap: true,
@@ -400,6 +400,38 @@ class _PublishScreenState extends State<PublishScreen> {
               ),
             );
           },
+        ),
+        // Fixed Done button at the bottom
+        bottomNavigationBar: Container(
+          padding: const EdgeInsets.all(20),
+          child: SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              onPressed: () {
+                // Get userId from current user
+                final userId = FirebaseAuth.instance.currentUser?.uid;
+                if (userId != null) {
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                    '/jobseeker-home',
+                    (route) => false,
+                    arguments: {'userId': userId},
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryPurple,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28),
+                ),
+              ),
+              child: const Text(
+                'Done',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
         ),
       ),
     );

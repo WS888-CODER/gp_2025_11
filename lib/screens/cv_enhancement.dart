@@ -74,12 +74,36 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
       List<Map<String, dynamic>> allJobsList = [];
       for (var doc in jobsSnapshot.docs) {
         final data = doc.data();
+        final userId = data['UserID'] ?? '';
+
+        // Fetch company info
+        String companyName = 'Company';
+        String companyLogo = '';
+        if (userId.isNotEmpty) {
+          try {
+            final userDoc = await FirebaseFirestore.instance
+                .collection('Users')
+                .doc(userId)
+                .get();
+            if (userDoc.exists) {
+              final userData = userDoc.data();
+              companyName =
+                  userData?['CompanyName'] ?? userData?['Name'] ?? 'Company';
+              companyLogo = userData?['PhotoURL'] ?? '';
+            }
+          } catch (e) {
+            print('Error fetching company: $e');
+          }
+        }
+
         allJobsList.add({
           'id': doc.id,
           'title': data['JobTitle'] ?? 'Untitled',
           'description': data['JobDescription'] ?? '',
           'position': data['Position'] ?? '',
           'status': data['JobStatus'] ?? 'Open',
+          'companyName': companyName,
+          'companyLogo': companyLogo,
         });
       }
 
@@ -381,7 +405,7 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
         appBar: AppBar(
           backgroundColor: AppTheme.primaryPurple,
           foregroundColor: Colors.white,
-          title: const Text('CV Upload',
+          title: const Text('CV Enhancement',
               style: const TextStyle(
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
@@ -396,6 +420,14 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
               }
             },
           ),
+          actions: _currentStep == 1
+              ? [
+                  IconButton(
+                    onPressed: _showInfoDialog,
+                    icon: const Icon(Icons.help_outline, color: Colors.white),
+                  ),
+                ]
+              : null,
         ),
         body: _currentStep == 0 ? _buildUploadStep() : _buildJobSelectionStep(),
       ),
@@ -417,7 +449,7 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
               color: AppTheme.primaryPurple,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 10),
           Expanded(
             child: Center(
               child: GestureDetector(
@@ -428,14 +460,20 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
                   decoration: BoxDecoration(
                     color: scheme.surface,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppTheme.primaryPurple, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: _selectedFile == null
                       ? const Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(Iconsax.document_upload,
-                                size: 60, color: AppTheme.primaryPurple),
+                                size: 60, color: Color(0xFFFF7B7B)),
                             SizedBox(height: 16),
                             Text('Click to upload CV',
                                 style: TextStyle(
@@ -450,7 +488,7 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(Icons.check_circle,
-                                size: 60, color: Colors.green),
+                                size: 60, color: Color(0xFFFF7B7B)),
                             const SizedBox(height: 16),
                             Text(
                                 'Selected: ${_selectedFile!.path.split('/').last}',
@@ -461,8 +499,8 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 20),
           if (_isUploading) ...[
+            const SizedBox(height: 16),
             const Text('Uploading CV...',
                 style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
@@ -470,24 +508,7 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
             const SizedBox(height: 8),
             Text('${(_uploadProgress * 100).toStringAsFixed(0)}%'),
           ],
-          if (_isExtracting) ...[
-            const Text('Extracting text...',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            const LinearProgressIndicator(),
-          ],
-          if (_extractionComplete) ...[
-            const Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.green, size: 20),
-                SizedBox(width: 8),
-                Text('Extraction complete!',
-                    style: TextStyle(
-                        color: Colors.green, fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ],
-          const SizedBox(height: 20),
+          const Spacer(),
           SizedBox(
             width: double.infinity,
             height: 50,
@@ -518,231 +539,409 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
 
     final jobsToShow = _showAllJobs ? _allJobs : _wishlistJobs;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Are you interested in applying for a Jadeer job?',
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Are you interested in applying for a specific job?',
                   style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: AppTheme.primaryPurple),
                 ),
-              ),
-              IconButton(
-                onPressed: _showInfoDialog,
-                icon: const Icon(Icons.help_outline,
-                    color: AppTheme.primaryPurple, size: 28),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-                color: scheme.surfaceVariant,
-                borderRadius: BorderRadius.circular(12)),
-            child: Column(
-              children: [
-                RadioListTile<String>(
-                  title: const Text('Select a Jadeer job'),
-                  value: 'jadeer',
-                  groupValue: _jobSelectionType,
-                  activeColor: AppTheme.primaryPurple,
-                  onChanged: (value) {
-                    setState(() {
-                      _jobSelectionType = value!;
-                      _selectedJobId = null;
-                      _jobTitleController.clear();
-                      _jobDescriptionController.clear();
-                    });
-                  },
-                ),
-                RadioListTile<String>(
-                  title: const Text('Apply for another job'),
-                  value: 'other',
-                  groupValue: _jobSelectionType,
-                  activeColor: AppTheme.primaryPurple,
-                  onChanged: (value) {
-                    setState(() {
-                      _jobSelectionType = value!;
-                      _selectedJobId = null;
-                    });
-                  },
-                ),
-                RadioListTile<String>(
-                  title: const Text('I don\'t want to specify a job'),
-                  value: 'none',
-                  groupValue: _jobSelectionType,
-                  activeColor: AppTheme.primaryPurple,
-                  onChanged: (value) {
-                    setState(() {
-                      _jobSelectionType = value!;
-                      _selectedJobId = null;
-                      _jobTitleController.clear();
-                      _jobDescriptionController.clear();
-                    });
-                  },
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          if (_jobSelectionType == 'jadeer') ...[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(_showAllJobs ? 'All Jadeer Jobs' : 'Your Wishlist Jobs',
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold)),
-                TextButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      _showAllJobs = !_showAllJobs;
-                      _selectedJobId = null;
-                    });
-                  },
-                  icon: Icon(_showAllJobs ? Icons.favorite : Icons.grid_view),
-                  label: Text(_showAllJobs ? 'Show Wishlist' : 'Show All Jobs'),
-                  style: TextButton.styleFrom(
-                      foregroundColor: AppTheme.primaryPurple),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            if (_loadingJobs)
-              const Center(child: CircularProgressIndicator())
-            else if (jobsToShow.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                    color: scheme.surfaceVariant,
-                    borderRadius: BorderRadius.circular(12)),
-                child: Center(
-                  child: Text(
-                    _showAllJobs ? 'No jobs available' : 'No jobs in wishlist',
-                    style: TextStyle(color: scheme.onSurface.withOpacity(0.6)),
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                      color: scheme.surfaceVariant,
+                      borderRadius: BorderRadius.circular(12)),
+                  child: Column(
+                    children: [
+                      RadioListTile<String>(
+                        title: const Text('Select a job from Jadeer'),
+                        value: 'jadeer',
+                        groupValue: _jobSelectionType,
+                        activeColor: const Color(0xFFFF7B7B),
+                        onChanged: (value) {
+                          setState(() {
+                            _jobSelectionType = value!;
+                            _selectedJobId = null;
+                            _jobTitleController.clear();
+                            _jobDescriptionController.clear();
+                          });
+                        },
+                      ),
+                      RadioListTile<String>(
+                        title: const Text('Apply for another job'),
+                        value: 'other',
+                        groupValue: _jobSelectionType,
+                        activeColor: const Color(0xFFFF7B7B),
+                        onChanged: (value) {
+                          setState(() {
+                            _jobSelectionType = value!;
+                            _selectedJobId = null;
+                          });
+                        },
+                      ),
+                      RadioListTile<String>(
+                        title: const Text('I don\'t want to specify a job'),
+                        value: 'none',
+                        groupValue: _jobSelectionType,
+                        activeColor: const Color(0xFFFF7B7B),
+                        onChanged: (value) {
+                          setState(() {
+                            _jobSelectionType = value!;
+                            _selectedJobId = null;
+                            _jobTitleController.clear();
+                            _jobDescriptionController.clear();
+                          });
+                        },
+                      ),
+                    ],
                   ),
                 ),
-              )
-            else
-              Column(
-                children: jobsToShow.map((job) {
-                  final isClosed =
-                      job['status']?.toString().toLowerCase() == 'closed';
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: _selectedJobId == job['id']
-                            ? AppTheme.primaryPurple
-                            : scheme.outlineVariant,
-                        width: _selectedJobId == job['id'] ? 2 : 1,
+                const SizedBox(height: 24),
+                if (_jobSelectionType == 'jadeer') ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                          _showAllJobs
+                              ? 'All Jadeer Jobs'
+                              : 'Your Wishlist Jobs',
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
+                      TextButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _showAllJobs = !_showAllJobs;
+                            _selectedJobId = null;
+                          });
+                        },
+                        icon: Icon(
+                            _showAllJobs ? Icons.favorite : Icons.grid_view,
+                            color: const Color(0xFFFF7B7B)),
+                        label: Text(
+                            _showAllJobs ? 'Show Wishlist' : 'Show All Jobs',
+                            style: const TextStyle(color: Color(0xFFFF7B7B))),
                       ),
-                      borderRadius: BorderRadius.circular(12),
-                      color: isClosed
-                          ? scheme.surfaceVariant.withOpacity(0.5)
-                          : scheme.surface,
-                    ),
-                    child: RadioListTile<String>(
-                      title: Text(
-                        job['title'],
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: isClosed
-                              ? scheme.onSurface.withOpacity(0.35)
-                              : scheme.onSurface,
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (_loadingJobs)
+                    const Center(child: CircularProgressIndicator())
+                  else if (jobsToShow.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                          color: scheme.surfaceVariant,
+                          borderRadius: BorderRadius.circular(12)),
+                      child: Center(
+                        child: Text(
+                          _showAllJobs
+                              ? 'No jobs available'
+                              : 'No jobs in wishlist',
+                          style: TextStyle(
+                              color: scheme.onSurface.withOpacity(0.6)),
                         ),
                       ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (job['position']?.toString().isNotEmpty == true)
-                            Text(
-                              job['position'],
-                              style: TextStyle(
-                                color: isClosed
-                                    ? scheme.onSurface.withOpacity(0.30)
-                                    : scheme.onSurfaceVariant,
+                    )
+                  else
+                    Column(
+                      children: jobsToShow.map((job) {
+                        final isClosed =
+                            job['status']?.toString().toLowerCase() == 'closed';
+                        final isSelected = _selectedJobId == job['id'];
+                        return GestureDetector(
+                          onTap: () =>
+                              setState(() => _selectedJobId = job['id']),
+                          child: Card(
+                            elevation: 0.5,
+                            margin: const EdgeInsets.only(bottom: 12),
+                            color: scheme.surface,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              side: BorderSide(
+                                color: isSelected
+                                    ? AppTheme.primaryPurple
+                                    : Colors.transparent,
+                                width: 2,
                               ),
                             ),
-                          Text(
-                            job['description'].length > 100
-                                ? '${job['description'].substring(0, 100)}...'
-                                : job['description'],
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              height: 1.2,
-                              color: isClosed
-                                  ? scheme.onSurface.withOpacity(0.28)
-                                  : scheme.onSurfaceVariant,
+                            child: Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Row(
+                                children: [
+                                  Radio<String>(
+                                    value: job['id'],
+                                    groupValue: _selectedJobId,
+                                    activeColor: const Color(0xFFFF7B7B),
+                                    onChanged: (value) =>
+                                        setState(() => _selectedJobId = value),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        // Company name with logo
+                                        Row(
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.all(2),
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: AppTheme.primaryPurple,
+                                                  width: 2,
+                                                ),
+                                              ),
+                                              child: CircleAvatar(
+                                                radius: 16,
+                                                backgroundImage:
+                                                    job['companyLogo']
+                                                                ?.toString()
+                                                                .isNotEmpty ==
+                                                            true
+                                                        ? NetworkImage(
+                                                            job['companyLogo'])
+                                                        : null,
+                                                child: job['companyLogo']
+                                                            ?.toString()
+                                                            .isEmpty !=
+                                                        false
+                                                    ? const Icon(Icons.business,
+                                                        size: 16)
+                                                    : null,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                job['companyName'] ?? 'Company',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: AppTheme.primaryPurple,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        // Job title
+                                        Text(
+                                          job['title'],
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w800,
+                                            color: scheme.onSurface,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        // Posted date
+                                        Text(
+                                          'Posted: 2025/11/21',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: scheme.onSurfaceVariant,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        // Position tag
+                                        if (job['position']
+                                                ?.toString()
+                                                .isNotEmpty ==
+                                            true)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 6),
+                                            decoration: BoxDecoration(
+                                              color: AppTheme.primaryPurple
+                                                  .withOpacity(0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: Text(
+                                              job['position'],
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: AppTheme.primaryPurple,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                        if (isClosed)
+                                          Padding(
+                                            padding:
+                                                const EdgeInsets.only(top: 6),
+                                            child: Text(
+                                              '(Closed)',
+                                              style: TextStyle(
+                                                color: scheme.error,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                          if (isClosed)
-                            Text(
-                              '(Closed)',
-                              style: TextStyle(
-                                color: scheme.error,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                        ],
-                      ),
-                      value: job['id'],
-                      groupValue: _selectedJobId,
-                      activeColor: AppTheme.primaryPurple,
-                      onChanged: isClosed
-                          ? null
-                          : (value) => setState(() => _selectedJobId = value),
+                        );
+                      }).toList(),
                     ),
-                  );
-                }).toList(),
-              ),
-          ],
-          if (_jobSelectionType == 'other') ...[
-            const Text('Or do you want to apply for another job?',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _jobTitleController,
-              decoration: InputDecoration(
-                labelText: 'Job Title',
-                hintText: 'Enter the job title',
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide:
-                      const BorderSide(color: AppTheme.primaryPurple, width: 2),
-                ),
-              ),
+                ],
+                if (_jobSelectionType == 'other') ...[
+                  const Text('Enter Job Title and Job Description',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: const [
+                      Text(
+                        'Job Title',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      SizedBox(width: 4),
+                      Text(
+                        '*',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: scheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: TextField(
+                      controller: _jobTitleController,
+                      style:
+                          TextStyle(color: scheme.onSurface.withOpacity(0.8)),
+                      decoration: InputDecoration(
+                        hintText: 'Enter the job title',
+                        hintStyle: TextStyle(color: Colors.grey.shade400),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        filled: true,
+                        fillColor: scheme.surface,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 16),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: const [
+                      Text(
+                        'Job Description',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      SizedBox(width: 4),
+                      Text(
+                        '*',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: scheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: TextField(
+                      controller: _jobDescriptionController,
+                      maxLines: 5,
+                      style:
+                          TextStyle(color: scheme.onSurface.withOpacity(0.8)),
+                      decoration: InputDecoration(
+                        hintText: 'Enter the job description',
+                        hintStyle: TextStyle(color: Colors.grey.shade400),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        filled: true,
+                        fillColor: scheme.surface,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 16),
+                        alignLabelWithHint: true,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _jobDescriptionController,
-              maxLines: 5,
-              decoration: InputDecoration(
-                labelText: 'Job Description',
-                hintText: 'Enter the job description (optional)',
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide:
-                      const BorderSide(color: AppTheme.primaryPurple, width: 2),
-                ),
-                alignLabelWithHint: true,
-              ),
-            ),
-          ],
-          const SizedBox(height: 32),
-          SizedBox(
+          ),
+        ),
+        // Fixed button at the bottom
+        Padding(
+          padding: const EdgeInsets.all(20),
+          child: SizedBox(
             width: double.infinity,
             height: 50,
             child: ElevatedButton(
@@ -763,8 +962,8 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
                           TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

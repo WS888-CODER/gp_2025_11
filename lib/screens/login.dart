@@ -19,7 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
 
-  // ðŸ”’ Error message variable
+  // Ã°Å¸â€â€™ Error message variable
   String? _loginError;
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -32,7 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // 🔒 Dialog for locked accounts using JadeerDialog
+  // ðŸ”’ Dialog for locked accounts using JadeerDialog
   Future<void> _showPasswordResetRequiredDialog(String userType) async {
     final bool isAdmin = userType == 'Admin';
 
@@ -55,10 +55,10 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             textAlign: TextAlign.center,
           ),
-          // الأزرار:
+          // Ø§Ù„Ø£Ø²Ø±Ø§Ø±:
           primaryLabel: isAdmin ? 'OK' : 'Reset Password',
           primaryResult: isAdmin ? 'ok' : 'reset',
-          // ما نحتاج زر ثاني هنا (نفس السلوك القديم)
+          // Ù…Ø§ Ù†Ø­ØªØ§Ø¬ Ø²Ø± Ø«Ø§Ù†ÙŠ Ù‡Ù†Ø§ (Ù†ÙØ³ Ø§Ù„Ø³Ù„ÙˆÙƒ Ø§Ù„Ù‚Ø¯ÙŠÙ…)
           secondaryLabel: null,
           secondaryResult: null,
         ),
@@ -68,12 +68,12 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (isAdmin) {
-      // كان زمان زر OK يقفل الديالوغ ويرجع للصفحة اللي قبل
+      // ÙƒØ§Ù† Ø²Ù…Ø§Ù† Ø²Ø± OK ÙŠÙ‚ÙÙ„ Ø§Ù„Ø¯ÙŠØ§Ù„ÙˆØº ÙˆÙŠØ±Ø¬Ø¹ Ù„Ù„ØµÙØ­Ø© Ø§Ù„Ù„ÙŠ Ù‚Ø¨Ù„
       if (result == 'ok') {
         Navigator.of(context).pop();
       }
     } else {
-      // كان زمان زر Reset Password يودّي لصفحة نسيان كلمة السر
+      // ÙƒØ§Ù† Ø²Ù…Ø§Ù† Ø²Ø± Reset Password ÙŠÙˆØ¯Ù‘ÙŠ Ù„ØµÙØ­Ø© Ù†Ø³ÙŠØ§Ù† ÙƒÙ„Ù…Ø© Ø§Ù„Ø³Ø±
       if (result == 'reset') {
         Navigator.pushReplacementNamed(
           context,
@@ -117,7 +117,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // ðŸ”’ Check account lock status
+  // Ã°Å¸â€â€™ Check account lock status
   Future<Map<String, dynamic>?> _checkAccountLockStatus(String email) async {
     try {
       final querySnapshot = await _firestore
@@ -179,12 +179,12 @@ class _LoginScreenState extends State<LoginScreen> {
         'failedAttempts': failedAttempts,
       };
     } catch (e) {
-      print('âŒ Error checking account lock status: $e');
+      print('Ã¢ÂÅ’ Error checking account lock status: $e');
       return null;
     }
   }
 
-  // ðŸ”’ Record failed login attempt
+  // Ã°Å¸â€â€™ Record failed login attempt
   Future<void> _recordFailedLoginAttempt(String email) async {
     try {
       final querySnapshot = await _firestore
@@ -194,7 +194,7 @@ class _LoginScreenState extends State<LoginScreen> {
           .get();
 
       if (querySnapshot.docs.isEmpty) {
-        // âœ… Ø§Ù„Ø¥ÙŠÙ…ÙŠÙ„ Ù…Ùˆ Ù…ÙˆØ¬ÙˆØ¯ØŒ Ø¨Ø³ Ù†Ø¹Ø±Ø¶ Ø±Ø³Ø§Ù„Ø© Ø¹Ø§Ù…Ø©
+        // Ã¢Å“â€¦ Ã˜Â§Ã™â€žÃ˜Â¥Ã™Å Ã™â€¦Ã™Å Ã™â€ž Ã™â€¦Ã™Ë† Ã™â€¦Ã™Ë†Ã˜Â¬Ã™Ë†Ã˜Â¯Ã˜Å’ Ã˜Â¨Ã˜Â³ Ã™â€ Ã˜Â¹Ã˜Â±Ã˜Â¶ Ã˜Â±Ã˜Â³Ã˜Â§Ã™â€žÃ˜Â© Ã˜Â¹Ã˜Â§Ã™â€¦Ã˜Â©
         if (mounted) {
           setState(() {
             _loginError = 'Invalid credentials. Please try again.';
@@ -223,7 +223,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final newFailedAttempts = resetCounter ? 1 : failedAttempts + 1;
 
-      // âœ… Update Firestore Ø£ÙˆÙ„Ø§Ù‹
+      // Ã¢Å“â€¦ Update Firestore Ã˜Â£Ã™Ë†Ã™â€žÃ˜Â§Ã™â€¹
       await _firestore.collection('Users').doc(userId).update({
         'failedLoginAttempts': newFailedAttempts,
         'lastFailedLoginDate': FieldValue.serverTimestamp(),
@@ -232,9 +232,9 @@ class _LoginScreenState extends State<LoginScreen> {
       });
 
       print(
-          'âœ… Updated failedLoginAttempts to: $newFailedAttempts for user: $userId');
+          'Ã¢Å“â€¦ Updated failedLoginAttempts to: $newFailedAttempts for user: $userId');
 
-      // âœ… Update UI Ø¨Ø¹Ø¯ÙŠÙ†
+      // Ã¢Å“â€¦ Update UI Ã˜Â¨Ã˜Â¹Ã˜Â¯Ã™Å Ã™â€
       if (mounted) {
         if (newFailedAttempts == 3 || newFailedAttempts == 4) {
           final remaining = 5 - newFailedAttempts;
@@ -247,7 +247,7 @@ class _LoginScreenState extends State<LoginScreen> {
             _loginError = 'Account locked due to multiple failed attempts.';
           });
 
-          // âœ… Show dialog for locked account
+          // Ã¢Å“â€¦ Show dialog for locked account
           final userType = data['UserType'] ?? data['userType'] ?? '';
           Future.delayed(Duration(milliseconds: 100), () {
             if (mounted) {
@@ -261,7 +261,7 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     } catch (e) {
-      print('âŒ Error recording failed login: $e');
+      print('Ã¢ÂÅ’ Error recording failed login: $e');
       if (mounted) {
         setState(() {
           _loginError = 'An error occurred. Please try again.';
@@ -270,7 +270,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // ðŸ”’ Reset failed login attempts
+  // Ã°Å¸â€â€™ Reset failed login attempts
   Future<void> _resetFailedLoginAttempts(String userId) async {
     try {
       await _firestore.collection('Users').doc(userId).update({
@@ -280,12 +280,12 @@ class _LoginScreenState extends State<LoginScreen> {
         'mustResetPassword': false,
       });
     } catch (e) {
-      print('âŒ Error resetting failed attempts: $e');
+      print('Ã¢ÂÅ’ Error resetting failed attempts: $e');
     }
   }
 
   Future<void> _handleLogin() async {
-    // ðŸ”’ Clear previous error
+    // Ã°Å¸â€â€™ Clear previous error
     setState(() {
       _loginError = null;
     });
@@ -295,7 +295,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // ðŸ”’ STEP 1: Check if account is locked
+      // Ã°Å¸â€â€™ STEP 1: Check if account is locked
       final lockStatus =
           await _checkAccountLockStatus(_emailController.text.trim());
 
@@ -305,7 +305,7 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      // 🔒 STEP 2: Check if user exists and if Company, check status BEFORE password verification
+      // ðŸ”’ STEP 2: Check if user exists and if Company, check status BEFORE password verification
       final userQuery = await _firestore
           .collection('Users')
           .where('Email', isEqualTo: _emailController.text.trim().toLowerCase())
@@ -339,7 +339,7 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
 
-      // 🔒 STEP 3: Now attempt password verification
+      // ðŸ”’ STEP 3: Now attempt password verification
       final userCredential = await _auth.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
@@ -347,7 +347,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final userId = userCredential.user!.uid;
 
-      // ðŸ”’ Reset failed attempts on successful login
+      // Ã°Å¸â€â€™ Reset failed attempts on successful login
       await _resetFailedLoginAttempts(userId);
 
       final userDoc = await _firestore.collection('Users').doc(userId).get();
@@ -432,9 +432,9 @@ class _LoginScreenState extends State<LoginScreen> {
         _loginError = 'Unknown user type: "$userType"';
       });
     } on FirebaseAuthException catch (e) {
-      print('ðŸ”´ FirebaseAuthException: ${e.code} - ${e.message}');
+      print('Ã°Å¸â€Â´ FirebaseAuthException: ${e.code} - ${e.message}');
 
-      // ðŸ”’ Handle different error types
+      // Ã°Å¸â€â€™ Handle different error types
       if (e.code == 'user-not-found') {
         // Email doesn't exist - show error but DON'T record attempt
         if (mounted) {
@@ -444,7 +444,7 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
         // Wrong password - record the failed attempt
-        print('ðŸ”´ Wrong password detected, recording attempt...');
+        print('Ã°Å¸â€Â´ Wrong password detected, recording attempt...');
         await _recordFailedLoginAttempt(_emailController.text.trim());
       } else {
         if (mounted) {
@@ -460,7 +460,7 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     } catch (e) {
-      print('âŒ Unexpected error: $e');
+      print('Ã¢ÂÅ’ Unexpected error: $e');
       if (mounted) {
         setState(() {
           _loginError = 'Unexpected error. Please try again.';
@@ -551,7 +551,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             focusedErrorBorder: const UnderlineInputBorder(
                               borderSide: BorderSide(color: Colors.red),
                             ),
-                            errorStyle: const TextStyle(color: Colors.red),
+                            errorStyle: const TextStyle(
+                                color: Colors.red, fontWeight: FontWeight.bold),
                           ),
                           validator: (v) {
                             if (v == null || v.isEmpty)
@@ -602,7 +603,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             focusedErrorBorder: const UnderlineInputBorder(
                               borderSide: BorderSide(color: Colors.red),
                             ),
-                            errorStyle: const TextStyle(color: Colors.red),
+                            errorStyle: const TextStyle(
+                                color: Colors.red, fontWeight: FontWeight.bold),
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _obscurePassword
@@ -626,7 +628,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             }
                           },
                         ),
-                        // ðŸ”’ Show error under password field
+                        // Ã°Å¸â€â€™ Show error under password field
                         if (_loginError != null)
                           Padding(
                             padding: const EdgeInsets.only(top: 8),
@@ -635,6 +637,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               style: const TextStyle(
                                 color: Colors.red,
                                 fontSize: 12,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
