@@ -140,12 +140,13 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     bool isInvalid, {
     bool required = true,
   }) {
+    final scheme = Theme.of(context).colorScheme;
     final bool showError = _submitted && isInvalid && required;
 
     final baseStyle = TextStyle(
       fontSize: 16,
       fontWeight: FontWeight.w600,
-      color: showError ? Colors.red : Colors.black,
+      color: showError ? Colors.red : scheme.onSurface,
     );
 
     if (!required) {

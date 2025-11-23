@@ -153,70 +153,78 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
             _nameController.text = registeredFullName;
           }
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _AccountHeader(
-                  fullName: registeredFullName,
-                  email: registeredEmail,
-                  userType: widget.userType,
-                  photoUrl: photoUrl,
-                ),
-                const SizedBox(height: 20),
+          return Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _AccountHeader(
+                        fullName: registeredFullName,
+                        email: registeredEmail,
+                        userType: widget.userType,
+                        photoUrl: photoUrl,
+                      ),
+                      const SizedBox(height: 20),
 
-                // Name section (editable)
-                _AccountSectionCard(
-                  child: _isEditing
-                      ? _EditableNameField(
-                          controller: _nameController,
-                          label: 'Full Name',
-                        )
-                      : _DetailTile(
-                          icon: Icons.person,
-                          label: 'Full Name',
-                          value: registeredFullName,
+                      // Name section (editable)
+                      _AccountSectionCard(
+                        child: _isEditing
+                            ? _EditableNameField(
+                                controller: _nameController,
+                                label: 'Full Name',
+                              )
+                            : _DetailTile(
+                                icon: Icons.person,
+                                label: 'Full Name',
+                                value: registeredFullName,
+                              ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // Company name (read-only â€“ for companies only)
+                      if (!isJobSeeker)
+                        _AccountSectionCard(
+                          child: _DetailTile(
+                            icon: Icons.business,
+                            label: 'Company Name',
+                            value: companyName,
+                          ),
                         ),
-                ),
 
-                const SizedBox(height: 12),
+                      if (!isJobSeeker) const SizedBox(height: 12),
 
-                // Company name (read-only – for companies only)
-                if (!isJobSeeker)
-                  _AccountSectionCard(
-                    child: _DetailTile(
-                      icon: Icons.business,
-                      label: 'Company Name',
-                      value: companyName,
-                    ),
-                  ),
-
-                if (!isJobSeeker) const SizedBox(height: 12),
-
-                // Email (read-only)
-                _AccountSectionCard(
-                  child: _DetailTile(
-                    icon: Icons.email_outlined,
-                    label: 'Registered Email',
-                    value: registeredEmail,
-                    subtitle: 'Email address cannot be changed.',
+                      // Email (read-only)
+                      _AccountSectionCard(
+                        child: _DetailTile(
+                          icon: Icons.email_outlined,
+                          label: 'Registered Email',
+                          value: registeredEmail,
+                          subtitle: 'Email address cannot be changed.',
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-
-                if (_isEditing) ...[
-                  const SizedBox(height: 28),
-                  SizedBox(
+              ),
+              // Fixed Save Changes button at the bottom
+              if (_isEditing)
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  child: SizedBox(
                     width: double.infinity,
+                    height: 50,
                     child: FilledButton(
                       onPressed: _isSaving
                           ? null
                           : () => _saveChanges(registeredFullName),
                       style: FilledButton.styleFrom(
                         backgroundColor: brandColor,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
+                          borderRadius: BorderRadius.circular(28),
                         ),
                         elevation: 2,
                       ),
@@ -232,15 +240,15 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                           : const Text(
                               'Save Changes',
                               style: TextStyle(
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
                               ),
                             ),
                     ),
                   ),
-                ],
-              ],
-            ),
+                ),
+            ],
           );
         },
       ),
