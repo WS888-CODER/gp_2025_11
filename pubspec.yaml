@@ -37,9 +37,18 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
   generate: true
   assets:
     - assets/images/
+
+# ✅ App Icon Configuration (LAUNCHER ONLY - لا يظهر في بداية التطبيق)
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/j_icon_BIG.png"  # ← غيريه من j_filled.png
+  # ✅ بدون adaptive icon عشان الصورة تطلع كاملة بدون قص
+  remove_alpha_ios: false

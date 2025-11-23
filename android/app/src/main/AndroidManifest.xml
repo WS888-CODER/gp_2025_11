@@ -6,7 +6,7 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     
     <application
-        android:label="gp_2025_11"
+        android:label="Jadeer"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
