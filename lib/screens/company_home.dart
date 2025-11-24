@@ -119,10 +119,9 @@ class _CompanyHomeState extends State<CompanyHome> {
           Future<void> selectStartDate() async {
             final now = DateTime.now();
             final today = DateTime(now.year, now.month, now.day);
-            final initialDate =
-                startDate != null && !startDate!.isBefore(today)
-                    ? startDate!
-                    : today;
+            final initialDate = startDate != null && !startDate!.isBefore(today)
+                ? startDate!
+                : today;
 
             final picked = await showDatePicker(
               context: context,
@@ -171,12 +170,12 @@ class _CompanyHomeState extends State<CompanyHome> {
           Future<void> selectEndDate() async {
             final now = DateTime.now();
             final today = DateTime(now.year, now.month, now.day);
-            final firstAllowedDate = (startDate != null &&
-                !startDate!.isBefore(today))
+            final firstAllowedDate =
+                (startDate != null && !startDate!.isBefore(today))
                     ? startDate!
                     : today;
-            final initialDate = (endDate != null &&
-                !endDate!.isBefore(firstAllowedDate))
+            final initialDate =
+                (endDate != null && !endDate!.isBefore(firstAllowedDate))
                     ? endDate!
                     : firstAllowedDate;
 
@@ -262,9 +261,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                           ),
                         ),
                         Text(
-                          startDate != null
-                              ? _fmtDate(startDate!)
-                              : 'Not set',
+                          startDate != null ? _fmtDate(startDate!) : 'Not set',
                           style: const TextStyle(color: Colors.white70),
                         ),
                       ],
@@ -303,30 +300,54 @@ class _CompanyHomeState extends State<CompanyHome> {
               ],
             ),
             actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text(
-                  'Cancel',
-                  style: TextStyle(color: Colors.white70),
-                ),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(dialogContext, {
-                    'startDate': startDate,
-                    'endDate': endDate,
-                  });
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFF4A5FBC),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+              // Cancel Button - أبيض مع نص بنفسجي
+              SizedBox(
+                width: 120,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF4A5FBC),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                  ),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
-                child: const Text('Save'),
+              ),
+              const SizedBox(width: 10),
+              // Save Button - برتقالي مع نص أبيض
+              SizedBox(
+                width: 120,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(dialogContext, {
+                      'startDate': startDate,
+                      'endDate': endDate,
+                    });
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF7B7B),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                  ),
+                  child: const Text(
+                    'Save',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
               ),
             ],
+            actionsAlignment: MainAxisAlignment.center,
+            actionsPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           );
         },
       ),
@@ -711,7 +732,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                               );
                             },
                             icon: const Icon(Icons.visibility),
-                            color: _brand,
+                            color: const Color(0xFF4A5FBC),
                             iconSize: 26,
                           ),
                         ],

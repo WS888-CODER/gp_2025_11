@@ -753,7 +753,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
                 child: _SettingsRow(
                   icon: Icons.info_outline,
                   color: const Color(0xFFFD6C67),
-                  title: 'Company Infoormation',
+                  title: 'Company Information',
                   subtitle: 'Description, logo, location',
                   onTap: () {
                     Navigator.of(context).push(
