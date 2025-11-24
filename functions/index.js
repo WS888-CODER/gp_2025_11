@@ -466,15 +466,15 @@ Speciality/Field: "${speciality || 'Not specified'}"
 
 Write a detailed job description (approximately 300-500 words) that includes:
 
-1. **Company Overview** (2-3 sentences): Brief introduction about what kind of company this role is for and the team culture.
+1. **Role Overview** (5-6 sentences): Clear, detailed description of what this position entails, its importance and impact, and what success looks like in this role. Focus on the value this position brings and the exciting challenges it offers.
 
-2. **Role Overview** (4-5 sentences): Clear, detailed description of what this position entails, its importance to the organization, and how it fits within the team structure. Explain the impact this role will have.
+2. **Key Responsibilities** (8-12 detailed bullet points): Specific, actionable responsibilities that match the position level and speciality. Be concrete and detailed. For senior positions, include leadership, strategic planning, and decision-making responsibilities. For junior positions, include learning opportunities, mentorship, and growth paths. Make each point substantial and meaningful.
 
-3. **Key Responsibilities** (6-10 detailed points): Specific, actionable responsibilities that match the position level and speciality. Be concrete and detailed. For senior positions, include leadership, strategic planning, and decision-making responsibilities. For junior positions, include learning opportunities, mentorship, and growth paths. Make each point substantial and meaningful.
+3. **Closing Statement** (2-3 sentences): Encouraging, inclusive call-to-action that invites candidates to apply and highlights what makes this opportunity special.
 
-4. **Closing Statement** (2-3 sentences): Encouraging, inclusive call-to-action that invites candidates to apply and highlights what makes this opportunity special.
-
-Important guidelines:
+CRITICAL guidelines:
+- DO NOT invent or mention ANY company names, company details, or specific organizations
+- Keep it general and focused on the role itself
 - Match the tone and expectations to the position level (Junior vs Senior vs Lead, etc.)
 - Make responsibilities highly specific to the speciality field
 - Be detailed and thorough - use the full word count
@@ -486,7 +486,7 @@ Important guidelines:
 
 Note: Do NOT include qualifications, requirements, or "what we offer" sections as those are handled separately.
 
-Provide ONLY the job description text without any markdown headers, labels, or meta-commentary. Write it as a flowing, well-structured description with clear paragraphs.`;
+Provide ONLY the job description text without any markdown headers, labels, bold text, asterisks, or meta-commentary. Write it as a flowing, well-structured description with clear paragraphs.`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
