@@ -552,8 +552,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
   }
 
   void _addRequirement() {
-    if (_requirements.length >= 15) {
-      _showWarningSnackBar('Maximum 15 requirements allowed');
+    if (_requirements.length >= 10) {
+      _showWarningSnackBar('Maximum 10 requirements allowed');
       return;
     }
     if (_requirementController.text.trim().isNotEmpty) {
@@ -942,7 +942,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
       color: baseColor,
     );
 
-    if (!required) {
+    // Only show asterisk when there's an error (after submission)
+    if (!showError) {
       return Text(text, style: baseStyle);
     }
 
@@ -954,9 +955,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
           TextSpan(
             text: ' *',
             style: TextStyle(
-              color: showError
-                  ? theme.colorScheme.error
-                  : theme.colorScheme.onSurface.withOpacity(0.7),
+              color: theme.colorScheme.error,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -1588,7 +1587,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                         child: TextFormField(
                           controller: _jobDescriptionController,
                           enabled: !_isEdit,
-                          maxLength: 2000,
+                          maxLength: 4000,
                           decoration: InputDecoration(
                             hintText:
                                 'Write a clear description for this job...',
@@ -1614,7 +1613,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                             errorMaxLines: 1,
                             counterText: '',
                             helperText:
-                                '${_jobDescriptionController.text.length}/2000',
+                                '${_jobDescriptionController.text.length}/4000',
                             helperStyle: TextStyle(
                               fontSize: 12,
                               color: Theme.of(context)
@@ -1637,111 +1636,121 @@ class _JobPostingPageState extends State<JobPostingPage> {
 
                   // Requirements (only show in create mode)
                   if (!_isEdit)
-                    Card(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                _buildLabel(
-                                    'Requirements', _requirements.isEmpty,
-                                    isBold: true),
-                                Text(
-                                  '${_requirements.length}/15',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: _requirements.length >= 15
-                                        ? Colors.red
-                                        : Colors.grey[700],
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4, bottom: 8),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _buildLabel(
+                                  'Requirements', _requirements.isEmpty,
+                                  isBold: true),
+                              Text(
+                                '${_requirements.length}/10',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: _requirements.length >= 10
+                                      ? Colors.red
+                                      : Colors.grey[700],
+                                  fontWeight: FontWeight.w500,
                                 ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: scheme.surface,
-                                      borderRadius: BorderRadius.circular(12),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.08),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: TextField(
-                                      controller: _requirementController,
-                                      maxLength: 200,
-                                      decoration: InputDecoration(
-                                        hintText: 'Enter requirement',
-                                        hintStyle:
-                                            const TextStyle(color: Colors.grey),
-                                        filled: true,
-                                        fillColor: Colors.transparent,
-                                        border: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                          borderSide: BorderSide.none,
-                                        ),
-                                        counterText: '',
-                                      ),
-                                      onSubmitted: (_) => _addRequirement(),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                ElevatedButton(
-                                  onPressed: _requirements.length >= 15
-                                      ? null
-                                      : _addRequirement,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF4A5FBC),
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(30),
-                                    ),
-                                  ),
-                                  child: const Text('Add'),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            if (_requirements.isEmpty)
-                              const Text('No requirements added yet',
-                                  style: TextStyle(color: Colors.grey))
-                            else
-                              ListView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: _requirements.length,
-                                itemBuilder: (context, index) {
-                                  return Card(
-                                    child: ListTile(
-                                      title: Text(_requirements[index]),
-                                      trailing: IconButton(
-                                        icon: const Icon(Icons.delete,
-                                            color: Colors.red),
-                                        onPressed: () =>
-                                            _removeRequirement(index),
-                                      ),
-                                    ),
-                                  );
-                                },
                               ),
+                            ],
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: scheme.surface,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.08),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: TextField(
+                                  controller: _requirementController,
+                                  maxLength: 200,
+                                  decoration: InputDecoration(
+                                    hintText: 'Enter requirement',
+                                    hintStyle:
+                                        const TextStyle(color: Colors.grey),
+                                    filled: true,
+                                    fillColor: Colors.transparent,
+                                    border: OutlineInputBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(12),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    counterText: '',
+                                  ),
+                                  onSubmitted: (_) => _addRequirement(),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFD6C67),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFFFD6C67).withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: IconButton(
+                                onPressed: _requirements.length >= 10
+                                    ? null
+                                    : _addRequirement,
+                                icon: const Icon(Icons.add, color: Colors.white),
+                                padding: const EdgeInsets.all(8),
+                              ),
+                            ),
                           ],
                         ),
-                      ),
+                        const SizedBox(height: 12),
+                        if (_requirements.isNotEmpty)
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: _requirements.length,
+                            itemBuilder: (context, index) {
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                decoration: BoxDecoration(
+                                  color: scheme.surface,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.08),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: ListTile(
+                                  title: Text(_requirements[index]),
+                                  trailing: IconButton(
+                                    icon: const Icon(Icons.delete,
+                                        color: Colors.red),
+                                    onPressed: () =>
+                                        _removeRequirement(index),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                      ],
                     ),
                   if (!_isEdit) const SizedBox(height: 16),
 
@@ -1769,7 +1778,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide.none,
                           ),
-                          suffixIcon: const Icon(Icons.calendar_today),
+                          suffixIcon: const Icon(Icons.calendar_today, color: Color(0xFFFD6C67)),
                         ),
                         child: Text(
                           _startDate != null
@@ -1810,7 +1819,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide.none,
                           ),
-                          suffixIcon: const Icon(Icons.calendar_today),
+                          suffixIcon: const Icon(Icons.calendar_today, color: Color(0xFFFD6C67)),
                         ),
                         child: Text(
                           _endDate != null
