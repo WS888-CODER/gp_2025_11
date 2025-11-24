@@ -458,26 +458,53 @@ export const generateJobPost = functions.https.onRequest(async (req, res) => {
       apiKey: process.env.OPENAI_API_KEY,
     });
 
-    const prompt = `
-      Write a concise and professional job description (under 100 words)
-      for the following role:
-      - Job Title: "${title}"
-      - Position Level: "${position}"
-      - Speciality/Field: "${speciality}"
+    const prompt = `You are an expert HR professional writing job descriptions. Create a comprehensive, professional, and engaging job description for the following role:
 
-      Focus on:
-      - The role's main responsibilities tailored to the position level and speciality (2–3 short sentences)
-      - Key expectations for someone in this position and speciality
-      - One short, inviting closing line encouraging candidates to apply.
-      Provide only the description text, no headers or sections.
-    `;
+Job Title: "${title}"
+Position Level: "${position || 'Not specified'}"
+Speciality/Field: "${speciality || 'Not specified'}"
 
-    const response = await openai.responses.create({
+Write a detailed job description (approximately 300-500 words) that includes:
+
+1. **Role Overview** (5-6 sentences): Clear, detailed description of what this position entails, its importance and impact, and what success looks like in this role. Focus on the value this position brings and the exciting challenges it offers.
+
+2. **Key Responsibilities** (8-12 detailed bullet points): Specific, actionable responsibilities that match the position level and speciality. Be concrete and detailed. For senior positions, include leadership, strategic planning, and decision-making responsibilities. For junior positions, include learning opportunities, mentorship, and growth paths. Make each point substantial and meaningful.
+
+3. **Closing Statement** (2-3 sentences): Encouraging, inclusive call-to-action that invites candidates to apply and highlights what makes this opportunity special.
+
+CRITICAL guidelines:
+- DO NOT invent or mention ANY company names, company details, or specific organizations
+- Keep it general and focused on the role itself
+- Match the tone and expectations to the position level (Junior vs Senior vs Lead, etc.)
+- Make responsibilities highly specific to the speciality field
+- Be detailed and thorough - use the full word count
+- Use professional yet engaging language
+- Focus on what makes this role attractive and impactful
+- Avoid generic corporate jargon
+- Write in a warm, inclusive tone
+- Make it compelling and inspiring
+
+Note: Do NOT include qualifications, requirements, or "what we offer" sections as those are handled separately.
+
+Provide ONLY the job description text without any markdown headers, labels, bold text, asterisks, or meta-commentary. Write it as a flowing, well-structured description with clear paragraphs.`;
+
+    const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      input: prompt,
+      messages: [
+        {
+          role: "system",
+          content: "You are an expert HR professional who writes compelling, detailed job descriptions that attract top talent.",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      max_tokens: 2000,
+      temperature: 0.7,
     });
 
-    const text = response.output[0].content[0].text.trim();
+    const text = response.choices[0].message.content.trim();
     res.status(200).json({ job_post: text });
   } catch (error) {
     console.error("❌ Error generating job post:", error);
@@ -2972,5 +2999,50 @@ function renderInterests(doc, content, colors, fonts, startY) {
 
   return doc.y + 12;
 }
+
+// ============================================
+// 📅 SCHEDULED FUNCTION: Auto-close expired jobs
+// ============================================
+// Runs daily at midnight (00:00) to check and close jobs with passed EndDate
+export const autoCloseExpiredJobs = v2.scheduler.onSchedule(
+  {
+    schedule: "0 0 * * *", // Run at midnight every day (cron format)
+    timeZone: "Asia/Riyadh", // Adjust to your timezone
+  },
+  async (event) => {
+    try {
+      const now = admin.firestore.Timestamp.now();
+
+      // Query all jobs that are Open but have EndDate in the past
+      const expiredJobsQuery = await db
+        .collection("Jobs")
+        .where("JobStatus", "==", "Open")
+        .where("EndDate", "<", now)
+        .get();
+
+      if (expiredJobsQuery.empty) {
+        console.log("No expired jobs found");
+        return null;
+      }
+
+      // Batch update all expired jobs
+      const batch = db.batch();
+      let count = 0;
+
+      expiredJobsQuery.docs.forEach((doc) => {
+        batch.update(doc.ref, { JobStatus: "Closed" });
+        count++;
+      });
+
+      await batch.commit();
+
+      console.log(`Successfully closed ${count} expired job(s)`);
+      return { success: true, closedCount: count };
+    } catch (error) {
+      console.error("Error auto-closing expired jobs:", error);
+      return { success: false, error: error.message };
+    }
+  }
+);
 
 export { generateInterviewQuestions };
