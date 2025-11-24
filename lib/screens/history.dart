@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:gp_2025_11/config/theme.dart';
+import 'package:gp_2025_11/screens/cv_ready.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -31,267 +32,119 @@ class _HistoryPageState extends State<HistoryPage>
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Container(
-          color: AppTheme.primaryPurple,
-          child: TabBar(
-            controller: _tabController,
-            indicatorColor: Colors.white,
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white70,
-            tabs: const [
-              Tab(text: 'CV Enhancements'),
-              Tab(text: 'Mock Interviews'),
-              Tab(text: 'Job Applications'),
-            ],
-          ),
-        ),
+        _buildTabs(context),
         Expanded(
           child: TabBarView(
             controller: _tabController,
-            children: const [
-              CVEnhancementsTab(),
-              MockInterviewsTab(),
-              JobApplicationsTab(),
+            children: [
+              _buildCVHistory(context),
+              _buildMockInterviewHistory(context),
+              _buildJobApplicationsHistory(context),
             ],
           ),
         ),
       ],
     );
   }
-}
 
-class CVEnhancementsTab extends StatelessWidget {
-  const CVEnhancementsTab({super.key});
+  Widget _buildTabs(BuildContext context) {
+    return Container(
+      color: AppTheme.primaryPurple,
+      child: TabBar(
+        controller: _tabController,
+        indicatorColor: Colors.white,
+        labelColor: Colors.white,
+        unselectedLabelColor: Colors.white70,
+        tabs: const [
+          Tab(
+            child: Text(
+              'CV Enhancement',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+              ),
+            ),
+          ),
+          Tab(
+            child: Text(
+              'Mock Interview',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+              ),
+            ),
+          ),
+          Tab(
+            child: Text(
+              'Job Application',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-  @override
-  Widget build(BuildContext context) {
-    final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+  // ---------------- CV HISTORY ----------------
+  Widget _buildCVHistory(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return _emptyState(
+        context,
+        icon: Icons.description_outlined,
+        title: 'No CV Enhancements Yet',
+        subtitle: 'Your CV enhancement history will appear here',
+      );
+    }
 
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('CVHistory')
-          .where('UserID', isEqualTo: userId)
+          .where('UserID', isEqualTo: user.uid)
           .orderBy('Date', descending: true)
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        if (snapshot.hasError) {
-          return _buildEmptyState(
-            icon: Icons.error_outline,
-            title: 'Something went wrong',
-            subtitle: 'We couldn\'t load your history. Please try again later.',
-          );
-        }
 
-        final docs = snapshot.data?.docs ?? [];
-        if (docs.isEmpty) {
-          return _buildEmptyState(
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return _emptyState(
+            context,
             icon: Icons.description_outlined,
             title: 'No CV Enhancements Yet',
             subtitle: 'Your CV enhancement history will appear here',
           );
         }
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
+        final docs = snapshot.data!.docs;
+        return ListView.separated(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           itemCount: docs.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
             final data = docs[index].data() as Map<String, dynamic>;
             final date = (data['Date'] as Timestamp?)?.toDate();
-            final jobTitle = data['JobTitle'] ?? 'N/A';
+            final title = (data['JobTitle'] ?? 'CV Enhancement').toString();
+            final cvHistoryId =
+                (data['CVHistoryID'] ?? docs[index].id).toString();
 
-            return Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  child: const Icon(Icons.description, color: Colors.white),
-                ),
-                title: Text(
-                  jobTitle.isEmpty ? 'CV Enhancement' : jobTitle,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: Text(
-                  date != null
-                      ? DateFormat('MMM dd, yyyy - hh:mm a').format(date)
-                      : 'Date not available',
-                ),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
-class MockInterviewsTab extends StatelessWidget {
-  const MockInterviewsTab({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
-
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('MockInterviews')
-          .where('UserID', isEqualTo: userId)
-          .orderBy('Date', descending: true)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return _buildEmptyState(
-            icon: Icons.error_outline,
-            title: 'Something went wrong',
-            subtitle: 'We couldn\'t load your history. Please try again later.',
-          );
-        }
-
-        final docs = snapshot.data?.docs ?? [];
-        if (docs.isEmpty) {
-          return _buildEmptyState(
-            icon: Icons.mic_none,
-            title: 'No Mock Interviews Yet',
-            subtitle: 'Your mock interview history will appear here',
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: docs.length,
-          itemBuilder: (context, index) {
-            final data = docs[index].data() as Map<String, dynamic>;
-            final date = (data['Date'] as Timestamp?)?.toDate();
-            final specialty = data['Specialty'] ?? 'N/A';
-
-            return Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: Color(0xFF4A5FBC),
-                  child: Icon(Icons.mic, color: Colors.white),
-                ),
-                title: Text(
-                  specialty.isEmpty ? 'Mock Interview' : specialty,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: Text(
-                  date != null
-                      ? DateFormat('MMM dd, yyyy - hh:mm a').format(date)
-                      : 'Date not available',
-                ),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
-class JobApplicationsTab extends StatelessWidget {
-  const JobApplicationsTab({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
-
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('Applications')
-          .where('UserID', isEqualTo: userId)
-          .orderBy('Date', descending: true)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return _buildEmptyState(
-            icon: Icons.error_outline,
-            title: 'Something went wrong',
-            subtitle: 'We couldn\'t load your history. Please try again later.',
-          );
-        }
-
-        final docs = snapshot.data?.docs ?? [];
-        if (docs.isEmpty) {
-          return _buildEmptyState(
-            icon: Icons.work_outline,
-            title: 'No Job Applications Yet',
-            subtitle: 'Your job application history will appear here',
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: docs.length,
-          itemBuilder: (context, index) {
-            final data = docs[index].data() as Map<String, dynamic>;
-            final date = (data['Date'] as Timestamp?)?.toDate();
-            final jobId = data['JobID'] ?? '';
-            final status = data['ApplicationStatus'] ?? 'Pending';
-
-            return FutureBuilder<DocumentSnapshot>(
-              future: FirebaseFirestore.instance
-                  .collection('Jobs')
-                  .doc(jobId)
-                  .get(),
-              builder: (context, jobSnapshot) {
-                String jobTitle = 'Job Application';
-
-                if (jobSnapshot.hasData && jobSnapshot.data!.exists) {
-                  final jobData =
-                      jobSnapshot.data!.data() as Map<String, dynamic>;
-                  jobTitle = jobData['JobTitle'] ?? 'Job Application';
-                }
-
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: _getStatusColor(status),
-                      child: const Icon(Icons.work, color: Colors.white),
-                    ),
-                    title: Text(
-                      jobTitle,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          date != null
-                              ? DateFormat('MMM dd, yyyy').format(date)
-                              : 'Date not available',
-                        ),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: _getStatusColor(status).withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            status,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: _getStatusColor(status),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            return _historyTile(
+              context,
+              title: title.isEmpty ? 'CV Enhancement' : title,
+              subtitle: date != null
+                  ? DateFormat('MMM dd, yyyy - hh:mm a').format(date)
+                  : '',
+              leadingIcon: Icons.description,
+              leadingBgColor: AppTheme.accentCoral,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => PublishScreen(cvUrl: cvHistoryId),
                   ),
                 );
               },
@@ -302,63 +155,217 @@ class JobApplicationsTab extends StatelessWidget {
     );
   }
 
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'accepted':
-        return Colors.green;
-      case 'rejected':
-        return Colors.red;
-      case 'pending':
-        return Colors.orange;
-      default:
-        return const Color(0xFF4A5FBC);
+  // ---------------- MOCK INTERVIEW HISTORY ----------------
+  Widget _buildMockInterviewHistory(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return _emptyState(
+        context,
+        icon: Icons.mic_none,
+        title: 'No Mock Interviews Yet',
+        subtitle: 'Your mock interview history will appear here',
+      );
     }
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('MockInterviews')
+          .where('UserID', isEqualTo: user.uid)
+          .orderBy('Date', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return _emptyState(
+            context,
+            icon: Icons.mic_none,
+            title: 'No Mock Interviews Yet',
+            subtitle: 'Your mock interview history will appear here',
+          );
+        }
+
+        final docs = snapshot.data!.docs;
+        return ListView.separated(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          itemCount: docs.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            final data = docs[index].data() as Map<String, dynamic>;
+            final date = (data['Date'] as Timestamp?)?.toDate();
+            final specialty =
+                (data['Specialty'] ?? 'Mock Interview').toString();
+
+            return _historyTile(
+              context,
+              title: specialty.isEmpty ? 'Mock Interview' : specialty,
+              subtitle: date != null
+                  ? DateFormat('MMM dd, yyyy - hh:mm a').format(date)
+                  : '',
+              leadingIcon: Icons.mic,
+              leadingBgColor: AppTheme.primaryPurple,
+              onTap: () {
+                // TODO: open mock interview details later
+              },
+            );
+          },
+        );
+      },
+    );
   }
-}
 
-Widget _buildEmptyState({
-  required IconData icon,
-  required String title,
-  required String subtitle,
-}) {
-  return Builder(
-    builder: (context) {
-      final scheme = Theme.of(context).colorScheme;
-      final textTheme = Theme.of(context).textTheme;
+  // ---------------- JOB APPLICATIONS HISTORY ----------------
+  Widget _buildJobApplicationsHistory(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return _emptyState(
+        context,
+        icon: Icons.work_outline,
+        title: 'No Job Applications Yet',
+        subtitle: 'Your job application history will appear here',
+      );
+    }
 
-      return Center(
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('Applications')
+          .where('UserID', isEqualTo: user.uid)
+          .orderBy('Date', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return _emptyState(
+            context,
+            icon: Icons.work_outline,
+            title: 'No Job Applications Yet',
+            subtitle: 'Your job application history will appear here',
+          );
+        }
+
+        final docs = snapshot.data!.docs;
+        return ListView.separated(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          itemCount: docs.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            final data = docs[index].data() as Map<String, dynamic>;
+            final date = (data['Date'] as Timestamp?)?.toDate();
+            final jobTitle =
+                (data['JobTitle'] ?? 'Job Application').toString();
+            final status = (data['ApplicationStatus'] ?? '').toString();
+
+            return _historyTile(
+              context,
+              title: jobTitle.isEmpty ? 'Job Application' : jobTitle,
+              subtitle: [
+                if (date != null)
+                  DateFormat('MMM dd, yyyy - hh:mm a').format(date),
+                if (status.isNotEmpty) status,
+              ].join('  •  '),
+              leadingIcon: Icons.work,
+              leadingBgColor: AppTheme.primaryPurple,
+              onTap: () {
+                // TODO: open job application details later
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // ---------------- SHARED WIDGETS ----------------
+  Widget _historyTile(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required IconData leadingIcon,
+    required Color leadingBgColor,
+    VoidCallback? onTap,
+  }) {
+    return Material(
+      color: Colors.white,
+      elevation: 1.5,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
         child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
             children: [
-              Icon(
-                icon,
-                size: 80,
-                color: scheme.outlineVariant.withOpacity(0.8),
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: leadingBgColor,
+                child: Icon(leadingIcon, color: Colors.white),
               ),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                style: textTheme.titleMedium?.copyWith(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                        color: Colors.black87,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
                 ),
-                textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 8),
-              Text(
-                subtitle,
-                style: textTheme.bodyMedium?.copyWith(
-                  fontSize: 14,
-                  color: scheme.onBackground.withOpacity(0.7),
-                ),
-                textAlign: TextAlign.center,
-              ),
+              const Icon(Icons.chevron_right, color: Colors.black45),
             ],
           ),
         ),
-      );
-    },
-  );
+      ),
+    );
+  }
+
+  Widget _emptyState(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 90, color: Colors.black26),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            subtitle,
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+          ),
+        ],
+      ),
+    );
+  }
 }

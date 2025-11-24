@@ -11,6 +11,7 @@ import 'package:gp_2025_11/screens/job_card.dart';
 import 'package:gp_2025_11/screens/cv_enhancement.dart';
 import 'package:gp_2025_11/screens/history.dart';
 import 'package:gp_2025_11/screens/favorites.dart';
+import 'package:gp_2025_11/screens/jobseeker_profile.dart';
 
 class JobSeekerHome extends StatefulWidget {
   const JobSeekerHome({super.key, this.userId});
@@ -24,8 +25,6 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
   int _tab = 1;
   final _homeScroll = ScrollController();
   final TextEditingController _homeSearchController = TextEditingController();
-
-  static const _brand = AppTheme.primaryPurple;
 
   String get _effectiveUserId {
     final args =
@@ -95,31 +94,136 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
     );
   }
 
-  Widget _buildAppBarTitle(String userId) {
+  PreferredSizeWidget _buildCustomAppBar(String userId) {
+    String title;
     switch (_tab) {
       case 0:
-        return const Text(
-          'History',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-          overflow: TextOverflow.ellipsis,
-        );
+        title = 'History';
+        break;
       case 1:
-        return _WelcomeTitle(userId: userId);
+        title = '';
+        break;
       case 2:
-        return const Text(
-          'Favorites',
-          style: TextStyle(
+        title = 'Favorites';
+        break;
+      default:
+        title = '';
+    }
+
+    // For non-home tabs, use JobSeekerAppBar
+    if (_tab != 1) {
+      return JobSeekerAppBar(
+        title: Text(
+          title,
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
-          overflow: TextOverflow.ellipsis,
-        );
-      default:
-        return _WelcomeTitle(userId: userId);
+        ),
+      );
     }
+
+    // For home tab, use custom design with profile button
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(200),
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF4A5FBC), Color(0xFF4A5FBC)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top row with profile, notification, and settings
+                Row(
+                  children: [
+                    // Profile button
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const JobSeekerProfile(),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.person,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    // Notification button
+                    GestureDetector(
+                      onTap: () {
+                        SnackHelper.error(context, 'Notifications coming soon');
+                      },
+                      child: Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.notifications_outlined,
+                          color: Colors.white,
+                          size: 26,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Settings button
+                    GestureDetector(
+                      onTap: () {
+                        final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+                        if (uid.isEmpty) return;
+                        Navigator.pushNamed(
+                          context,
+                          '/settings',
+                          arguments: {'userType': 'JobSeeker', 'userId': uid},
+                        );
+                      },
+                      child: Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.settings_outlined,
+                          color: Colors.white,
+                          size: 26,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                // Welcome text
+                _WelcomeTitle(userId: userId),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -131,75 +235,122 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
     });
     final userId = _effectiveUserId;
 
-    final homeBody = ListView(
-      controller: _homeScroll,
-      padding: const EdgeInsets.all(16),
-      children: [
-        const _JobsSearchShortcut(),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _BigTile(
-                label: 'Mock Interviews',
-                icon: Icons.mic_none,
-                color: _brand,
-                onTap: () {
-                  SnackHelper.error(
-                      context, 'Mock Interviews will be available soon');
-                },
+    final homeBody = Container(
+      color: const Color(0xFF4A5FBC),
+      child: Column(
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(30),
+                  topRight: Radius.circular(30),
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _BigTile(
-                label: 'CV Enhancement',
-                icon: Icons.description_outlined,
-                color: _brand,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const CVEnhancementScreen(),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 24),
-        Row(
-          children: [
-            const Text('Jobs',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
-            const Spacer(),
-            TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const JobsPage(),
+              child: ListView(
+                controller: _homeScroll,
+                padding: const EdgeInsets.all(20),
+                children: [
+                  const SizedBox(height: 8),
+                  // Search bar
+                  const _JobsSearchShortcut(),
+                  const SizedBox(height: 24),
+
+                  // Feature cards
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _ModernFeatureCard(
+                          title: 'Mock\nInterviews',
+                          subtitle: 'AI Practice',
+                          icon: Icons.mic_none,
+                          gradientColors: const [
+                            Color(0xFF7F53AC),
+                            Color(0xFF4A5FBC),
+                          ],
+                          onTap: () {
+                            SnackHelper.error(
+                                context, 'Mock Interviews will be available soon');
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _ModernFeatureCard(
+                          title: 'CV\nEnhancement',
+                          subtitle: 'Get Reviewed',
+                          icon: Icons.description_outlined,
+                          gradientColors: const [
+                            Color(0xFFFF5E5E),
+                            Color(0xFFFD6C67),
+                          ],
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const CVEnhancementScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ),
-                );
-              },
-              child: const Text('All'),
+
+                  const SizedBox(height: 32),
+                  // Jobs header
+                  Row(
+                    children: [
+                      const Text(
+                        'Jobs',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const JobsPage(),
+                            ),
+                          );
+                        },
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(40, 30),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text(
+                          'View All',
+                          style: TextStyle(
+                            color: Color(0xFF4A5FBC),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _JobsPreviewCompact(
+                    limit: 3,
+                    userId: userId,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
             ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        _JobsPreviewCompact(
-          limit: 3,
-          userId: userId,
-        ),
-        const SizedBox(height: 16),
-      ],
+          ),
+        ],
+      ),
     );
 
     return ThemedScaffold(
-      appBar: JobSeekerAppBar(
-        title: _buildAppBarTitle(userId),
-      ),
+      appBar: _buildCustomAppBar(userId),
       body: IndexedStack(
         index: _tab,
         children: [
@@ -312,63 +463,122 @@ class _WelcomeTitle extends StatelessWidget {
       stream: _displayNameStream(),
       builder: (context, snap) {
         final name = (snap.data ?? 'User').trim();
-        return Text(
-          'Welcome, $name!',
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-          overflow: TextOverflow.ellipsis,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Welcome back,',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.9),
+                fontSize: 16,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              name,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         );
       },
     );
   }
 }
 
-class _BigTile extends StatelessWidget {
-  final String label;
+class _ModernFeatureCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
   final IconData icon;
+  final List<Color> gradientColors;
   final VoidCallback onTap;
-  final Color color;
-  const _BigTile({
-    required this.label,
+
+  const _ModernFeatureCard({
+    required this.title,
+    required this.subtitle,
     required this.icon,
+    required this.gradientColors,
     required this.onTap,
-    required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
-    final dynamicCardColor = Theme.of(context).colorScheme.surface;
-    final dynamicTextColor = Theme.of(context).textTheme.bodyLarge?.color;
-
-    return Material(
-      color: dynamicCardColor,
-      borderRadius: BorderRadius.circular(16),
-      elevation: 4,
-      shadowColor: Colors.black.withOpacity(0.2),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          height: 90,
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+    return Container(
+      height: 160,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: LinearGradient(
+          colors: gradientColors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: gradientColors.first.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: onTap,
+          child: Stack(
             children: [
-              Icon(icon, color: color, size: 28),
-              const SizedBox(height: 8),
-              Flexible(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    color: dynamicTextColor,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+              // Background large icon (texture)
+              Positioned(
+                right: -20,
+                bottom: -20,
+                child: Icon(
+                  icon,
+                  size: 120,
+                  color: Colors.white.withOpacity(0.15),
+                ),
+              ),
+              // Content
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Small Icon Bubble
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.25),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(icon, color: Colors.white, size: 24),
+                    ),
+                    const Spacer(),
+                    // Title
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        height: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    // Subtitle
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.85),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -467,7 +677,6 @@ class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
       if (cleanKw.isEmpty) continue;
 
       if (jobTokens.contains(cleanKw)) {
-        // base match
         score += 2;
 
         if (j.specialty.toLowerCase().contains(cleanKw)) {
@@ -713,11 +922,8 @@ class _JobsSearchShortcut extends StatelessWidget {
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    final shadowColor =
-        isDark ? Colors.black.withOpacity(0.6) : Colors.black.withOpacity(0.07);
-
     return InkWell(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
       onTap: () {
         Navigator.push(
           context,
@@ -730,33 +936,39 @@ class _JobsSearchShortcut extends StatelessWidget {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: scheme.surface,
-          borderRadius: BorderRadius.circular(12),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: shadowColor,
+              color: Colors.black.withOpacity(0.06),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
           ],
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
             Icon(
               Icons.search,
-              color: isDark ? Colors.grey[400] : Colors.grey[600],
+              color: Colors.grey[500],
+              size: 24,
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Search jobs, companies or keywords…',
+                'Search jobs, companies...',
                 style: TextStyle(
-                  fontSize: 14,
-                  color: isDark ? Colors.grey[500] : Colors.grey[600],
+                  fontSize: 15,
+                  color: Colors.grey[500],
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
+            ),
+            Icon(
+              Icons.tune,
+              color: Colors.grey[400],
+              size: 22,
             ),
           ],
         ),
