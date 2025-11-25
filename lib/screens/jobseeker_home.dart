@@ -45,50 +45,95 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
     super.dispose();
   }
 
-  Widget _buildNavItem({
-    required IconData icon,
-    required IconData filledIcon,
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildAnimatedNavBar() {
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.bottomCenter,
+      children: [
+        // الـ Bottom Bar مع القطع (notch)
+        ClipPath(
+          clipper: _BottomBarClipper(
+            circlePosition: _getCirclePosition() + 30,
+            circleRadius: 45,
+          ),
+          child: Container(
+            height: 70,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+            ),
+            child: SafeArea(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildNavIcon(Icons.history, 0),
+                  _buildNavIcon(Icons.home, 1),
+                  _buildNavIcon(Icons.favorite, 2),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        // الدائرة المتحركة البارزة
+        AnimatedPositioned(
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOutCubic,
+          left: _getCirclePosition(),
+          bottom: 35,
+          child: Container(
+            width: 60,
+            height: 60,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Color(0xFFFC686A),
+            ),
+            child: Icon(
+              _getSelectedIcon(),
+              color: Colors.white,
+              size: 30,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  double _getCirclePosition() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final itemWidth = screenWidth / 3;
+    return (_tab * itemWidth) + (itemWidth / 2) - 30;
+  }
+
+  IconData _getSelectedIcon() {
+    switch (_tab) {
+      case 0:
+        return Icons.history;
+      case 1:
+        return Icons.home;
+      case 2:
+        return Icons.favorite;
+      default:
+        return Icons.home;
+    }
+  }
+
+  Widget _buildNavIcon(IconData icon, int index) {
+    final isSelected = _tab == index;
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        setState(() {
+          _tab = index;
+        });
+      },
       behavior: HitTestBehavior.opaque,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                if (isSelected)
-                  Icon(
-                    filledIcon,
-                    size: 34,
-                    color: const Color(0xFFFC686A),
-                  ),
-                if (isSelected)
-                  Icon(
-                    filledIcon,
-                    size: 32,
-                    color: const Color(0xFFFFDADD),
-                  ),
-                Icon(
-                  icon,
-                  size: 32,
-                  color: isSelected
-                      ? const Color(0xFFFC686A)
-                      : Theme.of(context)
-                          .textTheme
-                          .bodySmall
-                          ?.color
-                          ?.withOpacity(0.6),
-                ),
-              ],
-            ),
-          ],
+        width: 60,
+        height: 60,
+        alignment: Alignment.center,
+        child: Icon(
+          icon,
+          size: 26,
+          color: isSelected ? Colors.transparent : Colors.grey[400],
         ),
       ),
     );
@@ -242,9 +287,9 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
         children: [
           Expanded(
             child: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFF5F5F5),
-                borderRadius: const BorderRadius.only(
+              decoration: const BoxDecoration(
+                color: Color(0xFFF5F5F5),
+                borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(30),
                   topRight: Radius.circular(30),
                 ),
@@ -360,63 +405,7 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
           const FavoritesPage(),
         ],
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 16,
-              offset: const Offset(0, -4),
-            ),
-          ],
-          border: Border(
-            top: BorderSide(
-              color: Theme.of(context).colorScheme.outline.withOpacity(0.15),
-            ),
-          ),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 6),
-        child: SafeArea(
-          top: false,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildNavItem(
-                icon: Icons.history_outlined,
-                filledIcon: Icons.history,
-                label: 'History',
-                isSelected: _tab == 0,
-                onTap: () => setState(() => _tab = 0),
-              ),
-              _buildNavItem(
-                icon: Icons.home_outlined,
-                filledIcon: Icons.home,
-                label: 'Home',
-                isSelected: _tab == 1,
-                onTap: () {
-                  if (_tab == 1 && _homeScroll.hasClients) {
-                    _homeScroll.animateTo(
-                      0,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeOut,
-                    );
-                  } else {
-                    setState(() => _tab = 1);
-                  }
-                },
-              ),
-              _buildNavItem(
-                icon: Icons.favorite_border,
-                filledIcon: Icons.favorite,
-                label: 'Favorites',
-                isSelected: _tab == 2,
-                onTap: () => setState(() => _tab = 2),
-              ),
-            ],
-          ),
-        ),
-      ),
+      bottomNavigationBar: _buildAnimatedNavBar(),
     );
   }
 }
@@ -975,5 +964,41 @@ class _JobsSearchShortcut extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _BottomBarClipper extends CustomClipper<Path> {
+  final double circlePosition;
+  final double circleRadius;
+
+  _BottomBarClipper({
+    required this.circlePosition,
+    required this.circleRadius,
+  });
+
+  @override
+  Path getClip(Size size) {
+    final path = Path();
+
+    // مستطيل كامل
+    path.addRect(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    // نقص الدائرة من فوق!
+    path.addOval(
+      Rect.fromCircle(
+        center: Offset(circlePosition, 0), // مركز الدائرة على الحافة العليا
+        radius: circleRadius,
+      ),
+    );
+
+    // نستخدم fillType عشان نقص الدائرة من المستطيل
+    path.fillType = PathFillType.evenOdd;
+
+    return path;
+  }
+
+  @override
+  bool shouldReclip(_BottomBarClipper oldClipper) {
+    return oldClipper.circlePosition != circlePosition;
   }
 }

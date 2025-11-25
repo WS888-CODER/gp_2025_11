@@ -746,50 +746,92 @@ class _CompanyHomeState extends State<CompanyHome> {
     });
   }
 
-  Widget _buildNavItem({
-    required IconData icon,
-    required IconData filledIcon,
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildAnimatedNavBar() {
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.bottomCenter,
+      children: [
+        // الـ Bottom Bar مع القطع (notch)
+        ClipPath(
+          clipper: _BottomBarClipper(
+            circlePosition: _getCirclePosition() + 30,
+            circleRadius: 45,
+          ),
+          child: Container(
+            height: 70,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+            ),
+            child: SafeArea(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildNavIcon(Icons.analytics_outlined, 0),
+                  _buildNavIcon(Icons.home_outlined, 1),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        // الدائرة المتحركة البارزة
+        AnimatedPositioned(
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOutCubic,
+          left: _getCirclePosition(),
+          bottom: 35,
+          child: Container(
+            width: 60,
+            height: 60,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Color(0xFFFC686A),
+            ),
+            child: Icon(
+              _getSelectedIcon(),
+              color: Colors.white,
+              size: 30,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  double _getCirclePosition() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final itemWidth = screenWidth / 2;
+    return (_tab * itemWidth) + (itemWidth / 2) - 30;
+  }
+
+  IconData _getSelectedIcon() {
+    switch (_tab) {
+      case 0:
+        return Icons.analytics;
+      case 1:
+        return Icons.home;
+      default:
+        return Icons.home;
+    }
+  }
+
+  Widget _buildNavIcon(IconData icon, int index) {
+    final isSelected = _tab == index;
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        setState(() {
+          _tab = index;
+        });
+      },
       behavior: HitTestBehavior.opaque,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                if (isSelected)
-                  Icon(
-                    filledIcon,
-                    size: 34,
-                    color: const Color(0xFFFC686A),
-                  ),
-                if (isSelected)
-                  Icon(
-                    filledIcon,
-                    size: 32,
-                    color: const Color(0xFFFFDADD),
-                  ),
-                Icon(
-                  icon,
-                  size: 32,
-                  color: isSelected
-                      ? const Color(0xFFFC686A)
-                      : Theme.of(context)
-                          .textTheme
-                          .bodySmall
-                          ?.color
-                          ?.withOpacity(0.6),
-                ),
-              ],
-            ),
-          ],
+        width: 60,
+        height: 60,
+        alignment: Alignment.center,
+        child: Icon(
+          icon,
+          size: 26,
+          color: isSelected ? Colors.transparent : Colors.grey[400],
         ),
       ),
     );
@@ -1430,7 +1472,7 @@ class _CompanyHomeState extends State<CompanyHome> {
     return ThemedScaffold(
       floatingActionButton: _tab == 1
           ? Padding(
-              padding: const EdgeInsets.only(bottom: 0, right: 0),
+              padding: const EdgeInsets.only(bottom: 30, right: 0),
               child: FloatingActionButton.extended(
                 backgroundColor: _brand,
                 foregroundColor: Colors.white,
@@ -1627,47 +1669,7 @@ class _CompanyHomeState extends State<CompanyHome> {
           homeBody,
         ],
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 16,
-              offset: const Offset(0, -4),
-            ),
-          ],
-          border: Border(
-            top: BorderSide(
-              color: Theme.of(context).colorScheme.outline.withOpacity(0.15),
-            ),
-          ),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 6),
-        child: SafeArea(
-          top: false,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildNavItem(
-                icon: Icons.assessment_outlined,
-                filledIcon: Icons.assessment,
-                label: 'Reports',
-                isSelected: _tab == 0,
-                onTap: () => setState(() => _tab = 0),
-              ),
-              const SizedBox(width: 120),
-              _buildNavItem(
-                icon: Icons.home_outlined,
-                filledIcon: Icons.home,
-                label: 'Home',
-                isSelected: _tab == 1,
-                onTap: () => setState(() => _tab = 1),
-              ),
-            ],
-          ),
-        ),
-      ),
+      bottomNavigationBar: _buildAnimatedNavBar(),
     );
   }
 }
@@ -1894,5 +1896,34 @@ class _CompactReportFeature extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _BottomBarClipper extends CustomClipper<Path> {
+  final double circlePosition;
+  final double circleRadius;
+
+  _BottomBarClipper({
+    required this.circlePosition,
+    required this.circleRadius,
+  });
+
+  @override
+  Path getClip(Size size) {
+    final path = Path();
+    path.addRect(Rect.fromLTWH(0, 0, size.width, size.height));
+    path.addOval(
+      Rect.fromCircle(
+        center: Offset(circlePosition, 0),
+        radius: circleRadius,
+      ),
+    );
+    path.fillType = PathFillType.evenOdd;
+    return path;
+  }
+
+  @override
+  bool shouldReclip(_BottomBarClipper oldClipper) {
+    return oldClipper.circlePosition != circlePosition;
   }
 }
