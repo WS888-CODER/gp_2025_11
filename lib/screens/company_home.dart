@@ -135,25 +135,31 @@ class _CompanyHomeState extends State<CompanyHome> {
                 return Theme(
                   data: theme.copyWith(
                     colorScheme: scheme.copyWith(
-                      primary: const Color(0xFF4A5FBC),
+                      primary: const Color(0xFFFC686A),
                       onPrimary: Colors.white,
-                      onSurface: scheme.onSurface,
+                      onSurface: Colors.white,
+                      surface: const Color(0xFF4A5FBC).withOpacity(0.95),
                     ),
                     datePickerTheme: DatePickerThemeData(
+                      backgroundColor:
+                          const Color(0xFF4A5FBC).withOpacity(0.95),
+                      headerForegroundColor: Colors.white,
+                      weekdayStyle: const TextStyle(color: Colors.white),
+                      yearStyle: const TextStyle(color: Colors.white),
                       todayBorder: BorderSide.none,
                       todayBackgroundColor:
                           MaterialStateColor.resolveWith((states) {
                         if (states.contains(MaterialState.selected)) {
-                          return const Color(0xFF4A5FBC);
+                          return const Color(0xFFFC686A);
                         }
-                        return scheme.primary.withOpacity(0.15);
+                        return const Color(0xFFFC686A).withOpacity(0.15);
                       }),
                       todayForegroundColor:
                           MaterialStateColor.resolveWith((states) {
                         if (states.contains(MaterialState.selected)) {
                           return Colors.white;
                         }
-                        return scheme.onSurface;
+                        return Colors.white;
                       }),
                     ),
                   ),
@@ -191,25 +197,31 @@ class _CompanyHomeState extends State<CompanyHome> {
                 return Theme(
                   data: theme.copyWith(
                     colorScheme: scheme.copyWith(
-                      primary: const Color(0xFF4A5FBC),
+                      primary: const Color(0xFFFC686A),
                       onPrimary: Colors.white,
-                      onSurface: scheme.onSurface,
+                      onSurface: Colors.white,
+                      surface: const Color(0xFF4A5FBC).withOpacity(0.95),
                     ),
                     datePickerTheme: DatePickerThemeData(
+                      backgroundColor:
+                          const Color(0xFF4A5FBC).withOpacity(0.95),
+                      headerForegroundColor: Colors.white,
+                      weekdayStyle: const TextStyle(color: Colors.white),
+                      yearStyle: const TextStyle(color: Colors.white),
                       todayBorder: BorderSide.none,
                       todayBackgroundColor:
                           MaterialStateColor.resolveWith((states) {
                         if (states.contains(MaterialState.selected)) {
-                          return const Color(0xFF4A5FBC);
+                          return const Color(0xFFFC686A);
                         }
-                        return scheme.primary.withOpacity(0.15);
+                        return const Color(0xFFFC686A).withOpacity(0.15);
                       }),
                       todayForegroundColor:
                           MaterialStateColor.resolveWith((states) {
                         if (states.contains(MaterialState.selected)) {
                           return Colors.white;
                         }
-                        return scheme.onSurface;
+                        return Colors.white;
                       }),
                     ),
                   ),
@@ -368,7 +380,8 @@ class _CompanyHomeState extends State<CompanyHome> {
   }
 
   /// Close or reopen a job
-  Future<void> _closeJob(String jobId, bool isClosed, BuildContext ctx, DateTime? endDate) async {
+  Future<void> _closeJob(
+      String jobId, bool isClosed, BuildContext ctx, DateTime? endDate) async {
     try {
       // If reopening and endDate has passed, prompt for new date
       if (isClosed && endDate != null && endDate.isBefore(DateTime.now())) {
@@ -406,12 +419,14 @@ class _CompanyHomeState extends State<CompanyHome> {
                 style: TextButton.styleFrom(
                   backgroundColor: Colors.white.withOpacity(0.9),
                   foregroundColor: const Color(0xFF4A5FBC),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
                 ),
-                child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: const Text('Cancel',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
               ),
               const SizedBox(width: 12),
               TextButton(
@@ -419,12 +434,14 @@ class _CompanyHomeState extends State<CompanyHome> {
                 style: TextButton.styleFrom(
                   backgroundColor: const Color(0xFFFD6C67),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
                 ),
-                child: const Text('Select New Date', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: const Text('Select New Date',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ],
             actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
@@ -450,23 +467,30 @@ class _CompanyHomeState extends State<CompanyHome> {
             return Theme(
               data: theme.copyWith(
                 colorScheme: scheme.copyWith(
-                  primary: const Color(0xFF4A5FBC),
+                  primary: const Color(0xFFFC686A),
                   onPrimary: Colors.white,
-                  onSurface: scheme.onSurface,
+                  onSurface: Colors.white,
+                  surface: const Color(0xFF4A5FBC).withOpacity(0.95),
                 ),
                 datePickerTheme: DatePickerThemeData(
+                  backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.95),
+                  headerForegroundColor: Colors.white,
+                  weekdayStyle: const TextStyle(color: Colors.white),
+                  yearStyle: const TextStyle(color: Colors.white),
                   todayBorder: BorderSide.none,
-                  todayBackgroundColor: MaterialStateColor.resolveWith((states) {
+                  todayBackgroundColor:
+                      MaterialStateColor.resolveWith((states) {
                     if (states.contains(MaterialState.selected)) {
-                      return const Color(0xFF4A5FBC);
+                      return const Color(0xFFFC686A);
                     }
-                    return scheme.primary.withOpacity(0.15);
+                    return const Color(0xFFFC686A).withOpacity(0.15);
                   }),
-                  todayForegroundColor: MaterialStateColor.resolveWith((states) {
+                  todayForegroundColor:
+                      MaterialStateColor.resolveWith((states) {
                     if (states.contains(MaterialState.selected)) {
                       return Colors.white;
                     }
-                    return scheme.onSurface;
+                    return Colors.white;
                   }),
                 ),
               ),
@@ -659,6 +683,13 @@ class _CompanyHomeState extends State<CompanyHome> {
         backgroundColor: _brand,
         elevation: 0,
         centerTitle: true,
+        automaticallyImplyLeading: false, // ← نشيل السهم الخلفي
+        leadingWidth: 70, // ← نعطيه مساحة أكبر
+        leading: Padding(
+          // ← نحطه في Padding
+          padding: const EdgeInsets.only(left: 16), // ← نبعده عن الحافة
+          child: _ProfileButton(userId: companyId),
+        ),
         title: const Text(
           'Reports',
           style: TextStyle(
@@ -784,7 +815,7 @@ class _CompanyHomeState extends State<CompanyHome> {
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: Theme.of(context).scaffoldBackgroundColor,
+                color: const Color(0xFFF5F5F5),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(30),
                   topRight: Radius.circular(30),
@@ -796,7 +827,8 @@ class _CompanyHomeState extends State<CompanyHome> {
                   const SizedBox(height: 8),
                   const _SectionTitle(),
                   const SizedBox(height: 12),
-                  StreamBuilder<List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
+                  StreamBuilder<
+                      List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
                     stream: _jobsStream(companyId),
                     builder: (context, snap) {
                       if (snap.connectionState == ConnectionState.waiting) {
@@ -830,7 +862,10 @@ class _CompanyHomeState extends State<CompanyHome> {
                               const SizedBox(height: 12),
                               Text(
                                 'No job posts yet',
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(
                                       fontWeight: FontWeight.w600,
                                     ),
                               ),
@@ -838,7 +873,10 @@ class _CompanyHomeState extends State<CompanyHome> {
                               Text(
                                 'Tap "Create Job Post" to add your first opening.',
                                 textAlign: TextAlign.center,
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
                                       color: Theme.of(context)
                                           .colorScheme
                                           .onSurface
@@ -854,9 +892,11 @@ class _CompanyHomeState extends State<CompanyHome> {
                         children: jobs.map((doc) {
                           final data = doc.data();
 
-                          final title = (data['JobTitle'] ?? 'Untitled').toString();
+                          final title =
+                              (data['JobTitle'] ?? 'Untitled').toString();
                           final position = (data['Position'] ?? '').toString();
-                          final specialty = (data['Specialty'] ?? '').toString();
+                          final specialty =
+                              (data['Specialty'] ?? '').toString();
                           final endDateField = data['EndDate'];
                           DateTime? endDate;
                           if (endDateField is Timestamp) {
@@ -864,7 +904,8 @@ class _CompanyHomeState extends State<CompanyHome> {
                           }
                           final now = DateTime.now();
 
-                          final jobStatus = (data['JobStatus'] ?? 'Open').toString();
+                          final jobStatus =
+                              (data['JobStatus'] ?? 'Open').toString();
                           final isClosed = jobStatus == 'Closed' ||
                               (endDate != null && endDate.isBefore(now));
 
@@ -899,13 +940,15 @@ class _CompanyHomeState extends State<CompanyHome> {
                                 child: Padding(
                                   padding: const EdgeInsets.all(20),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         children: [
                                           Expanded(
                                             child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               children: [
                                                 Text(
                                                   title,
@@ -921,7 +964,8 @@ class _CompanyHomeState extends State<CompanyHome> {
                                                 const SizedBox(height: 8),
                                                 Text(
                                                   [position, specialty]
-                                                      .where((e) => e.isNotEmpty)
+                                                      .where(
+                                                          (e) => e.isNotEmpty)
                                                       .join(' / '),
                                                   style: TextStyle(
                                                     color: isClosed
@@ -936,11 +980,14 @@ class _CompanyHomeState extends State<CompanyHome> {
                                           ),
                                           if (isClosed)
                                             Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                  horizontal: 12, vertical: 6),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 6),
                                               decoration: BoxDecoration(
                                                 color: const Color(0xFFFFE5E5),
-                                                borderRadius: BorderRadius.circular(20),
+                                                borderRadius:
+                                                    BorderRadius.circular(20),
                                               ),
                                               child: const Text(
                                                 'Closed',
@@ -961,18 +1008,24 @@ class _CompanyHomeState extends State<CompanyHome> {
                                             child: Container(
                                               height: 42,
                                               decoration: BoxDecoration(
-                                                color: const Color(0xFF4A5FBC).withOpacity(0.1),
-                                                borderRadius: BorderRadius.circular(12),
+                                                color: const Color(0xFF4A5FBC)
+                                                    .withOpacity(0.1),
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
                                               ),
                                               child: Material(
                                                 color: Colors.transparent,
                                                 child: InkWell(
-                                                  borderRadius: BorderRadius.circular(12),
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
                                                   onTap: () async {
-                                                    final canProceed = await _checkProfileComplete();
-                                                    if (!canProceed || !mounted) return;
+                                                    final canProceed =
+                                                        await _checkProfileComplete();
+                                                    if (!canProceed || !mounted)
+                                                      return;
 
-                                                    final start = data['StartDate'];
+                                                    final start =
+                                                        data['StartDate'];
                                                     final end = data['EndDate'];
 
                                                     await _showEditDatesDialog(
@@ -984,19 +1037,24 @@ class _CompanyHomeState extends State<CompanyHome> {
                                                     );
                                                   },
                                                   child: const Row(
-                                                    mainAxisAlignment: MainAxisAlignment.center,
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
                                                     children: [
                                                       Icon(
                                                         Icons.edit_outlined,
-                                                        color: Color(0xFF4A5FBC),
+                                                        color:
+                                                            Color(0xFF4A5FBC),
                                                         size: 20,
                                                       ),
                                                       SizedBox(width: 6),
                                                       Text(
                                                         'Edit',
                                                         style: TextStyle(
-                                                          color: Color(0xFF4A5FBC),
-                                                          fontWeight: FontWeight.w600,
+                                                          color:
+                                                              Color(0xFF4A5FBC),
+                                                          fontWeight:
+                                                              FontWeight.w600,
                                                           fontSize: 14,
                                                         ),
                                                       ),
@@ -1012,13 +1070,16 @@ class _CompanyHomeState extends State<CompanyHome> {
                                             child: Container(
                                               height: 42,
                                               decoration: BoxDecoration(
-                                                color: const Color(0xFF4A5FBC).withOpacity(0.1),
-                                                borderRadius: BorderRadius.circular(12),
+                                                color: const Color(0xFF4A5FBC)
+                                                    .withOpacity(0.1),
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
                                               ),
                                               child: Material(
                                                 color: Colors.transparent,
                                                 child: InkWell(
-                                                  borderRadius: BorderRadius.circular(12),
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
                                                   onTap: () {
                                                     Navigator.pushNamed(
                                                       context,
@@ -1030,19 +1091,25 @@ class _CompanyHomeState extends State<CompanyHome> {
                                                     );
                                                   },
                                                   child: const Row(
-                                                    mainAxisAlignment: MainAxisAlignment.center,
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
                                                     children: [
                                                       Icon(
-                                                        Icons.visibility_outlined,
-                                                        color: Color(0xFF4A5FBC),
+                                                        Icons
+                                                            .visibility_outlined,
+                                                        color:
+                                                            Color(0xFF4A5FBC),
                                                         size: 20,
                                                       ),
                                                       SizedBox(width: 6),
                                                       Text(
                                                         'View',
                                                         style: TextStyle(
-                                                          color: Color(0xFF4A5FBC),
-                                                          fontWeight: FontWeight.w600,
+                                                          color:
+                                                              Color(0xFF4A5FBC),
+                                                          fontWeight:
+                                                              FontWeight.w600,
                                                           fontSize: 14,
                                                         ),
                                                       ),
@@ -1059,69 +1126,106 @@ class _CompanyHomeState extends State<CompanyHome> {
                                             height: 42,
                                             decoration: BoxDecoration(
                                               color: Colors.grey.shade100,
-                                              borderRadius: BorderRadius.circular(12),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
                                             ),
                                             child: Material(
                                               color: Colors.transparent,
                                               child: InkWell(
-                                                borderRadius: BorderRadius.circular(12),
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
                                                 onTap: () {
-                                                  final safeCtx = _scaffoldKey.currentContext;
+                                                  final safeCtx = _scaffoldKey
+                                                      .currentContext;
                                                   if (safeCtx == null) return;
 
                                                   showDialog(
                                                     context: safeCtx,
-                                                    builder: (dialogContext) => AlertDialog(
+                                                    builder: (dialogContext) =>
+                                                        AlertDialog(
                                                       backgroundColor:
-                                                          const Color(0xFF4A5FBC).withOpacity(0.95),
-                                                      shape: RoundedRectangleBorder(
-                                                        borderRadius: BorderRadius.circular(20),
+                                                          const Color(
+                                                                  0xFF4A5FBC)
+                                                              .withOpacity(
+                                                                  0.95),
+                                                      shape:
+                                                          RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(20),
                                                       ),
                                                       contentPadding:
-                                                          const EdgeInsets.symmetric(vertical: 10),
+                                                          const EdgeInsets
+                                                              .symmetric(
+                                                              vertical: 10),
                                                       content: Column(
-                                                        mainAxisSize: MainAxisSize.min,
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
                                                         children: [
                                                           ListTile(
                                                             leading: Icon(
                                                               isClosed
-                                                                  ? Icons.lock_open_outlined
-                                                                  : Icons.lock_outline,
-                                                              color: Colors.white,
+                                                                  ? Icons
+                                                                      .lock_open_outlined
+                                                                  : Icons
+                                                                      .lock_outline,
+                                                              color:
+                                                                  Colors.white,
                                                               size: 22,
                                                             ),
                                                             title: Text(
-                                                              isClosed ? 'Reopen Job' : 'Close Job',
-                                                              style: const TextStyle(
-                                                                color: Colors.white,
-                                                                fontWeight: FontWeight.w600,
+                                                              isClosed
+                                                                  ? 'Reopen Job'
+                                                                  : 'Close Job',
+                                                              style:
+                                                                  const TextStyle(
+                                                                color: Colors
+                                                                    .white,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600,
                                                               ),
                                                             ),
                                                             onTap: () {
-                                                              Navigator.pop(dialogContext);
-                                                              _closeJob(doc.id, isClosed, safeCtx, endDate);
+                                                              Navigator.pop(
+                                                                  dialogContext);
+                                                              _closeJob(
+                                                                  doc.id,
+                                                                  isClosed,
+                                                                  safeCtx,
+                                                                  endDate);
                                                             },
                                                           ),
                                                           const Divider(
-                                                            color: Colors.white24,
+                                                            color:
+                                                                Colors.white24,
                                                             height: 1,
                                                           ),
                                                           ListTile(
                                                             leading: const Icon(
-                                                              Icons.delete_outline,
-                                                              color: Color(0xFFFF7B7B),
+                                                              Icons
+                                                                  .delete_outline,
+                                                              color: Color(
+                                                                  0xFFFF7B7B),
                                                               size: 22,
                                                             ),
                                                             title: const Text(
                                                               'Delete Job',
                                                               style: TextStyle(
-                                                                color: Color(0xFFFF7B7B),
-                                                                fontWeight: FontWeight.w600,
+                                                                color: Color(
+                                                                    0xFFFF7B7B),
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600,
                                                               ),
                                                             ),
                                                             onTap: () {
-                                                              Navigator.pop(dialogContext);
-                                                              _deleteJob(doc.id, title, safeCtx);
+                                                              Navigator.pop(
+                                                                  dialogContext);
+                                                              _deleteJob(
+                                                                  doc.id,
+                                                                  title,
+                                                                  safeCtx);
                                                             },
                                                           ),
                                                         ],
@@ -1159,28 +1263,30 @@ class _CompanyHomeState extends State<CompanyHome> {
     );
 
     return ThemedScaffold(
-      floatingActionButton: _tab == 1 ? Padding(
-        padding: const EdgeInsets.only(bottom: 0, right: 0),
-        child: FloatingActionButton.extended(
-          backgroundColor: _brand,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(28),
-          ),
-          icon: const Icon(Icons.add),
-          label: const Text(
-            'Create Job Post',
-            style: TextStyle(fontWeight: FontWeight.w600),
-          ),
-          onPressed: () async {
-            final canProceed = await _checkProfileComplete();
-            if (canProceed && mounted) {
-              await Navigator.pushNamed(context, '/job-posting');
-              if (mounted) setState(() {});
-            }
-          },
-        ),
-      ) : null,
+      floatingActionButton: _tab == 1
+          ? Padding(
+              padding: const EdgeInsets.only(bottom: 0, right: 0),
+              child: FloatingActionButton.extended(
+                backgroundColor: _brand,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28),
+                ),
+                icon: const Icon(Icons.add),
+                label: const Text(
+                  'Create Job Post',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                onPressed: () async {
+                  final canProceed = await _checkProfileComplete();
+                  if (canProceed && mounted) {
+                    await Navigator.pushNamed(context, '/job-posting');
+                    if (mounted) setState(() {});
+                  }
+                },
+              ),
+            )
+          : null,
       key: _scaffoldKey,
       appBar: _buildCustomAppBar(companyId),
       body: IndexedStack(
@@ -1194,14 +1300,15 @@ class _CompanyHomeState extends State<CompanyHome> {
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Theme.of(context).scaffoldBackgroundColor,
+                      color: const Color(0xFFF5F5F5),
                       borderRadius: const BorderRadius.only(
                         topLeft: Radius.circular(30),
                         topRight: Radius.circular(30),
                       ),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 32, vertical: 32),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -1218,7 +1325,8 @@ class _CompanyHomeState extends State<CompanyHome> {
                               borderRadius: BorderRadius.circular(24),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFFFD6C67).withOpacity(0.4),
+                                  color:
+                                      const Color(0xFFFD6C67).withOpacity(0.4),
                                   blurRadius: 20,
                                   offset: const Offset(0, 10),
                                 ),
@@ -1231,7 +1339,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                             ),
                           ),
                           const SizedBox(height: 24),
-                          
+
                           // Title
                           const Text(
                             'Reports',
@@ -1244,7 +1352,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 12),
-                          
+
                           // Coming Soon badge
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -1270,7 +1378,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                             ),
                           ),
                           const SizedBox(height: 16),
-                          
+
                           // Description
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -1287,7 +1395,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                             ),
                           ),
                           const SizedBox(height: 24),
-                          
+
                           // Feature list - compact
                           _CompactReportFeature(
                             icon: Icons.description_outlined,
@@ -1303,12 +1411,13 @@ class _CompanyHomeState extends State<CompanyHome> {
                             icon: Icons.mic_outlined,
                             title: 'Voice Tone Analysis',
                           ),
-                          
+
                           const SizedBox(height: 20),
-                          
+
                           // Footer
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: [
@@ -1326,14 +1435,16 @@ class _CompanyHomeState extends State<CompanyHome> {
                                 Icon(
                                   Icons.auto_awesome,
                                   size: 16,
-                                  color: const Color(0xFF4A5FBC).withOpacity(0.7),
+                                  color:
+                                      const Color(0xFF4A5FBC).withOpacity(0.7),
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
                                   'Plus much more!',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: const Color(0xFF4A5FBC).withOpacity(0.8),
+                                    color: const Color(0xFF4A5FBC)
+                                        .withOpacity(0.8),
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -1526,7 +1637,8 @@ class _ProfileButton extends StatelessWidget {
                 ),
                 child: CircleAvatar(
                   radius: 22,
-                  backgroundImage: photo.isNotEmpty ? NetworkImage(photo) : null,
+                  backgroundImage:
+                      photo.isNotEmpty ? NetworkImage(photo) : null,
                   backgroundColor: Colors.transparent,
                   foregroundColor: Colors.white,
                   child: photo.isEmpty && initials.isNotEmpty

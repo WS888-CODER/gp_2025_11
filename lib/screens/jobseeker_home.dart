@@ -191,7 +191,8 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
                     // Settings button
                     GestureDetector(
                       onTap: () {
-                        final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+                        final uid =
+                            FirebaseAuth.instance.currentUser?.uid ?? '';
                         if (uid.isEmpty) return;
                         Navigator.pushNamed(
                           context,
@@ -242,7 +243,7 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: Theme.of(context).scaffoldBackgroundColor,
+                color: const Color(0xFFF5F5F5),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(30),
                   topRight: Radius.circular(30),
@@ -270,8 +271,8 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
                             Color(0xFF4A5FBC),
                           ],
                           onTap: () {
-                            SnackHelper.error(
-                                context, 'Mock Interviews will be available soon');
+                            SnackHelper.error(context,
+                                'Mock Interviews will be available soon');
                           },
                         ),
                       ),

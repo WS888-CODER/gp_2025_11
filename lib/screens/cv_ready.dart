@@ -14,7 +14,12 @@ import '../config/themed_scaffold.dart';
 
 class PublishScreen extends StatefulWidget {
   final String cvUrl; // Actually cvHistoryId
-  const PublishScreen({super.key, required this.cvUrl});
+  final bool isFromHistory; // ← نضيف هذا
+  const PublishScreen({
+    super.key,
+    required this.cvUrl,
+    this.isFromHistory = false, // ← نضيف هذا
+  });
 
   @override
   State<PublishScreen> createState() => _PublishScreenState();
@@ -177,6 +182,13 @@ class _PublishScreenState extends State<PublishScreen> {
                 color: Colors.white,
               )),
           automaticallyImplyLeading: false,
+          leading: widget.isFromHistory // ← ضيفي هذا السطر
+              ? IconButton(
+                  // ← وهذا
+                  icon: const Icon(Icons.arrow_back), // ← وهذا
+                  onPressed: () => Navigator.pop(context), // ← وهذا
+                ) // ← وهذا
+              : null, // ← وهذا
         ),
         body: StreamBuilder<DocumentSnapshot>(
           stream: FirebaseFirestore.instance
@@ -455,37 +467,42 @@ class _PublishScreenState extends State<PublishScreen> {
           },
         ),
         // Fixed Done button at the bottom
-        bottomNavigationBar: Container(
-          padding: const EdgeInsets.all(20),
-          child: SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton(
-              onPressed: () {
-                // Get userId from current user
-                final userId = FirebaseAuth.instance.currentUser?.uid;
-                if (userId != null) {
-                  Navigator.of(context).pushNamedAndRemoveUntil(
-                    '/jobseeker-home',
-                    (route) => false,
-                    arguments: {'userId': userId},
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryPurple,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28),
+        bottomNavigationBar: widget
+                .isFromHistory // ← ضيفي هذا السطر قبل Container
+            ? null // ← لو من الهيستوري، ما نعرض شي
+            : Container(
+                // ← باقي الكود نفسه
+                padding: const EdgeInsets.all(20),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      // Get userId from current user
+                      final userId = FirebaseAuth.instance.currentUser?.uid;
+                      if (userId != null) {
+                        Navigator.of(context).pushNamedAndRemoveUntil(
+                          '/jobseeker-home',
+                          (route) => false,
+                          arguments: {'userId': userId},
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryPurple,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(28),
+                      ),
+                    ),
+                    child: const Text(
+                      'Done',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
                 ),
               ),
-              child: const Text(
-                'Done',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }

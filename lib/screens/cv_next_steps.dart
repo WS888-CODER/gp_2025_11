@@ -235,7 +235,7 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        backgroundColor: const Color(0xFFF5F5F5),
         appBar: AppBar(
           backgroundColor: AppTheme.primaryPurple,
           foregroundColor: Colors.white,

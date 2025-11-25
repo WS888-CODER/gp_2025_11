@@ -1375,6 +1375,56 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
                                       initialDate: initial,
                                       firstDate: first,
                                       lastDate: last,
+                                      builder: (context, child) {
+                                        final theme = Theme.of(context);
+                                        final scheme = theme.colorScheme;
+
+                                        return Theme(
+                                          data: theme.copyWith(
+                                            colorScheme: scheme.copyWith(
+                                              primary: const Color(0xFFFC686A),
+                                              onPrimary: Colors.white,
+                                              onSurface: Colors.white,
+                                              surface: const Color(0xFF4A5FBC)
+                                                  .withOpacity(0.95),
+                                            ),
+                                            datePickerTheme:
+                                                DatePickerThemeData(
+                                              backgroundColor:
+                                                  const Color(0xFF4A5FBC)
+                                                      .withOpacity(0.95),
+                                              headerForegroundColor:
+                                                  Colors.white,
+                                              weekdayStyle: const TextStyle(
+                                                  color: Colors.white),
+                                              yearStyle: const TextStyle(
+                                                  color: Colors.white),
+                                              todayBorder: BorderSide.none,
+                                              todayBackgroundColor:
+                                                  MaterialStateColor
+                                                      .resolveWith((states) {
+                                                if (states.contains(
+                                                    MaterialState.selected)) {
+                                                  return const Color(
+                                                      0xFFFC686A);
+                                                }
+                                                return const Color(0xFFFC686A)
+                                                    .withOpacity(0.15);
+                                              }),
+                                              todayForegroundColor:
+                                                  MaterialStateColor
+                                                      .resolveWith((states) {
+                                                if (states.contains(
+                                                    MaterialState.selected)) {
+                                                  return Colors.white;
+                                                }
+                                                return Colors.white;
+                                              }),
+                                            ),
+                                          ),
+                                          child: child!,
+                                        );
+                                      },
                                     );
                                     if (picked != null) {
                                       setState(() => _dob = picked);

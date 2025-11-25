@@ -464,23 +464,28 @@ class _JobPostingPageState extends State<JobPostingPage> {
         return Theme(
           data: theme.copyWith(
             colorScheme: scheme.copyWith(
-              primary: const Color(0xFF4A5FBC),
+              primary: const Color(0xFFFC686A),
               onPrimary: Colors.white,
-              onSurface: scheme.onSurface,
+              onSurface: Colors.white,
+              surface: const Color(0xFF4A5FBC).withOpacity(0.95),
             ),
             datePickerTheme: DatePickerThemeData(
+              backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.95),
+              headerForegroundColor: Colors.white,
+              weekdayStyle: const TextStyle(color: Colors.white),
+              yearStyle: const TextStyle(color: Colors.white),
               todayBorder: BorderSide.none,
               todayBackgroundColor: MaterialStateColor.resolveWith((states) {
                 if (states.contains(MaterialState.selected)) {
-                  return const Color(0xFF4A5FBC);
+                  return const Color(0xFFFC686A);
                 }
-                return scheme.primary.withOpacity(0.15);
+                return const Color(0xFFFC686A).withOpacity(0.15);
               }),
               todayForegroundColor: MaterialStateColor.resolveWith((states) {
                 if (states.contains(MaterialState.selected)) {
                   return Colors.white;
                 }
-                return scheme.onSurface;
+                return Colors.white;
               }),
             ),
           ),
@@ -521,23 +526,28 @@ class _JobPostingPageState extends State<JobPostingPage> {
         return Theme(
           data: theme.copyWith(
             colorScheme: scheme.copyWith(
-              primary: const Color(0xFF4A5FBC),
+              primary: const Color(0xFFFC686A),
               onPrimary: Colors.white,
-              onSurface: scheme.onSurface,
+              onSurface: Colors.white,
+              surface: const Color(0xFF4A5FBC).withOpacity(0.95),
             ),
             datePickerTheme: DatePickerThemeData(
+              backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.95),
+              headerForegroundColor: Colors.white,
+              weekdayStyle: const TextStyle(color: Colors.white),
+              yearStyle: const TextStyle(color: Colors.white),
               todayBorder: BorderSide.none,
               todayBackgroundColor: MaterialStateColor.resolveWith((states) {
                 if (states.contains(MaterialState.selected)) {
-                  return const Color(0xFF4A5FBC);
+                  return const Color(0xFFFC686A);
                 }
-                return scheme.primary.withOpacity(0.15);
+                return const Color(0xFFFC686A).withOpacity(0.15);
               }),
               todayForegroundColor: MaterialStateColor.resolveWith((states) {
                 if (states.contains(MaterialState.selected)) {
                   return Colors.white;
                 }
-                return scheme.onSurface;
+                return Colors.white;
               }),
             ),
           ),
@@ -1185,287 +1195,288 @@ class _JobPostingPageState extends State<JobPostingPage> {
                   // Job Title (hide in edit mode)
                   if (!_isEdit)
                     Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 4, bottom: 8),
-                        child: _buildLabelWithInfo(
-                          'Job Title',
-                          'The job title is the name of the position you are hiring for. It tells candidates exactly what role the company wants to fill.\n\nEnter a clear, descriptive title that accurately reflects the role and responsibilities.',
-                          isInvalid: _jobTitleController.text.isEmpty,
-                          required: true,
-                        ),
-                      ),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: scheme.surface,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
-                              blurRadius: 20,
-                              offset: const Offset(0, 4),
-                              spreadRadius: 0,
-                            ),
-                          ],
-                        ),
-                        child: TextFormField(
-                          controller: _jobTitleController,
-                          enabled: !_isEdit,
-                          maxLength: 100,
-                          decoration: const InputDecoration(
-                            hintText: 'Enter job title',
-                            hintStyle: TextStyle(color: Colors.grey),
-                            filled: true,
-                            fillColor: Colors.transparent,
-                            border: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(12)),
-                              borderSide: BorderSide.none,
-                            ),
-                            errorBorder: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(12)),
-                              borderSide: BorderSide.none,
-                            ),
-                            focusedErrorBorder: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(12)),
-                              borderSide: BorderSide.none,
-                            ),
-                            errorStyle: TextStyle(height: 0, fontSize: 0),
-                            errorMaxLines: 1,
-                            counterText: '',
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4, bottom: 8),
+                          child: _buildLabelWithInfo(
+                            'Job Title',
+                            'The job title is the name of the position you are hiring for. It tells candidates exactly what role the company wants to fill.\n\nEnter a clear, descriptive title that accurately reflects the role and responsibilities.',
+                            isInvalid: _jobTitleController.text.isEmpty,
+                            required: true,
                           ),
-                          validator: (v) =>
-                              (v == null || v.isEmpty) ? '' : null,
                         ),
-                      ),
-                    ],
-                  ),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: scheme.surface,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.08),
+                                blurRadius: 20,
+                                offset: const Offset(0, 4),
+                                spreadRadius: 0,
+                              ),
+                            ],
+                          ),
+                          child: TextFormField(
+                            controller: _jobTitleController,
+                            enabled: !_isEdit,
+                            maxLength: 100,
+                            decoration: const InputDecoration(
+                              hintText: 'Enter job title',
+                              hintStyle: TextStyle(color: Colors.grey),
+                              filled: true,
+                              fillColor: Colors.transparent,
+                              border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(12)),
+                                borderSide: BorderSide.none,
+                              ),
+                              errorBorder: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(12)),
+                                borderSide: BorderSide.none,
+                              ),
+                              focusedErrorBorder: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(12)),
+                                borderSide: BorderSide.none,
+                              ),
+                              errorStyle: TextStyle(height: 0, fontSize: 0),
+                              errorMaxLines: 1,
+                              counterText: '',
+                            ),
+                            validator: (v) =>
+                                (v == null || v.isEmpty) ? '' : null,
+                          ),
+                        ),
+                      ],
+                    ),
                   if (!_isEdit) const SizedBox(height: 16),
 
                   // Position (hide in edit mode)
                   if (!_isEdit)
                     Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 4, bottom: 8),
-                        child: _buildLabelWithInfo(
-                          'Position',
-                          'Specify the job\'s level and role\nfor example: Junior Developer, Senior Designer, Team Lead. \nThis helps show the seniority, scope, and responsibilities of the position.',
-                          required: false,
-                        ),
-                      ),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: scheme.surface,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
-                              blurRadius: 20,
-                              offset: const Offset(0, 4),
-                              spreadRadius: 0,
-                            ),
-                          ],
-                        ),
-                        child: TextFormField(
-                          controller: _positionController,
-                          enabled: !_isEdit,
-                          maxLength: 100,
-                          decoration: const InputDecoration(
-                            hintText: 'Enter job position',
-                            hintStyle: TextStyle(color: Colors.grey),
-                            filled: true,
-                            fillColor: Colors.transparent,
-                            border: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(12)),
-                              borderSide: BorderSide.none,
-                            ),
-                            errorBorder: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(12)),
-                              borderSide: BorderSide.none,
-                            ),
-                            focusedErrorBorder: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(12)),
-                              borderSide: BorderSide.none,
-                            ),
-                            errorStyle: TextStyle(height: 0, fontSize: 0),
-                            errorMaxLines: 1,
-                            counterText: '',
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4, bottom: 8),
+                          child: _buildLabelWithInfo(
+                            'Position',
+                            'Specify the job\'s level and role\nfor example: Junior Developer, Senior Designer, Team Lead. \nThis helps show the seniority, scope, and responsibilities of the position.',
+                            required: false,
                           ),
                         ),
-                      ),
-                    ],
-                  ),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: scheme.surface,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.08),
+                                blurRadius: 20,
+                                offset: const Offset(0, 4),
+                                spreadRadius: 0,
+                              ),
+                            ],
+                          ),
+                          child: TextFormField(
+                            controller: _positionController,
+                            enabled: !_isEdit,
+                            maxLength: 100,
+                            decoration: const InputDecoration(
+                              hintText: 'Enter job position',
+                              hintStyle: TextStyle(color: Colors.grey),
+                              filled: true,
+                              fillColor: Colors.transparent,
+                              border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(12)),
+                                borderSide: BorderSide.none,
+                              ),
+                              errorBorder: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(12)),
+                                borderSide: BorderSide.none,
+                              ),
+                              focusedErrorBorder: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(12)),
+                                borderSide: BorderSide.none,
+                              ),
+                              errorStyle: TextStyle(height: 0, fontSize: 0),
+                              errorMaxLines: 1,
+                              counterText: '',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   if (!_isEdit) const SizedBox(height: 16),
 
                   // Speciality (hide in edit mode)
                   if (!_isEdit)
                     Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 4, bottom: 8),
-                        child: _buildLabelWithInfo(
-                          'Speciality',
-                          'Indicate the job\'s main area of expertise\nfor example: Data Science, Frontend Development, Cybersecurity.\nthis field helps job seekers find job posts more easily.',
-                          required: true,
-                          isInvalid:
-                              !_isEdit && _getSpecialtyValue().trim().isEmpty,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4, bottom: 8),
+                          child: _buildLabelWithInfo(
+                            'Speciality',
+                            'Indicate the job\'s main area of expertise\nfor example: Data Science, Frontend Development, Cybersecurity.\nthis field helps job seekers find job posts more easily.',
+                            required: true,
+                            isInvalid:
+                                !_isEdit && _getSpecialtyValue().trim().isEmpty,
+                          ),
                         ),
-                      ),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: scheme.surface,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
-                              blurRadius: 20,
-                              offset: const Offset(0, 4),
-                              spreadRadius: 0,
-                            ),
-                          ],
-                        ),
-                        child: Autocomplete<String>(
-                          key: ValueKey('spec-${_selectedSpecialty ?? ''}'),
-                          initialValue: _selectedSpecialty != null
-                              ? TextEditingValue(text: _selectedSpecialty!)
-                              : null,
-                          optionsBuilder: (TextEditingValue textEditingValue) {
-                            if (textEditingValue.text.isEmpty) {
-                              return _specialtyOptions;
-                            }
-                            return _specialtyOptions.where((String option) {
-                              return option.toLowerCase().contains(
-                                  textEditingValue.text.toLowerCase());
-                            });
-                          },
-                          onSelected: (String selection) {
-                            setState(() {
-                              _selectedSpecialty = selection;
-                            });
-                          },
-                          fieldViewBuilder: (context, textEditingController,
-                              focusNode, onFieldSubmitted) {
-                            return TextFormField(
-                              controller: textEditingController,
-                              focusNode: focusNode,
-                              enabled: !_isEdit,
-                              maxLength: 100,
-                              decoration: const InputDecoration(
-                                hintText: 'Type or select specialty',
-                                hintStyle: TextStyle(color: Colors.grey),
-                                filled: true,
-                                fillColor: Colors.transparent,
-                                border: OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(12)),
-                                  borderSide: BorderSide.none,
-                                ),
-                                errorBorder: OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(12)),
-                                  borderSide: BorderSide.none,
-                                ),
-                                focusedErrorBorder: OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(12)),
-                                  borderSide: BorderSide.none,
-                                ),
-                                errorStyle: TextStyle(height: 0, fontSize: 0),
-                                errorMaxLines: 1,
-                                counterText: '',
+                        Container(
+                          decoration: BoxDecoration(
+                            color: scheme.surface,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.08),
+                                blurRadius: 20,
+                                offset: const Offset(0, 4),
+                                spreadRadius: 0,
                               ),
-                              onChanged: (value) {
-                                setState(() {});
-                              },
-                              onFieldSubmitted: (value) {
-                                final match = _specialtyOptions.firstWhere(
-                                  (option) =>
-                                      option.toLowerCase() ==
-                                      value.toLowerCase(),
-                                  orElse: () => '',
-                                );
+                            ],
+                          ),
+                          child: Autocomplete<String>(
+                            key: ValueKey('spec-${_selectedSpecialty ?? ''}'),
+                            initialValue: _selectedSpecialty != null
+                                ? TextEditingValue(text: _selectedSpecialty!)
+                                : null,
+                            optionsBuilder:
+                                (TextEditingValue textEditingValue) {
+                              if (textEditingValue.text.isEmpty) {
+                                return _specialtyOptions;
+                              }
+                              return _specialtyOptions.where((String option) {
+                                return option.toLowerCase().contains(
+                                    textEditingValue.text.toLowerCase());
+                              });
+                            },
+                            onSelected: (String selection) {
+                              setState(() {
+                                _selectedSpecialty = selection;
+                              });
+                            },
+                            fieldViewBuilder: (context, textEditingController,
+                                focusNode, onFieldSubmitted) {
+                              return TextFormField(
+                                controller: textEditingController,
+                                focusNode: focusNode,
+                                enabled: !_isEdit,
+                                maxLength: 100,
+                                decoration: const InputDecoration(
+                                  hintText: 'Type or select specialty',
+                                  hintStyle: TextStyle(color: Colors.grey),
+                                  filled: true,
+                                  fillColor: Colors.transparent,
+                                  border: OutlineInputBorder(
+                                    borderRadius:
+                                        BorderRadius.all(Radius.circular(12)),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  errorBorder: OutlineInputBorder(
+                                    borderRadius:
+                                        BorderRadius.all(Radius.circular(12)),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  focusedErrorBorder: OutlineInputBorder(
+                                    borderRadius:
+                                        BorderRadius.all(Radius.circular(12)),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  errorStyle: TextStyle(height: 0, fontSize: 0),
+                                  errorMaxLines: 1,
+                                  counterText: '',
+                                ),
+                                onChanged: (value) {
+                                  setState(() {});
+                                },
+                                onFieldSubmitted: (value) {
+                                  final match = _specialtyOptions.firstWhere(
+                                    (option) =>
+                                        option.toLowerCase() ==
+                                        value.toLowerCase(),
+                                    orElse: () => '',
+                                  );
 
-                                if (match.isNotEmpty) {
-                                  setState(() {
-                                    _selectedSpecialty = match;
-                                    textEditingController.text = match;
-                                    textEditingController.selection =
-                                        TextSelection.fromPosition(
-                                      TextPosition(offset: match.length),
-                                    );
-                                  });
-                                } else {
-                                  if (_selectedSpecialty != null &&
-                                      _specialtyOptions
-                                          .contains(_selectedSpecialty)) {
-                                    final last = _selectedSpecialty!;
-                                    textEditingController.text = last;
-                                    textEditingController.selection =
-                                        TextSelection.fromPosition(
-                                      TextPosition(offset: last.length),
-                                    );
-                                  } else {
-                                    textEditingController.clear();
-                                  }
-                                  _showWarningSnackBar(
-                                      'Please choose a specialty from the list');
-                                }
-                              },
-                            );
-                          },
-                          optionsViewBuilder: (context, onSelected, options) {
-                            return Align(
-                              alignment: Alignment.topLeft,
-                              child: Material(
-                                elevation: 4,
-                                borderRadius: BorderRadius.circular(12),
-                                child: Container(
-                                  constraints:
-                                      const BoxConstraints(maxHeight: 200),
-                                  decoration: BoxDecoration(
-                                    color: scheme.surface,
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.1),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 3),
-                                      ),
-                                    ],
-                                  ),
-                                  child: ListView.builder(
-                                    padding: EdgeInsets.zero,
-                                    shrinkWrap: true,
-                                    itemCount: options.length,
-                                    itemBuilder: (context, index) {
-                                      final option = options.elementAt(index);
-                                      return InkWell(
-                                        onTap: () => onSelected(option),
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 16, vertical: 12),
-                                          child: Text(option),
-                                        ),
+                                  if (match.isNotEmpty) {
+                                    setState(() {
+                                      _selectedSpecialty = match;
+                                      textEditingController.text = match;
+                                      textEditingController.selection =
+                                          TextSelection.fromPosition(
+                                        TextPosition(offset: match.length),
                                       );
-                                    },
+                                    });
+                                  } else {
+                                    if (_selectedSpecialty != null &&
+                                        _specialtyOptions
+                                            .contains(_selectedSpecialty)) {
+                                      final last = _selectedSpecialty!;
+                                      textEditingController.text = last;
+                                      textEditingController.selection =
+                                          TextSelection.fromPosition(
+                                        TextPosition(offset: last.length),
+                                      );
+                                    } else {
+                                      textEditingController.clear();
+                                    }
+                                    _showWarningSnackBar(
+                                        'Please choose a specialty from the list');
+                                  }
+                                },
+                              );
+                            },
+                            optionsViewBuilder: (context, onSelected, options) {
+                              return Align(
+                                alignment: Alignment.topLeft,
+                                child: Material(
+                                  elevation: 4,
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    constraints:
+                                        const BoxConstraints(maxHeight: 200),
+                                    decoration: BoxDecoration(
+                                      color: scheme.surface,
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.1),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 3),
+                                        ),
+                                      ],
+                                    ),
+                                    child: ListView.builder(
+                                      padding: EdgeInsets.zero,
+                                      shrinkWrap: true,
+                                      itemCount: options.length,
+                                      itemBuilder: (context, index) {
+                                        final option = options.elementAt(index);
+                                        return InkWell(
+                                          onTap: () => onSelected(option),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 16, vertical: 12),
+                                            child: Text(option),
+                                          ),
+                                        );
+                                      },
+                                    ),
                                   ),
                                 ),
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
                   if (!_isEdit) const SizedBox(height: 16),
 
                   // AI Generate Button (only show in create mode)
@@ -1568,74 +1579,75 @@ class _JobPostingPageState extends State<JobPostingPage> {
                   // Job Description (hide in edit mode)
                   if (!_isEdit)
                     Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 4, bottom: 8),
-                        child: _buildLabel('Job Description',
-                            _jobDescriptionController.text.isEmpty),
-                      ),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: scheme.surface,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
-                              blurRadius: 20,
-                              offset: const Offset(0, 4),
-                              spreadRadius: 0,
-                            ),
-                          ],
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4, bottom: 8),
+                          child: _buildLabel('Job Description',
+                              _jobDescriptionController.text.isEmpty),
                         ),
-                        child: TextFormField(
-                          controller: _jobDescriptionController,
-                          enabled: !_isEdit,
-                          maxLength: 4000,
-                          decoration: InputDecoration(
-                            hintText:
-                                'Write a clear description for this job...',
-                            hintStyle: const TextStyle(color: Colors.grey),
-                            filled: true,
-                            fillColor: Colors.transparent,
-                            border: const OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(12)),
-                              borderSide: BorderSide.none,
-                            ),
-                            errorBorder: const OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(12)),
-                              borderSide: BorderSide.none,
-                            ),
-                            focusedErrorBorder: const OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(12)),
-                              borderSide: BorderSide.none,
-                            ),
-                            errorStyle: const TextStyle(height: 0, fontSize: 0),
-                            errorMaxLines: 1,
-                            counterText: '',
-                            helperText:
-                                '${_jobDescriptionController.text.length}/4000',
-                            helperStyle: TextStyle(
-                              fontSize: 12,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withOpacity(0.6),
-                            ),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: scheme.surface,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.08),
+                                blurRadius: 20,
+                                offset: const Offset(0, 4),
+                                spreadRadius: 0,
+                              ),
+                            ],
                           ),
-                          minLines: 6,
-                          maxLines: null,
-                          keyboardType: TextInputType.multiline,
-                          validator: (v) =>
-                              (v == null || v.isEmpty) ? '' : null,
-                          onChanged: (value) => setState(() {}),
+                          child: TextFormField(
+                            controller: _jobDescriptionController,
+                            enabled: !_isEdit,
+                            maxLength: 4000,
+                            decoration: InputDecoration(
+                              hintText:
+                                  'Write a clear description for this job...',
+                              hintStyle: const TextStyle(color: Colors.grey),
+                              filled: true,
+                              fillColor: Colors.transparent,
+                              border: const OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(12)),
+                                borderSide: BorderSide.none,
+                              ),
+                              errorBorder: const OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(12)),
+                                borderSide: BorderSide.none,
+                              ),
+                              focusedErrorBorder: const OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(12)),
+                                borderSide: BorderSide.none,
+                              ),
+                              errorStyle:
+                                  const TextStyle(height: 0, fontSize: 0),
+                              errorMaxLines: 1,
+                              counterText: '',
+                              helperText:
+                                  '${_jobDescriptionController.text.length}/4000',
+                              helperStyle: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.6),
+                              ),
+                            ),
+                            minLines: 6,
+                            maxLines: null,
+                            keyboardType: TextInputType.multiline,
+                            validator: (v) =>
+                                (v == null || v.isEmpty) ? '' : null,
+                            onChanged: (value) => setState(() {}),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
                   if (!_isEdit) const SizedBox(height: 16),
 
                   // Requirements (only show in create mode)
@@ -1648,8 +1660,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              _buildLabel(
-                                  'Requirements', _requirements.isEmpty,
+                              _buildLabel('Requirements', _requirements.isEmpty,
                                   isBold: true),
                               Text(
                                 '${_requirements.length}/10',
@@ -1689,8 +1700,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                                     filled: true,
                                     fillColor: Colors.transparent,
                                     border: OutlineInputBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(12),
+                                      borderRadius: BorderRadius.circular(12),
                                       borderSide: BorderSide.none,
                                     ),
                                     counterText: '',
@@ -1706,7 +1716,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFFFD6C67).withOpacity(0.3),
+                                    color: const Color(0xFFFD6C67)
+                                        .withOpacity(0.3),
                                     blurRadius: 8,
                                     offset: const Offset(0, 2),
                                   ),
@@ -1716,7 +1727,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
                                 onPressed: _requirements.length >= 10
                                     ? null
                                     : _addRequirement,
-                                icon: const Icon(Icons.add, color: Colors.white),
+                                icon:
+                                    const Icon(Icons.add, color: Colors.white),
                                 padding: const EdgeInsets.all(8),
                               ),
                             ),
@@ -1748,8 +1760,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                                   trailing: IconButton(
                                     icon: const Icon(Icons.delete,
                                         color: Colors.red),
-                                    onPressed: () =>
-                                        _removeRequirement(index),
+                                    onPressed: () => _removeRequirement(index),
                                   ),
                                 ),
                               );
@@ -1784,7 +1795,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide.none,
                           ),
-                          suffixIcon: const Icon(Icons.calendar_today, color: Color(0xFFFD6C67)),
+                          suffixIcon: const Icon(Icons.calendar_today,
+                              color: Color(0xFFFD6C67)),
                         ),
                         child: Text(
                           _startDate != null
@@ -1826,7 +1838,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide.none,
                           ),
-                          suffixIcon: const Icon(Icons.calendar_today, color: Color(0xFFFD6C67)),
+                          suffixIcon: const Icon(Icons.calendar_today,
+                              color: Color(0xFFFD6C67)),
                         ),
                         child: Text(
                           _endDate != null
@@ -1855,7 +1868,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                         elevation: 2,
                         shadowColor: const Color(0xFF4A5FBC).withOpacity(0.3),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(28),
                         ),
                       ),
                       child: Text(

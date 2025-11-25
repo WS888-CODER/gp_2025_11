@@ -59,6 +59,7 @@ class _HistoryPageState extends State<HistoryPage>
           Tab(
             child: Text(
               'CV Enhancement',
+              textAlign: TextAlign.center, // ← ضيفي هذا السطر
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 15,
@@ -68,6 +69,7 @@ class _HistoryPageState extends State<HistoryPage>
           Tab(
             child: Text(
               'Mock Interview',
+              textAlign: TextAlign.center, // ← ضيفي هذا السطر
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 15,
@@ -77,6 +79,7 @@ class _HistoryPageState extends State<HistoryPage>
           Tab(
             child: Text(
               'Job Application',
+              textAlign: TextAlign.center, // ← ضيفي هذا السطر
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 15,
@@ -144,7 +147,10 @@ class _HistoryPageState extends State<HistoryPage>
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => PublishScreen(cvUrl: cvHistoryId),
+                    builder: (_) => PublishScreen(
+                      cvUrl: cvHistoryId,
+                      isFromHistory: true, // ← نضيف هذا
+                    ),
                   ),
                 );
               },
@@ -256,8 +262,7 @@ class _HistoryPageState extends State<HistoryPage>
           itemBuilder: (context, index) {
             final data = docs[index].data() as Map<String, dynamic>;
             final date = (data['Date'] as Timestamp?)?.toDate();
-            final jobTitle =
-                (data['JobTitle'] ?? 'Job Application').toString();
+            final jobTitle = (data['JobTitle'] ?? 'Job Application').toString();
             final status = (data['ApplicationStatus'] ?? '').toString();
 
             return _historyTile(
