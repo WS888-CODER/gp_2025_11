@@ -1384,9 +1384,52 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
                                             colorScheme: scheme.copyWith(
                                               primary: const Color(0xFFFC686A),
                                               onPrimary: Colors.white,
-                                              onSurface: Colors.white,
+                                              onSurface: Colors
+                                                  .white, // السنوات والأرقام
                                               surface: const Color(0xFF4A5FBC)
                                                   .withOpacity(0.95),
+                                            ),
+                                            textTheme: theme.textTheme.copyWith(
+                                              // نص السنوات
+                                              bodyLarge: const TextStyle(
+                                                  color: Colors.white),
+                                              // نص الأرقام في الكاليندر
+                                              bodyMedium: const TextStyle(
+                                                  color: Colors.white),
+                                              // نص التاريخ المختار
+                                              headlineMedium: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold),
+                                              // نص السنة في الـ header
+                                              titleLarge: const TextStyle(
+                                                  color: Colors.white),
+                                            ),
+                                            inputDecorationTheme:
+                                                InputDecorationTheme(
+                                              // للـ Input mode (لما تضغطين القلم)
+                                              labelStyle: const TextStyle(
+                                                  color: Colors.white),
+                                              hintStyle: TextStyle(
+                                                  color: Colors.white
+                                                      .withOpacity(0.7)),
+                                              enabledBorder:
+                                                  const UnderlineInputBorder(
+                                                borderSide: BorderSide(
+                                                    color: Colors.white),
+                                              ),
+                                              focusedBorder:
+                                                  const UnderlineInputBorder(
+                                                borderSide: BorderSide(
+                                                    color: Color(0xFFFC686A),
+                                                    width: 2),
+                                              ),
+                                            ),
+                                            textButtonTheme:
+                                                TextButtonThemeData(
+                                              style: TextButton.styleFrom(
+                                                foregroundColor: const Color(
+                                                    0xFFFC686A), // أزرار OK و Cancel
+                                              ),
                                             ),
                                             datePickerTheme:
                                                 DatePickerThemeData(
@@ -1399,6 +1442,44 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
                                                   color: Colors.white),
                                               yearStyle: const TextStyle(
                                                   color: Colors.white),
+                                              dayStyle: const TextStyle(
+                                                  color: Colors
+                                                      .white), // الأيام في الشبكة
+                                              yearForegroundColor:
+                                                  MaterialStateColor
+                                                      .resolveWith((states) {
+                                                if (states.contains(
+                                                    MaterialState.selected)) {
+                                                  return Colors
+                                                      .white; // السنة المختارة
+                                                }
+                                                return Colors
+                                                    .white; // باقي السنوات
+                                              }),
+                                              yearBackgroundColor:
+                                                  MaterialStateColor
+                                                      .resolveWith((states) {
+                                                if (states.contains(
+                                                    MaterialState.selected)) {
+                                                  return const Color(
+                                                      0xFFFC686A); // خلفية السنة المختارة
+                                                }
+                                                return Colors.transparent;
+                                              }),
+                                              dayForegroundColor:
+                                                  MaterialStateColor
+                                                      .resolveWith((states) {
+                                                if (states.contains(
+                                                    MaterialState.selected)) {
+                                                  return Colors.white;
+                                                }
+                                                if (states.contains(
+                                                    MaterialState.disabled)) {
+                                                  return Colors.white
+                                                      .withOpacity(0.3);
+                                                }
+                                                return Colors.white;
+                                              }),
                                               todayBorder: BorderSide.none,
                                               todayBackgroundColor:
                                                   MaterialStateColor
