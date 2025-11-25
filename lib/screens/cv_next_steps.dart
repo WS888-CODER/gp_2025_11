@@ -3,6 +3,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import '../config/theme.dart';
 import 'cv_ready.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CVNextStepsScreen extends StatefulWidget {
   final String? cvHistoryId;
@@ -27,11 +28,23 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
   List<String>? _suggestedSkills;
   int _currentSectionIndex = 0;
   Map<String, dynamic> _filledSections = {};
+  bool _completedSuccessfully = false;
 
   @override
   void initState() {
     super.initState();
     _detectMissingSections();
+  }
+
+  @override
+  void dispose() {
+    if (!_completedSuccessfully && widget.cvHistoryId != null) {
+      FirebaseFirestore.instance
+          .collection('CVHistory')
+          .doc(widget.cvHistoryId)
+          .delete();
+    }
+    super.dispose();
   }
 
   Future<void> _detectMissingSections() async {
@@ -118,7 +131,7 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
       setState(() {
         _isEnhancing = false;
       });
-
+      _completedSuccessfully = true;
       // Navigate to CV Ready Screen to show results
       if (mounted) {
         Navigator.pushReplacement(
@@ -198,6 +211,14 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
         primaryResult: true,
       ),
     );
+
+// ✅ امسح الـ CV إذا المستخدم أكد الخروج
+    if (shouldPop == true && widget.cvHistoryId != null) {
+      await FirebaseFirestore.instance
+          .collection('CVHistory')
+          .doc(widget.cvHistoryId)
+          .delete();
+    }
 
     return shouldPop ?? false;
   }
@@ -305,56 +326,56 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
                 ),
               ),
             ),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  if (_currentSectionIndex > 0)
-                    TextButton.icon(
-                      onPressed: _goBack,
-                      icon: const Icon(Icons.arrow_back, size: 16),
-                      label: const Text('Back'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppTheme.primaryPurple,
-                      ),
-                    )
-                  else
-                    const SizedBox(width: 80),
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        'Section ${_currentSectionIndex + 1} of ${_missingSections.length}',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: scheme.onSurface,
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    if (_currentSectionIndex > 0)
+                      TextButton.icon(
+                        onPressed: _goBack,
+                        icon: const Icon(Icons.arrow_back, size: 16),
+                        label: const Text('Back'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.primaryPurple,
+                        ),
+                      )
+                    else
+                      const SizedBox(width: 80),
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          'Section ${_currentSectionIndex + 1} of ${_missingSections.length}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: scheme.onSurface,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  SizedBox(
-                    width: 80,
-                    child: TextButton(
-                      onPressed: _skipAll,
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppTheme.primaryPurple,
+                    SizedBox(
+                      width: 80,
+                      child: TextButton(
+                        onPressed: _skipAll,
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.primaryPurple,
+                        ),
+                        child: const Text('Skip All'),
                       ),
-                      child: const Text('Skip All'),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              LinearProgressIndicator(
-                value: progress,
-                backgroundColor: scheme.surface.withOpacity(0.5),
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                  AppTheme.primaryPurple,
+                  ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                LinearProgressIndicator(
+                  value: progress,
+                  backgroundColor: scheme.surface.withOpacity(0.5),
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                    AppTheme.primaryPurple,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
           Expanded(
             child: _buildSectionForm(sectionName),
           ),
@@ -710,7 +731,8 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
                     decoration: InputDecoration(
                       labelText: 'Links (LinkedIn, Portfolio, etc.)',
                       labelStyle: TextStyle(color: Colors.grey[600]),
-                      hintText: 'e.g., linkedin.com/in/johndoe, github.com/johndoe',
+                      hintText:
+                          'e.g., linkedin.com/in/johndoe, github.com/johndoe',
                       hintStyle: const TextStyle(color: Colors.grey),
                       filled: true,
                       fillColor: Colors.transparent,
@@ -889,7 +911,8 @@ class _SummaryFormState extends State<_SummaryForm> {
                     controller: _controller,
                     maxLines: 6,
                     decoration: InputDecoration(
-                      hintText: 'e.g., Experienced software engineer with 5+ years...',
+                      hintText:
+                          'e.g., Experienced software engineer with 5+ years...',
                       hintStyle: const TextStyle(color: Colors.grey),
                       filled: true,
                       fillColor: Colors.transparent,
@@ -1482,7 +1505,8 @@ class _EducationFormState extends State<_EducationForm> {
                   onPressed: widget.onSkip,
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: const BorderSide(color: AppTheme.primaryPurple, width: 2),
+                    side: const BorderSide(
+                        color: AppTheme.primaryPurple, width: 2),
                   ),
                   child: const Text('Skip'),
                 ),
@@ -1776,147 +1800,152 @@ class _SkillsFormState extends State<_SkillsForm> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-          const Text(
-            'Skills',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.primaryPurple,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            hasSuggestions
-                ? 'Add custom skills or select from suggestions below (max 20)'
-                : 'Add your skills (max 20)',
-            style: TextStyle(color: scheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 20),
-
-          // Custom Skills Section (moved to top)
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: scheme.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: TextField(
-                    controller: _controller,
-                    decoration: const InputDecoration(
-                      hintText: 'e.g., JavaScript, Python',
-                      hintStyle: TextStyle(color: Colors.grey),
-                      filled: true,
-                      fillColor: Colors.transparent,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                        borderSide: BorderSide.none,
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                    onSubmitted: (_) => _addCustomSkill(),
+                const Text(
+                  'Skills',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryPurple,
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: _totalSkills < 20 ? _addCustomSkill : null,
-                icon: const Icon(Icons.add_circle, size: 40),
-                color: AppTheme.primaryPurple,
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '${_totalSkills}/20 skills selected',
-            style: TextStyle(
-              color: _totalSkills >= 20 ? Colors.red : Colors.grey,
-              fontSize: 12,
-            ),
-          ),
-          const SizedBox(height: 16),
-          if (_customSkills.isNotEmpty)
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _customSkills.asMap().entries.map((entry) {
-                final index = entry.key;
-                final skill = entry.value;
-                return Chip(
-                  label: Text(skill),
-                  deleteIcon: const Icon(Icons.close, size: 18),
-                  onDeleted: () => _removeCustomSkill(index),
-                  backgroundColor: scheme.brightness == Brightness.dark
-                      ? scheme.surfaceContainerHighest
-                      : Colors.white,
-                  side: BorderSide.none,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                );
-              }).toList(),
-            ),
+                const SizedBox(height: 8),
+                Text(
+                  hasSuggestions
+                      ? 'Add custom skills or select from suggestions below (max 20)'
+                      : 'Add your skills (max 20)',
+                  style: TextStyle(color: scheme.onSurfaceVariant),
+                ),
+                const SizedBox(height: 20),
 
-          // Suggested Skills Section (moved to bottom)
-          if (hasSuggestions) ...[
-            const SizedBox(height: 24),
-            const Text(
-              'Or select from suggested skills:',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: widget.suggestedSkills!.map((skill) {
-                final isSelected = _selectedSuggestedSkills.contains(skill);
-                final canSelect = _totalSkills < 20 || isSelected;
-                return FilterChip(
-                  label: Text(skill),
-                  selected: isSelected,
-                  onSelected:
-                      canSelect ? (_) => _toggleSuggestedSkill(skill) : null,
-                  selectedColor: AppTheme.primaryPurple,
-                  checkmarkColor: Colors.white,
-                  labelStyle: TextStyle(
-                    color: isSelected ? Colors.white : scheme.onSurface,
-                    fontWeight:
-                        isSelected ? FontWeight.w500 : FontWeight.normal,
+                // Custom Skills Section (moved to top)
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: scheme.surface,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: TextField(
+                          controller: _controller,
+                          decoration: const InputDecoration(
+                            hintText: 'e.g., JavaScript, Python',
+                            hintStyle: TextStyle(color: Colors.grey),
+                            filled: true,
+                            fillColor: Colors.transparent,
+                            border: OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(12)),
+                              borderSide: BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(12)),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(12)),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                          onSubmitted: (_) => _addCustomSkill(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      onPressed: _totalSkills < 20 ? _addCustomSkill : null,
+                      icon: const Icon(Icons.add_circle, size: 40),
+                      color: AppTheme.primaryPurple,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '${_totalSkills}/20 skills selected',
+                  style: TextStyle(
+                    color: _totalSkills >= 20 ? Colors.red : Colors.grey,
+                    fontSize: 12,
                   ),
-                  backgroundColor: scheme.brightness == Brightness.dark
-                      ? scheme.surfaceContainerHighest
-                      : Colors.white,
-                  disabledColor: scheme.brightness == Brightness.dark
-                      ? scheme.surfaceContainer
-                      : Colors.grey[200],
-                  side: BorderSide.none,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
+                ),
+                const SizedBox(height: 16),
+                if (_customSkills.isNotEmpty)
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _customSkills.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final skill = entry.value;
+                      return Chip(
+                        label: Text(skill),
+                        deleteIcon: const Icon(Icons.close, size: 18),
+                        onDeleted: () => _removeCustomSkill(index),
+                        backgroundColor: scheme.brightness == Brightness.dark
+                            ? scheme.surfaceContainerHighest
+                            : Colors.white,
+                        side: BorderSide.none,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      );
+                    }).toList(),
                   ),
-                  elevation: 0,
-                  pressElevation: 0,
-                );
-              }).toList(),
-            ),
-          ],
+
+                // Suggested Skills Section (moved to bottom)
+                if (hasSuggestions) ...[
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Or select from suggested skills:',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: widget.suggestedSkills!.map((skill) {
+                      final isSelected =
+                          _selectedSuggestedSkills.contains(skill);
+                      final canSelect = _totalSkills < 20 || isSelected;
+                      return FilterChip(
+                        label: Text(skill),
+                        selected: isSelected,
+                        onSelected: canSelect
+                            ? (_) => _toggleSuggestedSkill(skill)
+                            : null,
+                        selectedColor: AppTheme.primaryPurple,
+                        checkmarkColor: Colors.white,
+                        labelStyle: TextStyle(
+                          color: isSelected ? Colors.white : scheme.onSurface,
+                          fontWeight:
+                              isSelected ? FontWeight.w500 : FontWeight.normal,
+                        ),
+                        backgroundColor: scheme.brightness == Brightness.dark
+                            ? scheme.surfaceContainerHighest
+                            : Colors.white,
+                        disabledColor: scheme.brightness == Brightness.dark
+                            ? scheme.surfaceContainer
+                            : Colors.grey[200],
+                        side: BorderSide.none,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        elevation: 0,
+                        pressElevation: 0,
+                      );
+                    }).toList(),
+                  ),
+                ],
               ],
             ),
           ),
@@ -1941,7 +1970,8 @@ class _SkillsFormState extends State<_SkillsForm> {
                   onPressed: widget.onSkip,
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: const BorderSide(color: AppTheme.primaryPurple, width: 2),
+                    side: const BorderSide(
+                        color: AppTheme.primaryPurple, width: 2),
                   ),
                   child: const Text('Skip'),
                 ),
@@ -2338,30 +2368,113 @@ class _LanguagesFormState extends State<_LanguagesForm> {
   ];
 
   static const List<String> _worldLanguages = [
-    'Afrikaans', 'Albanian', 'Amharic', 'Arabic', 'Armenian', 'Azerbaijani',
-    'Basque', 'Belarusian', 'Bengali', 'Bosnian', 'Bulgarian', 'Burmese',
-    'Catalan', 'Cebuano', 'Chinese (Simplified)', 'Chinese (Traditional)', 'Corsican', 'Croatian', 'Czech',
-    'Danish', 'Dutch',
-    'English', 'Esperanto', 'Estonian',
-    'Finnish', 'French', 'Frisian',
-    'Galician', 'Georgian', 'German', 'Greek', 'Gujarati',
-    'Haitian Creole', 'Hausa', 'Hawaiian', 'Hebrew', 'Hindi', 'Hmong', 'Hungarian',
-    'Icelandic', 'Igbo', 'Indonesian', 'Irish', 'Italian',
-    'Japanese', 'Javanese',
-    'Kannada', 'Kazakh', 'Khmer', 'Kinyarwanda', 'Korean', 'Kurdish',
+    'Afrikaans',
+    'Albanian',
+    'Amharic',
+    'Arabic',
+    'Armenian',
+    'Azerbaijani',
+    'Basque',
+    'Belarusian',
+    'Bengali',
+    'Bosnian',
+    'Bulgarian',
+    'Burmese',
+    'Catalan',
+    'Cebuano',
+    'Chinese (Simplified)',
+    'Chinese (Traditional)',
+    'Corsican',
+    'Croatian',
+    'Czech',
+    'Danish',
+    'Dutch',
+    'English',
+    'Esperanto',
+    'Estonian',
+    'Finnish',
+    'French',
+    'Frisian',
+    'Galician',
+    'Georgian',
+    'German',
+    'Greek',
+    'Gujarati',
+    'Haitian Creole',
+    'Hausa',
+    'Hawaiian',
+    'Hebrew',
+    'Hindi',
+    'Hmong',
+    'Hungarian',
+    'Icelandic',
+    'Igbo',
+    'Indonesian',
+    'Irish',
+    'Italian',
+    'Japanese',
+    'Javanese',
+    'Kannada',
+    'Kazakh',
+    'Khmer',
+    'Kinyarwanda',
+    'Korean',
+    'Kurdish',
     'Kyrgyz',
-    'Lao', 'Latin', 'Latvian', 'Lithuanian', 'Luxembourgish',
-    'Macedonian', 'Malagasy', 'Malay', 'Malayalam', 'Maltese', 'Maori', 'Marathi', 'Mongolian',
-    'Nepali', 'Norwegian',
-    'Odia', 'Pashto', 'Persian', 'Polish', 'Portuguese', 'Punjabi',
-    'Romanian', 'Russian',
-    'Samoan', 'Scots Gaelic', 'Serbian', 'Sesotho', 'Shona', 'Sindhi', 'Sinhala', 'Slovak', 'Slovenian', 'Somali', 'Spanish', 'Sundanese', 'Swahili', 'Swedish',
-    'Tagalog', 'Tajik', 'Tamil', 'Tatar', 'Telugu', 'Thai', 'Turkish', 'Turkmen',
-    'Ukrainian', 'Urdu', 'Uyghur', 'Uzbek',
+    'Lao',
+    'Latin',
+    'Latvian',
+    'Lithuanian',
+    'Luxembourgish',
+    'Macedonian',
+    'Malagasy',
+    'Malay',
+    'Malayalam',
+    'Maltese',
+    'Maori',
+    'Marathi',
+    'Mongolian',
+    'Nepali',
+    'Norwegian',
+    'Odia',
+    'Pashto',
+    'Persian',
+    'Polish',
+    'Portuguese',
+    'Punjabi',
+    'Romanian',
+    'Russian',
+    'Samoan',
+    'Scots Gaelic',
+    'Serbian',
+    'Sesotho',
+    'Shona',
+    'Sindhi',
+    'Sinhala',
+    'Slovak',
+    'Slovenian',
+    'Somali',
+    'Spanish',
+    'Sundanese',
+    'Swahili',
+    'Swedish',
+    'Tagalog',
+    'Tajik',
+    'Tamil',
+    'Tatar',
+    'Telugu',
+    'Thai',
+    'Turkish',
+    'Turkmen',
+    'Ukrainian',
+    'Urdu',
+    'Uyghur',
+    'Uzbek',
     'Vietnamese',
     'Welsh',
     'Xhosa',
-    'Yiddish', 'Yoruba',
+    'Yiddish',
+    'Yoruba',
     'Zulu',
   ];
 
@@ -2501,8 +2614,7 @@ class _LanguagesFormState extends State<_LanguagesForm> {
     );
   }
 
-  Widget _buildLanguageEntry(
-      int index, Map<String, String?> lang) {
+  Widget _buildLanguageEntry(int index, Map<String, String?> lang) {
     final scheme = Theme.of(context).colorScheme;
     return Card(
       color: scheme.surface,
@@ -2564,7 +2676,8 @@ class _LanguagesFormState extends State<_LanguagesForm> {
                     borderRadius: BorderRadius.all(Radius.circular(12)),
                     borderSide: BorderSide.none,
                   ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                  contentPadding:
+                      const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
                 ),
                 items: _worldLanguages.map((language) {
                   return DropdownMenuItem<String>(
@@ -2633,7 +2746,8 @@ class _LanguagesFormState extends State<_LanguagesForm> {
                     borderRadius: BorderRadius.all(Radius.circular(12)),
                     borderSide: BorderSide.none,
                   ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                  contentPadding:
+                      const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
                 ),
                 items: _proficiencyLevels.map((level) {
                   return DropdownMenuItem<String>(

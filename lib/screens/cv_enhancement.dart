@@ -27,6 +27,7 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
   bool _isExtracting = false;
   bool _extractionComplete = false;
   String? _cvHistoryId;
+  bool _navigatedSuccessfully = false;
   StreamSubscription<DocumentSnapshot>? _extractionListener;
 
   int _currentStep = 0;
@@ -46,6 +47,12 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
 
   @override
   void dispose() {
+    if (!_navigatedSuccessfully && _cvHistoryId != null) {
+      FirebaseFirestore.instance
+          .collection('CVHistory')
+          .doc(_cvHistoryId)
+          .delete();
+    }
     _jobTitleController.dispose();
     _jobDescriptionController.dispose();
     _extractionListener?.cancel();
@@ -314,6 +321,7 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
       setState(() {
         _isSaving = false;
       });
+      _navigatedSuccessfully = true;
 
       Navigator.pushReplacementNamed(
         context,
@@ -386,6 +394,14 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
         primaryResult: true,
       ),
     );
+
+// ✅ امسح الـ CV إذا المستخدم أكد الخروج
+    if (shouldPop == true && _cvHistoryId != null) {
+      await FirebaseFirestore.instance
+          .collection('CVHistory')
+          .doc(_cvHistoryId)
+          .delete();
+    }
 
     return shouldPop ?? false;
   }
