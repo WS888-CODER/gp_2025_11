@@ -368,18 +368,140 @@ class _CompanyHomeState extends State<CompanyHome> {
   }
 
   /// Close or reopen a job
-  Future<void> _closeJob(String jobId, bool isClosed, BuildContext ctx) async {
+  Future<void> _closeJob(String jobId, bool isClosed, BuildContext ctx, DateTime? endDate) async {
     try {
-      await FirebaseFirestore.instance.collection('Jobs').doc(jobId).update({
-        'JobStatus': isClosed ? 'Open' : 'Closed',
-      });
+      // If reopening and endDate has passed, prompt for new date
+      if (isClosed && endDate != null && endDate.isBefore(DateTime.now())) {
+        if (!mounted) return;
 
-      if (!mounted) return;
+        // Show dialog explaining the job is expired
+        final shouldExtend = await showDialog<bool>(
+          context: ctx,
+          builder: (context) => AlertDialog(
+            backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.95),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: const Text(
+              'Job Expired',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+            content: Text(
+              'This job expired on ${endDate.day}/${endDate.month}/${endDate.year}.\n\nTo reopen it, please select a new end date.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                height: 1.5,
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.white.withOpacity(0.9),
+                  foregroundColor: const Color(0xFF4A5FBC),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+                child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(width: 12),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: TextButton.styleFrom(
+                  backgroundColor: const Color(0xFFFD6C67),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+                child: const Text('Select New Date', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+            actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+            actionsAlignment: MainAxisAlignment.center,
+          ),
+        );
 
-      SnackHelper.success(
-        ctx,
-        isClosed ? 'Job reopened successfully' : 'Job closed successfully',
-      );
+        if (shouldExtend != true || !mounted) return;
+
+        // Show date picker for new end date
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+
+        final newEndDate = await showDatePicker(
+          context: ctx,
+          initialDate: today,
+          firstDate: today,
+          lastDate: DateTime(2100),
+          builder: (context, child) {
+            final theme = Theme.of(context);
+            final scheme = theme.colorScheme;
+
+            return Theme(
+              data: theme.copyWith(
+                colorScheme: scheme.copyWith(
+                  primary: const Color(0xFF4A5FBC),
+                  onPrimary: Colors.white,
+                  onSurface: scheme.onSurface,
+                ),
+                datePickerTheme: DatePickerThemeData(
+                  todayBorder: BorderSide.none,
+                  todayBackgroundColor: MaterialStateColor.resolveWith((states) {
+                    if (states.contains(MaterialState.selected)) {
+                      return const Color(0xFF4A5FBC);
+                    }
+                    return scheme.primary.withOpacity(0.15);
+                  }),
+                  todayForegroundColor: MaterialStateColor.resolveWith((states) {
+                    if (states.contains(MaterialState.selected)) {
+                      return Colors.white;
+                    }
+                    return scheme.onSurface;
+                  }),
+                ),
+              ),
+              child: child!,
+            );
+          },
+        );
+
+        if (newEndDate == null || !mounted) return;
+
+        // Update both JobStatus and EndDate
+        await FirebaseFirestore.instance.collection('Jobs').doc(jobId).update({
+          'JobStatus': 'Open',
+          'EndDate': newEndDate,
+        });
+
+        if (!mounted) return;
+
+        SnackHelper.success(
+          ctx,
+          'Job reopened with new end date: ${newEndDate.day}/${newEndDate.month}/${newEndDate.year}',
+        );
+      } else {
+        // Normal close/reopen without date change
+        await FirebaseFirestore.instance.collection('Jobs').doc(jobId).update({
+          'JobStatus': isClosed ? 'Open' : 'Closed',
+        });
+
+        if (!mounted) return;
+
+        SnackHelper.success(
+          ctx,
+          isClosed ? 'Job reopened successfully' : 'Job closed successfully',
+        );
+      }
     } catch (e) {
       if (!mounted) return;
 
@@ -977,7 +1099,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                                                             ),
                                                             onTap: () {
                                                               Navigator.pop(dialogContext);
-                                                              _closeJob(doc.id, isClosed, safeCtx);
+                                                              _closeJob(doc.id, isClosed, safeCtx, endDate);
                                                             },
                                                           ),
                                                           const Divider(

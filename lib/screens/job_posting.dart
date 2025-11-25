@@ -1143,7 +1143,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
         ),
         body: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(20.0),
             child: Form(
               key: _formKey,
               child: Column(
@@ -1199,12 +1199,13 @@ class _JobPostingPageState extends State<JobPostingPage> {
                       Container(
                         decoration: BoxDecoration(
                           color: scheme.surface,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.08),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
+                              blurRadius: 20,
+                              offset: const Offset(0, 4),
+                              spreadRadius: 0,
                             ),
                           ],
                         ),
@@ -1260,12 +1261,13 @@ class _JobPostingPageState extends State<JobPostingPage> {
                       Container(
                         decoration: BoxDecoration(
                           color: scheme.surface,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.08),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
+                              blurRadius: 20,
+                              offset: const Offset(0, 4),
+                              spreadRadius: 0,
                             ),
                           ],
                         ),
@@ -1321,12 +1323,13 @@ class _JobPostingPageState extends State<JobPostingPage> {
                       Container(
                         decoration: BoxDecoration(
                           color: scheme.surface,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.08),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
+                              blurRadius: 20,
+                              offset: const Offset(0, 4),
+                              spreadRadius: 0,
                             ),
                           ],
                         ),
@@ -1575,12 +1578,13 @@ class _JobPostingPageState extends State<JobPostingPage> {
                       Container(
                         decoration: BoxDecoration(
                           color: scheme.surface,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.08),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
+                              blurRadius: 20,
+                              offset: const Offset(0, 4),
+                              spreadRadius: 0,
                             ),
                           ],
                         ),
@@ -1726,15 +1730,16 @@ class _JobPostingPageState extends State<JobPostingPage> {
                             itemCount: _requirements.length,
                             itemBuilder: (context, index) {
                               return Container(
-                                margin: const EdgeInsets.only(bottom: 8),
+                                margin: const EdgeInsets.only(bottom: 12),
                                 decoration: BoxDecoration(
                                   color: scheme.surface,
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(16),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.08),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
+                                      color: Colors.black.withOpacity(0.06),
+                                      blurRadius: 15,
+                                      offset: const Offset(0, 3),
+                                      spreadRadius: 0,
                                     ),
                                   ],
                                 ),
@@ -1758,12 +1763,13 @@ class _JobPostingPageState extends State<JobPostingPage> {
                   Container(
                     decoration: BoxDecoration(
                       color: scheme.surface,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.08),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
+                          blurRadius: 20,
+                          offset: const Offset(0, 4),
+                          spreadRadius: 0,
                         ),
                       ],
                     ),
@@ -1799,12 +1805,13 @@ class _JobPostingPageState extends State<JobPostingPage> {
                   Container(
                     decoration: BoxDecoration(
                       color: scheme.surface,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.08),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
+                          blurRadius: 20,
+                          offset: const Offset(0, 4),
+                          spreadRadius: 0,
                         ),
                       ],
                     ),
@@ -1839,19 +1846,25 @@ class _JobPostingPageState extends State<JobPostingPage> {
                   // Submit Button or Continue to Questions
                   SizedBox(
                     width: double.infinity,
+                    height: 56,
                     child: ElevatedButton(
                       onPressed: _isEdit ? _saveEditedDates : _submitForm,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF4A5FBC),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        elevation: 2,
+                        shadowColor: const Color(0xFF4A5FBC).withOpacity(0.3),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
+                          borderRadius: BorderRadius.circular(16),
                         ),
                       ),
                       child: Text(
                         _isEdit ? 'Save Dates' : 'Create Job Posting',
-                        style: const TextStyle(fontSize: 16),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
                       ),
                     ),
                   ),
