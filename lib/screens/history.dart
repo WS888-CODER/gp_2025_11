@@ -95,8 +95,7 @@ class _HistoryPageState extends State<HistoryPage>
   Widget _buildCVHistory(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      return _emptyState(
-        context,
+      return const EmptyState(
         icon: Icons.description_outlined,
         title: 'No CV Enhancements Yet',
         subtitle: 'Your CV enhancement history will appear here',
@@ -115,8 +114,7 @@ class _HistoryPageState extends State<HistoryPage>
         }
 
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return _emptyState(
-            context,
+          return const EmptyState(
             icon: Icons.description_outlined,
             title: 'No CV Enhancements Yet',
             subtitle: 'Your CV enhancement history will appear here',
@@ -165,8 +163,7 @@ class _HistoryPageState extends State<HistoryPage>
   Widget _buildMockInterviewHistory(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      return _emptyState(
-        context,
+      return const EmptyState(
         icon: Icons.mic_none,
         title: 'No Mock Interviews Yet',
         subtitle: 'Your mock interview history will appear here',
@@ -185,8 +182,7 @@ class _HistoryPageState extends State<HistoryPage>
         }
 
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return _emptyState(
-            context,
+          return const EmptyState(
             icon: Icons.mic_none,
             title: 'No Mock Interviews Yet',
             subtitle: 'Your mock interview history will appear here',
@@ -226,8 +222,7 @@ class _HistoryPageState extends State<HistoryPage>
   Widget _buildJobApplicationsHistory(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      return _emptyState(
-        context,
+      return const EmptyState(
         icon: Icons.work_outline,
         title: 'No Job Applications Yet',
         subtitle: 'Your job application history will appear here',
@@ -246,8 +241,7 @@ class _HistoryPageState extends State<HistoryPage>
         }
 
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return _emptyState(
-            context,
+          return const EmptyState(
             icon: Icons.work_outline,
             title: 'No Job Applications Yet',
             subtitle: 'Your job application history will appear here',
@@ -340,36 +334,6 @@ class _HistoryPageState extends State<HistoryPage>
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _emptyState(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-  }) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 90, color: Colors.black26),
-          const SizedBox(height: 12),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade700,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            subtitle,
-            style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
-          ),
-        ],
       ),
     );
   }

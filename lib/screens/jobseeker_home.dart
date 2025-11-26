@@ -761,12 +761,10 @@ class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
 
         final docs = snap.data?.docs ?? [];
         if (docs.isEmpty) {
-          return Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(
-              'No jobs yet',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+          return const EmptyState(
+            icon: Icons.work_off_outlined,
+            title: 'No jobs yet',
+            subtitle: '',
           );
         }
 

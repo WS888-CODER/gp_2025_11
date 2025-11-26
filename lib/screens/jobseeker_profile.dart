@@ -12,6 +12,7 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 const kUsersCollection = 'Users';
@@ -879,10 +880,11 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
       return;
     }
 
-    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!ok) {
-      SnackHelper.error(context, 'Could not open CV file');
-    }
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CvPdfViewerScreen(pdfUrl: url),
+      ),
+    );
   }
 
   Future<void> _save() async {
@@ -1988,4 +1990,33 @@ Widget buildJadeerInputCard({
     ),
     child: child,
   );
+}
+
+class CvPdfViewerScreen extends StatelessWidget {
+  final String pdfUrl;
+
+  const CvPdfViewerScreen({super.key, required this.pdfUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return ThemedScaffold(
+      appBar: AppBar(
+        backgroundColor: AppTheme.primaryPurple,
+        foregroundColor: Colors.white,
+        title: const Text(
+          'CV',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
+      ),
+      body: SfPdfViewer.network(
+        pdfUrl,
+        canShowScrollHead: true,
+        canShowScrollStatus: true,
+        enableDoubleTapZooming: true,
+      ),
+    );
+  }
 }

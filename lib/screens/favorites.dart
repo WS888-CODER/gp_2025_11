@@ -151,34 +151,10 @@ class _FavoritesPageState extends State<FavoritesPage> {
     final favJobs = _favoriteJobs;
 
     if (favJobs.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.favorite_border,
-              size: 80,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No Favorite Jobs Yet',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[700],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Jobs you save will appear here',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
+      return const EmptyState(
+        icon: Icons.favorite_border,
+        title: 'No Favorite Jobs Yet',
+        subtitle: 'Jobs you save will appear here',
       );
     }
 
