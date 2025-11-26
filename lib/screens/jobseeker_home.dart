@@ -155,9 +155,60 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
         title = '';
     }
 
-    // For non-home tabs, use JobSeekerAppBar
+    // For non-home tabs, use custom AppBar with profile button
     if (_tab != 1) {
-      return JobSeekerAppBar(
+      return AppBar(
+        backgroundColor: const Color(0xFF4A5FBC),
+        elevation: 0,
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+        leadingWidth: 70,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 16),
+          child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+            stream: FirebaseFirestore.instance
+                .collection('Users')
+                .doc(userId)
+                .snapshots(),
+            builder: (context, snap) {
+              final photoUrl = snap.hasData
+                  ? (snap.data?.data()?['PhotoURL'] ?? '').toString().trim()
+                  : '';
+              
+              return GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const JobSeekerProfile(),
+                    ),
+                  );
+                },
+                child: Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                    image: photoUrl.isNotEmpty
+                        ? DecorationImage(
+                            image: NetworkImage(photoUrl),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                  ),
+                  child: photoUrl.isEmpty
+                      ? const Icon(
+                          Icons.person,
+                          color: Colors.white,
+                          size: 24,
+                        )
+                      : null,
+                ),
+              );
+            },
+          ),
+        ),
         title: Text(
           title,
           style: const TextStyle(
@@ -165,6 +216,26 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
             fontWeight: FontWeight.bold,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+            onPressed: () {
+              SnackHelper.error(context, 'Notifications coming soon');
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined, color: Colors.white),
+            onPressed: () {
+              final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+              if (uid.isEmpty) return;
+              Navigator.pushNamed(
+                context,
+                '/settings',
+                arguments: {'userType': 'JobSeeker', 'userId': uid},
+              );
+            },
+          ),
+        ],
       );
     }
 
@@ -229,29 +300,49 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
                     // Top row with profile, notification, and settings
                     Row(
                       children: [
-                        // Profile button
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const JobSeekerProfile(),
+                        // Profile button with actual photo
+                        StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                          stream: FirebaseFirestore.instance
+                              .collection('Users')
+                              .doc(userId)
+                              .snapshots(),
+                          builder: (context, snap) {
+                            final photoUrl = snap.hasData
+                                ? (snap.data?.data()?['PhotoURL'] ?? '').toString().trim()
+                                : '';
+                            
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const JobSeekerProfile(),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  shape: BoxShape.circle,
+                                  image: photoUrl.isNotEmpty
+                                      ? DecorationImage(
+                                          image: NetworkImage(photoUrl),
+                                          fit: BoxFit.cover,
+                                        )
+                                      : null,
+                                ),
+                                child: photoUrl.isEmpty
+                                    ? const Icon(
+                                        Icons.person,
+                                        color: Colors.white,
+                                        size: 28,
+                                      )
+                                    : null,
                               ),
                             );
                           },
-                          child: Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.person,
-                              color: Colors.white,
-                              size: 28,
-                            ),
-                          ),
                         ),
                         const Spacer(),
                         // Notification button
