@@ -33,7 +33,7 @@ dependencies:
   share_plus: ^10.1.2
   syncfusion_flutter_pdfviewer: ^28.1.33
   path_provider: ^2.1.5  
-
+  device_info_plus: ^11.5.0
 
 dev_dependencies:
   flutter_test:
@@ -47,10 +47,8 @@ flutter:
   assets:
     - assets/images/
 
-# ✅ App Icon Configuration (LAUNCHER ONLY - لا يظهر في بداية التطبيق)
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/images/j_icon_BIG.png"  # ← غيريه من j_filled.png
-  # ✅ بدون adaptive icon عشان الصورة تطلع كاملة بدون قص
+  image_path: "assets/images/j_icon_BIG.png"
   remove_alpha_ios: false

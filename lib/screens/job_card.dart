@@ -48,10 +48,8 @@ class Job {
   final String position;
   final List<String> keywords;
 
-  /// تاريخ نشر الوظيفة (اللي بنرتّب عليه)
   final DateTime postedAt;
 
-  /// تقدرِ تخليه nullable إذا في وظائف قديمة ما فيها StartDate
   final DateTime? startDate;
   final DateTime? endDate;
 
@@ -147,7 +145,11 @@ Widget _infoRow(
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 16),
+        Icon(
+          icon,
+          size: 16,
+          color: Color(0xFFFD6C67),
+        ),
         const SizedBox(width: 8),
         Expanded(
           child: RichText(
@@ -493,7 +495,8 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.start,
                                   children: [
-                                    const Icon(Icons.email, size: 16),
+                                    const Icon(Icons.email,
+                                        size: 16, color: Color(0xFFFD6C67)),
                                     const SizedBox(width: 4),
                                     Text(
                                       company!.contactEmail,
@@ -517,7 +520,8 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.start,
                                   children: [
-                                    const Icon(Icons.phone, size: 16),
+                                    const Icon(Icons.phone,
+                                        size: 16, color: Color(0xFFFD6C67)),
                                     const SizedBox(width: 4),
                                     Text(
                                       company!.phone,
@@ -535,7 +539,8 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.start,
                                   children: [
-                                    const Icon(Icons.link, size: 16),
+                                    const Icon(Icons.link,
+                                        size: 16, color: Color(0xFFFD6C67)),
                                     const SizedBox(width: 4),
                                     ConstrainedBox(
                                       constraints:
@@ -671,7 +676,11 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(Icons.check_circle_outline, size: 18),
+                              const Icon(
+                                Icons.check_circle_outline,
+                                size: 18,
+                                color: Color(0xFFFD6C67),
+                              ),
                               const SizedBox(width: 8),
                               Expanded(child: Text(r)),
                             ],
