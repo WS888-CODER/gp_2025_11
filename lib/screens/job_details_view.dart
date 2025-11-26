@@ -209,9 +209,9 @@ class _JobDetailsViewState extends State<JobDetailsView> {
                   Row(
                     children: [
                       const Icon(
-                        Icons.work_outline,
+                        Icons.stars_rounded,
                         size: 18,
-                        color: Color(0xFF4A5FBC),
+                        color: Color(0xFFFD6C67),
                       ),
                       const SizedBox(width: 6),
                       Flexible(
@@ -220,7 +220,6 @@ class _JobDetailsViewState extends State<JobDetailsView> {
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            color: Color(0xFF4A5FBC),
                           ),
                         ),
                       ),
@@ -253,12 +252,6 @@ class _JobDetailsViewState extends State<JobDetailsView> {
               children: [
                 const Row(
                   children: [
-                    Icon(
-                      Icons.calendar_today,
-                      size: 20,
-                      color: Color(0xFF4A5FBC),
-                    ),
-                    SizedBox(width: 8),
                     Text(
                       'Application Period',
                       style: TextStyle(
@@ -285,9 +278,7 @@ class _JobDetailsViewState extends State<JobDetailsView> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            startDate != null
-                                ? _fmtDate(startDate)
-                                : 'Not set',
+                            startDate != null ? _fmtDate(startDate) : 'Not set',
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
@@ -348,12 +339,6 @@ class _JobDetailsViewState extends State<JobDetailsView> {
                 children: [
                   const Row(
                     children: [
-                      Icon(
-                        Icons.description_outlined,
-                        size: 20,
-                        color: Color(0xFF4A5FBC),
-                      ),
-                      SizedBox(width: 8),
                       Text(
                         'Job Description',
                         style: TextStyle(
@@ -400,12 +385,6 @@ class _JobDetailsViewState extends State<JobDetailsView> {
                 children: [
                   const Row(
                     children: [
-                      Icon(
-                        Icons.checklist,
-                        size: 20,
-                        color: Color(0xFF4A5FBC),
-                      ),
-                      SizedBox(width: 8),
                       Text(
                         'Requirements',
                         style: TextStyle(
@@ -417,35 +396,19 @@ class _JobDetailsViewState extends State<JobDetailsView> {
                   ),
                   const SizedBox(height: 12),
                   ...requirements.asMap().entries.map((entry) {
-                    final index = entry.key;
                     final req = entry.value;
                     return Padding(
-                      padding: EdgeInsets.only(
-                        bottom: index < requirements.length - 1 ? 8 : 0,
-                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 6),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            margin: const EdgeInsets.only(top: 6),
-                            width: 6,
-                            height: 6,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF4A5FBC),
-                              shape: BoxShape.circle,
-                            ),
+                          const Icon(
+                            Icons.check_circle_outline,
+                            size: 18,
+                            color: Color(0xFFFD6C67),
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              req,
-                              style: TextStyle(
-                                fontSize: 14,
-                                height: 1.4,
-                                color: scheme.onSurface.withOpacity(0.85),
-                              ),
-                            ),
-                          ),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text(req)),
                         ],
                       ),
                     );

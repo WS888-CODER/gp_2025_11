@@ -639,8 +639,13 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Job Description',
-                      style: TextStyle(fontWeight: FontWeight.w700)),
+                  const Text(
+                    'Job Description',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   _ExpandableText(
                     job.description.isEmpty
@@ -665,8 +670,13 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Requirements',
-                        style: TextStyle(fontWeight: FontWeight.w700)),
+                    const Text(
+                      'Requirements',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

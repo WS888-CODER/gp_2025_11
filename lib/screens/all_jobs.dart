@@ -397,7 +397,7 @@ class _JobsPageState extends State<JobsPage> {
   @override
   Widget build(BuildContext context) {
     final jobs = _applyFilters(_allJobs);
-
+    final int filteredCount = jobs.length;
     return ThemedScaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF4A5FBC),
@@ -442,7 +442,7 @@ class _JobsPageState extends State<JobsPage> {
                       color: scheme.onSurface,
                     ),
                     decoration: InputDecoration(
-                      hintText: 'Search company, title, position or keyword…',
+                      hintText: 'Search company, title or keyword…',
                       hintStyle: TextStyle(
                         color: isDark ? Colors.grey[500] : Colors.grey[500],
                         fontSize: 14,
@@ -737,6 +737,26 @@ class _JobsPageState extends State<JobsPage> {
                           },
                         ),
                       ],
+                      Builder(
+                        builder: (context) {
+                          final scheme = Theme.of(context).colorScheme;
+                          final label = filteredCount == 1
+                              ? '1 job found'
+                              : '$filteredCount jobs found';
+
+                          return Align(
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              label,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: scheme.primary.withOpacity(0.8),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
                     ],
                   ),
                 );

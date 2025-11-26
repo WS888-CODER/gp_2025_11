@@ -628,7 +628,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
       context: context,
       builder: (ctx) => JadeerDialog<void>(
         title: 'How this page works',
-        primaryLabel: 'OK',
+        primaryLabel: 'Got it',
         primaryResult: null,
         content: Padding(
           padding: const EdgeInsets.only(top: 8),
@@ -1007,100 +1007,111 @@ class _JobHeaderCard extends StatelessWidget {
           clipBehavior: Clip.none,
           children: [
             Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Title + status chip
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  title.isEmpty ? 'Job title not set' : title,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              if (status.isNotEmpty)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    status,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: statusColor,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 6),
-
-          if (position.isNotEmpty)
-            Text(
-              position,
-              style: TextStyle(
-                fontSize: 13.5,
-                color: scheme.onSurface.withOpacity(0.75),
-              ),
-            ),
-
-          if (position.isNotEmpty) const SizedBox(height: 4),
-
-          if (specialty.isNotEmpty)
-            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(
-                  Icons.work_outline,
-                  size: 16,
-                  color: Color(0xFF4A5FBC),
-                ),
-                const SizedBox(width: 4),
-                Flexible(
-                  child: Text(
-                    specialty,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF4A5FBC),
+                // Title + status chip
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title.isEmpty ? 'Job title not set' : title,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF4A5FBC),
+                        ),
+                      ),
                     ),
-                  ),
+                    if (status.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          status,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: statusColor,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
+                const SizedBox(height: 6),
+
+                if (position.isNotEmpty)
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.badge_outlined,
+                        size: 18,
+                        color: Color(0xFF4A5FBC),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        position,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: scheme.onSurface,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                if (position.isNotEmpty) const SizedBox(height: 4),
+
+                if (specialty.isNotEmpty)
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.stars_rounded,
+                        size: 18,
+                        color: Color(0xFFFD6C67),
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          specialty,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                if (specialty.isNotEmpty && dateRange != null)
+                  const SizedBox(height: 4),
+
+                if (dateRange != null)
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.calendar_today_outlined,
+                        size: 14,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          dateRange,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: scheme.onSurface.withOpacity(0.65),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
               ],
             ),
-
-          if (specialty.isNotEmpty && dateRange != null)
-            const SizedBox(height: 4),
-
-          if (dateRange != null)
-            Row(
-              children: [
-                const Icon(
-                  Icons.calendar_today_outlined,
-                  size: 14,
-                  color: Colors.grey,
-                ),
-                const SizedBox(width: 4),
-                Flexible(
-                  child: Text(
-                    dateRange,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      color: scheme.onSurface.withOpacity(0.65),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-        ],
-      ),
             // Orange arrow button positioned at bottom right
             if (onTap != null)
               Positioned(

@@ -174,7 +174,7 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
               final photoUrl = snap.hasData
                   ? (snap.data?.data()?['PhotoURL'] ?? '').toString().trim()
                   : '';
-              
+
               return GestureDetector(
                 onTap: () {
                   Navigator.push(
@@ -293,7 +293,8 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
             // Original content
             SafeArea(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -308,9 +309,11 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
                               .snapshots(),
                           builder: (context, snap) {
                             final photoUrl = snap.hasData
-                                ? (snap.data?.data()?['PhotoURL'] ?? '').toString().trim()
+                                ? (snap.data?.data()?['PhotoURL'] ?? '')
+                                    .toString()
+                                    .trim()
                                 : '';
-                            
+
                             return GestureDetector(
                               onTap: () {
                                 Navigator.push(
@@ -348,7 +351,8 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
                         // Notification button
                         GestureDetector(
                           onTap: () {
-                            SnackHelper.error(context, 'Notifications coming soon');
+                            SnackHelper.error(
+                                context, 'Notifications coming soon');
                           },
                           child: Container(
                             width: 50,
@@ -374,7 +378,10 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
                             Navigator.pushNamed(
                               context,
                               '/settings',
-                              arguments: {'userType': 'JobSeeker', 'userId': uid},
+                              arguments: {
+                                'userType': 'JobSeeker',
+                                'userId': uid
+                              },
                             );
                           },
                           child: Container(
@@ -1075,7 +1082,7 @@ class _JobsSearchShortcut extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Search jobs, companies...',
+                'Search company, title or keyword…',
                 style: TextStyle(
                   fontSize: 15,
                   color: Colors.grey[500],
