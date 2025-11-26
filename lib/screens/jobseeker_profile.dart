@@ -425,40 +425,40 @@ class JobSeekerProfile extends StatelessWidget {
 
               // Section: Profile Information
               Container(
-                decoration: BoxDecoration(
-                  color: scheme.surface,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(
-                        Theme.of(context).brightness == Brightness.dark
-                            ? 0.12
-                            : 0.04,
-                      ),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                  border: Border.all(
-                    color: const Color(0xFFFD6C67).withOpacity(0.08),
-                  ),
-                ),
-                child: _SettingsRowSeeker(
-                  icon: Icons.person_outline,
-                  color: const Color(0xFFFD6C67),
-                  title: 'Profile Information',
-                  subtitle: 'Photo, nationality, date of birth, and CV',
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => EditJobSeekerPage(
-                          data: data,
+                  decoration: BoxDecoration(
+                    color: scheme.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(
+                          Theme.of(context).brightness == Brightness.dark
+                              ? 0.12
+                              : 0.04,
                         ),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
                       ),
-                    );
-                  },
-                ),
-              ),
+                    ],
+                    border: Border.all(
+                      color: const Color(0xFFFD6C67).withOpacity(0.08),
+                    ),
+                  ),
+                  child: _SettingsRowSeeker(
+                    icon: Icons.person_outline,
+                    color: const Color(0xFFFD6C67),
+                    title: 'Profile Information',
+                    subtitle: 'Photo, nationality, date of birth, and CV',
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => EditJobSeekerPage(
+                            data: data,
+                            initialTab: 0, // Profile Info tab
+                          ),
+                        ),
+                      );
+                    },
+                  )),
               const SizedBox(height: 12),
 
               // Section: Contact Information
@@ -491,6 +491,7 @@ class JobSeekerProfile extends StatelessWidget {
                       MaterialPageRoute(
                         builder: (_) => EditJobSeekerPage(
                           data: data,
+                          initialTab: 1, // Contact Info tab
                         ),
                       ),
                     );
@@ -577,10 +578,12 @@ class _SettingsRowSeeker extends StatelessWidget {
 
 class EditJobSeekerPage extends StatefulWidget {
   final Map<String, dynamic> data;
+  final int initialTab; // 0 = Profile Info, 1 = Contact Info
 
   const EditJobSeekerPage({
     super.key,
     required this.data,
+    this.initialTab = 0,
   });
 
   @override
@@ -667,7 +670,12 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: widget.initialTab,
+    );
     final data = widget.data;
 
     final phoneE164 = (data[UserFields.phone] ?? '').toString().trim();
