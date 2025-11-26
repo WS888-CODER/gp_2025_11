@@ -20,6 +20,7 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
   final TextEditingController _jobTitleController = TextEditingController();
   final TextEditingController _jobDescriptionController =
       TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
 
   File? _selectedFile;
   double _uploadProgress = 0.0;
@@ -35,6 +36,7 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
   String? _selectedJobId;
   List<Map<String, dynamic>> _allJobs = [];
   List<Map<String, dynamic>> _wishlistJobs = [];
+  List<Map<String, dynamic>> _filteredJobs = [];
   bool _loadingJobs = false;
   bool _showAllJobs = false;
   bool _isSaving = false;
@@ -55,6 +57,7 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
     }
     _jobTitleController.dispose();
     _jobDescriptionController.dispose();
+    _searchController.dispose();
     _extractionListener?.cancel();
     super.dispose();
   }
@@ -139,6 +142,26 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
         _loadingJobs = false;
       });
     }
+  }
+
+  void _filterJobs(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredJobs = [];
+      } else {
+        final jobsToFilter = _showAllJobs ? _allJobs : _wishlistJobs;
+        _filteredJobs = jobsToFilter.where((job) {
+          final title = job['title']?.toString().toLowerCase() ?? '';
+          final company = job['companyName']?.toString().toLowerCase() ?? '';
+          final position = job['position']?.toString().toLowerCase() ?? '';
+          final searchLower = query.toLowerCase();
+
+          return title.contains(searchLower) ||
+              company.contains(searchLower) ||
+              position.contains(searchLower);
+        }).toList();
+      }
+    });
   }
 
   Future<void> _pickFile() async {
@@ -395,7 +418,6 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
       ),
     );
 
-// ✅ امسح الـ CV إذا المستخدم أكد الخروج
     if (shouldPop == true && _cvHistoryId != null) {
       await FirebaseFirestore.instance
           .collection('CVHistory')
@@ -553,7 +575,9 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
   Widget _buildJobSelectionStep() {
     final scheme = Theme.of(context).colorScheme;
 
-    final jobsToShow = _showAllJobs ? _allJobs : _wishlistJobs;
+    final baseJobs = _showAllJobs ? _allJobs : _wishlistJobs;
+    final jobsToShow =
+        _searchController.text.isEmpty ? baseJobs : _filteredJobs;
 
     return Column(
       children: [
@@ -629,7 +653,7 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
                       Text(
                           _showAllJobs
                               ? 'All Jadeer Jobs'
-                              : 'Your Wishlist Jobs',
+                              : 'Your Favorite Jobs',
                           style: const TextStyle(
                               fontSize: 16, fontWeight: FontWeight.bold)),
                       TextButton.icon(
@@ -637,16 +661,74 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
                           setState(() {
                             _showAllJobs = !_showAllJobs;
                             _selectedJobId = null;
+                            _searchController.clear();
+                            _filterJobs('');
                           });
                         },
                         icon: Icon(
                             _showAllJobs ? Icons.favorite : Icons.grid_view,
                             color: const Color(0xFFFF7B7B)),
                         label: Text(
-                            _showAllJobs ? 'Show Wishlist' : 'Show All Jobs',
+                            _showAllJobs ? 'Show Favorite' : 'Show All Jobs',
                             style: const TextStyle(color: Color(0xFFFF7B7B))),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 12),
+                  // خانة البحث
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.06),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.search,
+                          color: Colors.grey[500],
+                          size: 24,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            onChanged: _filterJobs,
+                            style: const TextStyle(fontSize: 15),
+                            decoration: InputDecoration(
+                              hintText: 'Search jobs, companies...',
+                              hintStyle: TextStyle(
+                                fontSize: 15,
+                                color: Colors.grey[500],
+                              ),
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                        ),
+                        if (_searchController.text.isNotEmpty)
+                          GestureDetector(
+                            onTap: () {
+                              _searchController.clear();
+                              _filterJobs('');
+                            },
+                            child: Icon(
+                              Icons.clear,
+                              color: Colors.grey[400],
+                              size: 20,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 12),
                   if (_loadingJobs)
@@ -659,9 +741,11 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
                           borderRadius: BorderRadius.circular(12)),
                       child: Center(
                         child: Text(
-                          _showAllJobs
-                              ? 'No jobs available'
-                              : 'No jobs in wishlist',
+                          _searchController.text.isNotEmpty
+                              ? 'No jobs found'
+                              : (_showAllJobs
+                                  ? 'No jobs available'
+                                  : 'No jobs in favorite'),
                           style: TextStyle(
                               color: scheme.onSurface.withOpacity(0.6)),
                         ),
