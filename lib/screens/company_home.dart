@@ -914,79 +914,122 @@ class _CompanyHomeState extends State<CompanyHome> {
     return PreferredSize(
       preferredSize: const Size.fromHeight(200),
       child: Container(
+        height: 280,
+        width: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [Color(0xFF4A5FBC), Color(0xFF4A5FBC)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(40),
+            bottomRight: Radius.circular(40),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x404A5FBC),
+              blurRadius: 20,
+              offset: Offset(0, 10),
+            ),
+          ],
         ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Top row with profile, notification, and settings
-                Row(
+        child: Stack(
+          children: [
+            // Decorative background circles
+            Positioned(
+              top: -60,
+              right: -40,
+              child: Container(
+                width: 200,
+                height: 200,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(0.05),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 40,
+              left: -30,
+              child: Container(
+                width: 140,
+                height: 140,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(0.05),
+                ),
+              ),
+            ),
+            // Original content
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Profile button
-                    _ProfileButton(userId: companyId),
-                    const Spacer(),
-                    // Notification button
-                    GestureDetector(
-                      onTap: () {
-                        SnackHelper.error(context, 'Notifications coming soon');
-                      },
-                      child: Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
-                          shape: BoxShape.circle,
+                    // Top row with profile, notification, and settings
+                    Row(
+                      children: [
+                        // Profile button
+                        _ProfileButton(userId: companyId),
+                        const Spacer(),
+                        // Notification button
+                        GestureDetector(
+                          onTap: () {
+                            SnackHelper.error(context, 'Notifications coming soon');
+                          },
+                          child: Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.notifications_outlined,
+                              color: Colors.white,
+                              size: 26,
+                            ),
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.notifications_outlined,
-                          color: Colors.white,
-                          size: 26,
+                        const SizedBox(width: 12),
+                        // Settings button
+                        GestureDetector(
+                          onTap: () {
+                            final uid = FirebaseAuth.instance.currentUser?.uid;
+                            if (uid != null) {
+                              Navigator.pushNamed(
+                                context,
+                                '/settings',
+                                arguments: {'userType': 'Company', 'userId': uid},
+                              );
+                            }
+                          },
+                          child: Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.settings_outlined,
+                              color: Colors.white,
+                              size: 26,
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    // Settings button
-                    GestureDetector(
-                      onTap: () {
-                        final uid = FirebaseAuth.instance.currentUser?.uid;
-                        if (uid != null) {
-                          Navigator.pushNamed(
-                            context,
-                            '/settings',
-                            arguments: {'userType': 'Company', 'userId': uid},
-                          );
-                        }
-                      },
-                      child: Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.settings_outlined,
-                          color: Colors.white,
-                          size: 26,
-                        ),
-                      ),
-                    ),
+                    const SizedBox(height: 24),
+                    // Welcome text
+                    _WelcomeTitle(companyId: companyId),
                   ],
                 ),
-                const SizedBox(height: 24),
-                // Welcome text
-                _WelcomeTitle(companyId: companyId),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -997,7 +1040,7 @@ class _CompanyHomeState extends State<CompanyHome> {
     final companyId = _effectiveCompanyId;
 
     final homeBody = Container(
-      color: const Color(0xFF4A5FBC),
+      color: const Color(0xFFF5F5F5),
       child: Column(
         children: [
           Expanded(
