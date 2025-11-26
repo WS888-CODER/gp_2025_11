@@ -906,10 +906,6 @@ class _JobsSearchShortcut extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () {
@@ -952,11 +948,6 @@ class _JobsSearchShortcut extends StatelessWidget {
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
-            ),
-            Icon(
-              Icons.tune,
-              color: Colors.grey[400],
-              size: 22,
             ),
           ],
         ),
