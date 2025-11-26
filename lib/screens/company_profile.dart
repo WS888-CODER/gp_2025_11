@@ -9,6 +9,9 @@ import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:gp_2025_11/screens/jobseeker_profile.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
+import 'package:intl_phone_field/country_picker_dialog.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
+import 'package:intl_phone_field/phone_number.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 const kUsersCollection = 'Users';
@@ -26,19 +29,6 @@ class UserFields {
 
 final _email =
     RegExp(r"^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$", caseSensitive: false);
-final _localSaPhone = RegExp(r'^(5\d{8}|01[1-7]\d{6,7})$');
-const _saPrefix = '+966';
-
-String _toLocal(String e164) {
-  final t = e164.trim();
-  if (!t.startsWith(_saPrefix)) return t;
-
-  final rest = t.substring(_saPrefix.length);
-  if (rest.startsWith('5')) return rest;
-  if (RegExp(r'^1[1-7]\d{6,7}$').hasMatch(rest)) return '0$rest';
-
-  return rest;
-}
 
 class CompanyProfile extends StatefulWidget {
   const CompanyProfile({super.key});
@@ -80,9 +70,11 @@ class _CompanyProfileState extends State<CompanyProfile> {
   double? _progress;
   bool _filledFromServer = false;
   final ValueNotifier<double?> progressNotifier = ValueNotifier<double?>(null);
+  String? _phoneE164Draft;
 
   final _locAllowed =
       RegExp(r"^[A-Za-z\u0600-\u06FF][A-Za-z\u0600-\u06FF\s\.'-]{1,39}$");
+
   String _cleanLoc(String raw) => raw.trim().replaceAll(RegExp(r'\s+'), ' ');
 
   String? _validateImageFile(File f) {
@@ -304,10 +296,13 @@ class _CompanyProfileState extends State<CompanyProfile> {
     final hasLogoNow = _hasAnyLogo(current);
 
     final email = _emailCtrl.text.trim();
-    final phoneLocal = _phone.text.trim();
     final hasEmailValid = email.isNotEmpty && _email.hasMatch(email);
-    final hasPhoneValid =
-        phoneLocal.isNotEmpty && _localSaPhone.hasMatch(phoneLocal);
+
+    final oldPhoneE164 = (current[UserFields.phone] ?? '').toString().trim();
+    final phoneLocal = _phone.text.trim();
+    final effectivePhoneE164 =
+        (_phoneE164Draft ?? oldPhoneE164).toString().trim();
+    final hasPhoneValid = effectivePhoneE164.isNotEmpty;
 
     setState(() {
       _saving = true;
@@ -316,25 +311,10 @@ class _CompanyProfileState extends State<CompanyProfile> {
     });
 
     try {
-      String normalizePhoneToE164(String local) {
-        final s = local.trim();
-        if (RegExp(r'^5\d{8}$').hasMatch(s)) return '+966$s';
-        if (RegExp(r'^(01[1-7]\d{6,7})$').hasMatch(s)) {
-          return '+966${s.substring(1)}';
-        }
-        return '';
-      }
-
-      final oldPhoneE164 = (current[UserFields.phone] ?? '').toString();
       String? newPhoneE164;
-      if (hasPhoneValid) {
-        final candidate = normalizePhoneToE164(phoneLocal);
-        if (candidate.isEmpty) {
-          throw Exception('Phone format not recognized');
-        }
-        if (candidate != oldPhoneE164) {
-          newPhoneE164 = candidate;
-        }
+      if ((_phoneE164Draft ?? '').trim().isNotEmpty &&
+          _phoneE164Draft!.trim() != oldPhoneE164) {
+        newPhoneE164 = _phoneE164Draft!.trim();
       }
 
       final websiteRaw = _websiteCtrl.text.trim();
@@ -378,10 +358,13 @@ class _CompanyProfileState extends State<CompanyProfile> {
         }
       }
 
-      if (newPhoneE164 != null) {
+      if (phoneLocal.isEmpty &&
+          (_phoneE164Draft == null || _phoneE164Draft!.trim().isEmpty)) {
+        if (oldPhoneE164.isNotEmpty) {
+          updates[UserFields.phone] = FieldValue.delete();
+        }
+      } else if (newPhoneE164 != null) {
         updates[UserFields.phone] = newPhoneE164;
-      } else if (phoneLocal.isEmpty && oldPhoneE164.isNotEmpty) {
-        updates[UserFields.phone] = FieldValue.delete();
       }
 
       if (websiteRaw != oldWebsite) {
@@ -485,8 +468,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
             (data[UserFields.contactEmail] ?? '').toString().trim();
         final website = (data[UserFields.website] ?? '').toString().trim();
         final rawPhone = (data[UserFields.phone] ?? '').toString().trim();
-        final prettyPhone = rawPhone.isEmpty ? '' : _toLocal(rawPhone);
-
+        final prettyPhone = rawPhone;
         final location = (data[UserFields.location] ?? '').toString().trim();
         final desc = (data[UserFields.description] ?? '').toString().trim();
 
@@ -494,7 +476,6 @@ class _CompanyProfileState extends State<CompanyProfile> {
         if (!_filledFromServer) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
-
             _desc.text = _desc.text.isNotEmpty
                 ? _desc.text
                 : (data[UserFields.description] ?? '').toString();
@@ -510,9 +491,13 @@ class _CompanyProfileState extends State<CompanyProfile> {
             _phone.text = _phone.text.isNotEmpty
                 ? _phone.text
                 : (() {
-                    final raw = (data[UserFields.phone] ?? '').toString();
-                    return raw.isEmpty ? '' : _toLocal(raw);
+                    if (rawPhone.startsWith('+')) {
+                      return rawPhone.replaceFirst(RegExp(r'^\+\d+'), '');
+                    }
+                    return rawPhone;
                   })();
+            _phoneE164Draft ??= rawPhone.isEmpty ? null : rawPhone;
+
             _websiteCtrl.text = _websiteCtrl.text.isNotEmpty
                 ? _websiteCtrl.text
                 : (data[UserFields.website] ?? '').toString();
@@ -1007,7 +992,7 @@ class _EditCompanyPageState extends State<EditCompanyPage>
             SizedBox(height: 6),
             Text(
               '• A valid contact email, or\n'
-              '• A valid Saudi mobile number (+966 5XXXXXXXX)',
+              '• A valid phone number with country code',
               style: TextStyle(
                 color: Colors.white,
                 height: 1.4,
@@ -1119,7 +1104,6 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                 key: parent._form,
                 autovalidateMode: AutovalidateMode.onUserInteraction,
                 child: TabBarView(controller: _tabCtrl, children: [
-                  // ====== TAB 0: Company Info ======
                   ListView(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 16),
@@ -1234,7 +1218,6 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                         ],
                       ),
                       const SizedBox(height: 24),
-                      // DESCRIPTION
                       const Text(
                         'Description',
                         style: TextStyle(
@@ -1293,16 +1276,12 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                                           .withOpacity(0.6),
                                 ),
                               ),
-                              // لا نمنع الحفظ من الفاليديتور، نخليه بس للـ visual feedback
                               validator: (_) => null,
                             );
                           },
                         ),
                       ),
-
                       const SizedBox(height: 24),
-
-                      // LOCATION
                       const Text(
                         'Location',
                         style: TextStyle(
@@ -1350,8 +1329,6 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                       ),
                     ],
                   ),
-
-                  // ====== TAB 1: Contact Details ======
                   ListView(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 16),
@@ -1415,63 +1392,90 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                         ),
                       ),
                       const SizedBox(height: 8),
-                      ValueListenableBuilder<TextEditingValue>(
-                        valueListenable: parent._phone,
-                        builder: (context, value, _) {
-                          final t = value.text.trim();
-                          final isMobile = t.startsWith('5');
-                          return buildJadeerInputCard(
-                            context: context,
-                            child: TextFormField(
-                              key: parent._phoneKey,
-                              controller: parent._phone,
-                              keyboardType: TextInputType.phone,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                                LengthLimitingTextInputFormatter(10),
-                              ],
-                              decoration: InputDecoration(
-                                hintText: '5XXXXXXXX or 01XXXXXXXX',
-                                hintStyle: const TextStyle(color: Colors.grey),
-                                prefixText: isMobile ? '+966 ' : '',
-                                border: const OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(12)),
-                                  borderSide: BorderSide.none,
-                                ),
+                      const SizedBox(height: 8),
+                      buildJadeerInputCard(
+                        context: context,
+                        child: IntlPhoneField(
+                          key: parent._phoneKey,
+                          controller: parent._phone,
+                          initialCountryCode: 'SA',
+                          pickerDialogStyle: PickerDialogStyle(
+                              searchFieldCursorColor: Colors.white,
+                              backgroundColor:
+                                  const Color(0xFF4A5FBC).withOpacity(0.9),
+                              width: MediaQuery.of(context).size.width * 0.9,
+                              searchFieldInputDecoration: InputDecoration(
+                                hintText: 'Search country',
+                                hintStyle: const TextStyle(color: Colors.white),
                                 filled: true,
-                                fillColor: Colors.transparent,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 14,
+                                fillColor: Colors.white.withOpacity(0.2),
+                                prefixIcon: const Icon(
+                                  Icons.search,
+                                  color: Colors.white,
                                 ),
-                                errorBorder: const OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(12)),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(18),
                                   borderSide: BorderSide.none,
                                 ),
-                                focusedErrorBorder: const OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(12)),
-                                  borderSide: BorderSide.none,
-                                ),
-                                errorStyle:
-                                    const TextStyle(height: 0, fontSize: 0),
-                                counterText: '',
                               ),
-                              validator: (v) {
-                                final s = v?.trim() ?? '';
-                                if (s.isEmpty) return null;
-                                final reg =
-                                    RegExp(r'^(5\d{8}|01[1-7]\d{6,7})$');
-                                if (!reg.hasMatch(s)) {
-                                  return 'Enter a valid Saudi mobile or landline number';
-                                }
-                                return null;
-                              },
+                              countryNameStyle: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                              countryCodeStyle: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFFD6C67),
+                              ),
+                              listTilePadding: const EdgeInsets.symmetric(
+                                  vertical: 4, horizontal: 14),
+                              listTileDivider: Divider(
+                                color: Colors.white.withOpacity(0.2),
+                              )),
+                          decoration: const InputDecoration(
+                            hintText: 'Phone number',
+                            hintStyle: TextStyle(color: Colors.grey),
+                            border: OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(12)),
+                              borderSide: BorderSide.none,
                             ),
-                          );
-                        },
+                            filled: true,
+                            fillColor: Colors.transparent,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 14,
+                            ),
+                            errorBorder: OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(12)),
+                              borderSide: BorderSide.none,
+                            ),
+                            focusedErrorBorder: OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(12)),
+                              borderSide: BorderSide.none,
+                            ),
+                            errorStyle: TextStyle(height: 0, fontSize: 0),
+                            counterText: '',
+                          ),
+                          onChanged: (PhoneNumber phone) {
+                            parent._phoneE164Draft = phone.completeNumber;
+                          },
+                          onSaved: (PhoneNumber? phone) {
+                            parent._phoneE164Draft = phone?.completeNumber;
+                          },
+                          validator: (PhoneNumber? phone) {
+                            if (phone == null || phone.number.trim().isEmpty) {
+                              return null;
+                            }
+                            if (phone.number.trim().length < 6) {
+                              return 'Enter a valid phone number';
+                            }
+                            return null;
+                          },
+                        ),
                       ),
                       const SizedBox(height: 24),
                       const Text(
@@ -1482,7 +1486,6 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                         ),
                       ),
                       const SizedBox(height: 8),
-                      // Input card
                       buildJadeerInputCard(
                         context: context,
                         child: TextFormField(
@@ -1577,7 +1580,7 @@ class _EditCompanyPageState extends State<EditCompanyPage>
     final original = widget.data;
 
     final origWebsite = (original[UserFields.website] ?? '').toString().trim();
-    final currWebsite = widget.parentState._websiteCtrl.text.trim();
+    final currWebsite = parent._websiteCtrl.text.trim();
     if (currWebsite != origWebsite) return true;
 
     final origDesc = (original[UserFields.description] ?? '').toString().trim();
@@ -1595,23 +1598,11 @@ class _EditCompanyPageState extends State<EditCompanyPage>
 
     final origPhoneE164 = (original[UserFields.phone] ?? '').toString().trim();
     final currPhoneLocal = parent._phone.text.trim();
+    final draftE164 = parent._phoneE164Draft?.trim() ?? '';
 
-    String _toComparableLocal(String e164) {
-      if (e164.isEmpty) return '';
-      final t = e164.trim();
-      if (!t.startsWith(_saPrefix)) return t;
-      final rest = t.substring(_saPrefix.length);
-      if (rest.startsWith('5')) {
-        return rest;
-      }
-      if (RegExp(r'^1[1-7]\d{6,7}$').hasMatch(rest)) {
-        return '0$rest';
-      }
-      return rest;
-    }
+    if (currPhoneLocal.isEmpty && origPhoneE164.isNotEmpty) return true;
 
-    final origPhoneLocal = _toComparableLocal(origPhoneE164);
-    if (currPhoneLocal != origPhoneLocal) return true;
+    if (draftE164.isNotEmpty && draftE164 != origPhoneE164) return true;
 
     final origLogoUrl = (original[UserFields.photoUrl] ?? '').toString().trim();
     if (parent._pendingLogoFile != null) {

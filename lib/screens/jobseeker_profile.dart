@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:country_picker/country_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -130,6 +131,44 @@ const nationalities = <String>[
   "Australian",
   "New Zealander",
 ];
+const nationalityFlags = {
+  "Saudi": "🇸🇦",
+  "Emirati": "🇦🇪",
+  "Kuwaiti": "🇰🇼",
+  "Qatari": "🇶🇦",
+  "Bahraini": "🇧🇭",
+  "Omani": "🇴🇲",
+  "Egyptian": "🇪🇬",
+  "Jordanian": "🇯🇴",
+  "Lebanese": "🇱🇧",
+  "Syrian": "🇸🇾",
+  "Iraqi": "🇮🇶",
+  "Palestinian": "🇵🇸",
+  "Sudanese": "🇸🇩",
+  "Moroccan": "🇲🇦",
+  "Tunisian": "🇹🇳",
+  "Algerian": "🇩🇿",
+  "Somali": "🇸🇴",
+  "American": "🇺🇸",
+  "Canadian": "🇨🇦",
+  "British": "🇬🇧",
+  "French": "🇫🇷",
+  "German": "🇩🇪",
+  "Italian": "🇮🇹",
+  "Spanish": "🇪🇸",
+  "Chinese": "🇨🇳",
+  "Indian": "🇮🇳",
+  "Pakistani": "🇵🇰",
+  "Bangladeshi": "🇧🇩",
+  "Filipino": "🇵🇭",
+  "Japanese": "🇯🇵",
+  "Korean": "🇰🇷",
+  "Turkish": "🇹🇷",
+  "Russian": "🇷🇺",
+  "South African": "🇿🇦",
+  "Australian": "🇦🇺",
+  "New Zealander": "🇳🇿",
+};
 
 class JobSeekerProfile extends StatelessWidget {
   const JobSeekerProfile({super.key});
@@ -312,12 +351,13 @@ class JobSeekerProfile extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.badge_outlined,
-                            size: 16,
-                            color: isDark ? scheme.onSurface : brand,
-                          ),
-                          const SizedBox(width: 4),
+                          if (nationalityValue != 'Not set') ...[
+                            Text(
+                              nationalityFlags[nationalityValue] ?? '',
+                              style: const TextStyle(fontSize: 20),
+                            ),
+                            const SizedBox(width: 6),
+                          ],
                           Flexible(
                             child: Text(
                               [
@@ -593,6 +633,46 @@ class EditJobSeekerPage extends StatefulWidget {
 
 class _EditJobSeekerPageState extends State<EditJobSeekerPage>
     with SingleTickerProviderStateMixin {
+  String _convertCountryToNationality(String country) {
+    final map = {
+      "Saudi Arabia": "Saudi",
+      "United Arab Emirates": "Emirati",
+      "Qatar": "Qatari",
+      "Kuwait": "Kuwaiti",
+      "Bahrain": "Bahraini",
+      "Oman": "Omani",
+      "United States": "American",
+      "United Kingdom": "British",
+      "France": "French",
+      "Italy": "Italian",
+      "Spain": "Spanish",
+      "Germany": "German",
+      "Netherlands": "Dutch",
+      "Sweden": "Swedish",
+      "Switzerland": "Swiss",
+      "India": "Indian",
+      "Pakistan": "Pakistani",
+      "Bangladesh": "Bangladeshi",
+      "Philippines": "Filipino",
+      "China": "Chinese",
+      "Japan": "Japanese",
+      "South Korea": "Korean",
+      "Russia": "Russian",
+      "Turkey": "Turkish",
+      "Egypt": "Egyptian",
+      "Sudan": "Sudanese",
+      "Morocco": "Moroccan",
+      "Tunisia": "Tunisian",
+      "Algeria": "Algerian",
+      "Nigeria": "Nigerian",
+      "Ethiopia": "Ethiopian",
+      "South Africa": "South African",
+    };
+
+    return map[country] ?? country;
+  }
+
+  Country? _selectedCountry;
   final _form = GlobalKey<FormState>();
   final _phone = TextEditingController();
   final _emailCtrl = TextEditingController();
@@ -1559,83 +1639,74 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
                           ),
                         ),
                         const SizedBox(height: 8),
-                        buildJadeerInputCard(
-                          context: context,
-                          child: Autocomplete<String>(
-                            initialValue: _nationality != null
-                                ? TextEditingValue(text: _nationality!)
-                                : null,
-                            optionsBuilder: (TextEditingValue value) {
-                              if (value.text.isEmpty) {
-                                return nationalities;
-                              }
-                              return nationalities.where(
-                                (c) => c
-                                    .toLowerCase()
-                                    .contains(value.text.toLowerCase()),
-                              );
-                            },
-                            onSelected: (selection) {
-                              setState(() => _nationality = selection);
-                            },
-                            fieldViewBuilder: (context, textController,
-                                focusNode, onFieldSubmitted) {
-                              return TextFormField(
-                                controller: textController,
-                                focusNode: focusNode,
-                                decoration: const InputDecoration(
-                                  hintText: 'Select your nationality',
-                                  hintStyle: TextStyle(color: Colors.grey),
-                                  border: OutlineInputBorder(
-                                    borderSide: BorderSide.none,
-                                    borderRadius: BorderRadius.all(
-                                      Radius.circular(12),
-                                    ),
-                                  ),
+                        InkWell(
+                          onTap: () {
+                            showCountryPicker(
+                              context: context,
+                              showPhoneCode: false,
+                              countryListTheme: CountryListThemeData(
+                                bottomSheetHeight:
+                                    MediaQuery.of(context).size.height * 0.45,
+                                backgroundColor:
+                                    const Color(0xFF4A5FBC).withOpacity(0.95),
+                                borderRadius: BorderRadius.circular(24),
+                                flagSize: 20,
+                                textStyle: const TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.white,
+                                ),
+                                inputDecoration: InputDecoration(
+                                  hintText: 'Search country',
+                                  hintStyle:
+                                      const TextStyle(color: Colors.white70),
                                   filled: true,
-                                  fillColor: Colors.transparent,
-                                  contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 14,
+                                  fillColor: Colors.white.withOpacity(0.1),
+                                  prefixIcon: const Icon(Icons.search,
+                                      color: Colors.white),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(18),
+                                    borderSide: BorderSide.none,
                                   ),
                                 ),
-                              );
-                            },
-                            optionsViewBuilder: (context, onSelected, options) {
-                              final scheme = Theme.of(context).colorScheme;
-                              return Align(
-                                alignment: Alignment.topLeft,
-                                child: Material(
-                                  elevation: 6,
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Container(
-                                    constraints:
-                                        const BoxConstraints(maxHeight: 250),
-                                    decoration: BoxDecoration(
-                                      color: scheme.surface,
-                                      borderRadius: BorderRadius.circular(12),
+                              ),
+                              onSelect: (Country country) {
+                                setState(() {
+                                  _selectedCountry = country;
+                                  _nationality = _convertCountryToNationality(
+                                      country.name);
+                                });
+                              },
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 14, horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.surface,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    if (_selectedCountry != null) ...[
+                                      Text(
+                                        _selectedCountry!.flagEmoji,
+                                        style: const TextStyle(fontSize: 20),
+                                      ),
+                                      const SizedBox(width: 8),
+                                    ],
+                                    Text(
+                                      _nationality ?? 'Select nationality',
+                                      style: const TextStyle(fontSize: 16),
                                     ),
-                                    child: ListView.builder(
-                                      padding: EdgeInsets.zero,
-                                      itemCount: options.length,
-                                      itemBuilder: (context, index) {
-                                        final option = options.elementAt(index);
-                                        return InkWell(
-                                          onTap: () => onSelected(option),
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 16,
-                                              vertical: 12,
-                                            ),
-                                            child: Text(option),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
+                                  ],
                                 ),
-                              );
-                            },
+                                const Icon(Icons.arrow_drop_down,
+                                    color: Color(0xFFFD6C67)),
+                              ],
+                            ),
                           ),
                         ),
                         const SizedBox(height: 32),
