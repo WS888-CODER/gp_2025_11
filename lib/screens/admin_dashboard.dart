@@ -207,56 +207,27 @@ class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
     await FirebaseAuth.instance.signOut();
 
     if (mounted) {
-      final theme = Theme.of(context);
-
-      showDialog(
+      await showDialog<bool>(
         context: context,
         barrierDismissible: false,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: theme.colorScheme.primary.withOpacity(0.7),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(25),
-          ),
-          title: const Text(
-            'Session Expired',
+        builder: (ctx) => const JadeerDialog(
+          title: 'Session Expired',
+          content: Text(
+            'You have been automatically logged out after 1 hour.',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white,
-              fontWeight: FontWeight.bold,
+              fontSize: 15,
             ),
           ),
-          content: const Text(
-            'You have been automatically logged out after 1 hour.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white70),
-          ),
-          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-          actionsPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          actionsAlignment: MainAxisAlignment.center,
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(ctx).pop();
-                Navigator.pushReplacementNamed(context, '/login');
-              },
-              style: TextButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: theme.colorScheme.primary,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25),
-                ),
-              ),
-              child: const Text(
-                'OK',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
+          primaryLabel: 'OK',
+          primaryResult: true,
         ),
-      );
+      ).then((confirmed) {
+        if (confirmed == true) {
+          Navigator.pushReplacementNamed(context, '/login');
+        }
+      });
     }
   }
 

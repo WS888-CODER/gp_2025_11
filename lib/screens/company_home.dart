@@ -25,7 +25,6 @@ class _CompanyHomeState extends State<CompanyHome> {
   static const Color _brand = Color(0xFF4A5FBC);
   int _tab = 1; // 0: Reports, 1: Home
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
   String get _effectiveCompanyId {
     final args =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
@@ -751,7 +750,6 @@ class _CompanyHomeState extends State<CompanyHome> {
       clipBehavior: Clip.none,
       alignment: Alignment.bottomCenter,
       children: [
-        // الـ Bottom Bar مع القطع (notch)
         ClipPath(
           clipper: _BottomBarClipper(
             circlePosition: _getCirclePosition() + 30,
@@ -773,8 +771,6 @@ class _CompanyHomeState extends State<CompanyHome> {
             ),
           ),
         ),
-
-        // الدائرة المتحركة البارزة
         AnimatedPositioned(
           duration: const Duration(milliseconds: 400),
           curve: Curves.easeInOutCubic,
@@ -835,21 +831,6 @@ class _CompanyHomeState extends State<CompanyHome> {
         ),
       ),
     );
-  }
-
-  Stream<String> _companyNameStream(String companyId) {
-    if (companyId.isEmpty) return Stream.value(widget.fallbackCompanyName);
-
-    return FirebaseFirestore.instance
-        .collection('Users')
-        .doc(companyId)
-        .snapshots()
-        .map((snap) {
-      final data = snap.data() ?? {};
-      final name =
-          (data['CompanyName'] ?? data['companyName'] ?? '').toString().trim();
-      return name.isEmpty ? widget.fallbackCompanyName : name;
-    });
   }
 
   Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>> _jobsStream(
@@ -1021,9 +1002,9 @@ class _CompanyHomeState extends State<CompanyHome> {
         children: [
           Expanded(
             child: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFF5F5F5),
-                borderRadius: const BorderRadius.only(
+              decoration: const BoxDecoration(
+                color: Color(0xFFF5F5F5),
+                borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(30),
                   topRight: Radius.circular(30),
                 ),
@@ -1210,7 +1191,6 @@ class _CompanyHomeState extends State<CompanyHome> {
                                       const SizedBox(height: 16),
                                       Row(
                                         children: [
-                                          // Edit button
                                           Expanded(
                                             child: Container(
                                               height: 42,
@@ -1228,8 +1208,10 @@ class _CompanyHomeState extends State<CompanyHome> {
                                                   onTap: () async {
                                                     final canProceed =
                                                         await _checkProfileComplete();
-                                                    if (!canProceed || !mounted)
+                                                    if (!canProceed ||
+                                                        !mounted) {
                                                       return;
+                                                    }
 
                                                     final start =
                                                         data['StartDate'];
@@ -1272,7 +1254,6 @@ class _CompanyHomeState extends State<CompanyHome> {
                                             ),
                                           ),
                                           const SizedBox(width: 10),
-                                          // View button
                                           Expanded(
                                             child: Container(
                                               height: 42,
@@ -1327,7 +1308,6 @@ class _CompanyHomeState extends State<CompanyHome> {
                                             ),
                                           ),
                                           const SizedBox(width: 10),
-                                          // More menu
                                           Container(
                                             width: 42,
                                             height: 42,
@@ -1397,10 +1377,11 @@ class _CompanyHomeState extends State<CompanyHome> {
                                                               Navigator.pop(
                                                                   dialogContext);
                                                               _closeJob(
-                                                                  doc.id,
-                                                                  isClosed,
-                                                                  safeCtx,
-                                                                  endDate);
+                                                                doc.id,
+                                                                isClosed,
+                                                                safeCtx,
+                                                                endDate,
+                                                              );
                                                             },
                                                           ),
                                                           const Divider(
@@ -1430,9 +1411,10 @@ class _CompanyHomeState extends State<CompanyHome> {
                                                               Navigator.pop(
                                                                   dialogContext);
                                                               _deleteJob(
-                                                                  doc.id,
-                                                                  title,
-                                                                  safeCtx);
+                                                                doc.id,
+                                                                title,
+                                                                safeCtx,
+                                                              );
                                                             },
                                                           ),
                                                         ],
@@ -1469,207 +1451,204 @@ class _CompanyHomeState extends State<CompanyHome> {
       ),
     );
 
-    return ThemedScaffold(
-      floatingActionButton: _tab == 1
-          ? Padding(
-              padding: const EdgeInsets.only(bottom: 30, right: 0),
-              child: FloatingActionButton.extended(
-                backgroundColor: _brand,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28),
-                ),
-                icon: const Icon(Icons.add),
-                label: const Text(
-                  'Create Job Post',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Stack(
+          children: [
+            ThemedScaffold(
+              key: _scaffoldKey,
+              appBar: _buildCustomAppBar(companyId),
+              body: IndexedStack(
+                index: _tab,
+                children: [
+                  // Reports tab
+                  Container(
+                    color: const Color(0xFF4A5FBC),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFF5F5F5),
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(30),
+                                topRight: Radius.circular(30),
+                              ),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 32,
+                                vertical: 32,
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    width: 80,
+                                    height: 80,
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [
+                                          Color(0xFFFD6C67),
+                                          Color(0xFFFF8A87),
+                                        ],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                      borderRadius: BorderRadius.circular(24),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(0xFFFD6C67)
+                                              .withOpacity(0.4),
+                                          blurRadius: 20,
+                                          offset: const Offset(0, 10),
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Icon(
+                                      Icons.assessment_rounded,
+                                      size: 40,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  const Text(
+                                    'Reports',
+                                    style: TextStyle(
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.black87,
+                                      letterSpacing: -0.5,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF4A5FBC)
+                                          .withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(30),
+                                      border: Border.all(
+                                        color: const Color(0xFF4A5FBC)
+                                            .withOpacity(0.3),
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Coming Soon',
+                                      style: TextStyle(
+                                        color: Color(0xFF4A5FBC),
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 14,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8),
+                                    child: Text(
+                                      'Comprehensive AI-powered evaluation reports for every candidate interview.',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.black.withOpacity(0.6),
+                                        height: 1.5,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 2,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  const _CompactReportFeature(
+                                    icon: Icons.description_outlined,
+                                    title: 'CV Evaluation',
+                                  ),
+                                  const SizedBox(height: 12),
+                                  const _CompactReportFeature(
+                                    icon: Icons.psychology_outlined,
+                                    title: 'Psychometric Analysis',
+                                  ),
+                                  const SizedBox(height: 12),
+                                  const _CompactReportFeature(
+                                    icon: Icons.mic_outlined,
+                                    title: 'Voice Tone Analysis',
+                                  ),
+                                  const SizedBox(height: 20),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 12,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          const Color(0xFF4A5FBC)
+                                              .withOpacity(0.05),
+                                          const Color(0xFFFD6C67)
+                                              .withOpacity(0.05),
+                                        ],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.auto_awesome,
+                                          size: 16,
+                                          color: const Color(0xFF4A5FBC)
+                                              .withOpacity(0.7),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Plus much more!',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: const Color(0xFF4A5FBC)
+                                                .withOpacity(0.8),
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Home tab
+                  homeBody,
+                ],
+              ),
+              bottomNavigationBar: _buildAnimatedNavBar(),
+            ),
+            if (_tab == 1)
+              _MovableFab(
                 onPressed: () async {
                   final canProceed = await _checkProfileComplete();
                   if (canProceed && mounted) {
                     await Navigator.pushNamed(context, '/job-posting');
-                    if (mounted) setState(() {});
+                    if (mounted) {
+                      setState(() {});
+                    }
                   }
                 },
               ),
-            )
-          : null,
-      key: _scaffoldKey,
-      appBar: _buildCustomAppBar(companyId),
-      body: IndexedStack(
-        index: _tab,
-        children: [
-          // Reports tab - Coming Soon
-          Container(
-            color: const Color(0xFF4A5FBC),
-            child: Column(
-              children: [
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF5F5F5),
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(30),
-                        topRight: Radius.circular(30),
-                      ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 32, vertical: 32),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          // Icon with coral gradient
-                          Container(
-                            width: 80,
-                            height: 80,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFFFD6C67), Color(0xFFFF8A87)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(24),
-                              boxShadow: [
-                                BoxShadow(
-                                  color:
-                                      const Color(0xFFFD6C67).withOpacity(0.4),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 10),
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.assessment_rounded,
-                              size: 40,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-
-                          // Title
-                          const Text(
-                            'Reports',
-                            style: TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.black87,
-                              letterSpacing: -0.5,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Coming Soon badge
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF4A5FBC).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(30),
-                              border: Border.all(
-                                color: const Color(0xFF4A5FBC).withOpacity(0.3),
-                                width: 2,
-                              ),
-                            ),
-                            child: const Text(
-                              'Coming Soon',
-                              style: TextStyle(
-                                color: Color(0xFF4A5FBC),
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Description
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            child: Text(
-                              'Comprehensive AI-powered evaluation reports for every candidate interview.',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.black.withOpacity(0.6),
-                                height: 1.5,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-
-                          // Feature list - compact
-                          _CompactReportFeature(
-                            icon: Icons.description_outlined,
-                            title: 'CV Evaluation',
-                          ),
-                          const SizedBox(height: 12),
-                          _CompactReportFeature(
-                            icon: Icons.psychology_outlined,
-                            title: 'Psychometric Analysis',
-                          ),
-                          const SizedBox(height: 12),
-                          _CompactReportFeature(
-                            icon: Icons.mic_outlined,
-                            title: 'Voice Tone Analysis',
-                          ),
-
-                          const SizedBox(height: 20),
-
-                          // Footer
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 12),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  const Color(0xFF4A5FBC).withOpacity(0.05),
-                                  const Color(0xFFFD6C67).withOpacity(0.05),
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.auto_awesome,
-                                  size: 16,
-                                  color:
-                                      const Color(0xFF4A5FBC).withOpacity(0.7),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Plus much more!',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: const Color(0xFF4A5FBC)
-                                        .withOpacity(0.8),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          homeBody,
-        ],
-      ),
-      bottomNavigationBar: _buildAnimatedNavBar(),
+          ],
+        );
+      },
     );
   }
 }
@@ -1925,5 +1904,62 @@ class _BottomBarClipper extends CustomClipper<Path> {
   @override
   bool shouldReclip(_BottomBarClipper oldClipper) {
     return oldClipper.circlePosition != circlePosition;
+  }
+}
+
+class _MovableFab extends StatefulWidget {
+  final Future<void> Function() onPressed;
+
+  const _MovableFab({required this.onPressed});
+
+  @override
+  State<_MovableFab> createState() => _MovableFabState();
+}
+
+class _MovableFabState extends State<_MovableFab> {
+  double _fabX = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    if (_fabX == 0) {
+      _fabX = screenWidth - 180;
+    }
+
+    const double minX = 16;
+    final double maxX = screenWidth - 180;
+
+    if (_fabX < minX) _fabX = minX;
+    if (_fabX > maxX) _fabX = maxX;
+
+    return Positioned(
+      bottom: 110,
+      left: _fabX,
+      child: GestureDetector(
+        onHorizontalDragUpdate: (details) {
+          setState(() {
+            _fabX += details.delta.dx;
+            if (_fabX < minX) _fabX = minX;
+            if (_fabX > maxX) _fabX = maxX;
+          });
+        },
+        child: FloatingActionButton.extended(
+          backgroundColor: const Color(0xFF4A5FBC),
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+          icon: const Icon(Icons.add),
+          label: const Text(
+            'Create Job Post',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          onPressed: () async {
+            await widget.onPressed();
+          },
+        ),
+      ),
+    );
   }
 }
