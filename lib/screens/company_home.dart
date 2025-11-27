@@ -135,22 +135,17 @@ class _CompanyHomeState extends State<CompanyHome> {
                     colorScheme: scheme.copyWith(
                       primary: const Color(0xFFFC686A),
                       onPrimary: Colors.white,
-                      onSurface: Colors.white, // السنوات والأرقام
+                      onSurface: Colors.white,
                       surface: const Color(0xFF4A5FBC).withOpacity(0.95),
                     ),
                     textTheme: theme.textTheme.copyWith(
-                      // نص السنوات
                       bodyLarge: const TextStyle(color: Colors.white),
-                      // نص الأرقام في الكاليندر
                       bodyMedium: const TextStyle(color: Colors.white),
-                      // نص التاريخ المختار
                       headlineMedium: const TextStyle(
                           color: Colors.white, fontWeight: FontWeight.bold),
-                      // نص السنة في الـ header
                       titleLarge: const TextStyle(color: Colors.white),
                     ),
                     inputDecorationTheme: InputDecorationTheme(
-                      // للـ Input mode (لما تضغطين القلم)
                       labelStyle: const TextStyle(color: Colors.white),
                       hintStyle:
                           TextStyle(color: Colors.white.withOpacity(0.7)),
@@ -251,22 +246,17 @@ class _CompanyHomeState extends State<CompanyHome> {
                     colorScheme: scheme.copyWith(
                       primary: const Color(0xFFFC686A),
                       onPrimary: Colors.white,
-                      onSurface: Colors.white, // السنوات والأرقام
+                      onSurface: Colors.white,
                       surface: const Color(0xFF4A5FBC).withOpacity(0.95),
                     ),
                     textTheme: theme.textTheme.copyWith(
-                      // نص السنوات
                       bodyLarge: const TextStyle(color: Colors.white),
-                      // نص الأرقام في الكاليندر
                       bodyMedium: const TextStyle(color: Colors.white),
-                      // نص التاريخ المختار
                       headlineMedium: const TextStyle(
                           color: Colors.white, fontWeight: FontWeight.bold),
-                      // نص السنة في الـ header
                       titleLarge: const TextStyle(color: Colors.white),
                     ),
                     inputDecorationTheme: InputDecorationTheme(
-                      // للـ Input mode (لما تضغطين القلم)
                       labelStyle: const TextStyle(color: Colors.white),
                       hintStyle:
                           TextStyle(color: Colors.white.withOpacity(0.7)),
@@ -280,8 +270,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                     ),
                     textButtonTheme: TextButtonThemeData(
                       style: TextButton.styleFrom(
-                        foregroundColor:
-                            const Color(0xFFFC686A), // أزرار OK و Cancel
+                        foregroundColor: const Color(0xFFFC686A),
                       ),
                     ),
                     datePickerTheme: DatePickerThemeData(
@@ -290,20 +279,18 @@ class _CompanyHomeState extends State<CompanyHome> {
                       headerForegroundColor: Colors.white,
                       weekdayStyle: const TextStyle(color: Colors.white),
                       yearStyle: const TextStyle(color: Colors.white),
-                      dayStyle: const TextStyle(
-                          color: Colors.white), // الأيام في الشبكة
+                      dayStyle: const TextStyle(color: Colors.white),
                       yearForegroundColor:
                           MaterialStateColor.resolveWith((states) {
                         if (states.contains(MaterialState.selected)) {
-                          return Colors.white; // السنة المختارة
+                          return Colors.white;
                         }
-                        return Colors.white; // باقي السنوات
+                        return Colors.white;
                       }),
                       yearBackgroundColor:
                           MaterialStateColor.resolveWith((states) {
                         if (states.contains(MaterialState.selected)) {
-                          return const Color(
-                              0xFFFC686A); // خلفية السنة المختارة
+                          return const Color(0xFFFC686A);
                         }
                         return Colors.transparent;
                       }),
@@ -881,7 +868,6 @@ class _CompanyHomeState extends State<CompanyHome> {
         return docs;
       });
     } catch (e) {
-      print("Error in _jobsStream: $e");
       return Stream.error(e);
     }
   }

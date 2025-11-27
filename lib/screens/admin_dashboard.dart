@@ -63,7 +63,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final isDark = theme.brightness == Brightness.dark;
 
     final Color selectedBg = theme.colorScheme.secondary;
-    final Color borderColor = theme.colorScheme.secondary;
+    final Color borderColor =
+        isSelected ? selectedBg : theme.colorScheme.primary;
     final Color unselectedText =
         isDark ? Colors.white70 : theme.colorScheme.primary;
 
@@ -79,7 +80,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       selectedColor: selectedBg,
       side: BorderSide(
         color: borderColor,
-        width: 1.2,
+        width: 2,
       ),
       showCheckmark: false,
       onSelected: (sel) async {
@@ -91,14 +92,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(
-        context); // Ã˜Â¹Ã˜Â´Ã˜Â§Ã™â€  Ã™â€¦Ã˜Â§ Ã™â€ Ã™Æ’Ã˜Â±Ã˜Â± Theme.of(context) Ã™â€¦Ã™â€žÃ™Å Ã™Ë†Ã™â€  Ã™â€¦Ã˜Â±Ã˜Â©
+    final theme = Theme.of(context);
     final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black87;
 
     return ThemedScaffold(
       appBar: const _AdminDashboardAppBar(),
       body: Column(
         children: [
+          const SizedBox(height: 20),
           // ======== Filter chips row (All / Pending / ...) ========
           Container(
             width: double.infinity,
@@ -123,14 +124,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
             child: isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : (companies == null || companies!.isEmpty)
-                    ? Center(
-                        child: Text(
-                          'No companies found',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: textColor.withOpacity(0.6),
-                          ),
-                        ),
+                    ? const EmptyState(
+                        icon: Iconsax.briefcase,
+                        title: 'No companies found',
+                        subtitle: 'New company registrations will appear here.',
                       )
                     : RefreshIndicator(
                         onRefresh: loadCompanies,
@@ -171,7 +168,7 @@ class _AdminDashboardAppBar extends StatefulWidget
   State<_AdminDashboardAppBar> createState() => _AdminDashboardAppBarState();
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => const Size.fromHeight(180);
 }
 
 class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
@@ -192,6 +189,7 @@ class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
 
   void _startSessionTimer() {
     _sessionTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
       setState(() {
         if (_remainingSeconds > 0) {
           _remainingSeconds--;
@@ -314,71 +312,150 @@ class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     final bool isLowTime = _remainingSeconds < 300;
 
-    return AppBar(
-      backgroundColor: theme.colorScheme.primary,
-      elevation: 0,
-      leadingWidth: 105,
-      leading: Container(
-        margin: const EdgeInsets.only(left: 12),
-        child: Center(
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 10,
-              vertical: 5,
-            ),
-            decoration: BoxDecoration(
-              color:
-                  isLowTime ? Colors.red[100] : Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.timer,
-                  color: isLowTime ? Colors.red[700] : Colors.white,
-                  size: 16,
-                ),
-                const SizedBox(width: 5),
-                Text(
-                  _formatTime(_remainingSeconds),
-                  style: TextStyle(
-                    color: isLowTime ? Colors.red[700] : Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
+    final pillColor =
+        isLowTime ? Colors.red[100] : Colors.white.withOpacity(0.2);
+    final timerColor = isLowTime ? Colors.red[700] : Colors.white;
+
+    final bubbleColor = Colors.white.withOpacity(isDark ? 0.04 : 0.06);
+    final shadowColor = scheme.primary.withOpacity(isDark ? 0.55 : 0.4);
+
+    return Container(
+      height: widget.preferredSize.height,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [scheme.primary, scheme.primary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(40),
+          bottomRight: Radius.circular(40),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: shadowColor,
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            top: -60,
+            right: -40,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: bubbleColor,
+              ),
             ),
           ),
-        ),
+          Positioned(
+            bottom: -20,
+            left: -30,
+            child: Container(
+              width: 140,
+              height: 140,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: bubbleColor,
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: pillColor,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.timer,
+                              color: timerColor,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              _formatTime(_remainingSeconds),
+                              style: TextStyle(
+                                color: timerColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.pushNamed(
+                            context,
+                            '/settings',
+                            arguments: {
+                              'userId':
+                                  FirebaseAuth.instance.currentUser?.uid ?? '',
+                              'userType': 'Admin',
+                            },
+                          );
+                        },
+                        child: Container(
+                          width: 46,
+                          height: 46,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.settings_outlined,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  const Center(
+                    child: Text(
+                      'Admin Dashboard',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        ],
       ),
-      centerTitle: true,
-      title: const Text(
-        'Admin Dashboard',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.settings, color: Colors.white),
-          tooltip: 'Settings',
-          onPressed: () {
-            Navigator.pushNamed(
-              context,
-              '/settings',
-              arguments: {
-                'userId': FirebaseAuth.instance.currentUser?.uid ?? '',
-                'userType': 'Admin',
-              },
-            );
-          },
-        ),
-      ],
     );
   }
 }
@@ -414,7 +491,6 @@ class _CompanyCard extends StatelessWidget {
     final companyName = data['CompanyName'] ?? 'Unnamed';
     final email = data['Email'] ?? 'No email';
     final accountStatus = data['AccountStatus'] ?? 'Pending';
-    final isEmailVerified = data['IsEmailVerified'] ?? false;
     final createdAt = (data['Date'] as Timestamp?)?.toDate();
 
     final bgColor = theme.colorScheme.surface;
@@ -423,7 +499,6 @@ class _CompanyCard extends StatelessWidget {
         : theme.colorScheme.primary.withOpacity(0.15);
 
     final primaryColor = theme.colorScheme.primary;
-    final secondaryColor = theme.colorScheme.secondary;
     final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black87;
 
     return Container(
@@ -441,7 +516,7 @@ class _CompanyCard extends StatelessWidget {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12.0),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
         child: Column(
           children: [
             // name + status
@@ -456,7 +531,7 @@ class _CompanyCard extends StatelessWidget {
                     style: TextStyle(
                       color: primaryColor,
                       fontWeight: FontWeight.bold,
-                      fontSize: 15,
+                      fontSize: 20,
                     ),
                   ),
                 ),
@@ -511,13 +586,13 @@ class _CompanyCard extends StatelessWidget {
                 icon: Icon(
                   Iconsax.edit,
                   color: primaryColor,
-                  size: 16,
+                  size: 18,
                 ),
                 label: Text(
                   'Change Status',
                   style: TextStyle(
                     color: primaryColor,
-                    fontSize: 12,
+                    fontSize: 14,
                   ),
                 ),
               ),
@@ -566,7 +641,7 @@ class _InfoRow extends StatelessWidget {
       children: [
         Icon(
           icon,
-          size: 16,
+          size: 18,
           color: theme.colorScheme.secondary,
         ),
         const SizedBox(width: 5),
@@ -579,7 +654,7 @@ class _InfoRow extends StatelessWidget {
               color: labelColor ??
                   theme.textTheme.bodyLarge?.color ??
                   Colors.black87,
-              fontSize: 12,
+              fontSize: 14,
             ),
           ),
         ),

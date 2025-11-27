@@ -25,6 +25,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isDeletingAccount = false;
 
   Future<void> _handleLogout(BuildContext context) async {
+    final settings = Provider.of<AppSettingsNotifier>(context, listen: false);
+
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => const JadeerDialog<bool>(
@@ -45,6 +47,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
 
     if (confirm == true) {
+      settings.toggleTheme(ThemeMode.light);
+
       await FirebaseAuth.instance.signOut();
       if (context.mounted) {
         Navigator.of(context)
