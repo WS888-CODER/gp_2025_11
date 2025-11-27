@@ -64,9 +64,8 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
         return;
       }
 
-      final userDocRef = FirebaseFirestore.instance
-          .collection('Users')
-          .doc(currentUser.uid);
+      final userDocRef =
+          FirebaseFirestore.instance.collection('Users').doc(currentUser.uid);
 
       final userDoc = await userDocRef.get();
 
@@ -330,34 +329,10 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
           Navigator.pop(context);
         }
       },
-<<<<<<< HEAD
       child: Scaffold(
         backgroundColor: const Color(0xFFF5F5F5),
         appBar: CustomHeader(
           title: _isEnhancing ? 'Enhancing CV' : 'Complete Your CV',
-=======
-      child: ThemedScaffold(
-        appBar: AppBar(
-          backgroundColor: AppTheme.primaryPurple,
-          foregroundColor: Colors.white,
-          title: Text(
-            _isEnhancing ? 'Enhancing CV' : 'Complete Your CV',
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () async {
-              final shouldPop = await _onWillPop();
-              if (shouldPop && context.mounted) {
-                Navigator.pop(context);
-              }
-            },
-          ),
->>>>>>> 3177aa701ce6a33e0b575757ee6cf232c35ae786
         ),
         body: _buildBody(),
       ),
@@ -410,75 +385,75 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
     final progress = (_currentSectionIndex + 1) / _missingSections.length;
 
     return Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: scheme.surface,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    if (_currentSectionIndex > 0)
-                      TextButton.icon(
-                        onPressed: _goBack,
-                        icon: const Icon(Icons.arrow_back, size: 16),
-                        label: const Text('Back'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppTheme.primaryPurple,
-                        ),
-                      )
-                    else
-                      const SizedBox(width: 80),
-                    Expanded(
-                      child: Center(
-                        child: Text(
-                          'Section ${_currentSectionIndex + 1} of ${_missingSections.length}',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: scheme.onSurface,
-                          ),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  if (_currentSectionIndex > 0)
+                    TextButton.icon(
+                      onPressed: _goBack,
+                      icon: const Icon(Icons.arrow_back, size: 16),
+                      label: const Text('Back'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppTheme.primaryPurple,
+                      ),
+                    )
+                  else
+                    const SizedBox(width: 80),
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        'Section ${_currentSectionIndex + 1} of ${_missingSections.length}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: scheme.onSurface,
                         ),
                       ),
                     ),
-                    SizedBox(
-                      width: 80,
-                      child: TextButton(
-                        onPressed: _skipAll,
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppTheme.primaryPurple,
-                        ),
-                        child: const Text('Skip All'),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                LinearProgressIndicator(
-                  value: progress,
-                  backgroundColor: AppTheme.primaryPurple.withOpacity(0.15),
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                    AppTheme.primaryPurple,
                   ),
-                  minHeight: 6,
+                  SizedBox(
+                    width: 80,
+                    child: TextButton(
+                      onPressed: _skipAll,
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppTheme.primaryPurple,
+                      ),
+                      child: const Text('Skip All'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              LinearProgressIndicator(
+                value: progress,
+                backgroundColor: AppTheme.primaryPurple.withOpacity(0.15),
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  AppTheme.primaryPurple,
                 ),
-              ],
-            ),
+                minHeight: 6,
+              ),
+            ],
           ),
-          Expanded(
-            child: _buildSectionForm(sectionName),
-          ),
-        ],
-      );
+        ),
+        Expanded(
+          child: _buildSectionForm(sectionName),
+        ),
+      ],
+    );
   }
 
   Widget _buildStyledTextField({
