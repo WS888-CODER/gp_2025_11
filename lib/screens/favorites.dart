@@ -144,181 +144,43 @@ class _FavoritesPageState extends State<FavoritesPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
-    final favJobs = _favoriteJobs;
+    return Scaffold(
+      backgroundColor: isDark ? scheme.background : const Color(0xFFF5F5F5),
+      appBar: const CustomHeader(
+        title: 'Favorites',
+        showBack: false,
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _favoriteJobs.isEmpty
+              ? const EmptyState(
+                  icon: Icons.favorite_border,
+                  title: 'No Favorite Jobs Yet',
+                  subtitle: 'Jobs you save will appear here',
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: _favoriteJobs.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final job = _favoriteJobs[index];
+                    final company =
+                        _companies[job.userId] ?? const CompanyInfo();
 
-    if (favJobs.isEmpty) {
-      return Column(
-        children: [
-          // Purple curved header with decorative circles
-          Container(
-            height: 120,
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF4A5FBC), Color(0xFF4A5FBC)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(40),
-                bottomRight: Radius.circular(40),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Color(0x404A5FBC),
-                  blurRadius: 20,
-                  offset: Offset(0, 10),
+                    return JobCard(
+                      job: job,
+                      company: company,
+                      isSaved: true,
+                      onSavedChanged: (newValue) {
+                        _handleToggleFavorite(job, newValue);
+                      },
+                    );
+                  },
                 ),
-              ],
-            ),
-            child: Stack(
-              children: [
-                // Decorative background circles
-                Positioned(
-                  top: -60,
-                  right: -40,
-                  child: Container(
-                    width: 200,
-                    height: 200,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.05),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  bottom: -20,
-                  left: -30,
-                  child: Container(
-                    width: 140,
-                    height: 140,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.05),
-                    ),
-                  ),
-                ),
-                // Page title centered
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.only(top: 35),
-                    child: Text(
-                      'Favorites',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Expanded(
-            child: EmptyState(
-              icon: Icons.favorite_border,
-              title: 'No Favorite Jobs Yet',
-              subtitle: 'Jobs you save will appear here',
-            ),
-          ),
-        ],
-      );
-    }
-
-    return Column(
-      children: [
-        // Purple curved header with decorative circles
-        Container(
-          height: 120,
-          width: double.infinity,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF4A5FBC), Color(0xFF4A5FBC)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(40),
-              bottomRight: Radius.circular(40),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x404A5FBC),
-                blurRadius: 20,
-                offset: Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              // Decorative background circles
-              Positioned(
-                top: -60,
-                right: -40,
-                child: Container(
-                  width: 200,
-                  height: 200,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.05),
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: -20,
-                left: -30,
-                child: Container(
-                  width: 140,
-                  height: 140,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.05),
-                  ),
-                ),
-              ),
-              // Page title centered
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.only(top: 35),
-                  child: Text(
-                    'Favorites',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: ListView.separated(
-            padding: const EdgeInsets.all(12),
-            itemCount: favJobs.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
-            itemBuilder: (context, index) {
-              final job = favJobs[index];
-              final company = _companies[job.userId] ?? const CompanyInfo();
-
-              return JobCard(
-                job: job,
-                company: company,
-                isSaved: true,
-                onSavedChanged: (newValue) {
-                  _handleToggleFavorite(job, newValue);
-                },
-              );
-            },
-          ),
-        ),
-      ],
     );
   }
 }

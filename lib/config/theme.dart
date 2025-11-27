@@ -446,3 +446,113 @@ class EmptyState extends StatelessWidget {
     );
   }
 }
+
+class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
+  final String title;
+  final bool showBack;
+
+  const CustomHeader({
+    super.key,
+    required this.title,
+    this.showBack = true,
+  });
+
+  @override
+  Size get preferredSize => const Size.fromHeight(120);
+
+  @override
+  Widget build(BuildContext context) {
+    final canPop = Navigator.of(context).canPop();
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final Color primaryTop = scheme.primary;
+    final Color primaryBottom =
+        isDark ? scheme.primary.withOpacity(0.95) : scheme.primary;
+
+    final Color bubbleColor = Colors.white.withOpacity(isDark ? 0.04 : 0.06);
+    final Color shadowColor = scheme.primary.withOpacity(isDark ? 0.55 : 0.4);
+
+    return Container(
+      height: preferredSize.height,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [primaryTop, primaryBottom],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(40),
+          bottomRight: Radius.circular(40),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: shadowColor,
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            top: -60,
+            right: -40,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: bubbleColor,
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -20,
+            left: -30,
+            child: Container(
+              width: 140,
+              height: 140,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: bubbleColor,
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Stack(
+              children: [
+                if (showBack && canPop)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                  ),
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 38),
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

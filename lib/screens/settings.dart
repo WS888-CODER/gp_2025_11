@@ -189,16 +189,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final isAdmin = widget.userType == 'Admin';
 
     return ThemedScaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Settings',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        backgroundColor: _brandColor,
-      ),
+      appBar: const CustomHeader(title: 'Settings'),
       body: Padding(
         padding: const EdgeInsets.fromLTRB(20.0, 30.0, 20.0, 0),
         child: ListView(

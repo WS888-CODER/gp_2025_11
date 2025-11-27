@@ -30,133 +30,131 @@ class _HistoryPageState extends State<HistoryPage>
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Purple curved header with tabs merged inside
-        Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF4A5FBC), Color(0xFF4A5FBC)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(40),
-              bottomRight: Radius.circular(40),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x404A5FBC),
-                blurRadius: 20,
-                offset: Offset(0, 10),
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      color: isDark ? scheme.background : const Color(0xFFF5F5F5),
+      child: Column(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [scheme.primary, scheme.primary],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              // Decorative background circles
-              Positioned(
-                top: -60,
-                right: -40,
-                child: Container(
-                  width: 200,
-                  height: 200,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.05),
-                  ),
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(40),
+                bottomRight: Radius.circular(40),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: scheme.primary.withOpacity(isDark ? 0.6 : 0.4),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
                 ),
-              ),
-              Positioned(
-                bottom: 20,
-                left: -30,
-                child: Container(
-                  width: 140,
-                  height: 140,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.05),
-                  ),
-                ),
-              ),
-              // Tabs inside the purple header
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(height: 50),
-                  // Page title
-                  const Text(
-                    'History',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+              ],
+            ),
+            child: Stack(
+              children: [
+                Positioned(
+                  top: -60,
+                  right: -40,
+                  child: Container(
+                    width: 200,
+                    height: 200,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withOpacity(isDark ? 0.03 : 0.06),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  TabBar(
-                    controller: _tabController,
-                    indicatorColor: Colors.white,
-                    indicatorWeight: 3,
-                    dividerColor: Colors.transparent,
-                    labelColor: Colors.white,
-                    unselectedLabelColor: Colors.white70,
-                    tabs: const [
-                      Tab(
-                        child: Text(
-                          'CV Enhancement',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ),
-                      Tab(
-                        child: Text(
-                          'Mock Interview',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ),
-                      Tab(
-                        child: Text(
-                          'Job Application',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ),
-                    ],
+                ),
+                Positioned(
+                  bottom: 20,
+                  left: -30,
+                  child: Container(
+                    width: 140,
+                    height: 140,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withOpacity(isDark ? 0.03 : 0.06),
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                ],
-              ),
-            ],
+                ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(height: 60),
+                    Text(
+                      'History',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TabBar(
+                      controller: _tabController,
+                      indicatorColor: Colors.white,
+                      indicatorWeight: 3,
+                      dividerColor: Colors.transparent,
+                      labelColor: Colors.white,
+                      unselectedLabelColor: Colors.white70,
+                      tabs: const [
+                        Tab(
+                          child: Text(
+                            'CV Enhancement',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                        Tab(
+                          child: Text(
+                            'Mock Interview',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                        Tab(
+                          child: Text(
+                            'Job Application',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              _buildCVHistory(context),
-              _buildMockInterviewHistory(context),
-              _buildJobApplicationsHistory(context),
-            ],
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildCVHistory(context),
+                _buildMockInterviewHistory(context),
+                _buildJobApplicationsHistory(context),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
-  }
-
-  Widget _buildTabs(BuildContext context) {
-    // This method is no longer used but kept for compatibility
-    return const SizedBox.shrink();
   }
 
   // ---------------- CV HISTORY ----------------
@@ -356,9 +354,14 @@ class _HistoryPageState extends State<HistoryPage>
     required Color leadingBgColor,
     VoidCallback? onTap,
   }) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     return Material(
-      color: Colors.white,
-      elevation: 1.5,
+      color: isDark ? scheme.surface : Colors.white,
+      elevation: isDark ? 0 : 1,
+      shadowColor: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onTap,
@@ -379,10 +382,10 @@ class _HistoryPageState extends State<HistoryPage>
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 16,
-                        color: Colors.black87,
+                        color: isDark ? scheme.onSurface : Colors.black87,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -392,13 +395,18 @@ class _HistoryPageState extends State<HistoryPage>
                       subtitle,
                       style: TextStyle(
                         fontSize: 13,
-                        color: Colors.grey.shade600,
+                        color: isDark
+                            ? scheme.onSurface.withOpacity(0.7)
+                            : Colors.grey.shade600,
                       ),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: Colors.black45),
+              Icon(Icons.chevron_right,
+                  color: isDark
+                      ? scheme.onSurface.withOpacity(0.5)
+                      : Colors.black45),
             ],
           ),
         ),

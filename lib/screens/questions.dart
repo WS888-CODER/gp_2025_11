@@ -742,10 +742,23 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                   final isUserAdded =
                                       _userAddedQuestions.contains(q);
 
-                                  return Card(
-                                    elevation: 1.5,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
+                                  return Container(
+                                    decoration: BoxDecoration(
+                                      color:
+                                          Theme.of(context).colorScheme.surface,
+                                      borderRadius: BorderRadius.circular(16),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(
+                                            Theme.of(context).brightness ==
+                                                    Brightness.dark
+                                                ? 0.12
+                                                : 0.05,
+                                          ),
+                                          blurRadius: 12,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
                                     ),
                                     child: Padding(
                                       padding: const EdgeInsets.all(14),

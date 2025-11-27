@@ -46,11 +46,20 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
   }
 
   Widget _buildAnimatedNavBar() {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final barColor = isDark ? scheme.surface : Colors.white;
+    final circleColor = isDark ? scheme.secondary : const Color(0xFFFC686A);
+    final circleIconColor = isDark ? scheme.onSecondary : Colors.white;
+    final shadowColor =
+        isDark ? Colors.black.withOpacity(0.6) : Colors.black.withOpacity(0.08);
+
     return Stack(
       clipBehavior: Clip.none,
       alignment: Alignment.bottomCenter,
       children: [
-        // الـ Bottom Bar مع القطع (notch)
         ClipPath(
           clipper: _BottomBarClipper(
             circlePosition: _getCirclePosition() + 30,
@@ -58,8 +67,15 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
           ),
           child: Container(
             height: 70,
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: barColor,
+              boxShadow: [
+                BoxShadow(
+                  color: shadowColor,
+                  blurRadius: 12,
+                  offset: const Offset(0, -2),
+                ),
+              ],
             ),
             child: SafeArea(
               child: Row(
@@ -73,8 +89,6 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
             ),
           ),
         ),
-
-        // الدائرة المتحركة البارزة
         AnimatedPositioned(
           duration: const Duration(milliseconds: 400),
           curve: Curves.easeInOutCubic,
@@ -83,18 +97,54 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
           child: Container(
             width: 60,
             height: 60,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Color(0xFFFC686A),
+              color: circleColor,
+              boxShadow: [
+                BoxShadow(
+                  color: circleColor.withOpacity(0.4),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
             child: Icon(
               _getSelectedIcon(),
-              color: Colors.white,
+              color: circleIconColor,
               size: 30,
             ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildNavIcon(IconData icon, int index) {
+    final isSelected = _tab == index;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final Color baseColor =
+        isDark ? scheme.onSurface.withOpacity(0.5) : Colors.grey[400]!;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _tab = index;
+        });
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: 60,
+        height: 60,
+        alignment: Alignment.center,
+        child: Icon(
+          icon,
+          size: 26,
+          color: isSelected ? Colors.transparent : baseColor,
+        ),
+      ),
     );
   }
 
@@ -117,64 +167,47 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
     }
   }
 
-  Widget _buildNavIcon(IconData icon, int index) {
-    final isSelected = _tab == index;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _tab = index;
-        });
-      },
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        width: 60,
-        height: 60,
-        alignment: Alignment.center,
-        child: Icon(
-          icon,
-          size: 26,
-          color: isSelected ? Colors.transparent : Colors.grey[400],
-        ),
-      ),
-    );
-  }
-
   PreferredSizeWidget _buildCustomAppBar(String userId) {
-    // For non-home tabs, no AppBar (handled by the page itself)
     if (_tab != 1) {
-      return PreferredSize(
+      return const PreferredSize(
         preferredSize: Size.zero,
-        child: Container(),
+        child: SizedBox.shrink(),
       );
     }
 
-    // For home tab, use custom design with profile button
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final Color primaryTop = scheme.primary;
+    final Color primaryBottom =
+        isDark ? scheme.primary.withOpacity(0.95) : scheme.primary;
+
     return PreferredSize(
       preferredSize: const Size.fromHeight(200),
       child: Container(
         height: 280,
         width: double.infinity,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF4A5FBC), Color(0xFF4A5FBC)],
+            colors: [primaryTop, primaryBottom],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.only(
+          borderRadius: const BorderRadius.only(
             bottomLeft: Radius.circular(40),
             bottomRight: Radius.circular(40),
           ),
           boxShadow: [
             BoxShadow(
-              color: Color(0x404A5FBC),
+              color: scheme.primary.withOpacity(0.4),
               blurRadius: 20,
-              offset: Offset(0, 10),
+              offset: const Offset(0, 10),
             ),
           ],
         ),
         child: Stack(
           children: [
-            // Decorative background circles
             Positioned(
               top: -60,
               right: -40,
@@ -183,7 +216,7 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
                 height: 200,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.05),
+                  color: Colors.white.withOpacity(isDark ? 0.05 : 0.08),
                 ),
               ),
             ),
@@ -195,11 +228,10 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
                 height: 140,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.05),
+                  color: Colors.white.withOpacity(isDark ? 0.04 : 0.07),
                 ),
               ),
             ),
-            // Original content
             SafeArea(
               child: Padding(
                 padding:
@@ -207,10 +239,8 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Top row with profile, notification, and settings
                     Row(
                       children: [
-                        // Profile button with actual photo
                         StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
                           stream: FirebaseFirestore.instance
                               .collection('Users')
@@ -257,7 +287,6 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
                           },
                         ),
                         const Spacer(),
-                        // Notification button
                         GestureDetector(
                           onTap: () {
                             SnackHelper.error(
@@ -278,7 +307,6 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        // Settings button
                         GestureDetector(
                           onTap: () {
                             final uid =
@@ -310,7 +338,6 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
                       ],
                     ),
                     const SizedBox(height: 24),
-                    // Welcome text
                     _WelcomeTitle(userId: userId),
                   ],
                 ),
@@ -330,16 +357,18 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
       messenger?.hideCurrentMaterialBanner();
     });
     final userId = _effectiveUserId;
+    final scheme = Theme.of(context).colorScheme;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final homeBody = Container(
-      color: const Color(0xFF4A5FBC),
+      color: isDark ? scheme.background : const Color(0xFFF5F5F5),
       child: Column(
         children: [
           Expanded(
             child: Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFFF5F5F5),
-                borderRadius: BorderRadius.only(
+              decoration: BoxDecoration(
+                color: isDark ? scheme.background : const Color(0xFFF5F5F5),
+                borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(30),
                   topRight: Radius.circular(30),
                 ),
@@ -349,11 +378,8 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
                 padding: const EdgeInsets.all(20),
                 children: [
                   const SizedBox(height: 8),
-                  // Search bar
                   const _JobsSearchShortcut(),
                   const SizedBox(height: 24),
-
-                  // Feature cards
                   Row(
                     children: [
                       Expanded(
@@ -393,9 +419,7 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 32),
-                  // Jobs header
                   Row(
                     children: [
                       const Text(
@@ -420,10 +444,10 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
                           minimumSize: const Size(40, 30),
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
-                        child: const Text(
+                        child: Text(
                           'View All',
                           style: TextStyle(
-                            color: Color(0xFF4A5FBC),
+                            color: scheme.primary,
                             fontWeight: FontWeight.w600,
                             fontSize: 16,
                           ),
@@ -548,6 +572,8 @@ class _ModernFeatureCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       height: 160,
       decoration: BoxDecoration(
@@ -559,7 +585,7 @@ class _ModernFeatureCard extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: gradientColors.first.withOpacity(0.3),
+            color: Colors.black.withOpacity(isDark ? 0.6 : 0.3),
             blurRadius: 12,
             offset: const Offset(0, 8),
           ),
@@ -572,7 +598,6 @@ class _ModernFeatureCard extends StatelessWidget {
           onTap: onTap,
           child: Stack(
             children: [
-              // Background large icon (texture)
               Positioned(
                 right: -20,
                 bottom: -20,
@@ -582,13 +607,11 @@ class _ModernFeatureCard extends StatelessWidget {
                   color: Colors.white.withOpacity(0.15),
                 ),
               ),
-              // Content
               Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Small Icon Bubble
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
@@ -598,7 +621,6 @@ class _ModernFeatureCard extends StatelessWidget {
                       child: Icon(icon, color: Colors.white, size: 24),
                     ),
                     const Spacer(),
-                    // Title
                     Text(
                       title,
                       style: const TextStyle(
@@ -609,7 +631,6 @@ class _ModernFeatureCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    // Subtitle
                     Text(
                       subtitle,
                       style: TextStyle(
@@ -956,6 +977,12 @@ class _JobsSearchShortcut extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final shadowColor =
+        isDark ? Colors.black.withOpacity(0.6) : Colors.black.withOpacity(0.07);
+
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () {
@@ -970,11 +997,11 @@ class _JobsSearchShortcut extends StatelessWidget {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDark ? scheme.surface : Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: shadowColor,
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -985,7 +1012,7 @@ class _JobsSearchShortcut extends StatelessWidget {
           children: [
             Icon(
               Icons.search,
-              color: Colors.grey[500],
+              color: isDark ? Colors.grey[400] : Colors.grey[600],
               size: 24,
             ),
             const SizedBox(width: 12),
@@ -994,7 +1021,7 @@ class _JobsSearchShortcut extends StatelessWidget {
                 'Search company, title or keyword…',
                 style: TextStyle(
                   fontSize: 15,
-                  color: Colors.grey[500],
+                  color: isDark ? Colors.grey[400] : Colors.grey[500],
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -1019,18 +1046,15 @@ class _BottomBarClipper extends CustomClipper<Path> {
   Path getClip(Size size) {
     final path = Path();
 
-    // مستطيل كامل
     path.addRect(Rect.fromLTWH(0, 0, size.width, size.height));
 
-    // نقص الدائرة من فوق!
     path.addOval(
       Rect.fromCircle(
-        center: Offset(circlePosition, 0), // مركز الدائرة على الحافة العليا
+        center: Offset(circlePosition, 0),
         radius: circleRadius,
       ),
     );
 
-    // نستخدم fillType عشان نقص الدائرة من المستطيل
     path.fillType = PathFillType.evenOdd;
 
     return path;
