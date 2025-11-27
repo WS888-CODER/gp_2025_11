@@ -320,6 +320,8 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return PopScope(
       canPop: false,
       onPopInvoked: (didPop) async {
@@ -330,7 +332,7 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F5F5),
+        backgroundColor: Theme.of(context).colorScheme.background,
         appBar: CustomHeader(
           title: _isEnhancing ? 'Enhancing CV' : 'Complete Your CV',
         ),
@@ -651,7 +653,7 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
                     controller: _fullNameController,
                     decoration: InputDecoration(
                       labelText: 'Full Name',
-                      labelStyle: TextStyle(color: Colors.grey[600]),
+                      labelStyle: TextStyle(color: scheme.onSurfaceVariant),
                       hintText: 'e.g., John Doe',
                       hintStyle: const TextStyle(color: Colors.grey),
                       filled: true,
@@ -689,7 +691,7 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
                     keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
                       labelText: 'Email',
-                      labelStyle: TextStyle(color: Colors.grey[600]),
+                      labelStyle: TextStyle(color: scheme.onSurfaceVariant),
                       hintText: 'e.g., john@example.com',
                       hintStyle: const TextStyle(color: Colors.grey),
                       filled: true,
@@ -727,7 +729,7 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
                     keyboardType: TextInputType.phone,
                     decoration: InputDecoration(
                       labelText: 'Phone',
-                      labelStyle: TextStyle(color: Colors.grey[600]),
+                      labelStyle: TextStyle(color: scheme.onSurfaceVariant),
                       hintText: 'e.g., +1 234 567 8900',
                       hintStyle: const TextStyle(color: Colors.grey),
                       filled: true,
@@ -764,7 +766,7 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
                     controller: _locationController,
                     decoration: InputDecoration(
                       labelText: 'Location',
-                      labelStyle: TextStyle(color: Colors.grey[600]),
+                      labelStyle: TextStyle(color: scheme.onSurfaceVariant),
                       hintText: 'e.g., New York, USA',
                       hintStyle: const TextStyle(color: Colors.grey),
                       filled: true,
@@ -802,7 +804,7 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
                     maxLines: 2,
                     decoration: InputDecoration(
                       labelText: 'Links (LinkedIn, Portfolio, etc.)',
-                      labelStyle: TextStyle(color: Colors.grey[600]),
+                      labelStyle: TextStyle(color: scheme.onSurfaceVariant),
                       hintText:
                           'e.g., linkedin.com/in/johndoe, github.com/johndoe',
                       hintStyle: const TextStyle(color: Colors.grey),
@@ -882,8 +884,8 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
                     });
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryPurple,
-                    foregroundColor: Colors.white,
+                    backgroundColor: scheme.primary,
+                    foregroundColor: scheme.onPrimary,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     elevation: 2,
                     shape: RoundedRectangleBorder(
@@ -1035,8 +1037,8 @@ class _SummaryFormState extends State<_SummaryForm> {
                     widget.onSave({'content': _controller.text.trim()});
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryPurple,
-                    foregroundColor: Colors.white,
+                    backgroundColor: scheme.primary,
+                    foregroundColor: scheme.onPrimary,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     elevation: 2,
                     shape: RoundedRectangleBorder(
@@ -1194,8 +1196,8 @@ class _ExperienceFormState extends State<_ExperienceForm> {
                 child: ElevatedButton(
                   onPressed: _saveExperiences,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryPurple,
-                    foregroundColor: Colors.white,
+                    backgroundColor: scheme.primary,
+                    foregroundColor: scheme.onPrimary,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     elevation: 2,
                     shape: RoundedRectangleBorder(
@@ -1258,7 +1260,7 @@ class _ExperienceFormState extends State<_ExperienceForm> {
                 controller: exp['title'],
                 decoration: InputDecoration(
                   labelText: 'Job Title',
-                  labelStyle: TextStyle(color: Colors.grey[600]),
+                  labelStyle: TextStyle(color: scheme.onSurfaceVariant),
                   hintText: 'e.g., Software Engineer',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
@@ -1299,7 +1301,7 @@ class _ExperienceFormState extends State<_ExperienceForm> {
                 controller: exp['company'],
                 decoration: InputDecoration(
                   labelText: 'Company',
-                  labelStyle: TextStyle(color: Colors.grey[600]),
+                  labelStyle: TextStyle(color: scheme.onSurfaceVariant),
                   hintText: 'e.g., Google',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
@@ -1340,7 +1342,7 @@ class _ExperienceFormState extends State<_ExperienceForm> {
                 controller: exp['years'],
                 decoration: InputDecoration(
                   labelText: 'Years',
-                  labelStyle: TextStyle(color: Colors.grey[600]),
+                  labelStyle: TextStyle(color: scheme.onSurfaceVariant),
                   hintText: 'e.g., 2020-2023',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
@@ -1382,7 +1384,7 @@ class _ExperienceFormState extends State<_ExperienceForm> {
                 maxLines: 3,
                 decoration: InputDecoration(
                   labelText: 'Description',
-                  labelStyle: TextStyle(color: Colors.grey[600]),
+                  labelStyle: TextStyle(color: scheme.onSurfaceVariant),
                   hintText: 'Describe your responsibilities and achievements',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
@@ -1568,8 +1570,8 @@ class _EducationFormState extends State<_EducationForm> {
                 child: ElevatedButton(
                   onPressed: _saveEducation,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryPurple,
-                    foregroundColor: Colors.white,
+                    backgroundColor: scheme.primary,
+                    foregroundColor: scheme.onPrimary,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     elevation: 2,
                     shape: RoundedRectangleBorder(
@@ -1632,7 +1634,7 @@ class _EducationFormState extends State<_EducationForm> {
                 controller: edu['degree'],
                 decoration: InputDecoration(
                   labelText: 'Degree',
-                  labelStyle: TextStyle(color: Colors.grey[600]),
+                  labelStyle: TextStyle(color: scheme.onSurfaceVariant),
                   hintText: 'e.g., Bachelor of Computer Science',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
@@ -1673,7 +1675,7 @@ class _EducationFormState extends State<_EducationForm> {
                 controller: edu['institution'],
                 decoration: InputDecoration(
                   labelText: 'Institution',
-                  labelStyle: TextStyle(color: Colors.grey[600]),
+                  labelStyle: TextStyle(color: scheme.onSurfaceVariant),
                   hintText: 'e.g., MIT',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
@@ -1714,7 +1716,7 @@ class _EducationFormState extends State<_EducationForm> {
                 controller: edu['years'],
                 decoration: InputDecoration(
                   labelText: 'Years',
-                  labelStyle: TextStyle(color: Colors.grey[600]),
+                  labelStyle: TextStyle(color: scheme.onSurfaceVariant),
                   hintText: 'e.g., 2016-2020',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
@@ -2042,8 +2044,8 @@ class _SkillsFormState extends State<_SkillsForm> {
                     widget.onSave({'content': allSkills});
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryPurple,
-                    foregroundColor: Colors.white,
+                    backgroundColor: scheme.primary,
+                    foregroundColor: scheme.onPrimary,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     elevation: 2,
                     shape: RoundedRectangleBorder(
@@ -2199,8 +2201,8 @@ class _CertificationsFormState extends State<_CertificationsForm> {
                 child: ElevatedButton(
                   onPressed: _saveCertifications,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryPurple,
-                    foregroundColor: Colors.white,
+                    backgroundColor: scheme.primary,
+                    foregroundColor: scheme.onPrimary,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     elevation: 2,
                     shape: RoundedRectangleBorder(
@@ -2263,7 +2265,7 @@ class _CertificationsFormState extends State<_CertificationsForm> {
                 controller: cert['name'],
                 decoration: InputDecoration(
                   labelText: 'Certification Name',
-                  labelStyle: TextStyle(color: Colors.grey[600]),
+                  labelStyle: TextStyle(color: scheme.onSurfaceVariant),
                   hintText: 'e.g., AWS Certified Solutions Architect',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
@@ -2304,7 +2306,7 @@ class _CertificationsFormState extends State<_CertificationsForm> {
                 controller: cert['issuer'],
                 decoration: InputDecoration(
                   labelText: 'Issuer',
-                  labelStyle: TextStyle(color: Colors.grey[600]),
+                  labelStyle: TextStyle(color: scheme.onSurfaceVariant),
                   hintText: 'e.g., Amazon Web Services',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
@@ -2345,7 +2347,7 @@ class _CertificationsFormState extends State<_CertificationsForm> {
                 controller: cert['year'],
                 decoration: InputDecoration(
                   labelText: 'Year',
-                  labelStyle: TextStyle(color: Colors.grey[600]),
+                  labelStyle: TextStyle(color: scheme.onSurfaceVariant),
                   hintText: 'e.g., 2023',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
@@ -2643,8 +2645,8 @@ class _LanguagesFormState extends State<_LanguagesForm> {
                 child: ElevatedButton(
                   onPressed: _saveLanguages,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryPurple,
-                    foregroundColor: Colors.white,
+                    backgroundColor: scheme.primary,
+                    foregroundColor: scheme.onPrimary,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                   child: const Text('Finish'),
@@ -2702,7 +2704,7 @@ class _LanguagesFormState extends State<_LanguagesForm> {
                 value: lang['language'],
                 decoration: InputDecoration(
                   labelText: 'Language',
-                  labelStyle: TextStyle(color: Colors.grey[600]),
+                  labelStyle: TextStyle(color: scheme.onSurfaceVariant),
                   hintText: 'Select a language',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
@@ -2772,7 +2774,7 @@ class _LanguagesFormState extends State<_LanguagesForm> {
                 value: lang['proficiency'],
                 decoration: InputDecoration(
                   labelText: 'Proficiency',
-                  labelStyle: TextStyle(color: Colors.grey[600]),
+                  labelStyle: TextStyle(color: scheme.onSurfaceVariant),
                   hintText: 'Select proficiency level',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
