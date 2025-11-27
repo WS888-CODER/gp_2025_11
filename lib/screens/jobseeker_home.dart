@@ -332,7 +332,7 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
     final userId = _effectiveUserId;
 
     final homeBody = Container(
-      color: const Color(0xFF4A5FBC),
+      color: const Color(0xFFF5F5F5),
       child: Column(
         children: [
           Expanded(
