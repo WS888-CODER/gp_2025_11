@@ -32,7 +32,114 @@ class _HistoryPageState extends State<HistoryPage>
   Widget build(BuildContext context) {
     return Column(
       children: [
-        _buildTabs(context),
+        // Purple curved header with tabs merged inside
+        Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF4A5FBC), Color(0xFF4A5FBC)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(40),
+              bottomRight: Radius.circular(40),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x404A5FBC),
+                blurRadius: 20,
+                offset: Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              // Decorative background circles
+              Positioned(
+                top: -60,
+                right: -40,
+                child: Container(
+                  width: 200,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.05),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 20,
+                left: -30,
+                child: Container(
+                  width: 140,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.05),
+                  ),
+                ),
+              ),
+              // Tabs inside the purple header
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 50),
+                  // Page title
+                  const Text(
+                    'History',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TabBar(
+                    controller: _tabController,
+                    indicatorColor: Colors.white,
+                    indicatorWeight: 3,
+                    dividerColor: Colors.transparent,
+                    labelColor: Colors.white,
+                    unselectedLabelColor: Colors.white70,
+                    tabs: const [
+                      Tab(
+                        child: Text(
+                          'CV Enhancement',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                      Tab(
+                        child: Text(
+                          'Mock Interview',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                      Tab(
+                        child: Text(
+                          'Job Application',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ],
+          ),
+        ),
         Expanded(
           child: TabBarView(
             controller: _tabController,
@@ -48,47 +155,8 @@ class _HistoryPageState extends State<HistoryPage>
   }
 
   Widget _buildTabs(BuildContext context) {
-    return Container(
-      color: AppTheme.primaryPurple,
-      child: TabBar(
-        controller: _tabController,
-        indicatorColor: Colors.white,
-        labelColor: Colors.white,
-        unselectedLabelColor: Colors.white70,
-        tabs: const [
-          Tab(
-            child: Text(
-              'CV Enhancement',
-              textAlign: TextAlign.center, // ← ضيفي هذا السطر
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 15,
-              ),
-            ),
-          ),
-          Tab(
-            child: Text(
-              'Mock Interview',
-              textAlign: TextAlign.center, // ← ضيفي هذا السطر
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 15,
-              ),
-            ),
-          ),
-          Tab(
-            child: Text(
-              'Job Application',
-              textAlign: TextAlign.center, // ← ضيفي هذا السطر
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 15,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    // This method is no longer used but kept for compatibility
+    return const SizedBox.shrink();
   }
 
   // ---------------- CV HISTORY ----------------

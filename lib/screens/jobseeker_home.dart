@@ -140,102 +140,11 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
   }
 
   PreferredSizeWidget _buildCustomAppBar(String userId) {
-    String title;
-    switch (_tab) {
-      case 0:
-        title = 'History';
-        break;
-      case 1:
-        title = '';
-        break;
-      case 2:
-        title = 'Favorites';
-        break;
-      default:
-        title = '';
-    }
-
-    // For non-home tabs, use custom AppBar with profile button
+    // For non-home tabs, no AppBar (handled by the page itself)
     if (_tab != 1) {
-      return AppBar(
-        backgroundColor: const Color(0xFF4A5FBC),
-        elevation: 0,
-        centerTitle: true,
-        automaticallyImplyLeading: false,
-        leadingWidth: 70,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 16),
-          child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-            stream: FirebaseFirestore.instance
-                .collection('Users')
-                .doc(userId)
-                .snapshots(),
-            builder: (context, snap) {
-              final photoUrl = snap.hasData
-                  ? (snap.data?.data()?['PhotoURL'] ?? '').toString().trim()
-                  : '';
-
-              return GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const JobSeekerProfile(),
-                    ),
-                  );
-                },
-                child: Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    shape: BoxShape.circle,
-                    image: photoUrl.isNotEmpty
-                        ? DecorationImage(
-                            image: NetworkImage(photoUrl),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
-                  ),
-                  child: photoUrl.isEmpty
-                      ? const Icon(
-                          Icons.person,
-                          color: Colors.white,
-                          size: 24,
-                        )
-                      : null,
-                ),
-              );
-            },
-          ),
-        ),
-        title: Text(
-          title,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined, color: Colors.white),
-            onPressed: () {
-              SnackHelper.error(context, 'Notifications coming soon');
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings_outlined, color: Colors.white),
-            onPressed: () {
-              final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
-              if (uid.isEmpty) return;
-              Navigator.pushNamed(
-                context,
-                '/settings',
-                arguments: {'userType': 'JobSeeker', 'userId': uid},
-              );
-            },
-          ),
-        ],
+      return PreferredSize(
+        preferredSize: Size.zero,
+        child: Container(),
       );
     }
 
@@ -423,7 +332,7 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
     final userId = _effectiveUserId;
 
     final homeBody = Container(
-      color: const Color(0xFFF5F5F5),
+      color: const Color(0xFF4A5FBC),
       child: Column(
         children: [
           Expanded(

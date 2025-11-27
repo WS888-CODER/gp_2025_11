@@ -151,30 +151,174 @@ class _FavoritesPageState extends State<FavoritesPage> {
     final favJobs = _favoriteJobs;
 
     if (favJobs.isEmpty) {
-      return const EmptyState(
-        icon: Icons.favorite_border,
-        title: 'No Favorite Jobs Yet',
-        subtitle: 'Jobs you save will appear here',
+      return Column(
+        children: [
+          // Purple curved header with decorative circles
+          Container(
+            height: 120,
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF4A5FBC), Color(0xFF4A5FBC)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(40),
+                bottomRight: Radius.circular(40),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0x404A5FBC),
+                  blurRadius: 20,
+                  offset: Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Stack(
+              children: [
+                // Decorative background circles
+                Positioned(
+                  top: -60,
+                  right: -40,
+                  child: Container(
+                    width: 200,
+                    height: 200,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withOpacity(0.05),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: -20,
+                  left: -30,
+                  child: Container(
+                    width: 140,
+                    height: 140,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withOpacity(0.05),
+                    ),
+                  ),
+                ),
+                // Page title centered
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 35),
+                    child: Text(
+                      'Favorites',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Expanded(
+            child: EmptyState(
+              icon: Icons.favorite_border,
+              title: 'No Favorite Jobs Yet',
+              subtitle: 'Jobs you save will appear here',
+            ),
+          ),
+        ],
       );
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.all(12),
-      itemCount: favJobs.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (context, index) {
-        final job = favJobs[index];
-        final company = _companies[job.userId] ?? const CompanyInfo();
+    return Column(
+      children: [
+        // Purple curved header with decorative circles
+        Container(
+          height: 120,
+          width: double.infinity,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF4A5FBC), Color(0xFF4A5FBC)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(40),
+              bottomRight: Radius.circular(40),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x404A5FBC),
+                blurRadius: 20,
+                offset: Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              // Decorative background circles
+              Positioned(
+                top: -60,
+                right: -40,
+                child: Container(
+                  width: 200,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.05),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: -20,
+                left: -30,
+                child: Container(
+                  width: 140,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.05),
+                  ),
+                ),
+              ),
+              // Page title centered
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.only(top: 35),
+                  child: Text(
+                    'Favorites',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView.separated(
+            padding: const EdgeInsets.all(12),
+            itemCount: favJobs.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            itemBuilder: (context, index) {
+              final job = favJobs[index];
+              final company = _companies[job.userId] ?? const CompanyInfo();
 
-        return JobCard(
-          job: job,
-          company: company,
-          isSaved: true,
-          onSavedChanged: (newValue) {
-            _handleToggleFavorite(job, newValue);
-          },
-        );
-      },
+              return JobCard(
+                job: job,
+                company: company,
+                isSaved: true,
+                onSavedChanged: (newValue) {
+                  _handleToggleFavorite(job, newValue);
+                },
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
