@@ -92,7 +92,6 @@ class Job {
     final startDate = asDate(d[JobFields.startDate]);
     final endDate = asDate(d[JobFields.endDate]);
 
-    // 🔥 الأولوية لـ PostedAt، ولو مو موجود نطيح على StartDate، ولو برضو مو موجود نخلي تاريخ قديم
     final postedAt =
         asDate(d[JobFields.postedAt]) ?? startDate ?? DateTime(2000);
 
@@ -305,11 +304,15 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
+          color: scheme.surface,
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.07),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
+              color: Colors.black.withOpacity(
+                Theme.of(context).brightness == Brightness.dark ? 0.12 : 0.05,
+              ),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -343,9 +346,21 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
         padding: const EdgeInsets.all(16),
         children: [
           // Company details
-          Card(
-            shape: RoundedRectangleBorder(
+          Container(
+            decoration: BoxDecoration(
+              color: scheme.surface,
               borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(
+                    Theme.of(context).brightness == Brightness.dark
+                        ? 0.12
+                        : 0.05,
+                  ),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -570,9 +585,21 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
           const SizedBox(height: 12),
 
           // Job Summary
-          Card(
-            shape: RoundedRectangleBorder(
+          Container(
+            decoration: BoxDecoration(
+              color: scheme.surface,
               borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(
+                    Theme.of(context).brightness == Brightness.dark
+                        ? 0.12
+                        : 0.05,
+                  ),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -631,9 +658,22 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
           const SizedBox(height: 12),
 
           // Description
-          Card(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          Container(
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(
+                    Theme.of(context).brightness == Brightness.dark
+                        ? 0.12
+                        : 0.05,
+                  ),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -662,9 +702,22 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
 
           // Requirements
           if (job.requirements.isNotEmpty)
-            Card(
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
+            Container(
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(
+                      Theme.of(context).brightness == Brightness.dark
+                          ? 0.12
+                          : 0.05,
+                    ),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -759,20 +812,25 @@ class _JobCardState extends State<JobCard> {
     final scheme = Theme.of(context).colorScheme;
     final onSurface = scheme.onSurface;
     final primary = scheme.primary;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final job = widget.job;
     final company = widget.company;
     final isClosed = job.status.trim().toLowerCase() == 'closed';
 
-    final Color cardBgColor = isClosed
-        ? scheme.surface.withOpacity(isDark ? 0.5 : 0.6)
-        : scheme.surface;
-
-    return Card(
-      elevation: 0.5,
-      color: cardBgColor,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(
+              Theme.of(context).brightness == Brightness.dark ? 0.12 : 0.05,
+            ),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: () {

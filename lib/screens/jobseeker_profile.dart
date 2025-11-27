@@ -13,6 +13,9 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:intl_phone_field/country_picker_dialog.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
+import 'package:intl_phone_field/phone_number.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 const kUsersCollection = 'Users';
@@ -26,27 +29,19 @@ class UserFields {
   static const isProfileComplete = 'IsProfileComplete';
   static const cvPath = 'CVPath';
   static const photoPath = 'PhotoPath';
-
-  // NEW: contact email field
   static const contactEmail = 'ContactEmail';
 }
 
 final _email =
     RegExp(r"^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$", caseSensitive: false);
 
-final _localSaPhone = RegExp(r'^5\d{8}$');
-const _saPrefix = '+966';
-
 const nationalities = <String>[
-  // Gulf
   "Saudi",
   "Emirati",
   "Kuwaiti",
   "Qatari",
   "Bahraini",
   "Omani",
-
-  // Middle East & North Africa
   "Egyptian",
   "Jordanian",
   "Lebanese",
@@ -60,8 +55,6 @@ const nationalities = <String>[
   "Algerian",
   "Libyan",
   "Somali",
-
-  // Asia
   "Indian",
   "Pakistani",
   "Bangladeshi",
@@ -80,8 +73,6 @@ const nationalities = <String>[
   "Afghan",
   "Nepalese",
   "Sri Lankan",
-
-  // Europe
   "British",
   "Irish",
   "French",
@@ -106,8 +97,6 @@ const nationalities = <String>[
   "Hungarian",
   "Ukrainian",
   "Russian",
-
-  // North & South America
   "American",
   "Canadian",
   "Mexican",
@@ -117,19 +106,16 @@ const nationalities = <String>[
   "Chilean",
   "Peruvian",
   "Venezuelan",
-
-  // Africa
   "Nigerian",
   "Ethiopian",
   "Kenyan",
   "Ghanaian",
   "Rwandan",
   "South African",
-
-  // Oceania
   "Australian",
   "New Zealander",
 ];
+
 const nationalityFlags = {
   "Saudi": "🇸🇦",
   "Emirati": "🇦🇪",
@@ -172,12 +158,6 @@ const nationalityFlags = {
 class JobSeekerProfile extends StatelessWidget {
   const JobSeekerProfile({super.key});
 
-  String _toLocal(String e164) {
-    final t = e164.trim();
-    if (t.startsWith(_saPrefix)) return t.substring(_saPrefix.length);
-    return t;
-  }
-
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -207,7 +187,6 @@ class JobSeekerProfile extends StatelessWidget {
         final nationality =
             (data[UserFields.nationality] ?? '').toString().trim();
         final phoneE164 = (data[UserFields.phone] ?? '').toString().trim();
-        final phoneLocal = phoneE164.isEmpty ? '' : _toLocal(phoneE164);
         final dobCurrent = data[UserFields.dob] is Timestamp
             ? (data[UserFields.dob] as Timestamp).toDate()
             : null;
@@ -215,8 +194,7 @@ class JobSeekerProfile extends StatelessWidget {
         final cvUrl = (data[UserFields.cvUrl] ?? '').toString().trim();
         final photoUrl = (data[UserFields.photoUrl] ?? '').toString().trim();
 
-        final phoneValid =
-            phoneLocal.isNotEmpty && _localSaPhone.hasMatch(phoneLocal);
+        final phoneValid = phoneE164.isNotEmpty;
         final natOk = nationality.isNotEmpty;
         final dobOk = dobCurrent != null;
         final cvOk = cvUrl.isNotEmpty;
@@ -226,7 +204,7 @@ class JobSeekerProfile extends StatelessWidget {
             (data[UserFields.contactEmail] ?? '').toString().trim();
         final emailValid =
             contactEmail.isNotEmpty && _email.hasMatch(contactEmail);
-        final contactPhoneLabel = phoneValid ? '+966 $phoneLocal' : '';
+        final contactPhoneLabel = phoneValid ? phoneE164 : '';
         final hasAnyContact = emailValid || phoneValid;
         final profileComplete = data[UserFields.isProfileComplete] == true ||
             (cvOk && photoOk && dobOk && natOk && (emailValid || phoneValid));
@@ -260,7 +238,6 @@ class JobSeekerProfile extends StatelessWidget {
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              // Header card
               Container(
                 decoration: BoxDecoration(
                   color: scheme.surface,
@@ -462,46 +439,43 @@ class JobSeekerProfile extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-
-              // Section: Profile Information
               Container(
-                  decoration: BoxDecoration(
-                    color: scheme.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(
-                          Theme.of(context).brightness == Brightness.dark
-                              ? 0.12
-                              : 0.04,
-                        ),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
+                decoration: BoxDecoration(
+                  color: scheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(
+                        Theme.of(context).brightness == Brightness.dark
+                            ? 0.12
+                            : 0.04,
                       ),
-                    ],
-                    border: Border.all(
-                      color: const Color(0xFFFD6C67).withOpacity(0.08),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
                     ),
+                  ],
+                  border: Border.all(
+                    color: const Color(0xFFFD6C67).withOpacity(0.08),
                   ),
-                  child: _SettingsRowSeeker(
-                    icon: Icons.person_outline,
-                    color: const Color(0xFFFD6C67),
-                    title: 'Profile Information',
-                    subtitle: 'Photo, nationality, date of birth, and CV',
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => EditJobSeekerPage(
-                            data: data,
-                            initialTab: 0, // Profile Info tab
-                          ),
+                ),
+                child: _SettingsRowSeeker(
+                  icon: Icons.person_outline,
+                  color: const Color(0xFFFD6C67),
+                  title: 'Profile Information',
+                  subtitle: 'Photo, nationality, date of birth, and CV',
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => EditJobSeekerPage(
+                          data: data,
+                          initialTab: 0,
                         ),
-                      );
-                    },
-                  )),
+                      ),
+                    );
+                  },
+                ),
+              ),
               const SizedBox(height: 12),
-
-              // Section: Contact Information
               Container(
                 decoration: BoxDecoration(
                   color: scheme.surface,
@@ -531,14 +505,13 @@ class JobSeekerProfile extends StatelessWidget {
                       MaterialPageRoute(
                         builder: (_) => EditJobSeekerPage(
                           data: data,
-                          initialTab: 1, // Contact Info tab
+                          initialTab: 1,
                         ),
                       ),
                     );
                   },
                 ),
               ),
-
               const SizedBox(height: 32),
             ],
           ),
@@ -618,7 +591,7 @@ class _SettingsRowSeeker extends StatelessWidget {
 
 class EditJobSeekerPage extends StatefulWidget {
   final Map<String, dynamic> data;
-  final int initialTab; // 0 = Profile Info, 1 = Contact Info
+  final int initialTab;
 
   const EditJobSeekerPage({
     super.key,
@@ -632,6 +605,13 @@ class EditJobSeekerPage extends StatefulWidget {
 
 class _EditJobSeekerPageState extends State<EditJobSeekerPage>
     with SingleTickerProviderStateMixin {
+  final _phoneKey = GlobalKey<FormFieldState>();
+  final _phoneFocus = FocusNode();
+
+  final _emailKey = GlobalKey<FormFieldState>();
+  final _emailFocus = FocusNode();
+  final _phoneCtrl = TextEditingController();
+
   String _convertCountryToNationality(String country) {
     final map = {
       "Saudi Arabia": "Saudi",
@@ -673,7 +653,6 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
 
   Country? _selectedCountry;
   final _form = GlobalKey<FormState>();
-  final _phone = TextEditingController();
   final _emailCtrl = TextEditingController();
 
   String? _nationality;
@@ -685,6 +664,9 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
   String? _photoUrl;
   String? _cvUrl;
 
+  String? _phoneE164Draft;
+  late final String _originalPhoneE164;
+
   bool _saving = false;
   double? _progress;
   StreamSubscription<TaskSnapshot>? _uploadSub;
@@ -693,6 +675,7 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
   static const int _kMaxCvBytes = 10 * 1024 * 1024;
 
   late TabController _tabController;
+
   void _showProfileRequirements() {
     showDialog(
       context: context,
@@ -735,7 +718,7 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
             SizedBox(height: 6),
             Text(
               '• A valid contact email, or\n'
-              '• A valid Saudi mobile number (+966 5XXXXXXXX)',
+              '• A valid phone number with country code',
               style: TextStyle(
                 color: Colors.white,
                 height: 1.4,
@@ -758,13 +741,13 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
     );
     final data = widget.data;
 
-    final phoneE164 = (data[UserFields.phone] ?? '').toString().trim();
-    if (phoneE164.startsWith(_saPrefix)) {
-      final local = phoneE164.substring(_saPrefix.length);
-      if (local.startsWith('5')) {
-        _phone.text = local;
-      }
+    _originalPhoneE164 = (data[UserFields.phone] ?? '').toString().trim();
+    final phoneE164 = _originalPhoneE164;
+
+    if (phoneE164.startsWith('+966') && phoneE164.length > 4) {
+      _phoneCtrl.text = phoneE164.substring(4);
     }
+    _phoneE164Draft = phoneE164.isEmpty ? null : phoneE164;
 
     _emailCtrl.text = (data[UserFields.contactEmail] ?? '').toString().trim();
 
@@ -783,8 +766,10 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
   void dispose() {
     _tabController.dispose();
     _uploadSub?.cancel();
-    _phone.dispose();
+    _phoneCtrl.dispose();
     _emailCtrl.dispose();
+    _phoneFocus.dispose();
+    _emailFocus.dispose();
     super.dispose();
   }
 
@@ -967,8 +952,29 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
   }
 
   Future<void> _save() async {
-    if (!(_form.currentState?.validate() ?? false)) {
-      SnackHelper.error(context, 'Please fix the highlighted fields');
+    final formValid = _form.currentState?.validate() ?? false;
+
+    final email = _emailCtrl.text.trim();
+    final hasPhoneDigits = _phoneCtrl.text.trim().isNotEmpty;
+
+    if (!formValid) {
+      final emailInvalid = email.isNotEmpty && !_email.hasMatch(email);
+
+      if (emailInvalid) {
+        _emailKey.currentState?.validate();
+        FocusScope.of(context).requestFocus(_emailFocus);
+        SnackHelper.error(context, 'Enter a valid email address');
+        return;
+      }
+
+      if (hasPhoneDigits) {
+        FocusScope.of(context).requestFocus(_phoneFocus);
+        SnackHelper.error(
+            context, 'Enter a valid phone number with country code');
+        return;
+      }
+
+      SnackHelper.error(context, 'Please check your contact information');
       return;
     }
 
@@ -977,15 +983,10 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
       return;
     }
 
+    _form.currentState?.save();
+
     final current = widget.data;
 
-    final local = _phone.text.trim();
-    if (local.isNotEmpty && !_localSaPhone.hasMatch(local)) {
-      SnackHelper.error(context, 'Enter a valid Saudi mobile number');
-      return;
-    }
-
-    final email = _emailCtrl.text.trim();
     final emailValid = email.isNotEmpty && _email.hasMatch(email);
 
     final updates = <String, dynamic>{};
@@ -1048,9 +1049,12 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
       updates[UserFields.nationality] = newNat;
     }
 
-    // email updates (Email OR phone logic)
     final currentEmail =
         (current[UserFields.contactEmail] ?? '').toString().trim();
+    if (!emailValid && email.isNotEmpty) {
+      SnackHelper.error(context, 'Enter a valid email address');
+      return;
+    }
     if (email.isEmpty && currentEmail.isNotEmpty) {
       updates[UserFields.contactEmail] = FieldValue.delete();
     } else if (email.isNotEmpty && email != currentEmail) {
@@ -1058,13 +1062,20 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
     }
 
     final currentPhone = (current[UserFields.phone] ?? '').toString().trim();
-    if (local.isNotEmpty && _localSaPhone.hasMatch(local)) {
-      final e164 = '$_saPrefix$local';
-      if (e164 != currentPhone) {
-        updates[UserFields.phone] = e164;
+    final draft = (_phoneE164Draft ?? '').trim();
+    final hasDigits = hasPhoneDigits;
+
+    String? newPhoneE164;
+    if (draft.isNotEmpty && draft != currentPhone) {
+      newPhoneE164 = draft;
+    }
+
+    if (!hasDigits) {
+      if (currentPhone.isNotEmpty) {
+        updates[UserFields.phone] = FieldValue.delete();
       }
-    } else if (local.isEmpty && currentPhone.isNotEmpty) {
-      updates[UserFields.phone] = FieldValue.delete();
+    } else if (newPhoneE164 != null) {
+      updates[UserFields.phone] = newPhoneE164;
     }
 
     if (updates.isEmpty) {
@@ -1087,21 +1098,14 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
     final natOk =
         (next[UserFields.nationality] ?? '').toString().trim().isNotEmpty;
 
-    final phoneMerged = (next[UserFields.phone] ?? '').toString();
-    String toLocalPhone(String e164) {
-      if (e164.startsWith(_saPrefix)) {
-        return e164.substring(_saPrefix.length);
-      }
-      return e164;
-    }
+    final mergedPhone = (next[UserFields.phone] ?? '').toString().trim();
+    final mergedEmail = (next[UserFields.contactEmail] ?? '').toString().trim();
+    final mergedEmailValid =
+        mergedEmail.isNotEmpty && _email.hasMatch(mergedEmail);
+    final phoneOk = mergedPhone.isNotEmpty;
 
-    final phoneLocalMerged = toLocalPhone(phoneMerged);
-    final phoneOk =
-        phoneLocalMerged.isNotEmpty && _localSaPhone.hasMatch(phoneLocalMerged);
-
-    // NEW COMPLETE LOGIC: email OR phone
     final complete =
-        cvOk && photoOk && dobOk && natOk && (emailValid || phoneOk);
+        cvOk && photoOk && dobOk && natOk && (mergedEmailValid || phoneOk);
     updates[UserFields.isProfileComplete] = complete;
 
     final uid = FirebaseAuth.instance.currentUser!.uid;
@@ -1167,14 +1171,6 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
     bool hasUnsavedChanges() {
       final current = widget.data;
 
-      final origPhone = (current[UserFields.phone] ?? '').toString().trim();
-      String origLocal = '';
-      if (origPhone.startsWith(_saPrefix)) {
-        origLocal = origPhone.substring(_saPrefix.length);
-      } else {
-        origLocal = origPhone;
-      }
-
       final origEmail =
           (current[UserFields.contactEmail] ?? '').toString().trim();
       final origNat = (current[UserFields.nationality] ?? '').toString().trim();
@@ -1189,7 +1185,6 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
           (current[UserFields.photoUrl] ?? '').toString().trim();
       final origCvUrl = (current[UserFields.cvUrl] ?? '').toString().trim();
 
-      final uiPhone = _phone.text.trim();
       final uiEmail = _emailCtrl.text.trim();
       final uiNat = (_nationality ?? '').trim();
 
@@ -1198,7 +1193,6 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
         uiDob = DateTime(uiDob.year, uiDob.month, uiDob.day);
       }
 
-      final phoneChanged = uiPhone != origLocal;
       final emailChanged = uiEmail != origEmail;
       final natChanged = uiNat != origNat;
 
@@ -1216,12 +1210,15 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
       final cvChanged =
           _pendingCvFile != null || (_cvUrl ?? '').trim() != origCvUrl;
 
-      return phoneChanged ||
-          emailChanged ||
+      final draftPhone = _phoneE164Draft?.trim() ?? '';
+      final phoneChanged = draftPhone != _originalPhoneE164;
+
+      return emailChanged ||
           natChanged ||
           dobChanged ||
           photoChanged ||
-          cvChanged;
+          cvChanged ||
+          phoneChanged;
     }
 
     Future<bool> onWillPop() async {
@@ -1337,7 +1334,6 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
                 child: TabBarView(
                   controller: _tabController,
                   children: [
-                    // ====== TAB 0: Profile Info ======
                     ListView(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -1473,29 +1469,24 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
                                             colorScheme: scheme.copyWith(
                                               primary: const Color(0xFFFC686A),
                                               onPrimary: Colors.white,
-                                              onSurface: Colors
-                                                  .white, // السنوات والأرقام
+                                              onSurface: Colors.white,
                                               surface: const Color(0xFF4A5FBC)
                                                   .withOpacity(0.95),
                                             ),
                                             textTheme: theme.textTheme.copyWith(
-                                              // نص السنوات
                                               bodyLarge: const TextStyle(
                                                   color: Colors.white),
-                                              // نص الأرقام في الكاليندر
                                               bodyMedium: const TextStyle(
                                                   color: Colors.white),
-                                              // نص التاريخ المختار
                                               headlineMedium: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.bold),
-                                              // نص السنة في الـ header
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                              ),
                                               titleLarge: const TextStyle(
                                                   color: Colors.white),
                                             ),
                                             inputDecorationTheme:
                                                 InputDecorationTheme(
-                                              // للـ Input mode (لما تضغطين القلم)
                                               labelStyle: const TextStyle(
                                                   color: Colors.white),
                                               hintStyle: TextStyle(
@@ -1506,18 +1497,12 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
                                                 borderSide: BorderSide(
                                                     color: Colors.white),
                                               ),
-                                              focusedBorder:
-                                                  const UnderlineInputBorder(
-                                                borderSide: BorderSide(
-                                                    color: Color(0xFFFC686A),
-                                                    width: 2),
-                                              ),
                                             ),
                                             textButtonTheme:
                                                 TextButtonThemeData(
                                               style: TextButton.styleFrom(
-                                                foregroundColor: const Color(
-                                                    0xFFFC686A), // أزرار OK و Cancel
+                                                foregroundColor:
+                                                    const Color(0xFFFC686A),
                                               ),
                                             ),
                                             datePickerTheme:
@@ -1532,18 +1517,15 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
                                               yearStyle: const TextStyle(
                                                   color: Colors.white),
                                               dayStyle: const TextStyle(
-                                                  color: Colors
-                                                      .white), // الأيام في الشبكة
+                                                  color: Colors.white),
                                               yearForegroundColor:
                                                   MaterialStateColor
                                                       .resolveWith((states) {
                                                 if (states.contains(
                                                     MaterialState.selected)) {
-                                                  return Colors
-                                                      .white; // السنة المختارة
+                                                  return Colors.white;
                                                 }
-                                                return Colors
-                                                    .white; // باقي السنوات
+                                                return Colors.white;
                                               }),
                                               yearBackgroundColor:
                                                   MaterialStateColor
@@ -1551,7 +1533,7 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
                                                 if (states.contains(
                                                     MaterialState.selected)) {
                                                   return const Color(
-                                                      0xFFFC686A); // خلفية السنة المختارة
+                                                      0xFFFC686A);
                                                 }
                                                 return Colors.transparent;
                                               }),
@@ -1774,7 +1756,6 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    // View
                                     SizedBox(
                                       width: 140,
                                       child: ElevatedButton.icon(
@@ -1800,8 +1781,6 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
                                       ),
                                     ),
                                     const SizedBox(width: 12),
-
-                                    // Replace
                                     SizedBox(
                                       width: 140,
                                       child: ElevatedButton.icon(
@@ -1878,8 +1857,6 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
                         ),
                       ],
                     ),
-
-                    // ====== TAB 1: Contact Info ======
                     ListView(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -1897,6 +1874,8 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
                         buildJadeerInputCard(
                           context: context,
                           child: TextFormField(
+                            key: _emailKey,
+                            focusNode: _emailFocus,
                             controller: _emailCtrl,
                             keyboardType: TextInputType.emailAddress,
                             decoration: const InputDecoration(
@@ -1905,21 +1884,8 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
                               filled: true,
                               fillColor: Colors.transparent,
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(12),
-                                ),
-                                borderSide: BorderSide.none,
-                              ),
-                              errorBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(12),
-                                ),
-                                borderSide: BorderSide.none,
-                              ),
-                              focusedErrorBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(12),
-                                ),
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(12)),
                                 borderSide: BorderSide.none,
                               ),
                               errorStyle: TextStyle(height: 0, fontSize: 0),
@@ -1943,51 +1909,94 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
                         ),
                         const SizedBox(height: 8),
                         buildJadeerInputCard(
-                          context: context,
-                          child: TextFormField(
-                            controller: _phone,
-                            keyboardType: TextInputType.phone,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                              LengthLimitingTextInputFormatter(9),
-                            ],
-                            decoration: const InputDecoration(
-                              hintText: '5XXXXXXXX',
-                              hintStyle: TextStyle(color: Colors.grey),
-                              prefixText: '+966 ',
-                              filled: true,
-                              fillColor: Colors.transparent,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(12),
+                            context: context,
+                            child: IntlPhoneField(
+                              key: _phoneKey,
+                              controller: _phoneCtrl,
+                              focusNode: _phoneFocus,
+                              initialCountryCode: 'SA',
+                              pickerDialogStyle: PickerDialogStyle(
+                                searchFieldCursorColor: Colors.white,
+                                backgroundColor:
+                                    const Color(0xFF4A5FBC).withOpacity(0.9),
+                                width: MediaQuery.of(context).size.width * 0.9,
+                                searchFieldInputDecoration: InputDecoration(
+                                  hintText: 'Search country',
+                                  hintStyle:
+                                      const TextStyle(color: Colors.white),
+                                  filled: true,
+                                  fillColor: Colors.white.withOpacity(0.2),
+                                  prefixIcon: const Icon(Icons.search,
+                                      color: Colors.white),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(18),
+                                    borderSide: BorderSide.none,
+                                  ),
                                 ),
-                                borderSide: BorderSide.none,
-                              ),
-                              errorBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(12),
+                                countryNameStyle: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
                                 ),
-                                borderSide: BorderSide.none,
-                              ),
-                              focusedErrorBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(12),
+                                countryCodeStyle: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFFD6C67),
                                 ),
-                                borderSide: BorderSide.none,
+                                listTilePadding: const EdgeInsets.symmetric(
+                                    vertical: 4, horizontal: 14),
+                                listTileDivider: Divider(
+                                  color: Colors.white.withOpacity(0.2),
+                                ),
                               ),
-                              errorStyle: TextStyle(height: 0, fontSize: 0),
-                              counterText: '',
-                            ),
-                            validator: (v) {
-                              final t = v?.trim() ?? '';
-                              if (t.isEmpty) return null;
-                              if (!_localSaPhone.hasMatch(t)) {
-                                return 'Must start with 5 and be 9 digits';
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
+                              decoration: const InputDecoration(
+                                hintText: 'Phone number',
+                                hintStyle: TextStyle(color: Colors.grey),
+                                border: OutlineInputBorder(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(12)),
+                                  borderSide: BorderSide.none,
+                                ),
+                                filled: true,
+                                fillColor: Colors.transparent,
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 14,
+                                ),
+                                errorStyle: TextStyle(height: 0, fontSize: 0),
+                                counterText: '',
+                              ),
+                              onChanged: (PhoneNumber phone) {
+                                if (phone.number.trim().isEmpty) {
+                                  _phoneE164Draft = '';
+                                } else {
+                                  _phoneE164Draft =
+                                      phone.completeNumber; // مثل +9665...
+                                }
+                              },
+                              onSaved: (PhoneNumber? phone) {
+                                if (phone == null ||
+                                    phone.number.trim().isEmpty) {
+                                  _phoneE164Draft = '';
+                                } else {
+                                  _phoneE164Draft = phone.completeNumber;
+                                }
+                              },
+                              validator: (PhoneNumber? phone) {
+                                if (phone == null ||
+                                    phone.number.trim().isEmpty) {
+                                  return null;
+                                }
+                                if (!RegExp(r'^[0-9]+$')
+                                    .hasMatch(phone.number.trim())) {
+                                  return 'Digits only';
+                                }
+                                if (phone.number.trim().length < 6) {
+                                  return 'Enter a valid phone number';
+                                }
+                                return null;
+                              },
+                            )),
                         const SizedBox(height: 120),
                       ],
                     ),

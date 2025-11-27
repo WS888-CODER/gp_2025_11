@@ -286,39 +286,77 @@ class _CompanyProfileState extends State<CompanyProfile> {
 
   Future<bool> _save(Map<String, dynamic> current,
       {BuildContext? inContext}) async {
-    final formOk = _form.currentState?.validate() ?? false;
+    final uiContext = inContext ?? context;
 
-    if (!formOk) {
-      SnackHelper.error(context, 'Please fix the highlighted fields');
-      return false;
-    }
-
-    final hasLogoNow = _hasAnyLogo(current);
+    if (_saving) return false;
 
     final email = _emailCtrl.text.trim();
-    final hasEmailValid = email.isNotEmpty && _email.hasMatch(email);
+    final websiteRaw = _websiteCtrl.text.trim();
+    final desc = _desc.text.trim();
+    final loc = _cleanLoc(_locCtrl.text);
+    final hasPhoneDigits = _phone.text.trim().isNotEmpty;
 
     final oldPhoneE164 = (current[UserFields.phone] ?? '').toString().trim();
     final phoneLocal = _phone.text.trim();
-    final effectivePhoneE164 =
-        (_phoneE164Draft ?? oldPhoneE164).toString().trim();
-    final hasPhoneValid = effectivePhoneE164.isNotEmpty;
+    final oldWebsite = (current[UserFields.website] ?? '').toString().trim();
+
+    final hadLogoBefore = _hasAnyLogo(current);
+
+    final formOk = _form.currentState?.validate() ?? false;
+
+    if (!formOk) {
+      final emailInvalid = email.isNotEmpty && !_email.hasMatch(email);
+      if (emailInvalid) {
+        _emailKey.currentState?.validate();
+        SnackHelper.error(uiContext, 'Enter a valid email address');
+        return false;
+      }
+
+      if (hasPhoneDigits) {
+        _phoneKey.currentState?.validate();
+        SnackHelper.error(uiContext, 'Enter a valid phone number');
+        return false;
+      }
+
+      if (websiteRaw.isNotEmpty) {
+        final normalized =
+            websiteRaw.startsWith(RegExp(r'https?://', caseSensitive: false))
+                ? websiteRaw
+                : 'https://$websiteRaw';
+
+        if (!_urlReg.hasMatch(normalized)) {
+          _websiteKey.currentState?.validate();
+          SnackHelper.error(
+            uiContext,
+            'Enter a valid website URL or leave empty',
+          );
+          return false;
+        }
+      }
+
+      if (_locKey.currentState?.hasError ?? false) {
+        _locKey.currentState?.validate();
+        SnackHelper.error(
+          uiContext,
+          'Location must be 2–40 letters (Arabic/English), no numbers',
+        );
+        return false;
+      }
+
+      SnackHelper.error(uiContext, 'Please check your information');
+      return false;
+    }
 
     setState(() {
       _saving = true;
-      _progress = 0;
-      progressNotifier.value = 0;
     });
 
     try {
       String? newPhoneE164;
-      if ((_phoneE164Draft ?? '').trim().isNotEmpty &&
-          _phoneE164Draft!.trim() != oldPhoneE164) {
-        newPhoneE164 = _phoneE164Draft!.trim();
+      final draftTrim = (_phoneE164Draft ?? '').trim();
+      if (draftTrim.isNotEmpty && draftTrim != oldPhoneE164) {
+        newPhoneE164 = draftTrim;
       }
-
-      final websiteRaw = _websiteCtrl.text.trim();
-      final oldWebsite = (current[UserFields.website] ?? '').toString().trim();
 
       String? newLogoUrl;
       String? newLogoPath;
@@ -335,13 +373,16 @@ class _CompanyProfileState extends State<CompanyProfile> {
         _pendingLogoFile = null;
       }
 
-      final desc = _desc.text.trim();
-      final loc = _cleanLoc(_locCtrl.text);
+      bool hasLogoAfter;
+      if (newLogoUrl != null) {
+        hasLogoAfter = true;
+      } else if (_logoUrl == '') {
+        hasLogoAfter = false;
+      } else {
+        hasLogoAfter = hadLogoBefore;
+      }
 
-      final complete = desc.length >= 150 &&
-          loc.isNotEmpty &&
-          (hasEmailValid || hasPhoneValid) &&
-          hasLogoNow;
+      final complete = desc.length >= 150 && loc.isNotEmpty && hasLogoAfter;
 
       final updates = <String, dynamic>{
         UserFields.description: desc,
@@ -349,7 +390,8 @@ class _CompanyProfileState extends State<CompanyProfile> {
         UserFields.isProfileComplete: complete,
       };
 
-      final oldEmail = (current[UserFields.contactEmail] ?? '').toString();
+      final oldEmail =
+          (current[UserFields.contactEmail] ?? '').toString().trim();
       if (email != oldEmail) {
         if (email.isEmpty) {
           updates[UserFields.contactEmail] = FieldValue.delete();
@@ -358,8 +400,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
         }
       }
 
-      if (phoneLocal.isEmpty &&
-          (_phoneE164Draft == null || _phoneE164Draft!.trim().isEmpty)) {
+      if (phoneLocal.isEmpty && draftTrim.isEmpty) {
         if (oldPhoneE164.isNotEmpty) {
           updates[UserFields.phone] = FieldValue.delete();
         }
@@ -391,7 +432,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
       }
 
       if (updates.isEmpty) {
-        SnackHelper.error(context, 'No changes to save');
+        SnackHelper.error(uiContext, 'No changes to save');
         return false;
       }
 
@@ -421,10 +462,10 @@ class _CompanyProfileState extends State<CompanyProfile> {
         await _deleteStorageFile(current[UserFields.photoUrl]?.toString());
       }
 
-      SnackHelper.success(context, 'Profile updated successfully');
+      SnackHelper.success(uiContext, 'Profile updated successfully');
       return true;
     } catch (e) {
-      SnackHelper.error(context, 'Failed to update profile');
+      SnackHelper.error(uiContext, 'Failed to update profile');
       return false;
     } finally {
       if (mounted) {
@@ -468,7 +509,11 @@ class _CompanyProfileState extends State<CompanyProfile> {
             (data[UserFields.contactEmail] ?? '').toString().trim();
         final website = (data[UserFields.website] ?? '').toString().trim();
         final rawPhone = (data[UserFields.phone] ?? '').toString().trim();
-        final prettyPhone = rawPhone;
+
+        final phoneDigits = rawPhone.replaceAll(RegExp(r'\D'), '');
+
+        final prettyPhone = phoneDigits.length < 6 ? '' : rawPhone;
+
         final location = (data[UserFields.location] ?? '').toString().trim();
         final desc = (data[UserFields.description] ?? '').toString().trim();
 
@@ -972,27 +1017,9 @@ class _EditCompanyPageState extends State<EditCompanyPage>
             SizedBox(height: 12),
             Text(
               '• A company logo is uploaded\n'
-              '• Description is at least 150 characters\n'
+              '• Description is at least 150 characters (max 900)\n'
               '• Location is set\n'
               '• Website is optional but recommended',
-              style: TextStyle(
-                color: Colors.white,
-                height: 1.4,
-              ),
-            ),
-            SizedBox(height: 12),
-            Text(
-              'And at least one contact method:',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-                height: 1.4,
-              ),
-            ),
-            SizedBox(height: 6),
-            Text(
-              '• A valid contact email, or\n'
-              '• A valid phone number with country code',
               style: TextStyle(
                 color: Colors.white,
                 height: 1.4,
@@ -1103,435 +1130,430 @@ class _EditCompanyPageState extends State<EditCompanyPage>
               child: Form(
                 key: parent._form,
                 autovalidateMode: AutovalidateMode.onUserInteraction,
-                child: TabBarView(controller: _tabCtrl, children: [
-                  ListView(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 16),
-                    children: [
-                      const Text(
-                        'Logo',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: brand,
-                                width: 2,
-                              ),
-                            ),
-                            child: CircleAvatar(
-                              radius: 32,
-                              backgroundColor: Colors.white,
-                              backgroundImage: parent._pendingLogoFile != null
-                                  ? FileImage(parent._pendingLogoFile!)
-                                      as ImageProvider
-                                  : ((parent._logoUrl ??
-                                                  widget.data[
-                                                      UserFields.photoUrl])
-                                              ?.toString()
-                                              .isNotEmpty ==
-                                          true
-                                      ? NetworkImage(
-                                          (parent._logoUrl ??
-                                                  widget.data[
-                                                      UserFields.photoUrl])
-                                              .toString(),
-                                        )
-                                      : null),
-                              child: (parent._pendingLogoFile == null &&
-                                      !((parent._logoUrl ??
-                                                  widget.data[
-                                                      UserFields.photoUrl])
-                                              ?.toString()
-                                              .isNotEmpty ==
-                                          true))
-                                  ? const Icon(
-                                      Icons.business,
-                                      color: brand,
-                                      size: 28,
-                                    )
-                                  : null,
-                            ),
+                child: TabBarView(
+                  controller: _tabCtrl,
+                  children: [
+                    ListView(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 16),
+                      children: [
+                        const Text(
+                          'Logo',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
                           ),
-                          const SizedBox(width: 16),
-                          Row(
-                            children: [
-                              FilledButton(
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: const Color(0xFFFD6C67),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(24),
-                                  ),
-                                ),
-                                onPressed:
-                                    parent._saving || parent._progress != null
-                                        ? null
-                                        : () async {
-                                            await parent._pickLogo();
-                                            if (mounted) setState(() {});
-                                          },
-                                child: const Text(
-                                  'Upload Logo',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: brand,
+                                  width: 2,
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              if (parent._pendingLogoFile != null ||
-                                  ((parent._logoUrl ??
-                                              widget.data[UserFields.photoUrl])
-                                          ?.toString()
-                                          .isNotEmpty ==
-                                      true))
-                                TextButton(
+                              child: CircleAvatar(
+                                radius: 32,
+                                backgroundColor: Colors.white,
+                                backgroundImage: parent._pendingLogoFile != null
+                                    ? FileImage(parent._pendingLogoFile!)
+                                        as ImageProvider
+                                    : ((parent._logoUrl ??
+                                                    widget.data[
+                                                        UserFields.photoUrl])
+                                                ?.toString()
+                                                .isNotEmpty ==
+                                            true
+                                        ? NetworkImage(
+                                            (parent._logoUrl ??
+                                                    widget.data[
+                                                        UserFields.photoUrl])
+                                                .toString(),
+                                          )
+                                        : null),
+                                child: (parent._pendingLogoFile == null &&
+                                        !((parent._logoUrl ??
+                                                    widget.data[
+                                                        UserFields.photoUrl])
+                                                ?.toString()
+                                                .isNotEmpty ==
+                                            true))
+                                    ? const Icon(
+                                        Icons.business,
+                                        color: brand,
+                                        size: 28,
+                                      )
+                                    : null,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Row(
+                              children: [
+                                FilledButton(
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: const Color(0xFFFD6C67),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(24),
+                                    ),
+                                  ),
                                   onPressed:
                                       parent._saving || parent._progress != null
                                           ? null
-                                          : () {
-                                              parent.setState(() {
-                                                parent._pendingLogoFile = null;
-                                                parent._logoUrl = '';
-                                              });
-                                              if (mounted) setState(() {});
+                                          : () async {
+                                              await parent._pickLogo();
+                                              if (mounted) {
+                                                setState(() {});
+                                              }
                                             },
                                   child: const Text(
-                                    'Remove logo',
-                                    style: TextStyle(color: Colors.red),
+                                    'Upload Logo',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      const Text(
-                        'Description',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      buildJadeerInputCard(
-                        context: context,
-                        child: ValueListenableBuilder<TextEditingValue>(
-                          valueListenable: parent._desc,
-                          builder: (context, value, _) {
-                            final text = value.text.trim();
-                            final length = text.length;
-                            final tooShort = length > 0 && length < 150;
-
-                            return TextFormField(
-                              key: parent._descKey,
-                              controller: parent._desc,
-                              maxLines: 10,
-                              maxLength: 900,
-                              keyboardType: TextInputType.multiline,
-                              decoration: InputDecoration(
-                                hintText:
-                                    'Describe your company and what you do.',
-                                hintStyle: const TextStyle(color: Colors.grey),
-                                filled: true,
-                                fillColor: Colors.transparent,
-                                border: const OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(12)),
-                                  borderSide: BorderSide.none,
-                                ),
-                                errorBorder: const OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(12)),
-                                  borderSide: BorderSide.none,
-                                ),
-                                focusedErrorBorder: const OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(12)),
-                                  borderSide: BorderSide.none,
-                                ),
-                                counterText: '',
-                                helperText: tooShort
-                                    ? '$length/900 – minimum 150 characters for a complete profile'
-                                    : '$length/900',
-                                helperStyle: TextStyle(
-                                  fontSize: 12,
-                                  color: tooShort
-                                      ? const Color(0xFFFC686A)
-                                      : Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withOpacity(0.6),
-                                ),
-                              ),
-                              validator: (_) => null,
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      const Text(
-                        'Location',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      buildJadeerInputCard(
-                        context: context,
-                        child: TextFormField(
-                          key: parent._locKey,
-                          controller: parent._locCtrl,
-                          textCapitalization: TextCapitalization.words,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(
-                              RegExp(r"[A-Za-z\u0600-\u06FF\s\.'-]"),
+                                const SizedBox(width: 12),
+                                if (parent._pendingLogoFile != null ||
+                                    ((parent._logoUrl ??
+                                                widget
+                                                    .data[UserFields.photoUrl])
+                                            ?.toString()
+                                            .isNotEmpty ==
+                                        true))
+                                  TextButton(
+                                    onPressed: parent._saving ||
+                                            parent._progress != null
+                                        ? null
+                                        : () {
+                                            parent.setState(() {
+                                              parent._pendingLogoFile = null;
+                                              parent._logoUrl = '';
+                                            });
+                                            if (mounted) {
+                                              setState(() {});
+                                            }
+                                          },
+                                    child: const Text(
+                                      'Remove logo',
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                  ),
+                              ],
                             ),
-                            LengthLimitingTextInputFormatter(40),
                           ],
-                          decoration: const InputDecoration(
-                            hintText: 'e.g., Riyadh / Jeddah / Al Khobar',
-                            hintStyle: TextStyle(color: Colors.grey),
-                            border: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(12)),
-                              borderSide: BorderSide.none,
-                            ),
-                            filled: true,
-                            fillColor: Colors.transparent,
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 14,
-                            ),
+                        ),
+                        const SizedBox(height: 24),
+                        const Text(
+                          'Description',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
                           ),
-                          validator: (v) {
-                            final t = parent._cleanLoc(v ?? '');
-                            if (t.isEmpty) return null;
-                            if (!parent._locAllowed.hasMatch(t)) {
-                              return '2–40 letters only (Arabic/English), no numbers';
-                            }
-                            return null;
-                          },
                         ),
-                      ),
-                    ],
-                  ),
-                  ListView(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 16),
-                    children: [
-                      const Text(
-                        'Contact Email',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      buildJadeerInputCard(
-                        context: context,
-                        child: TextFormField(
-                          key: parent._emailKey,
-                          controller: parent._emailCtrl,
-                          keyboardType: TextInputType.emailAddress,
-                          decoration: const InputDecoration(
-                            hintText: 'Enter contact email',
-                            hintStyle: TextStyle(color: Colors.grey),
-                            helperMaxLines: 2,
-                            border: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(12)),
-                              borderSide: BorderSide.none,
-                            ),
-                            filled: true,
-                            fillColor: Colors.transparent,
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 14,
-                            ),
-                            errorBorder: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(12)),
-                              borderSide: BorderSide.none,
-                            ),
-                            focusedErrorBorder: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(12)),
-                              borderSide: BorderSide.none,
-                            ),
-                            errorStyle: TextStyle(height: 0, fontSize: 0),
-                            counterText: '',
+                        const SizedBox(height: 8),
+                        buildJadeerInputCard(
+                          context: context,
+                          child: ValueListenableBuilder<TextEditingValue>(
+                            valueListenable: parent._desc,
+                            builder: (context, value, _) {
+                              final text = value.text.trim();
+                              final length = text.length;
+                              final tooShort = length > 0 && length < 150;
+
+                              return TextFormField(
+                                key: parent._descKey,
+                                focusNode: parent._descFocus,
+                                controller: parent._desc,
+                                maxLines: 10,
+                                maxLength: 900,
+                                keyboardType: TextInputType.multiline,
+                                decoration: InputDecoration(
+                                  hintText:
+                                      'Describe your company and what you do.',
+                                  hintStyle:
+                                      const TextStyle(color: Colors.grey),
+                                  filled: true,
+                                  fillColor: Colors.transparent,
+                                  border: const OutlineInputBorder(
+                                    borderRadius:
+                                        BorderRadius.all(Radius.circular(12)),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  helperText: tooShort
+                                      ? '$length/900 – minimum 150 characters for a complete profile'
+                                      : '$length/900',
+                                  helperStyle: TextStyle(
+                                    fontSize: 12,
+                                    color: tooShort
+                                        ? const Color(0xFFFC686A)
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.6),
+                                  ),
+                                ),
+                                validator: (_) => null,
+                              );
+                            },
                           ),
-                          validator: (v) {
-                            final t = v?.trim() ?? '';
-                            if (t.isEmpty) return null;
-                            if (!_email.hasMatch(t)) return 'Invalid email';
-                            return null;
-                          },
                         ),
-                      ),
-                      const SizedBox(height: 24),
-                      const Text(
-                        'Contact Phone',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
+                        const SizedBox(height: 24),
+                        const Text(
+                          'Location',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      const SizedBox(height: 8),
-                      buildJadeerInputCard(
-                        context: context,
-                        child: IntlPhoneField(
-                          key: parent._phoneKey,
-                          controller: parent._phone,
-                          initialCountryCode: 'SA',
-                          pickerDialogStyle: PickerDialogStyle(
-                              searchFieldCursorColor: Colors.white,
-                              backgroundColor:
-                                  const Color(0xFF4A5FBC).withOpacity(0.9),
-                              width: MediaQuery.of(context).size.width * 0.9,
-                              searchFieldInputDecoration: InputDecoration(
-                                hintText: 'Search country',
-                                hintStyle: const TextStyle(color: Colors.white),
-                                filled: true,
-                                fillColor: Colors.white.withOpacity(0.2),
-                                prefixIcon: const Icon(
-                                  Icons.search,
+                        const SizedBox(height: 8),
+                        buildJadeerInputCard(
+                          context: context,
+                          child: TextFormField(
+                            key: parent._locKey,
+                            focusNode: parent._locFocus,
+                            controller: parent._locCtrl,
+                            textCapitalization: TextCapitalization.words,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                RegExp(r"[A-Za-z\u0600-\u06FF\s\.'-]"),
+                              ),
+                              LengthLimitingTextInputFormatter(40),
+                            ],
+                            decoration: const InputDecoration(
+                              hintText: 'e.g., Riyadh / Jeddah / Al Khobar',
+                              hintStyle: TextStyle(color: Colors.grey),
+                              border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(12)),
+                                borderSide: BorderSide.none,
+                              ),
+                              filled: true,
+                              fillColor: Colors.transparent,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 14,
+                              ),
+                            ),
+                            validator: (v) {
+                              final t = parent._cleanLoc(v ?? '');
+                              if (t.isEmpty) return null;
+                              if (!parent._locAllowed.hasMatch(t)) {
+                                return '2–40 letters only (Arabic/English), no numbers';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    ListView(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 16),
+                      children: [
+                        const Text(
+                          'Contact Email',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        buildJadeerInputCard(
+                          context: context,
+                          child: TextFormField(
+                            key: parent._emailKey,
+                            focusNode: parent._emailFocus,
+                            controller: parent._emailCtrl,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: const InputDecoration(
+                              hintText: 'Enter contact email',
+                              hintStyle: TextStyle(color: Colors.grey),
+                              helperMaxLines: 2,
+                              border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(12)),
+                                borderSide: BorderSide.none,
+                              ),
+                              filled: true,
+                              fillColor: Colors.transparent,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 14,
+                              ),
+                              errorStyle: TextStyle(height: 0, fontSize: 0),
+                              counterText: '',
+                            ),
+                            validator: (v) {
+                              final t = v?.trim() ?? '';
+                              if (t.isEmpty) return null;
+                              if (!_email.hasMatch(t)) return 'Invalid email';
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        const Text(
+                          'Contact Phone',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        buildJadeerInputCard(
+                            context: context,
+                            child: IntlPhoneField(
+                              key: parent._phoneKey,
+                              controller: parent._phone,
+                              focusNode: parent._phoneFocus,
+                              initialCountryCode: 'SA',
+                              pickerDialogStyle: PickerDialogStyle(
+                                searchFieldCursorColor: Colors.white,
+                                backgroundColor:
+                                    const Color(0xFF4A5FBC).withOpacity(0.9),
+                                width: MediaQuery.of(context).size.width * 0.9,
+                                searchFieldInputDecoration: InputDecoration(
+                                  hintText: 'Search country',
+                                  hintStyle:
+                                      const TextStyle(color: Colors.white),
+                                  filled: true,
+                                  fillColor: Colors.white.withOpacity(0.2),
+                                  prefixIcon: const Icon(
+                                    Icons.search,
+                                    color: Colors.white,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(18),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                ),
+                                countryNameStyle: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
                                   color: Colors.white,
                                 ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(18),
-                                  borderSide: BorderSide.none,
+                                countryCodeStyle: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFFD6C67),
+                                ),
+                                listTilePadding: const EdgeInsets.symmetric(
+                                    vertical: 4, horizontal: 14),
+                                listTileDivider: Divider(
+                                  color: Colors.white.withOpacity(0.2),
                                 ),
                               ),
-                              countryNameStyle: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
+                              decoration: const InputDecoration(
+                                hintText: 'Phone number',
+                                hintStyle: TextStyle(color: Colors.grey),
+                                border: OutlineInputBorder(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(12)),
+                                  borderSide: BorderSide.none,
+                                ),
+                                filled: true,
+                                fillColor: Colors.transparent,
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 14,
+                                ),
+                                errorStyle: TextStyle(height: 0, fontSize: 0),
+                                counterText: '',
                               ),
-                              countryCodeStyle: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFFFD6C67),
-                              ),
-                              listTilePadding: const EdgeInsets.symmetric(
-                                  vertical: 4, horizontal: 14),
-                              listTileDivider: Divider(
-                                color: Colors.white.withOpacity(0.2),
-                              )),
-                          decoration: const InputDecoration(
-                            hintText: 'Phone number',
-                            hintStyle: TextStyle(color: Colors.grey),
-                            border: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(12)),
-                              borderSide: BorderSide.none,
-                            ),
-                            filled: true,
-                            fillColor: Colors.transparent,
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 14,
-                            ),
-                            errorBorder: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(12)),
-                              borderSide: BorderSide.none,
-                            ),
-                            focusedErrorBorder: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(12)),
-                              borderSide: BorderSide.none,
-                            ),
-                            errorStyle: TextStyle(height: 0, fontSize: 0),
-                            counterText: '',
+                              onChanged: (PhoneNumber phone) {
+                                final digits = phone.number.trim();
+                                if (digits.isEmpty) {
+                                  parent._phoneE164Draft = '';
+                                } else {
+                                  parent._phoneE164Draft = phone.completeNumber;
+                                }
+                              },
+                              onSaved: (PhoneNumber? phone) {
+                                if (phone == null ||
+                                    phone.number.trim().isEmpty) {
+                                  parent._phoneE164Draft = '';
+                                } else {
+                                  parent._phoneE164Draft = phone.completeNumber;
+                                }
+                              },
+                              validator: (PhoneNumber? phone) {
+                                if (phone == null ||
+                                    phone.number.trim().isEmpty) {
+                                  return null;
+                                }
+                                final digits = phone.number.trim();
+                                if (!RegExp(r'^[0-9]+$').hasMatch(digits)) {
+                                  return 'Digits only';
+                                }
+                                if (digits.length < 6) {
+                                  return 'Enter a valid phone number';
+                                }
+                                return null;
+                              },
+                            )),
+                        const SizedBox(height: 24),
+                        const Text(
+                          'Company Website',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
                           ),
-                          onChanged: (PhoneNumber phone) {
-                            parent._phoneE164Draft = phone.completeNumber;
-                          },
-                          onSaved: (PhoneNumber? phone) {
-                            parent._phoneE164Draft = phone?.completeNumber;
-                          },
-                          validator: (PhoneNumber? phone) {
-                            if (phone == null || phone.number.trim().isEmpty) {
+                        ),
+                        const SizedBox(height: 8),
+                        buildJadeerInputCard(
+                          context: context,
+                          child: TextFormField(
+                            key: parent._websiteKey,
+                            focusNode: parent._websiteFocus,
+                            controller: parent._websiteCtrl,
+                            keyboardType: TextInputType.url,
+                            decoration: const InputDecoration(
+                              hintText: 'example.com',
+                              hintStyle: TextStyle(color: Colors.grey),
+                              border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(12)),
+                                borderSide: BorderSide.none,
+                              ),
+                              filled: true,
+                              fillColor: Colors.transparent,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 14,
+                              ),
+                              counterText: '',
+                              errorStyle: TextStyle(height: 0, fontSize: 0),
+                            ),
+                            validator: (v) {
+                              final t = (v ?? '').trim();
+                              if (t.isEmpty) return null;
+
+                              final normalized = t.startsWith(RegExp(
+                                      r'https?://',
+                                      caseSensitive: false))
+                                  ? t
+                                  : 'https://$t';
+
+                              if (!parent._urlReg.hasMatch(normalized)) {
+                                return 'Invalid website URL';
+                              }
                               return null;
-                            }
-                            if (phone.number.trim().length < 6) {
-                              return 'Enter a valid phone number';
-                            }
-                            return null;
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      const Text(
-                        'Company Website',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      buildJadeerInputCard(
-                        context: context,
-                        child: TextFormField(
-                          key: parent._websiteKey,
-                          controller: parent._websiteCtrl,
-                          keyboardType: TextInputType.url,
-                          decoration: const InputDecoration(
-                            hintText: 'example.com',
-                            hintStyle: TextStyle(color: Colors.grey),
-                            border: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(12)),
-                              borderSide: BorderSide.none,
-                            ),
-                            filled: true,
-                            fillColor: Colors.transparent,
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 14,
-                            ),
-                            errorBorder: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(12)),
-                              borderSide: BorderSide.none,
-                            ),
-                            focusedErrorBorder: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(12)),
-                              borderSide: BorderSide.none,
-                            ),
-                            errorStyle: TextStyle(height: 0, fontSize: 0),
-                            counterText: '',
+                            },
                           ),
-                          validator: (v) {
-                            final t = (v ?? '').trim();
-                            if (t.isEmpty) return null;
-                            if (!parent._urlReg.hasMatch(t)) {
-                              return 'Enter a valid website URL or leave empty';
-                            }
-                            return null;
-                          },
                         ),
-                      ),
-                    ],
-                  ),
-                ]),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -1580,44 +1602,42 @@ class _EditCompanyPageState extends State<EditCompanyPage>
     final original = widget.data;
 
     final origWebsite = (original[UserFields.website] ?? '').toString().trim();
-    final currWebsite = parent._websiteCtrl.text.trim();
-    if (currWebsite != origWebsite) return true;
-
     final origDesc = (original[UserFields.description] ?? '').toString().trim();
-    final currDesc = parent._desc.text.trim();
-    if (currDesc != origDesc) return true;
-
     final origLoc = (original[UserFields.location] ?? '').toString().trim();
-    final currLoc = parent._locCtrl.text.trim();
-    if (currLoc != origLoc) return true;
-
     final origEmail =
         (original[UserFields.contactEmail] ?? '').toString().trim();
+    final origPhone = (original[UserFields.phone] ?? '').toString().trim();
+    final origLogoUrl = (original[UserFields.photoUrl] ?? '').toString().trim();
+
+    final currWebsite = parent._websiteCtrl.text.trim();
+    final currDesc = parent._desc.text.trim();
+    final currLoc = parent._locCtrl.text.trim();
     final currEmail = parent._emailCtrl.text.trim();
+
+    final draftE164 = parent._phoneE164Draft?.trim() ?? '';
+    final currPhoneLocal = parent._phone.text.trim();
+
+    if (currWebsite != origWebsite) return true;
+    if (currDesc != origDesc) return true;
+    if (currLoc != origLoc) return true;
     if (currEmail != origEmail) return true;
 
-    final origPhoneE164 = (original[UserFields.phone] ?? '').toString().trim();
-    final currPhoneLocal = parent._phone.text.trim();
-    final draftE164 = parent._phoneE164Draft?.trim() ?? '';
+    if (currPhoneLocal.isEmpty && origPhone.isNotEmpty) return true;
+    if (draftE164.isNotEmpty && draftE164 != origPhone) return true;
 
-    if (currPhoneLocal.isEmpty && origPhoneE164.isNotEmpty) return true;
-
-    if (draftE164.isNotEmpty && draftE164 != origPhoneE164) return true;
-
-    final origLogoUrl = (original[UserFields.photoUrl] ?? '').toString().trim();
     if (parent._pendingLogoFile != null) {
       return true;
     }
-    if (parent._logoUrl == '') {
-      if (origLogoUrl.isNotEmpty) {
-        return true;
-      }
-    }
-    if (parent._logoUrl != null &&
-        parent._logoUrl!.isNotEmpty &&
-        parent._logoUrl!.trim() != origLogoUrl) {
-      return true;
-    }
+
+    final currLogoUrl =
+        ((parent._logoUrl ?? original[UserFields.photoUrl]) ?? '')
+            .toString()
+            .trim();
+
+    if (currLogoUrl == '' && origLogoUrl.isNotEmpty) return true;
+
+    if (currLogoUrl.isNotEmpty && currLogoUrl != origLogoUrl) return true;
+
     return false;
   }
 
