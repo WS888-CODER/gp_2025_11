@@ -77,9 +77,8 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
         return;
       }
 
-      final userDocRef = FirebaseFirestore.instance
-          .collection('Users')
-          .doc(currentUser.uid);
+      final userDocRef =
+          FirebaseFirestore.instance.collection('Users').doc(currentUser.uid);
 
       final userDoc = await userDocRef.get();
 
@@ -466,17 +465,18 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
     if (_isUploading || _isExtracting || _isSaving) {
       return false;
     }
+    final scheme = Theme.of(context).colorScheme;
 
     // Show warning if file selected or in job selection
     final shouldPop = await showDialog<bool>(
       context: context,
-      builder: (context) => const JadeerDialog<bool>(
+      builder: (context) => JadeerDialog<bool>(
         title: 'Leave CV Enhancement?',
         content: Text(
           'Your progress will be lost. Are you sure you want to leave?',
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: Colors.white,
+            color: scheme.surface,
             fontSize: 15,
           ),
         ),
@@ -565,8 +565,11 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
       child: Row(
         children: [
           Icon(
-            _cvEnhancementCredits > 0 ? Icons.auto_awesome : Icons.warning_rounded,
-            color: _cvEnhancementCredits > 0 ? AppTheme.primaryPurple : Colors.red,
+            _cvEnhancementCredits > 0
+                ? Icons.auto_awesome
+                : Icons.warning_rounded,
+            color:
+                _cvEnhancementCredits > 0 ? AppTheme.primaryPurple : Colors.red,
             size: 22,
           ),
           const SizedBox(width: 12),
@@ -627,7 +630,9 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
           Expanded(
             child: Center(
               child: GestureDetector(
-                onTap: (_isUploading || _isExtracting || _cvEnhancementCredits <= 0)
+                onTap: (_isUploading ||
+                        _isExtracting ||
+                        _cvEnhancementCredits <= 0)
                     ? null
                     : _pickFile,
                 child: Opacity(
@@ -637,12 +642,12 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
                     padding: const EdgeInsets.all(40),
                     decoration: BoxDecoration(
                       color: _cvEnhancementCredits <= 0
-                          ? Colors.grey.shade200
+                          ? scheme.surfaceVariant
                           : scheme.surface,
-                      borderRadius: BorderRadius.circular(12),
                       border: _cvEnhancementCredits <= 0
-                          ? Border.all(color: Colors.grey.shade400, width: 2)
+                          ? Border.all(color: scheme.outlineVariant, width: 2)
                           : null,
+                      borderRadius: BorderRadius.circular(12),
                       boxShadow: _cvEnhancementCredits <= 0
                           ? []
                           : [
@@ -653,56 +658,56 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
                               ),
                             ],
                     ),
-                  child: _selectedFile == null
-                      ? Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              _cvEnhancementCredits <= 0
-                                  ? Icons.lock_outlined
-                                  : Iconsax.document_upload,
-                              size: 60,
-                              color: _cvEnhancementCredits <= 0
-                                  ? Colors.grey
-                                  : const Color(0xFFFF7B7B),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              _cvEnhancementCredits <= 0
-                                  ? 'Upload Disabled'
-                                  : 'Click to upload CV',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
+                    child: _selectedFile == null
+                        ? Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _cvEnhancementCredits <= 0
+                                    ? Icons.lock_outlined
+                                    : Iconsax.document_upload,
+                                size: 60,
                                 color: _cvEnhancementCredits <= 0
                                     ? Colors.grey
-                                    : null,
+                                    : const Color(0xFFFF7B7B),
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _cvEnhancementCredits <= 0
-                                  ? 'No AI enhancements remaining today'
-                                  : 'Supported: PDF, DOC, DOCX (Max 10MB)',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
+                              const SizedBox(height: 16),
+                              Text(
+                                _cvEnhancementCredits <= 0
+                                    ? 'Upload Disabled'
+                                    : 'Click to upload CV',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: _cvEnhancementCredits <= 0
+                                      ? Colors.grey
+                                      : null,
+                                ),
                               ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        )
-                      : Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.check_circle,
-                                size: 60, color: Color(0xFFFF7B7B)),
-                            const SizedBox(height: 16),
-                            Text(
-                                'Selected: ${_selectedFile!.path.split('/').last}',
-                                textAlign: TextAlign.center),
-                          ],
-                        ),
+                              const SizedBox(height: 8),
+                              Text(
+                                _cvEnhancementCredits <= 0
+                                    ? 'No AI enhancements remaining today'
+                                    : 'Supported: PDF, DOC, DOCX (Max 10MB)',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          )
+                        : Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.check_circle,
+                                  size: 60, color: Color(0xFFFF7B7B)),
+                              const SizedBox(height: 16),
+                              Text(
+                                  'Selected: ${_selectedFile!.path.split('/').last}',
+                                  textAlign: TextAlign.center),
+                            ],
+                          ),
                   ),
                 ),
               ),
@@ -846,10 +851,9 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  // خانة البحث
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: scheme.surface,
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
@@ -996,7 +1000,7 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
                                             Expanded(
                                               child: Text(
                                                 job['companyName'] ?? 'Company',
-                                                style: TextStyle(
+                                                style: const TextStyle(
                                                   fontSize: 14,
                                                   fontWeight: FontWeight.bold,
                                                   color: AppTheme.primaryPurple,
@@ -1045,7 +1049,7 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
                                             ),
                                             child: Text(
                                               job['position'],
-                                              style: TextStyle(
+                                              style: const TextStyle(
                                                 fontSize: 12,
                                                 color: AppTheme.primaryPurple,
                                                 fontWeight: FontWeight.w600,
@@ -1082,17 +1086,17 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
                           TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 16),
                   Row(
-                    children: const [
+                    children: [
                       Text(
                         'Job Title',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Colors.black87,
+                          color: scheme.onSurface,
                         ),
                       ),
-                      SizedBox(width: 4),
-                      Text(
+                      const SizedBox(width: 4),
+                      const Text(
                         '*',
                         style: TextStyle(
                           fontSize: 14,
@@ -1143,17 +1147,17 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
                   ),
                   const SizedBox(height: 16),
                   Row(
-                    children: const [
+                    children: [
                       Text(
                         'Job Description',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Colors.black87,
+                          color: scheme.onSurface,
                         ),
                       ),
-                      SizedBox(width: 4),
-                      Text(
+                      const SizedBox(width: 4),
+                      const Text(
                         '*',
                         style: TextStyle(
                           fontSize: 14,
