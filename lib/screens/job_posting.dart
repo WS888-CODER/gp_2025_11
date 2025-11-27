@@ -1174,14 +1174,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
       onWillPop: _onWillPop,
       child: ThemedScaffold(
         resizeToAvoidBottomInset: false,
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF4A5FBC),
-          foregroundColor: Colors.white,
-          title: Text(_isEdit ? 'Edit Job' : 'Create Job Posting',
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              )),
+        appBar: CustomHeader(
+          title: _isEdit ? 'Edit Job' : 'Create Job Posting',
         ),
         body: SingleChildScrollView(
           child: Padding(

@@ -440,24 +440,8 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
         }
       },
       child: ThemedScaffold(
-        appBar: AppBar(
-          backgroundColor: AppTheme.primaryPurple,
-          foregroundColor: Colors.white,
-          title: const Text('CV Enhancement',
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              )),
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () async {
-              final shouldPop = await _onWillPop();
-              if (shouldPop && context.mounted) {
-                Navigator.pop(context);
-              }
-            },
-          ),
+        appBar: CustomHeader(
+          title: 'CV Enhancement',
           actions: _currentStep == 1
               ? [
                   IconButton(

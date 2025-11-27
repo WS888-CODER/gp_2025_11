@@ -236,26 +236,8 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
       },
       child: Scaffold(
         backgroundColor: const Color(0xFFF5F5F5),
-        appBar: AppBar(
-          backgroundColor: AppTheme.primaryPurple,
-          foregroundColor: Colors.white,
-          title: Text(
-            _isEnhancing ? 'Enhancing CV' : 'Complete Your CV',
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () async {
-              final shouldPop = await _onWillPop();
-              if (shouldPop && context.mounted) {
-                Navigator.pop(context);
-              }
-            },
-          ),
+        appBar: CustomHeader(
+          title: _isEnhancing ? 'Enhancing CV' : 'Complete Your CV',
         ),
         body: _buildBody(),
       ),

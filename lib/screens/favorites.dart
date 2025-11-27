@@ -148,11 +148,83 @@ class _FavoritesPageState extends State<FavoritesPage> {
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
+    final Color primaryTop = scheme.primary;
+    final Color primaryBottom =
+        isDark ? scheme.primary.withOpacity(0.95) : scheme.primary;
+
+    final Color bubbleColor = Colors.white.withOpacity(isDark ? 0.04 : 0.06);
+    final Color shadowColor = scheme.primary.withOpacity(isDark ? 0.55 : 0.4);
+
     return Scaffold(
       backgroundColor: isDark ? scheme.background : const Color(0xFFF5F5F5),
-      appBar: const CustomHeader(
-        title: 'Favorites',
-        showBack: false,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(120),
+        child: Container(
+          height: 120,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [primaryTop, primaryBottom],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(40),
+              bottomRight: Radius.circular(40),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: shadowColor,
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                top: -60,
+                right: -40,
+                child: Container(
+                  width: 200,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: bubbleColor,
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: -20,
+                left: -30,
+                child: Container(
+                  width: 140,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: bubbleColor,
+                  ),
+                ),
+              ),
+              const SafeArea(
+                child: Center(
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 50),
+                    child: Text(
+                      'Favorites',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())

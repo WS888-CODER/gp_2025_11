@@ -29,17 +29,8 @@ class AboutPage extends StatelessWidget {
     }
 
     return ThemedScaffold(
-      appBar: AppBar(
-        title: const Text(
-          'About',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: _brand,
-        foregroundColor: Colors.white,
-        elevation: 0,
+      appBar: const CustomHeader(
+        title: 'About',
       ),
       body: CustomScrollView(
         slivers: [

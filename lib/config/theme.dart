@@ -450,11 +450,15 @@ class EmptyState extends StatelessWidget {
 class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final bool showBack;
+  final List<Widget>? actions;
+  final Widget? leading;
 
   const CustomHeader({
     super.key,
     required this.title,
     this.showBack = true,
+    this.actions,
+    this.leading,
   });
 
   @override
@@ -497,6 +501,7 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
       ),
       child: Stack(
         children: [
+          // decorations
           Positioned(
             top: -60,
             right: -40,
@@ -521,10 +526,17 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
               ),
             ),
           ),
+
           SafeArea(
             child: Stack(
               children: [
-                if (showBack && canPop)
+                // -------- leading logic ---------
+                if (leading != null)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: leading!,
+                  )
+                else if (showBack && canPop)
                   Align(
                     alignment: Alignment.centerLeft,
                     child: IconButton(
@@ -534,9 +546,20 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
                       },
                     ),
                   ),
+                // --------------------------------
+
+                if (actions != null && actions!.isNotEmpty)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: actions!,
+                    ),
+                  ),
+
                 Center(
                   child: Padding(
-                    padding: const EdgeInsets.only(top: 38),
+                    padding: const EdgeInsets.only(top: 10),
                     child: Text(
                       title,
                       style: const TextStyle(

@@ -396,18 +396,15 @@ class _JobsPageState extends State<JobsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     final jobs = _applyFilters(_allJobs);
     final int filteredCount = jobs.length;
+
     return ThemedScaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF4A5FBC),
-        title: const Text(
-          'Jobs',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
+      appBar: const CustomHeader(
+        title: 'Jobs',
       ),
       body: Column(
         children: [

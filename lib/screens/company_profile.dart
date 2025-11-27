@@ -562,17 +562,8 @@ class _CompanyProfileState extends State<CompanyProfile> {
         final chipTextColor = isDark ? scheme.onSurface : brand;
 
         return ThemedScaffold(
-          appBar: AppBar(
-            backgroundColor: const Color(0xFF4A5FBC),
-            elevation: 0,
-            title: const Text(
-              'Company Profile',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            iconTheme: const IconThemeData(color: Colors.white),
+          appBar: const CustomHeader(
+            title: 'Company Profile',
           ),
           body: ListView(
             padding: const EdgeInsets.all(16),
@@ -1036,6 +1027,10 @@ class _EditCompanyPageState extends State<EditCompanyPage>
     const brand = Color(0xFF4A5FBC);
     final parent = widget.parentState;
 
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     return WillPopScope(
       onWillPop: () async {
         final hasChanges = _hasUnsavedChanges();
@@ -1045,371 +1040,466 @@ class _EditCompanyPageState extends State<EditCompanyPage>
         return shouldLeave ?? false;
       },
       child: ThemedScaffold(
-        appBar: AppBar(
-          backgroundColor: brand,
-          title: const Text(
-            'Edit Company Info',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () async {
-              final hasChanges = _hasUnsavedChanges();
-              if (!hasChanges) {
-                Navigator.of(context).pop();
-                return;
-              }
-
-              final shouldLeave = await _showLeaveConfirmDialogStyled(context);
-              if (shouldLeave == true && mounted) {
-                Navigator.of(context).pop();
-              }
-            },
-          ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.info_outline, color: Colors.white),
-              tooltip: 'Profile completion rules',
-              onPressed: _showProfileCompletionInfo,
-            ),
-          ],
-        ),
-        body: Column(
-          children: [
-            ValueListenableBuilder<double?>(
-              valueListenable: parent.progressNotifier,
-              builder: (context, progress, _) {
-                if (progress == null) return const SizedBox.shrink();
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    LinearProgressIndicator(
-                      value: (progress == 0) ? null : progress,
-                      minHeight: 4,
-                      backgroundColor: Colors.black12,
-                      color: Colors.white,
+        // no appBar, we build a custom header in the body
+        body: Container(
+          color: isDark ? scheme.background : const Color(0xFFF5F5F5),
+          child: Column(
+            children: [
+              // header with gradient + tabs
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [scheme.primary, scheme.primary],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(32),
+                    bottomRight: Radius.circular(32),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: scheme.primary.withOpacity(isDark ? 0.6 : 0.4),
+                      blurRadius: 16,
+                      offset: const Offset(0, 8),
                     ),
-                    const SizedBox(height: 8),
                   ],
-                );
-              },
-            ),
-            Container(
-              color: brand,
-              child: TabBar(
-                controller: _tabCtrl,
-                indicatorColor: Colors.white,
-                labelColor: Colors.white,
-                unselectedLabelColor: Colors.white70,
-                tabs: const [
-                  Tab(
-                    child: Text(
-                      'Company Info',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ),
-                  Tab(
-                    child: Text(
-                      'Contact Info',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Form(
-                key: parent._form,
-                autovalidateMode: AutovalidateMode.onUserInteraction,
-                child: TabBarView(
-                  controller: _tabCtrl,
+                ),
+                child: Stack(
                   children: [
-                    ListView(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 16),
-                      children: [
-                        const Text(
-                          'Logo',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
+                    Positioned(
+                      top: -50,
+                      right: -30,
+                      child: Container(
+                        width: 150,
+                        height: 150,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withOpacity(
+                            isDark ? 0.03 : 0.06,
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(2),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: brand,
-                                  width: 2,
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 10,
+                      left: -25,
+                      child: Container(
+                        width: 110,
+                        height: 110,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withOpacity(
+                            isDark ? 0.03 : 0.06,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.only(
+                        top: MediaQuery.of(context).padding.top - 16,
+                        left: 16,
+                        right: 16,
+                        bottom: 12,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.arrow_back,
+                                  color: Colors.white,
                                 ),
+                                onPressed: () async {
+                                  final hasChanges = _hasUnsavedChanges();
+                                  if (!hasChanges) {
+                                    Navigator.of(context).pop();
+                                    return;
+                                  }
+
+                                  final shouldLeave =
+                                      await _showLeaveConfirmDialogStyled(
+                                          context);
+                                  if (shouldLeave == true && mounted) {
+                                    Navigator.of(context).pop();
+                                  }
+                                },
                               ),
-                              child: CircleAvatar(
-                                radius: 32,
-                                backgroundColor: Colors.white,
-                                backgroundImage: parent._pendingLogoFile != null
-                                    ? FileImage(parent._pendingLogoFile!)
-                                        as ImageProvider
-                                    : ((parent._logoUrl ??
-                                                    widget.data[
-                                                        UserFields.photoUrl])
-                                                ?.toString()
-                                                .isNotEmpty ==
-                                            true
-                                        ? NetworkImage(
-                                            (parent._logoUrl ??
-                                                    widget.data[
-                                                        UserFields.photoUrl])
-                                                .toString(),
-                                          )
-                                        : null),
-                                child: (parent._pendingLogoFile == null &&
-                                        !((parent._logoUrl ??
-                                                    widget.data[
-                                                        UserFields.photoUrl])
-                                                ?.toString()
-                                                .isNotEmpty ==
-                                            true))
-                                    ? const Icon(
-                                        Icons.business,
-                                        color: brand,
-                                        size: 28,
-                                      )
-                                    : null,
+                              const Spacer(),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.info_outline,
+                                  color: Colors.white,
+                                ),
+                                tooltip: 'Profile completion rules',
+                                onPressed: _showProfileCompletionInfo,
                               ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Edit Company Info',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
                             ),
-                            const SizedBox(width: 16),
-                            Row(
-                              children: [
-                                FilledButton(
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: const Color(0xFFFD6C67),
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 12),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(24),
-                                    ),
-                                  ),
-                                  onPressed:
-                                      parent._saving || parent._progress != null
-                                          ? null
-                                          : () async {
-                                              await parent._pickLogo();
-                                              if (mounted) {
-                                                setState(() {});
-                                              }
-                                            },
-                                  child: const Text(
-                                    'Upload Logo',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                          ),
+                          const SizedBox(height: 10),
+                          TabBar(
+                            controller: _tabCtrl,
+                            indicatorColor: Colors.white,
+                            indicatorWeight: 3,
+                            dividerColor: Colors.transparent,
+                            labelColor: Colors.white,
+                            unselectedLabelColor: Colors.white70,
+                            tabs: const [
+                              Tab(
+                                child: Text(
+                                  'Company Info',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15,
                                   ),
                                 ),
-                                const SizedBox(width: 12),
-                                if (parent._pendingLogoFile != null ||
-                                    ((parent._logoUrl ??
-                                                widget
-                                                    .data[UserFields.photoUrl])
-                                            ?.toString()
-                                            .isNotEmpty ==
-                                        true))
-                                  TextButton(
+                              ),
+                              Tab(
+                                child: Text(
+                                  'Contact Info',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // upload progress bar (if any)
+              ValueListenableBuilder<double?>(
+                valueListenable: parent.progressNotifier,
+                builder: (context, progress, _) {
+                  if (progress == null) return const SizedBox.shrink();
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      LinearProgressIndicator(
+                        value: (progress == 0) ? null : progress,
+                        minHeight: 4,
+                        backgroundColor: Colors.black12,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                  );
+                },
+              ),
+
+              // main form content
+              Expanded(
+                child: Form(
+                  key: parent._form,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  child: TabBarView(
+                    controller: _tabCtrl,
+                    children: [
+                      // Company Info tab
+                      ListView(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
+                        children: [
+                          const Text(
+                            'Logo',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(2),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: brand,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: CircleAvatar(
+                                  radius: 32,
+                                  backgroundColor: Colors.white,
+                                  backgroundImage: parent._pendingLogoFile !=
+                                          null
+                                      ? FileImage(parent._pendingLogoFile!)
+                                          as ImageProvider
+                                      : ((parent._logoUrl ??
+                                                      widget.data[
+                                                          UserFields.photoUrl])
+                                                  ?.toString()
+                                                  .isNotEmpty ==
+                                              true
+                                          ? NetworkImage(
+                                              (parent._logoUrl ??
+                                                      widget.data[
+                                                          UserFields.photoUrl])
+                                                  .toString(),
+                                            )
+                                          : null),
+                                  child: (parent._pendingLogoFile == null &&
+                                          !((parent._logoUrl ??
+                                                      widget.data[
+                                                          UserFields.photoUrl])
+                                                  ?.toString()
+                                                  .isNotEmpty ==
+                                              true))
+                                      ? const Icon(
+                                          Icons.business,
+                                          color: brand,
+                                          size: 28,
+                                        )
+                                      : null,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Row(
+                                children: [
+                                  FilledButton(
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: const Color(0xFFFD6C67),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 12,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(24),
+                                      ),
+                                    ),
                                     onPressed: parent._saving ||
                                             parent._progress != null
                                         ? null
-                                        : () {
-                                            parent.setState(() {
-                                              parent._pendingLogoFile = null;
-                                              parent._logoUrl = '';
-                                            });
+                                        : () async {
+                                            await parent._pickLogo();
                                             if (mounted) {
                                               setState(() {});
                                             }
                                           },
                                     child: const Text(
-                                      'Remove logo',
-                                      style: TextStyle(color: Colors.red),
+                                      'Upload Logo',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                   ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                        const Text(
-                          'Description',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        buildJadeerInputCard(
-                          context: context,
-                          child: ValueListenableBuilder<TextEditingValue>(
-                            valueListenable: parent._desc,
-                            builder: (context, value, _) {
-                              final text = value.text.trim();
-                              final length = text.length;
-                              final tooShort = length > 0 && length < 150;
-
-                              return TextFormField(
-                                key: parent._descKey,
-                                focusNode: parent._descFocus,
-                                controller: parent._desc,
-                                maxLines: 10,
-                                maxLength: 900,
-                                keyboardType: TextInputType.multiline,
-                                decoration: InputDecoration(
-                                  hintText:
-                                      'Describe your company and what you do.',
-                                  hintStyle:
-                                      const TextStyle(color: Colors.grey),
-                                  filled: true,
-                                  fillColor: Colors.transparent,
-                                  border: const OutlineInputBorder(
-                                    borderRadius:
-                                        BorderRadius.all(Radius.circular(12)),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  helperText: tooShort
-                                      ? '$length/900 – minimum 150 characters for a complete profile'
-                                      : '$length/900',
-                                  helperStyle: TextStyle(
-                                    fontSize: 12,
-                                    color: tooShort
-                                        ? const Color(0xFFFC686A)
-                                        : Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withOpacity(0.6),
-                                  ),
-                                ),
-                                validator: (_) => null,
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        const Text(
-                          'Location',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        buildJadeerInputCard(
-                          context: context,
-                          child: TextFormField(
-                            key: parent._locKey,
-                            focusNode: parent._locFocus,
-                            controller: parent._locCtrl,
-                            textCapitalization: TextCapitalization.words,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.allow(
-                                RegExp(r"[A-Za-z\u0600-\u06FF\s\.'-]"),
+                                  const SizedBox(width: 12),
+                                  if (parent._pendingLogoFile != null ||
+                                      ((parent._logoUrl ??
+                                                  widget.data[
+                                                      UserFields.photoUrl])
+                                              ?.toString()
+                                              .isNotEmpty ==
+                                          true))
+                                    TextButton(
+                                      onPressed: parent._saving ||
+                                              parent._progress != null
+                                          ? null
+                                          : () {
+                                              parent.setState(() {
+                                                parent._pendingLogoFile = null;
+                                                parent._logoUrl = '';
+                                              });
+                                              if (mounted) {
+                                                setState(() {});
+                                              }
+                                            },
+                                      child: const Text(
+                                        'Remove logo',
+                                        style: TextStyle(color: Colors.red),
+                                      ),
+                                    ),
+                                ],
                               ),
-                              LengthLimitingTextInputFormatter(40),
                             ],
-                            decoration: const InputDecoration(
-                              hintText: 'e.g., Riyadh / Jeddah / Al Khobar',
-                              hintStyle: TextStyle(color: Colors.grey),
-                              border: OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(12)),
-                                borderSide: BorderSide.none,
-                              ),
-                              filled: true,
-                              fillColor: Colors.transparent,
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 14,
-                              ),
+                          ),
+                          const SizedBox(height: 24),
+                          const Text(
+                            'Description',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
                             ),
-                            validator: (v) {
-                              final t = parent._cleanLoc(v ?? '');
-                              if (t.isEmpty) return null;
-                              if (!parent._locAllowed.hasMatch(t)) {
-                                return '2–40 letters only (Arabic/English), no numbers';
-                              }
-                              return null;
-                            },
                           ),
-                        ),
-                      ],
-                    ),
-                    ListView(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 16),
-                      children: [
-                        const Text(
-                          'Contact Email',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        buildJadeerInputCard(
-                          context: context,
-                          child: TextFormField(
-                            key: parent._emailKey,
-                            focusNode: parent._emailFocus,
-                            controller: parent._emailCtrl,
-                            keyboardType: TextInputType.emailAddress,
-                            decoration: const InputDecoration(
-                              hintText: 'Enter contact email',
-                              hintStyle: TextStyle(color: Colors.grey),
-                              helperMaxLines: 2,
-                              border: OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(12)),
-                                borderSide: BorderSide.none,
-                              ),
-                              filled: true,
-                              fillColor: Colors.transparent,
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 14,
-                              ),
-                              errorStyle: TextStyle(height: 0, fontSize: 0),
-                              counterText: '',
+                          const SizedBox(height: 8),
+                          buildJadeerInputCard(
+                            context: context,
+                            child: ValueListenableBuilder<TextEditingValue>(
+                              valueListenable: parent._desc,
+                              builder: (context, value, _) {
+                                final text = value.text.trim();
+                                final length = text.length;
+                                final tooShort = length > 0 && length < 150;
+
+                                return TextFormField(
+                                  key: parent._descKey,
+                                  focusNode: parent._descFocus,
+                                  controller: parent._desc,
+                                  maxLines: 10,
+                                  maxLength: 900,
+                                  keyboardType: TextInputType.multiline,
+                                  decoration: InputDecoration(
+                                    hintText:
+                                        'Describe your company and what you do.',
+                                    hintStyle:
+                                        const TextStyle(color: Colors.grey),
+                                    filled: true,
+                                    fillColor: Colors.transparent,
+                                    border: const OutlineInputBorder(
+                                      borderRadius:
+                                          BorderRadius.all(Radius.circular(12)),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    helperText: tooShort
+                                        ? '$length/900 – minimum 150 characters for a complete profile'
+                                        : '$length/900',
+                                    helperStyle: TextStyle(
+                                      fontSize: 12,
+                                      color: tooShort
+                                          ? const Color(0xFFFC686A)
+                                          : Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withOpacity(0.6),
+                                    ),
+                                  ),
+                                  validator: (_) => null,
+                                );
+                              },
                             ),
-                            validator: (v) {
-                              final t = v?.trim() ?? '';
-                              if (t.isEmpty) return null;
-                              if (!_email.hasMatch(t)) return 'Invalid email';
-                              return null;
-                            },
                           ),
-                        ),
-                        const SizedBox(height: 24),
-                        const Text(
-                          'Contact Phone',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
+                          const SizedBox(height: 24),
+                          const Text(
+                            'Location',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
                           ),
+                          const SizedBox(height: 8),
+                          buildJadeerInputCard(
+                            context: context,
+                            child: TextFormField(
+                              key: parent._locKey,
+                              focusNode: parent._locFocus,
+                              controller: parent._locCtrl,
+                              textCapitalization: TextCapitalization.words,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(
+                                  RegExp(r"[A-Za-z\u0600-\u06FF\s\.'-]"),
+                                ),
+                                LengthLimitingTextInputFormatter(40),
+                              ],
+                              decoration: const InputDecoration(
+                                hintText: 'e.g., Riyadh / Jeddah / Al Khobar',
+                                hintStyle: TextStyle(color: Colors.grey),
+                                border: OutlineInputBorder(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(12)),
+                                  borderSide: BorderSide.none,
+                                ),
+                                filled: true,
+                                fillColor: Colors.transparent,
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 14,
+                                ),
+                              ),
+                              validator: (v) {
+                                final t = parent._cleanLoc(v ?? '');
+                                if (t.isEmpty) return null;
+                                if (!parent._locAllowed.hasMatch(t)) {
+                                  return '2–40 letters only (Arabic/English), no numbers';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // Contact Info tab
+                      ListView(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
                         ),
-                        const SizedBox(height: 8),
-                        buildJadeerInputCard(
+                        children: [
+                          const Text(
+                            'Contact Email',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          buildJadeerInputCard(
+                            context: context,
+                            child: TextFormField(
+                              key: parent._emailKey,
+                              focusNode: parent._emailFocus,
+                              controller: parent._emailCtrl,
+                              keyboardType: TextInputType.emailAddress,
+                              decoration: const InputDecoration(
+                                hintText: 'Enter contact email',
+                                hintStyle: TextStyle(color: Colors.grey),
+                                helperMaxLines: 2,
+                                border: OutlineInputBorder(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(12)),
+                                  borderSide: BorderSide.none,
+                                ),
+                                filled: true,
+                                fillColor: Colors.transparent,
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 14,
+                                ),
+                                errorStyle: TextStyle(height: 0, fontSize: 0),
+                                counterText: '',
+                              ),
+                              validator: (v) {
+                                final t = v?.trim() ?? '';
+                                if (t.isEmpty) return null;
+                                if (!_email.hasMatch(t)) return 'Invalid email';
+                                return null;
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          const Text(
+                            'Contact Phone',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          buildJadeerInputCard(
                             context: context,
                             child: IntlPhoneField(
                               key: parent._phoneKey,
@@ -1447,7 +1537,9 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                                   color: Color(0xFFFD6C67),
                                 ),
                                 listTilePadding: const EdgeInsets.symmetric(
-                                    vertical: 4, horizontal: 14),
+                                  vertical: 4,
+                                  horizontal: 14,
+                                ),
                                 listTileDivider: Divider(
                                   color: Colors.white.withOpacity(0.2),
                                 ),
@@ -1499,64 +1591,66 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                                 }
                                 return null;
                               },
-                            )),
-                        const SizedBox(height: 24),
-                        const Text(
-                          'Company Website',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        buildJadeerInputCard(
-                          context: context,
-                          child: TextFormField(
-                            key: parent._websiteKey,
-                            focusNode: parent._websiteFocus,
-                            controller: parent._websiteCtrl,
-                            keyboardType: TextInputType.url,
-                            decoration: const InputDecoration(
-                              hintText: 'example.com',
-                              hintStyle: TextStyle(color: Colors.grey),
-                              border: OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(12)),
-                                borderSide: BorderSide.none,
-                              ),
-                              filled: true,
-                              fillColor: Colors.transparent,
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 14,
-                              ),
-                              counterText: '',
-                              errorStyle: TextStyle(height: 0, fontSize: 0),
                             ),
-                            validator: (v) {
-                              final t = (v ?? '').trim();
-                              if (t.isEmpty) return null;
-
-                              final normalized = t.startsWith(RegExp(
-                                      r'https?://',
-                                      caseSensitive: false))
-                                  ? t
-                                  : 'https://$t';
-
-                              if (!parent._urlReg.hasMatch(normalized)) {
-                                return 'Invalid website URL';
-                              }
-                              return null;
-                            },
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                          const SizedBox(height: 24),
+                          const Text(
+                            'Company Website',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          buildJadeerInputCard(
+                            context: context,
+                            child: TextFormField(
+                              key: parent._websiteKey,
+                              focusNode: parent._websiteFocus,
+                              controller: parent._websiteCtrl,
+                              keyboardType: TextInputType.url,
+                              decoration: const InputDecoration(
+                                hintText: 'example.com',
+                                hintStyle: TextStyle(color: Colors.grey),
+                                border: OutlineInputBorder(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(12)),
+                                  borderSide: BorderSide.none,
+                                ),
+                                filled: true,
+                                fillColor: Colors.transparent,
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 14,
+                                ),
+                                counterText: '',
+                                errorStyle: TextStyle(height: 0, fontSize: 0),
+                              ),
+                              validator: (v) {
+                                final t = (v ?? '').trim();
+                                if (t.isEmpty) return null;
+
+                                final normalized = t.startsWith(RegExp(
+                                        r'https?://',
+                                        caseSensitive: false))
+                                    ? t
+                                    : 'https://$t';
+
+                                if (!parent._urlReg.hasMatch(normalized)) {
+                                  return 'Invalid website URL';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         bottomNavigationBar: SafeArea(
           minimum:
