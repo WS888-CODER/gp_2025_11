@@ -361,7 +361,7 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final homeBody = Container(
-      color: const Color(0xFFF5F5F5),
+      color: isDark ? scheme.background : const Color(0xFFF5F5F5),
       child: Column(
         children: [
           Expanded(
