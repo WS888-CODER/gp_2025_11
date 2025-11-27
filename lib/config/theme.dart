@@ -537,8 +537,13 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
                     child: leading!,
                   )
                 else if (showBack && canPop)
-                  Align(
-                    alignment: Alignment.centerLeft,
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      //top: MediaQuery.of(context).padding.top,
+                      left: 8,
+                      right: 8,
+                      bottom: 16,
+                    ),
                     child: IconButton(
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
                       onPressed: () {
@@ -559,7 +564,7 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
 
                 Center(
                   child: Padding(
-                    padding: const EdgeInsets.only(top: 10),
+                    padding: const EdgeInsets.only(top: 2),
                     child: Text(
                       title,
                       style: const TextStyle(

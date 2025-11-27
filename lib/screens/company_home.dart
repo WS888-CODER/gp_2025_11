@@ -164,8 +164,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                     ),
                     textButtonTheme: TextButtonThemeData(
                       style: TextButton.styleFrom(
-                        foregroundColor:
-                            const Color(0xFFFC686A), // أزرار OK و Cancel
+                        foregroundColor: const Color(0xFFFC686A),
                       ),
                     ),
                     datePickerTheme: DatePickerThemeData(
@@ -174,20 +173,18 @@ class _CompanyHomeState extends State<CompanyHome> {
                       headerForegroundColor: Colors.white,
                       weekdayStyle: const TextStyle(color: Colors.white),
                       yearStyle: const TextStyle(color: Colors.white),
-                      dayStyle: const TextStyle(
-                          color: Colors.white), // الأيام في الشبكة
+                      dayStyle: const TextStyle(color: Colors.white),
                       yearForegroundColor:
                           MaterialStateColor.resolveWith((states) {
                         if (states.contains(MaterialState.selected)) {
-                          return Colors.white; // السنة المختارة
+                          return Colors.white;
                         }
-                        return Colors.white; // باقي السنوات
+                        return Colors.white;
                       }),
                       yearBackgroundColor:
                           MaterialStateColor.resolveWith((states) {
                         if (states.contains(MaterialState.selected)) {
-                          return const Color(
-                              0xFFFC686A); // خلفية السنة المختارة
+                          return const Color(0xFFFC686A);
                         }
                         return Colors.transparent;
                       }),
@@ -892,31 +889,7 @@ class _CompanyHomeState extends State<CompanyHome> {
   PreferredSizeWidget _buildCustomAppBar(String companyId) {
     // For Reports tab, use standard AppBar
     if (_tab != 1) {
-      return CustomHeader(
-        title: 'Reports',
-        actions: [
-          IconButton(
-            tooltip: 'Notifications',
-            icon: const Icon(Icons.notifications_none, color: Colors.white),
-            onPressed: () => SnackHelper.error(
-                context, 'Notifications will be available soon'),
-          ),
-          IconButton(
-            tooltip: 'Settings',
-            icon: const Icon(Icons.settings_outlined, color: Colors.white),
-            onPressed: () {
-              final uid = FirebaseAuth.instance.currentUser?.uid;
-              if (uid != null) {
-                Navigator.pushNamed(
-                  context,
-                  '/settings',
-                  arguments: {'userType': 'Company', 'userId': uid},
-                );
-              }
-            },
-          ),
-        ],
-      );
+      return const CustomHeader(title: 'Reports', showBack: false);
     }
 
     // For home tab, use custom purple gradient header
@@ -1060,7 +1033,7 @@ class _CompanyHomeState extends State<CompanyHome> {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-
+    final Color iconColor = isDark ? Colors.black87 : Colors.white;
     final homeBody = Container(
       color: isDark ? scheme.background : const Color(0xFFF5F5F5),
       child: Column(
@@ -1357,7 +1330,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                                                         color: primary,
                                                         size: 20,
                                                       ),
-                                                      SizedBox(width: 6),
+                                                      const SizedBox(width: 6),
                                                       Text(
                                                         'View',
                                                         style: TextStyle(
@@ -1562,7 +1535,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                                       gradient: const LinearGradient(
                                         colors: [
                                           Color(0xFFFD6C67),
-                                          Color(0xFFFF8A87),
+                                          Color(0xFFFD6C67),
                                         ],
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight,
@@ -1577,19 +1550,19 @@ class _CompanyHomeState extends State<CompanyHome> {
                                         ),
                                       ],
                                     ),
-                                    child: const Icon(
+                                    child: Icon(
                                       Icons.assessment_rounded,
                                       size: 40,
-                                      color: Colors.white,
+                                      color: iconColor,
                                     ),
                                   ),
                                   const SizedBox(height: 24),
-                                  const Text(
+                                  Text(
                                     'Reports',
                                     style: TextStyle(
                                       fontSize: 26,
                                       fontWeight: FontWeight.w800,
-                                      color: Colors.black87,
+                                      color: scheme.onSurface,
                                       letterSpacing: -0.5,
                                     ),
                                     textAlign: TextAlign.center,
@@ -1601,19 +1574,17 @@ class _CompanyHomeState extends State<CompanyHome> {
                                       vertical: 8,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF4A5FBC)
-                                          .withOpacity(0.1),
+                                      color: scheme.primary.withOpacity(0.1),
                                       borderRadius: BorderRadius.circular(30),
                                       border: Border.all(
-                                        color: const Color(0xFF4A5FBC)
-                                            .withOpacity(0.3),
+                                        color: scheme.primary.withOpacity(0.3),
                                         width: 2,
                                       ),
                                     ),
-                                    child: const Text(
+                                    child: Text(
                                       'Coming Soon',
                                       style: TextStyle(
-                                        color: Color(0xFF4A5FBC),
+                                        color: scheme.primary,
                                         fontWeight: FontWeight.w700,
                                         fontSize: 14,
                                         letterSpacing: 0.5,
@@ -1628,7 +1599,8 @@ class _CompanyHomeState extends State<CompanyHome> {
                                       'Comprehensive AI-powered evaluation reports for every candidate interview.',
                                       style: TextStyle(
                                         fontSize: 14,
-                                        color: Colors.black.withOpacity(0.6),
+                                        color:
+                                            scheme.onSurface.withOpacity(0.7),
                                         height: 1.5,
                                         fontWeight: FontWeight.w500,
                                       ),
@@ -1660,10 +1632,9 @@ class _CompanyHomeState extends State<CompanyHome> {
                                     decoration: BoxDecoration(
                                       gradient: LinearGradient(
                                         colors: [
-                                          const Color(0xFF4A5FBC)
-                                              .withOpacity(0.05),
+                                          scheme.primary.withOpacity(0.05),
                                           const Color(0xFFFD6C67)
-                                              .withOpacity(0.05),
+                                              .withOpacity(0.08),
                                         ],
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight,
@@ -1676,16 +1647,16 @@ class _CompanyHomeState extends State<CompanyHome> {
                                         Icon(
                                           Icons.auto_awesome,
                                           size: 16,
-                                          color: const Color(0xFF4A5FBC)
-                                              .withOpacity(0.7),
+                                          color:
+                                              scheme.primary.withOpacity(0.7),
                                         ),
                                         const SizedBox(width: 8),
                                         Text(
                                           'Plus much more!',
                                           style: TextStyle(
                                             fontSize: 12,
-                                            color: const Color(0xFF4A5FBC)
-                                                .withOpacity(0.8),
+                                            color:
+                                                scheme.primary.withOpacity(0.8),
                                             fontWeight: FontWeight.w600,
                                           ),
                                         ),
@@ -1700,6 +1671,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                       ],
                     ),
                   ),
+
                   // Home tab
                   homeBody,
                 ],
@@ -1912,21 +1884,20 @@ class _CompactReportFeature extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-
-    final borderColor = isDark
-        ? scheme.outline.withOpacity(0.3)
-        : Colors.black.withOpacity(0.06);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: scheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: borderColor,
-          width: 1,
-        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+            spreadRadius: 0,
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -2025,7 +1996,7 @@ class _MovableFabState extends State<_MovableFab> {
           });
         },
         child: FloatingActionButton.extended(
-          backgroundColor: const Color(0xFF4A5FBC),
+          backgroundColor: Theme.of(context).colorScheme.primary,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),

@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/config/themed_scaffold.dart';
-import 'package:url_launcher/url_launcher.dart'; // for email launch
+import 'package:url_launcher/url_launcher.dart';
 
 class AboutPage extends StatelessWidget {
   const AboutPage({super.key});
@@ -13,6 +13,9 @@ class AboutPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     Future<void> launchEmail() async {
       final Uri emailUri = Uri(
         scheme: 'mailto',
@@ -29,108 +32,168 @@ class AboutPage extends StatelessWidget {
     }
 
     return ThemedScaffold(
-      appBar: const CustomHeader(
-        title: 'About',
-      ),
-      body: CustomScrollView(
-        slivers: [
-          // Gradient header section
-          SliverToBoxAdapter(
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF4A5FBC),
-                    Color(0xFF6B7EF3),
-                  ],
-                ),
+      body: Column(
+        children: [
+          // Gradient header (acts like app bar)
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [scheme.primary, scheme.primary],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              child: Column(
-                children: [
-                  // ✅ Logo badge with subtle elevation + glow
-                  Container(
-                    width: 95,
-                    height: 95,
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(32),
+                bottomRight: Radius.circular(32),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: scheme.primary.withOpacity(isDark ? 0.6 : 0.4),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Stack(
+              children: [
+                Positioned(
+                  top: -50,
+                  right: -30,
+                  child: Container(
+                    width: 150,
+                    height: 150,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(.15),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                        BoxShadow(
-                          color: Colors.white.withOpacity(0.15),
-                          blurRadius: 20,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                      image: const DecorationImage(
-                        image: AssetImage('assets/images/logo.jpg'),
-                        fit: BoxFit.contain,
-                      ),
+                      color: Colors.white.withOpacity(isDark ? 0.03 : 0.06),
                     ),
                   ),
+                ),
+                Positioned(
+                  bottom: 10,
+                  left: -25,
+                  child: Container(
+                    width: 110,
+                    height: 110,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withOpacity(isDark ? 0.03 : 0.06),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.only(
+                    top: MediaQuery.of(context).padding.top - 16,
+                    left: 16,
+                    right: 16,
+                    bottom: 16,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.arrow_back,
+                              color: Colors.white,
+                            ),
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                          ),
+                          const Spacer(),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'About',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
 
-                  const SizedBox(height: 16),
-
-                  Text(
-                    'Jadeer',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      // Jadeer logo + info (moved from old Sliver header)
+                      Container(
+                        width: 95,
+                        height: 95,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withOpacity(.15),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                            BoxShadow(
+                              color: Colors.white.withOpacity(0.15),
+                              blurRadius: 20,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                          image: const DecorationImage(
+                            image: AssetImage('assets/images/logo.jpg'),
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Jadeer',
+                        style: text.headlineSmall?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 0.3,
                         ),
-                  ),
-                  const SizedBox(height: 4),
-
-                  Text(
-                    'Smart Recruitment Platform',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Smart Recruitment Platform',
+                        style: text.bodyMedium?.copyWith(
                           color: Colors.white.withOpacity(.85),
                           fontSize: 15,
                         ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(.15),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.white.withOpacity(.15),
-                          blurRadius: 10,
-                          spreadRadius: 1,
-                        ),
-                      ],
-                    ),
-                    child: const Text(
-                      'Version 1.0.0',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.2,
                       ),
-                    ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(.15),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.white.withOpacity(.15),
+                              blurRadius: 10,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                        child: const Text(
+                          'Version 1.0.0',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
 
           // Body content
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-            sliver: SliverList.list(
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
               children: [
                 _InfoCard(
                   icon: Icons.lightbulb_outline,
@@ -169,8 +232,6 @@ class AboutPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-
-                // Contact section
                 _InfoCard(
                   icon: Icons.email_outlined,
                   iconTint: Colors.indigo,
