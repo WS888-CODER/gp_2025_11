@@ -672,16 +672,8 @@ class _QuestionsPageState extends State<QuestionsPage> {
       },
       child: ThemedScaffold(
         resizeToAvoidBottomInset: false,
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF4A5FBC),
-          foregroundColor: Colors.white,
-          title: const Text(
-            'Job Questions',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+        appBar: CustomHeader(
+          title: 'Job Questions',
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () {

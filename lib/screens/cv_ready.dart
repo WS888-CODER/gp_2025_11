@@ -173,23 +173,10 @@ class _PublishScreenState extends State<PublishScreen> {
     return WillPopScope(
       onWillPop: _onWillPop,
       child: ThemedScaffold(
-        appBar: AppBar(
-          backgroundColor: AppTheme.primaryPurple,
-          foregroundColor: Colors.white,
-          title: const Text('CV Enhancement Results',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              )),
-          automaticallyImplyLeading: false,
-          leading: widget.isFromHistory // ← ضيفي هذا السطر
-              ? IconButton(
-                  // ← وهذا
-                  icon: const Icon(Icons.arrow_back), // ← وهذا
-                  onPressed: () => Navigator.pop(context), // ← وهذا
-                ) // ← وهذا
-              : null, // ← وهذا
+        appBar: const CustomHeader(
+          title: 'CV Enhancement Results',
         ),
+
         body: StreamBuilder<DocumentSnapshot>(
           stream: FirebaseFirestore.instance
               .collection('CVHistory')
@@ -358,7 +345,7 @@ class _PublishScreenState extends State<PublishScreen> {
                                 child: ElevatedButton.icon(
                                   onPressed: () => _downloadPDF(pdfUrl),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Color(0xFFFD6C67),
+                                    backgroundColor: const Color(0xFFFD6C67),
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(
                                         vertical: 12),
@@ -517,16 +504,8 @@ class PDFViewerScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ThemedScaffold(
-      appBar: AppBar(
-        backgroundColor: AppTheme.primaryPurple,
-        foregroundColor: Colors.white,
-        title: const Text(
-          'Enhanced CV',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
+      appBar: CustomHeader(
+        title: 'Enhanced CV',
         actions: [
           IconButton(
             icon: const Icon(Icons.download, color: Colors.white),

@@ -64,9 +64,8 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
         return;
       }
 
-      final userDocRef = FirebaseFirestore.instance
-          .collection('Users')
-          .doc(currentUser.uid);
+      final userDocRef =
+          FirebaseFirestore.instance.collection('Users').doc(currentUser.uid);
 
       final userDoc = await userDocRef.get();
 
@@ -330,27 +329,10 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
           Navigator.pop(context);
         }
       },
-      child: ThemedScaffold(
-        appBar: AppBar(
-          backgroundColor: AppTheme.primaryPurple,
-          foregroundColor: Colors.white,
-          title: Text(
-            _isEnhancing ? 'Enhancing CV' : 'Complete Your CV',
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () async {
-              final shouldPop = await _onWillPop();
-              if (shouldPop && context.mounted) {
-                Navigator.pop(context);
-              }
-            },
-          ),
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF5F5F5),
+        appBar: CustomHeader(
+          title: _isEnhancing ? 'Enhancing CV' : 'Complete Your CV',
         ),
         body: _buildBody(),
       ),

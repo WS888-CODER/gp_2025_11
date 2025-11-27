@@ -95,16 +95,8 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
     const brandColor = AppTheme.primaryPurple;
 
     return ThemedScaffold(
-      appBar: AppBar(
-        title: const Text(
-          'My Account Details',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: brandColor,
-        foregroundColor: Colors.white,
+      appBar: CustomHeader(
+        title: 'My Account Details',
         actions: [
           if (!_isEditing)
             IconButton(

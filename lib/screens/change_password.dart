@@ -172,20 +172,11 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const primaryPurple = Color(0xFF4A5FBC);
     final scheme = Theme.of(context).colorScheme;
 
     return ThemedScaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Change Password',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: primaryPurple,
-        foregroundColor: Colors.white,
+      appBar: const CustomHeader(
+        title: 'Change Password',
       ),
       body: Column(
         children: [

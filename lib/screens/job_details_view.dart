@@ -108,16 +108,8 @@ class _JobDetailsViewState extends State<JobDetailsView> {
     }
 
     return ThemedScaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF4A5FBC),
-        foregroundColor: Colors.white,
-        title: const Text(
-          'Job Details',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+      appBar: CustomHeader(
+        title: 'Job Details',
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),

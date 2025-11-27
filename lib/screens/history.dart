@@ -87,7 +87,7 @@ class _HistoryPageState extends State<HistoryPage>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const SizedBox(height: 60),
-                    Text(
+                    const Text(
                       'History',
                       style: TextStyle(
                         color: Colors.white,
@@ -213,7 +213,7 @@ class _HistoryPageState extends State<HistoryPage>
                   MaterialPageRoute(
                     builder: (_) => PublishScreen(
                       cvUrl: cvHistoryId,
-                      isFromHistory: true, // ← نضيف هذا
+                      isFromHistory: true,
                     ),
                   ),
                 );

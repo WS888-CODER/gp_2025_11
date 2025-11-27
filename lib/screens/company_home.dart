@@ -22,7 +22,6 @@ class CompanyHome extends StatefulWidget {
 }
 
 class _CompanyHomeState extends State<CompanyHome> {
-  static const Color _brand = Color(0xFF4A5FBC);
   int _tab = 1; // 0: Reports, 1: Home
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   String get _effectiveCompanyId {
@@ -893,26 +892,8 @@ class _CompanyHomeState extends State<CompanyHome> {
   PreferredSizeWidget _buildCustomAppBar(String companyId) {
     // For Reports tab, use standard AppBar
     if (_tab != 1) {
-      final theme = Theme.of(context);
-      final scheme = theme.colorScheme;
-
-      return AppBar(
-        backgroundColor: scheme.primary,
-        elevation: 0,
-        centerTitle: true,
-        automaticallyImplyLeading: false,
-        leadingWidth: 70,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 16),
-          child: _ProfileButton(userId: companyId),
-        ),
-        title: const Text(
-          'Reports',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+      return CustomHeader(
+        title: 'Reports',
         actions: [
           IconButton(
             tooltip: 'Notifications',
@@ -1552,7 +1533,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                 children: [
                   // Reports tab
                   Container(
-                    color: scheme.primary,
+                    color: isDark ? scheme.background : const Color(0xFFF5F5F5),
                     child: Column(
                       children: [
                         Expanded(

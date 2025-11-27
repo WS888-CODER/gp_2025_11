@@ -139,6 +139,8 @@ Widget _infoRow(
 }) {
   if (value.trim().isEmpty) return const SizedBox.shrink();
 
+  final scheme = Theme.of(ctx).colorScheme;
+
   return Padding(
     padding: const EdgeInsets.symmetric(vertical: 4),
     child: Row(
@@ -147,7 +149,7 @@ Widget _infoRow(
         Icon(
           icon,
           size: 16,
-          color: Color(0xFFFD6C67),
+          color: scheme.secondary,
         ),
         const SizedBox(width: 8),
         Expanded(
@@ -279,18 +281,8 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
     final isClosed = job.status.trim().toLowerCase() == 'closed';
 
     return ThemedScaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF4A5FBC),
-        title: const Text(
-          'Job Details',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        iconTheme: const IconThemeData(
-          color: Colors.white,
-        ),
+      appBar: CustomHeader(
+        title: 'Job Details',
         actions: [
           IconButton(
             onPressed: _toggleFavorite,
@@ -326,8 +318,9 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                 : () => SnackHelper.error(
                     context, 'Application functionality coming soon'),
             style: FilledButton.styleFrom(
-              backgroundColor: isClosed ? onSurface.withOpacity(0.6) : primary,
-              disabledBackgroundColor: Colors.grey[400],
+              backgroundColor:
+                  isClosed ? onSurface.withOpacity(0.6) : scheme.primary,
+              disabledBackgroundColor: onSurface.withOpacity(0.6),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
@@ -372,7 +365,7 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: Color(0xFF4A5FBC),
+                        color: scheme.primary,
                         width: 3,
                       ),
                     ),
@@ -381,9 +374,13 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                       backgroundImage: (company?.logoUrl ?? '').isNotEmpty
                           ? NetworkImage(company!.logoUrl)
                           : null,
-                      backgroundColor: const Color(0xFFE8E8FF),
+                      backgroundColor:
+                          Theme.of(context).brightness == Brightness.dark
+                              ? scheme.surface
+                              : const Color(0xFFE8E8FF),
                       child: (company?.logoUrl ?? '').isEmpty
-                          ? const Icon(Icons.business, size: 28)
+                          ? Icon(Icons.business,
+                              size: 28, color: scheme.primary)
                           : null,
                     ),
                   ),
@@ -510,8 +507,8 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.start,
                                   children: [
-                                    const Icon(Icons.email,
-                                        size: 16, color: Color(0xFFFD6C67)),
+                                    Icon(Icons.email,
+                                        size: 16, color: scheme.secondary),
                                     const SizedBox(width: 4),
                                     Text(
                                       company!.contactEmail,
@@ -535,8 +532,8 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.start,
                                   children: [
-                                    const Icon(Icons.phone,
-                                        size: 16, color: Color(0xFFFD6C67)),
+                                    Icon(Icons.phone,
+                                        size: 16, color: scheme.secondary),
                                     const SizedBox(width: 4),
                                     Text(
                                       company!.phone,
@@ -554,8 +551,8 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.start,
                                   children: [
-                                    const Icon(Icons.link,
-                                        size: 16, color: Color(0xFFFD6C67)),
+                                    Icon(Icons.link,
+                                        size: 16, color: scheme.secondary),
                                     const SizedBox(width: 4),
                                     ConstrainedBox(
                                       constraints:
@@ -739,10 +736,10 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.check_circle_outline,
                                 size: 18,
-                                color: Color(0xFFFD6C67),
+                                color: scheme.secondary,
                               ),
                               const SizedBox(width: 8),
                               Expanded(child: Text(r)),
@@ -859,7 +856,7 @@ class _JobCardState extends State<JobCard> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: Color(0xFF4A5FBC),
+                        color: scheme.primary,
                         width: 2.5,
                       ),
                     ),
@@ -869,7 +866,8 @@ class _JobCardState extends State<JobCard> {
                           ? NetworkImage(company.logoUrl)
                           : null,
                       child: company.logoUrl.isEmpty
-                          ? const Icon(Icons.business, size: 20)
+                          ? Icon(Icons.business,
+                              size: 20, color: scheme.primary)
                           : null,
                     ),
                   ),
@@ -932,13 +930,13 @@ class _JobCardState extends State<JobCard> {
                           horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(8),
-                        color: const Color(0xFF4A5FBC).withOpacity(.08),
+                        color: scheme.primary.withOpacity(0.10),
                       ),
                       child: Text(
                         job.specialty,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF4A5FBC),
+                          color: scheme.primary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -969,7 +967,7 @@ class _JobCardState extends State<JobCard> {
                     style: FilledButton.styleFrom(
                       backgroundColor: isClosed
                           ? onSurface.withOpacity(0.5)
-                          : const Color(0xFF4A5FBC),
+                          : scheme.primary,
                       disabledBackgroundColor: onSurface.withOpacity(0.5),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
