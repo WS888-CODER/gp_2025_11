@@ -1094,20 +1094,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
           onTap: () {
             showDialog(
               context: context,
-              builder: (context) => AlertDialog(
-                backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.95),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                title: Text(
-                  text,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
+              builder: (context) => JadeerDialog(
+                title: text,
                 content: Text(
                   tooltipMessage,
                   textAlign: TextAlign.center,
@@ -1117,28 +1105,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                     height: 1.5,
                   ),
                 ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: TextButton.styleFrom(
-                      backgroundColor: const Color(0xFFFD6C67),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-                    child: const Text(
-                      'Got it',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
-                actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-                actionsAlignment: MainAxisAlignment.center,
+                primaryLabel: 'Got it',
               ),
             );
           },
@@ -1182,52 +1149,17 @@ class _JobPostingPageState extends State<JobPostingPage> {
     // Show confirmation dialog (for create mode with data or if dates changed in edit mode)
     final shouldPop = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-        title: const Text(
-          'Abandon Changes?',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+      builder: (context) => JadeerDialog<bool>(
+        title: 'Abandon Changes?',
         content: const Text(
           'Are you sure you want to go back? Any unsaved changes will be lost.',
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.white),
         ),
-        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-        actionsPadding:
-            const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            style: TextButton.styleFrom(
-              backgroundColor: Colors.white.withOpacity(0.9),
-              foregroundColor: const Color(0xFF4A5FBC),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-            ),
-            child: const Text('Cancel',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-          const SizedBox(width: 12),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(
-              backgroundColor: const Color(0xFFFC686A),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-            ),
-            child: const Text('Leave',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
+        primaryLabel: 'Leave',
+        primaryResult: true,
+        secondaryLabel: 'Cancel',
+        secondaryResult: false,
       ),
     );
     return shouldPop ?? false;
