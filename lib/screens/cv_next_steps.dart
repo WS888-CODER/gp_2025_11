@@ -448,9 +448,9 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
                       child: TextButton(
                         onPressed: _skipAll,
                         style: TextButton.styleFrom(
-                          foregroundColor: AppTheme.primaryPurple,
+                          foregroundColor: AppTheme.accentCoral,
                         ),
-                        child: const Text('Skip All'),
+                        child: const Text('Skip All', style: TextStyle(fontWeight: FontWeight.w600)),
                       ),
                     ),
                   ],
@@ -847,30 +847,21 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
         ),
         Container(
           padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: scheme.surface,
-            boxShadow: [
-              BoxShadow(
-                color: scheme.shadow.withOpacity(0.2),
-                spreadRadius: 1,
-                blurRadius: 5,
-                offset: const Offset(0, -3),
-              ),
-            ],
-          ),
           child: Row(
             children: [
               Expanded(
-                child: OutlinedButton(
+                child: ElevatedButton(
                   onPressed: widget.onSkip,
-                  style: OutlinedButton.styleFrom(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.accentCoral,
+                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: const BorderSide(
-                      color: AppTheme.primaryPurple,
-                      width: 2,
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  child: const Text('Skip'),
+                  child: const Text('Skip', style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -912,8 +903,12 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
                     backgroundColor: AppTheme.primaryPurple,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
                   ),
-                  child: const Text('Next'),
+                  child: const Text('Next', style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
@@ -1027,30 +1022,21 @@ class _SummaryFormState extends State<_SummaryForm> {
         ),
         Container(
           padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: scheme.surface,
-            boxShadow: [
-              BoxShadow(
-                color: scheme.shadow.withOpacity(0.2),
-                spreadRadius: 1,
-                blurRadius: 5,
-                offset: const Offset(0, -3),
-              ),
-            ],
-          ),
           child: Row(
             children: [
               Expanded(
-                child: OutlinedButton(
+                child: ElevatedButton(
                   onPressed: widget.onSkip,
-                  style: OutlinedButton.styleFrom(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.accentCoral,
+                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: const BorderSide(
-                      color: AppTheme.primaryPurple,
-                      width: 2,
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  child: const Text('Skip'),
+                  child: const Text('Skip', style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1070,8 +1056,12 @@ class _SummaryFormState extends State<_SummaryForm> {
                     backgroundColor: AppTheme.primaryPurple,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
                   ),
-                  child: const Text('Next'),
+                  child: const Text('Next', style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
@@ -1200,28 +1190,21 @@ class _ExperienceFormState extends State<_ExperienceForm> {
         ),
         Container(
           padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: scheme.surface,
-            boxShadow: [
-              BoxShadow(
-                color: scheme.shadow.withOpacity(0.2),
-                spreadRadius: 1,
-                blurRadius: 5,
-                offset: const Offset(0, -3),
-              ),
-            ],
-          ),
           child: Row(
             children: [
               Expanded(
-                child: OutlinedButton(
+                child: ElevatedButton(
                   onPressed: widget.onSkip,
-                  style: OutlinedButton.styleFrom(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.accentCoral,
+                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: const BorderSide(
-                        color: AppTheme.primaryPurple, width: 2),
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
                   ),
-                  child: const Text('Skip'),
+                  child: const Text('Skip', style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1232,8 +1215,12 @@ class _ExperienceFormState extends State<_ExperienceForm> {
                     backgroundColor: AppTheme.primaryPurple,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
                   ),
-                  child: const Text('Next'),
+                  child: const Text('Next', style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
@@ -1577,28 +1564,21 @@ class _EducationFormState extends State<_EducationForm> {
         ),
         Container(
           padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: scheme.surface,
-            boxShadow: [
-              BoxShadow(
-                color: scheme.shadow.withOpacity(0.2),
-                spreadRadius: 1,
-                blurRadius: 5,
-                offset: const Offset(0, -3),
-              ),
-            ],
-          ),
           child: Row(
             children: [
               Expanded(
-                child: OutlinedButton(
+                child: ElevatedButton(
                   onPressed: widget.onSkip,
-                  style: OutlinedButton.styleFrom(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.accentCoral,
+                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: const BorderSide(
-                        color: AppTheme.primaryPurple, width: 2),
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
                   ),
-                  child: const Text('Skip'),
+                  child: const Text('Skip', style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1609,8 +1589,12 @@ class _EducationFormState extends State<_EducationForm> {
                     backgroundColor: AppTheme.primaryPurple,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
                   ),
-                  child: const Text('Next'),
+                  child: const Text('Next', style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
@@ -2042,28 +2026,21 @@ class _SkillsFormState extends State<_SkillsForm> {
         ),
         Container(
           padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: scheme.surface,
-            boxShadow: [
-              BoxShadow(
-                color: scheme.shadow.withOpacity(0.2),
-                spreadRadius: 1,
-                blurRadius: 5,
-                offset: const Offset(0, -3),
-              ),
-            ],
-          ),
           child: Row(
             children: [
               Expanded(
-                child: OutlinedButton(
+                child: ElevatedButton(
                   onPressed: widget.onSkip,
-                  style: OutlinedButton.styleFrom(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.accentCoral,
+                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: const BorderSide(
-                        color: AppTheme.primaryPurple, width: 2),
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
                   ),
-                  child: const Text('Skip'),
+                  child: const Text('Skip', style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -2086,8 +2063,12 @@ class _SkillsFormState extends State<_SkillsForm> {
                     backgroundColor: AppTheme.primaryPurple,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
                   ),
-                  child: const Text('Next'),
+                  child: const Text('Next', style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
@@ -2214,28 +2195,21 @@ class _CertificationsFormState extends State<_CertificationsForm> {
         ),
         Container(
           padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: scheme.surface,
-            boxShadow: [
-              BoxShadow(
-                color: scheme.shadow.withOpacity(0.2),
-                spreadRadius: 1,
-                blurRadius: 5,
-                offset: const Offset(0, -3),
-              ),
-            ],
-          ),
           child: Row(
             children: [
               Expanded(
-                child: OutlinedButton(
+                child: ElevatedButton(
                   onPressed: widget.onSkip,
-                  style: OutlinedButton.styleFrom(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.accentCoral,
+                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: const BorderSide(
-                        color: AppTheme.primaryPurple, width: 2),
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
                   ),
-                  child: const Text('Skip'),
+                  child: const Text('Skip', style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -2246,8 +2220,12 @@ class _CertificationsFormState extends State<_CertificationsForm> {
                     backgroundColor: AppTheme.primaryPurple,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
                   ),
-                  child: const Text('Next'),
+                  child: const Text('Next', style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
@@ -2661,28 +2639,21 @@ class _LanguagesFormState extends State<_LanguagesForm> {
         ),
         Container(
           padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: scheme.surface,
-            boxShadow: [
-              BoxShadow(
-                color: scheme.shadow.withOpacity(0.2),
-                spreadRadius: 1,
-                blurRadius: 5,
-                offset: const Offset(0, -3),
-              ),
-            ],
-          ),
           child: Row(
             children: [
               Expanded(
-                child: OutlinedButton(
+                child: ElevatedButton(
                   onPressed: widget.onSkip,
-                  style: OutlinedButton.styleFrom(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.accentCoral,
+                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: const BorderSide(
-                        color: AppTheme.primaryPurple, width: 2),
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
                   ),
-                  child: const Text('Skip'),
+                  child: const Text('Skip', style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(width: 12),

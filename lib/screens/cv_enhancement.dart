@@ -653,11 +653,11 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
                     padding: const EdgeInsets.all(40),
                     decoration: BoxDecoration(
                       color: _cvEnhancementCredits <= 0
-                          ? Colors.grey.shade200
+                          ? scheme.surfaceVariant.withOpacity(0.5)
                           : scheme.surface,
                       borderRadius: BorderRadius.circular(12),
                       border: _cvEnhancementCredits <= 0
-                          ? Border.all(color: Colors.grey.shade400, width: 2)
+                          ? Border.all(color: scheme.outline, width: 2)
                           : null,
                       boxShadow: _cvEnhancementCredits <= 0
                           ? []
@@ -679,7 +679,7 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
                                   : Iconsax.document_upload,
                               size: 60,
                               color: _cvEnhancementCredits <= 0
-                                  ? Colors.grey
+                                  ? scheme.onSurface.withOpacity(0.38)
                                   : const Color(0xFFFF7B7B),
                             ),
                             const SizedBox(height: 16),
@@ -691,7 +691,7 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                                 color: _cvEnhancementCredits <= 0
-                                    ? Colors.grey
+                                    ? scheme.onSurface.withOpacity(0.38)
                                     : null,
                               ),
                             ),
@@ -702,7 +702,9 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
                                   : 'Supported: PDF, DOC, DOCX (Max 10MB)',
                               style: TextStyle(
                                 fontSize: 14,
-                                color: Colors.grey,
+                                color: _cvEnhancementCredits <= 0
+                                    ? scheme.onSurface.withOpacity(0.6)
+                                    : Colors.grey,
                               ),
                               textAlign: TextAlign.center,
                             ),
