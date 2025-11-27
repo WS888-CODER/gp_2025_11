@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import '../config/theme.dart';
+import '../config/themed_scaffold.dart';
 import 'cv_ready.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class CVNextStepsScreen extends StatefulWidget {
   final String? cvHistoryId;
@@ -30,9 +32,14 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
   Map<String, dynamic> _filledSections = {};
   bool _completedSuccessfully = false;
 
+  // AI Credits tracking
+  int _cvEnhancementCredits = 0;
+  bool _loadingCredits = true;
+
   @override
   void initState() {
     super.initState();
+    _fetchCredits();
     _detectMissingSections();
   }
 
@@ -45,6 +52,61 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
           .delete();
     }
     super.dispose();
+  }
+
+  Future<void> _fetchCredits() async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        setState(() {
+          _loadingCredits = false;
+        });
+        return;
+      }
+
+      final userDocRef = FirebaseFirestore.instance
+          .collection('Users')
+          .doc(currentUser.uid);
+
+      final userDoc = await userDocRef.get();
+
+      if (userDoc.exists) {
+        final data = userDoc.data();
+        final aiUsage = data?['AiUsage'] as Map<String, dynamic>?;
+
+        int credits = aiUsage?['CvEnhancement'] ?? 2;
+        final lastReset = aiUsage?['LastReset'] as Timestamp?;
+
+        // Check if we need to reset credits (new day)
+        if (lastReset != null) {
+          final lastResetDate = lastReset.toDate();
+          final now = DateTime.now();
+          final today = DateTime(now.year, now.month, now.day);
+          final lastResetDay = DateTime(
+              lastResetDate.year, lastResetDate.month, lastResetDate.day);
+
+          // If LastReset is not today, reset credits to 2
+          if (lastResetDay.isBefore(today)) {
+            credits = 2;
+            await userDocRef.update({
+              'AiUsage.CvEnhancement': 2,
+              'AiUsage.MockInterview': 2,
+              'AiUsage.LastReset': FieldValue.serverTimestamp(),
+            });
+          }
+        }
+
+        setState(() {
+          _cvEnhancementCredits = credits;
+          _loadingCredits = false;
+        });
+      }
+    } catch (e) {
+      print('Error fetching credits: $e');
+      setState(() {
+        _loadingCredits = false;
+      });
+    }
   }
 
   Future<void> _detectMissingSections() async {
@@ -109,11 +171,25 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
   }
 
   Future<void> _enhanceCV() async {
+    // Check if user has credits
+    if (_cvEnhancementCredits <= 0) {
+      SnackHelper.error(
+        context,
+        'You have reached your AI enhancement limit for today. Resets at midnight.',
+      );
+      return;
+    }
+
     setState(() {
       _isEnhancing = true;
     });
 
     try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        throw Exception('User not authenticated');
+      }
+
       final functions = FirebaseFunctions.instance;
       final callable = functions.httpsCallable('enhanceCV');
 
@@ -128,10 +204,30 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
 
       await callable.call(data);
 
+      // Decrement credits after successful enhancement
+      final newCredits = _cvEnhancementCredits - 1;
+      await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(currentUser.uid)
+          .update({
+        'AiUsage.CvEnhancement': newCredits,
+      });
+
       setState(() {
+        _cvEnhancementCredits = newCredits;
         _isEnhancing = false;
       });
+
       _completedSuccessfully = true;
+
+      // Show success message
+      if (mounted) {
+        SnackHelper.success(
+          context,
+          'CV enhanced successfully! ($newCredits ${newCredits == 1 ? 'enhancement' : 'enhancements'} remaining)',
+        );
+      }
+
       // Navigate to CV Ready Screen to show results
       if (mounted) {
         Navigator.pushReplacement(
@@ -234,8 +330,7 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
           Navigator.pop(context);
         }
       },
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF5F5F5),
+      child: ThemedScaffold(
         appBar: AppBar(
           backgroundColor: AppTheme.primaryPurple,
           foregroundColor: Colors.white,
@@ -307,24 +402,19 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
     final sectionName = _missingSections[_currentSectionIndex];
     final progress = (_currentSectionIndex + 1) / _missingSections.length;
 
-    return Container(
-      color: scheme.brightness == Brightness.dark
-          ? scheme.surfaceVariant.withOpacity(0.3)
-          : AppTheme.primaryPurple.withOpacity(0.08),
-      child: Column(
+    return Column(
         children: [
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: scheme.brightness == Brightness.dark
-                  ? scheme.surfaceVariant.withOpacity(0.3)
-                  : AppTheme.primaryPurple.withOpacity(0.08),
-              border: Border(
-                bottom: BorderSide(
-                  color: scheme.outline.withOpacity(0.3),
-                  width: 1,
+              color: scheme.surface,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
                 ),
-              ),
+              ],
             ),
             child: Column(
               children: [
@@ -368,10 +458,11 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
                 const SizedBox(height: 8),
                 LinearProgressIndicator(
                   value: progress,
-                  backgroundColor: scheme.surface.withOpacity(0.5),
+                  backgroundColor: AppTheme.primaryPurple.withOpacity(0.15),
                   valueColor: const AlwaysStoppedAnimation<Color>(
                     AppTheme.primaryPurple,
                   ),
+                  minHeight: 6,
                 ),
               ],
             ),
@@ -380,8 +471,7 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
             child: _buildSectionForm(sectionName),
           ),
         ],
-      ),
-    );
+      );
   }
 
   Widget _buildStyledTextField({
