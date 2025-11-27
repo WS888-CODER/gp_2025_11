@@ -41,9 +41,14 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
   bool _showAllJobs = false;
   bool _isSaving = false;
 
+  // AI Credits tracking
+  int _cvEnhancementCredits = 0;
+  bool _loadingCredits = true;
+
   @override
   void initState() {
     super.initState();
+    _fetchCredits();
     _loadJobs();
   }
 
@@ -60,6 +65,61 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
     _searchController.dispose();
     _extractionListener?.cancel();
     super.dispose();
+  }
+
+  Future<void> _fetchCredits() async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        setState(() {
+          _loadingCredits = false;
+        });
+        return;
+      }
+
+      final userDocRef = FirebaseFirestore.instance
+          .collection('Users')
+          .doc(currentUser.uid);
+
+      final userDoc = await userDocRef.get();
+
+      if (userDoc.exists) {
+        final data = userDoc.data();
+        final aiUsage = data?['AiUsage'] as Map<String, dynamic>?;
+
+        int credits = aiUsage?['CvEnhancement'] ?? 2;
+        final lastReset = aiUsage?['LastReset'] as Timestamp?;
+
+        // Check if we need to reset credits (new day)
+        if (lastReset != null) {
+          final lastResetDate = lastReset.toDate();
+          final now = DateTime.now();
+          final today = DateTime(now.year, now.month, now.day);
+          final lastResetDay = DateTime(
+              lastResetDate.year, lastResetDate.month, lastResetDate.day);
+
+          // If LastReset is not today, reset credits to 2
+          if (lastResetDay.isBefore(today)) {
+            credits = 2;
+            await userDocRef.update({
+              'AiUsage.CvEnhancement': 2,
+              'AiUsage.MockInterview': 2,
+              'AiUsage.LastReset': FieldValue.serverTimestamp(),
+            });
+          }
+        }
+
+        setState(() {
+          _cvEnhancementCredits = credits;
+          _loadingCredits = false;
+        });
+      }
+    } catch (e) {
+      print('Error fetching credits: $e');
+      setState(() {
+        _loadingCredits = false;
+      });
+    }
   }
 
   Future<void> _loadJobs() async {
@@ -165,6 +225,15 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
   }
 
   Future<void> _pickFile() async {
+    // Block if no credits
+    if (_cvEnhancementCredits <= 0) {
+      SnackHelper.error(
+        context,
+        'You have no AI enhancements remaining today. Credits reset at midnight.',
+      );
+      return;
+    }
+
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf', 'doc', 'docx'],
@@ -456,6 +525,87 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
     );
   }
 
+  Widget _buildCreditsInfo() {
+    if (_loadingCredits) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppTheme.primaryPurple.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              height: 16,
+              width: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: 8),
+            Text('Loading credits...'),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: _cvEnhancementCredits > 0
+            ? AppTheme.primaryPurple.withOpacity(0.1)
+            : Colors.red.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _cvEnhancementCredits > 0
+              ? AppTheme.primaryPurple.withOpacity(0.3)
+              : Colors.red.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            _cvEnhancementCredits > 0 ? Icons.auto_awesome : Icons.warning_rounded,
+            color: _cvEnhancementCredits > 0 ? AppTheme.primaryPurple : Colors.red,
+            size: 22,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _cvEnhancementCredits > 0
+                      ? 'AI Enhancements Available'
+                      : 'No Credits Remaining',
+                  style: TextStyle(
+                    color: _cvEnhancementCredits > 0
+                        ? AppTheme.primaryPurple
+                        : Colors.red,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _cvEnhancementCredits > 0
+                      ? '$_cvEnhancementCredits ${_cvEnhancementCredits == 1 ? 'enhancement' : 'enhancements'} remaining today'
+                      : 'Credits reset daily at midnight',
+                  style: TextStyle(
+                    color: _cvEnhancementCredits > 0
+                        ? AppTheme.primaryPurple.withOpacity(0.7)
+                        : Colors.red.withOpacity(0.7),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildUploadStep() {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
@@ -471,39 +621,75 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
               color: AppTheme.primaryPurple,
             ),
           ),
+          const SizedBox(height: 12),
+          _buildCreditsInfo(),
           const SizedBox(height: 10),
           Expanded(
             child: Center(
               child: GestureDetector(
-                onTap: (_isUploading || _isExtracting) ? null : _pickFile,
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(40),
-                  decoration: BoxDecoration(
-                    color: scheme.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
+                onTap: (_isUploading || _isExtracting || _cvEnhancementCredits <= 0)
+                    ? null
+                    : _pickFile,
+                child: Opacity(
+                  opacity: _cvEnhancementCredits <= 0 ? 0.5 : 1.0,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(40),
+                    decoration: BoxDecoration(
+                      color: _cvEnhancementCredits <= 0
+                          ? Colors.grey.shade200
+                          : scheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: _cvEnhancementCredits <= 0
+                          ? Border.all(color: Colors.grey.shade400, width: 2)
+                          : null,
+                      boxShadow: _cvEnhancementCredits <= 0
+                          ? []
+                          : [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.08),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                    ),
                   child: _selectedFile == null
-                      ? const Column(
+                      ? Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Iconsax.document_upload,
-                                size: 60, color: Color(0xFFFF7B7B)),
-                            SizedBox(height: 16),
-                            Text('Click to upload CV',
-                                style: TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.w600)),
-                            SizedBox(height: 8),
-                            Text('Supported: PDF, DOC, DOCX (Max 10MB)',
-                                style: TextStyle(
-                                    fontSize: 14, color: Colors.grey)),
+                            Icon(
+                              _cvEnhancementCredits <= 0
+                                  ? Icons.lock_outlined
+                                  : Iconsax.document_upload,
+                              size: 60,
+                              color: _cvEnhancementCredits <= 0
+                                  ? Colors.grey
+                                  : const Color(0xFFFF7B7B),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              _cvEnhancementCredits <= 0
+                                  ? 'Upload Disabled'
+                                  : 'Click to upload CV',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: _cvEnhancementCredits <= 0
+                                    ? Colors.grey
+                                    : null,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _cvEnhancementCredits <= 0
+                                  ? 'No AI enhancements remaining today'
+                                  : 'Supported: PDF, DOC, DOCX (Max 10MB)',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
                           ],
                         )
                       : Column(
@@ -517,6 +703,7 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
                                 textAlign: TextAlign.center),
                           ],
                         ),
+                  ),
                 ),
               ),
             ),
