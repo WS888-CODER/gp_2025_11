@@ -586,18 +586,13 @@ class _CompanyHomeState extends State<CompanyHome> {
                   surface: const Color(0xFF4A5FBC).withOpacity(0.95),
                 ),
                 textTheme: theme.textTheme.copyWith(
-                  // نص السنوات
                   bodyLarge: const TextStyle(color: Colors.white),
-                  // نص الأرقام في الكاليندر
                   bodyMedium: const TextStyle(color: Colors.white),
-                  // نص التاريخ المختار
                   headlineMedium: const TextStyle(
                       color: Colors.white, fontWeight: FontWeight.bold),
-                  // نص السنة في الـ header
                   titleLarge: const TextStyle(color: Colors.white),
                 ),
                 inputDecorationTheme: InputDecorationTheme(
-                  // للـ Input mode (لما تضغطين القلم)
                   labelStyle: const TextStyle(color: Colors.white),
                   hintStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
                   enabledBorder: const UnderlineInputBorder(
@@ -746,6 +741,16 @@ class _CompanyHomeState extends State<CompanyHome> {
   }
 
   Widget _buildAnimatedNavBar() {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final barColor = isDark ? scheme.surface : Colors.white;
+    final circleColor = isDark ? scheme.secondary : const Color(0xFFFC686A);
+    final circleIconColor = isDark ? scheme.onSecondary : Colors.white;
+    final shadowColor =
+        isDark ? Colors.black.withOpacity(0.6) : Colors.black.withOpacity(0.08);
+
     return Stack(
       clipBehavior: Clip.none,
       alignment: Alignment.bottomCenter,
@@ -757,8 +762,15 @@ class _CompanyHomeState extends State<CompanyHome> {
           ),
           child: Container(
             height: 70,
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: barColor,
+              boxShadow: [
+                BoxShadow(
+                  color: shadowColor,
+                  blurRadius: 12,
+                  offset: const Offset(0, -2),
+                ),
+              ],
             ),
             child: SafeArea(
               child: Row(
@@ -779,18 +791,54 @@ class _CompanyHomeState extends State<CompanyHome> {
           child: Container(
             width: 60,
             height: 60,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Color(0xFFFC686A),
+              color: circleColor,
+              boxShadow: [
+                BoxShadow(
+                  color: circleColor.withOpacity(0.4),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
             child: Icon(
               _getSelectedIcon(),
-              color: Colors.white,
+              color: circleIconColor,
               size: 30,
             ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildNavIcon(IconData icon, int index) {
+    final isSelected = _tab == index;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final Color baseColor =
+        isDark ? scheme.onSurface.withOpacity(0.5) : Colors.grey[400]!;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _tab = index;
+        });
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: 60,
+        height: 60,
+        alignment: Alignment.center,
+        child: Icon(
+          icon,
+          size: 26,
+          color: isSelected ? Colors.transparent : baseColor,
+        ),
+      ),
     );
   }
 
@@ -809,28 +857,6 @@ class _CompanyHomeState extends State<CompanyHome> {
       default:
         return Icons.home;
     }
-  }
-
-  Widget _buildNavIcon(IconData icon, int index) {
-    final isSelected = _tab == index;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _tab = index;
-        });
-      },
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        width: 60,
-        height: 60,
-        alignment: Alignment.center,
-        child: Icon(
-          icon,
-          size: 26,
-          color: isSelected ? Colors.transparent : Colors.grey[400],
-        ),
-      ),
-    );
   }
 
   Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>> _jobsStream(
@@ -867,15 +893,17 @@ class _CompanyHomeState extends State<CompanyHome> {
   PreferredSizeWidget _buildCustomAppBar(String companyId) {
     // For Reports tab, use standard AppBar
     if (_tab != 1) {
+      final theme = Theme.of(context);
+      final scheme = theme.colorScheme;
+
       return AppBar(
-        backgroundColor: _brand,
+        backgroundColor: scheme.primary,
         elevation: 0,
         centerTitle: true,
-        automaticallyImplyLeading: false, // ← نشيل السهم الخلفي
-        leadingWidth: 70, // ← نعطيه مساحة أكبر
+        automaticallyImplyLeading: false,
+        leadingWidth: 70,
         leading: Padding(
-          // ← نحطه في Padding
-          padding: const EdgeInsets.only(left: 16), // ← نبعده عن الحافة
+          padding: const EdgeInsets.only(left: 16),
           child: _ProfileButton(userId: companyId),
         ),
         title: const Text(
@@ -913,124 +941,134 @@ class _CompanyHomeState extends State<CompanyHome> {
     // For home tab, use custom purple gradient header
     return PreferredSize(
       preferredSize: const Size.fromHeight(200),
-      child: Container(
-        height: 280,
-        width: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF4A5FBC), Color(0xFF4A5FBC)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.only(
-            bottomLeft: Radius.circular(40),
-            bottomRight: Radius.circular(40),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x404A5FBC),
-              blurRadius: 20,
-              offset: Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Stack(
-          children: [
-            // Decorative background circles
-            Positioned(
-              top: -60,
-              right: -40,
-              child: Container(
-                width: 200,
-                height: 200,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.05),
-                ),
+      child: Builder(
+        builder: (context) {
+          final theme = Theme.of(context);
+          final scheme = theme.colorScheme;
+          final isDark = theme.brightness == Brightness.dark;
+
+          final bubbleColor = Colors.white.withOpacity(isDark ? 0.03 : 0.06);
+          final shadowColor = scheme.primary.withOpacity(isDark ? 0.6 : 0.4);
+
+          return Container(
+            height: 280,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [scheme.primary, scheme.primary],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-            ),
-            Positioned(
-              bottom: 40,
-              left: -30,
-              child: Container(
-                width: 140,
-                height: 140,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.05),
-                ),
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(40),
+                bottomRight: Radius.circular(40),
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: shadowColor,
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
-            // Original content
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Top row with profile, notification, and settings
-                    Row(
+            child: Stack(
+              children: [
+                Positioned(
+                  top: -60,
+                  right: -40,
+                  child: Container(
+                    width: 200,
+                    height: 200,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: bubbleColor,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: 40,
+                  left: -30,
+                  child: Container(
+                    width: 140,
+                    height: 140,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: bubbleColor,
+                    ),
+                  ),
+                ),
+                SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Profile button
-                        _ProfileButton(userId: companyId),
-                        const Spacer(),
-                        // Notification button
-                        GestureDetector(
-                          onTap: () {
-                            SnackHelper.error(context, 'Notifications coming soon');
-                          },
-                          child: Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.15),
-                              shape: BoxShape.circle,
+                        Row(
+                          children: [
+                            _ProfileButton(userId: companyId),
+                            const Spacer(),
+                            GestureDetector(
+                              onTap: () {
+                                SnackHelper.error(
+                                    context, 'Notifications coming soon');
+                              },
+                              child: Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.15),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.notifications_outlined,
+                                  color: Colors.white,
+                                  size: 26,
+                                ),
+                              ),
                             ),
-                            child: const Icon(
-                              Icons.notifications_outlined,
-                              color: Colors.white,
-                              size: 26,
+                            const SizedBox(width: 12),
+                            GestureDetector(
+                              onTap: () {
+                                final uid =
+                                    FirebaseAuth.instance.currentUser?.uid;
+                                if (uid != null) {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/settings',
+                                    arguments: {
+                                      'userType': 'Company',
+                                      'userId': uid
+                                    },
+                                  );
+                                }
+                              },
+                              child: Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.15),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.settings_outlined,
+                                  color: Colors.white,
+                                  size: 26,
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
-                        const SizedBox(width: 12),
-                        // Settings button
-                        GestureDetector(
-                          onTap: () {
-                            final uid = FirebaseAuth.instance.currentUser?.uid;
-                            if (uid != null) {
-                              Navigator.pushNamed(
-                                context,
-                                '/settings',
-                                arguments: {'userType': 'Company', 'userId': uid},
-                              );
-                            }
-                          },
-                          child: Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.15),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.settings_outlined,
-                              color: Colors.white,
-                              size: 26,
-                            ),
-                          ),
-                        ),
+                        const SizedBox(height: 24),
+                        _WelcomeTitle(companyId: companyId),
                       ],
                     ),
-                    const SizedBox(height: 24),
-                    // Welcome text
-                    _WelcomeTitle(companyId: companyId),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -1038,16 +1076,19 @@ class _CompanyHomeState extends State<CompanyHome> {
   @override
   Widget build(BuildContext context) {
     final companyId = _effectiveCompanyId;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
     final homeBody = Container(
-      color: const Color(0xFFF5F5F5),
+      color: isDark ? scheme.background : const Color(0xFFF5F5F5),
       child: Column(
         children: [
           Expanded(
             child: Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFFF5F5F5),
-                borderRadius: BorderRadius.only(
+              decoration: BoxDecoration(
+                color: isDark ? scheme.background : const Color(0xFFF5F5F5),
+                borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(30),
                   topRight: Radius.circular(30),
                 ),
@@ -1139,11 +1180,12 @@ class _CompanyHomeState extends State<CompanyHome> {
                               (data['JobStatus'] ?? 'Open').toString();
                           final isClosed = jobStatus == 'Closed' ||
                               (endDate != null && endDate.isBefore(now));
-
+                          final scheme = Theme.of(context).colorScheme;
+                          final primary = scheme.primary;
                           return Container(
                             margin: const EdgeInsets.only(bottom: 16),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: scheme.surface,
                               borderRadius: BorderRadius.circular(20),
                               boxShadow: [
                                 BoxShadow(
@@ -1187,8 +1229,9 @@ class _CompanyHomeState extends State<CompanyHome> {
                                                     fontWeight: FontWeight.w700,
                                                     fontSize: 18,
                                                     color: isClosed
-                                                        ? Colors.black54
-                                                        : Colors.black87,
+                                                        ? scheme.onSurface
+                                                            .withOpacity(0.6)
+                                                        : scheme.onSurface,
                                                     letterSpacing: -0.5,
                                                   ),
                                                 ),
@@ -1200,8 +1243,10 @@ class _CompanyHomeState extends State<CompanyHome> {
                                                       .join(' / '),
                                                   style: TextStyle(
                                                     color: isClosed
-                                                        ? Colors.black38
-                                                        : Colors.black54,
+                                                        ? scheme.onSurface
+                                                            .withOpacity(0.5)
+                                                        : scheme.onSurface
+                                                            .withOpacity(0.7),
                                                     fontSize: 14,
                                                     fontWeight: FontWeight.w500,
                                                   ),
@@ -1216,14 +1261,16 @@ class _CompanyHomeState extends State<CompanyHome> {
                                                       horizontal: 12,
                                                       vertical: 6),
                                               decoration: BoxDecoration(
-                                                color: const Color(0xFFFFE5E5),
+                                                color: theme.colorScheme.error
+                                                    .withOpacity(0.15),
                                                 borderRadius:
                                                     BorderRadius.circular(20),
                                               ),
-                                              child: const Text(
+                                              child: Text(
                                                 'Closed',
                                                 style: TextStyle(
-                                                  color: Color(0xFFFF5252),
+                                                  color:
+                                                      theme.colorScheme.error,
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.w700,
                                                 ),
@@ -1238,8 +1285,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                                             child: Container(
                                               height: 42,
                                               decoration: BoxDecoration(
-                                                color: const Color(0xFF4A5FBC)
-                                                    .withOpacity(0.1),
+                                                color: primary.withOpacity(0.1),
                                                 borderRadius:
                                                     BorderRadius.circular(12),
                                               ),
@@ -1268,23 +1314,21 @@ class _CompanyHomeState extends State<CompanyHome> {
                                                       context,
                                                     );
                                                   },
-                                                  child: const Row(
+                                                  child: Row(
                                                     mainAxisAlignment:
                                                         MainAxisAlignment
                                                             .center,
                                                     children: [
                                                       Icon(
                                                         Icons.edit_outlined,
-                                                        color:
-                                                            Color(0xFF4A5FBC),
+                                                        color: primary,
                                                         size: 20,
                                                       ),
-                                                      SizedBox(width: 6),
+                                                      const SizedBox(width: 6),
                                                       Text(
                                                         'Edit',
                                                         style: TextStyle(
-                                                          color:
-                                                              Color(0xFF4A5FBC),
+                                                          color: primary,
                                                           fontWeight:
                                                               FontWeight.w600,
                                                           fontSize: 14,
@@ -1321,7 +1365,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                                                       },
                                                     );
                                                   },
-                                                  child: const Row(
+                                                  child: Row(
                                                     mainAxisAlignment:
                                                         MainAxisAlignment
                                                             .center,
@@ -1329,16 +1373,14 @@ class _CompanyHomeState extends State<CompanyHome> {
                                                       Icon(
                                                         Icons
                                                             .visibility_outlined,
-                                                        color:
-                                                            Color(0xFF4A5FBC),
+                                                        color: primary,
                                                         size: 20,
                                                       ),
                                                       SizedBox(width: 6),
                                                       Text(
                                                         'View',
                                                         style: TextStyle(
-                                                          color:
-                                                              Color(0xFF4A5FBC),
+                                                          color: primary,
                                                           fontWeight:
                                                               FontWeight.w600,
                                                           fontSize: 14,
@@ -1355,7 +1397,10 @@ class _CompanyHomeState extends State<CompanyHome> {
                                             width: 42,
                                             height: 42,
                                             decoration: BoxDecoration(
-                                              color: Colors.grey.shade100,
+                                              color: isDark
+                                                  ? scheme.surface
+                                                      .withOpacity(0.9)
+                                                  : Colors.grey.shade100,
                                               borderRadius:
                                                   BorderRadius.circular(12),
                                             ),
@@ -1465,9 +1510,10 @@ class _CompanyHomeState extends State<CompanyHome> {
                                                     ),
                                                   );
                                                 },
-                                                child: const Icon(
+                                                child: Icon(
                                                   Icons.more_vert,
-                                                  color: Colors.black54,
+                                                  color: scheme.onSurface
+                                                      .withOpacity(0.6),
                                                   size: 22,
                                                 ),
                                               ),
@@ -1506,14 +1552,16 @@ class _CompanyHomeState extends State<CompanyHome> {
                 children: [
                   // Reports tab
                   Container(
-                    color: const Color(0xFF4A5FBC),
+                    color: scheme.primary,
                     child: Column(
                       children: [
                         Expanded(
                           child: Container(
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFF5F5F5),
-                              borderRadius: BorderRadius.only(
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? scheme.background
+                                  : const Color(0xFFF5F5F5),
+                              borderRadius: const BorderRadius.only(
                                 topLeft: Radius.circular(30),
                                 topRight: Radius.circular(30),
                               ),
@@ -1881,13 +1929,21 @@ class _CompactReportFeature extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final borderColor = isDark
+        ? scheme.outline.withOpacity(0.3)
+        : Colors.black.withOpacity(0.06);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Colors.black.withOpacity(0.06),
+          color: borderColor,
           width: 1,
         ),
       ),
@@ -1897,22 +1953,22 @@ class _CompactReportFeature extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: const Color(0xFF4A5FBC).withOpacity(0.1),
+              color: scheme.primary.withOpacity(0.10),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               icon,
               size: 20,
-              color: const Color(0xFF4A5FBC),
+              color: scheme.primary,
             ),
           ),
           const SizedBox(width: 12),
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w600,
-              color: Colors.black87,
+              color: scheme.onSurface,
             ),
           ),
         ],
