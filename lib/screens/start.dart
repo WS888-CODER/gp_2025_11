@@ -16,7 +16,7 @@ class _StartScreenState extends State<StartScreen>
     super.initState();
 
     _splitController = AnimationController(
-      duration: Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
 
@@ -28,15 +28,15 @@ class _StartScreenState extends State<StartScreen>
   }
 
   void _startAnimation() async {
-    await Future.delayed(Duration(seconds: 3));
+    await Future.delayed(const Duration(seconds: 3));
     _splitController.forward();
-    await Future.delayed(Duration(milliseconds: 1000));
+    await Future.delayed(const Duration(milliseconds: 1000));
     if (mounted) {
       Navigator.pushReplacement(
         context,
         PageRouteBuilder(
           pageBuilder: (context, animation, secondaryAnimation) =>
-              WelcomeScreen(),
+              const WelcomeScreen(),
           transitionDuration: Duration.zero,
         ),
       );
@@ -59,14 +59,13 @@ class _StartScreenState extends State<StartScreen>
         builder: (context, child) {
           return Stack(
             children: [
-              // النص الأيسر
               Positioned(
                 left: -_splitAnimation.value * screenWidth,
                 top: 0,
                 bottom: 0,
                 width: screenWidth / 2,
                 child: Container(
-                  color: Color(0xFF4A5FBC),
+                  color: const Color(0xFF4A5FBC),
                   child: Stack(
                     children: [
                       Center(
@@ -74,8 +73,8 @@ class _StartScreenState extends State<StartScreen>
                           offset: Offset(screenWidth / 4, 0),
                           child: Image.asset(
                             'assets/images/whiteLogo.png',
-                            width: 400, // حجم ثابت
-                            height: 400, // حجم ثابت
+                            width: 400,
+                            height: 400,
                             fit: BoxFit.contain,
                           ),
                         ),
@@ -84,14 +83,13 @@ class _StartScreenState extends State<StartScreen>
                   ),
                 ),
               ),
-              // النص الأيمن
               Positioned(
                 right: -_splitAnimation.value * screenWidth,
                 top: 0,
                 bottom: 0,
                 width: screenWidth / 2,
                 child: Container(
-                  color: Color(0xFF4A5FBC),
+                  color: const Color(0xFF4A5FBC),
                   child: Stack(
                     children: [
                       Center(
@@ -99,8 +97,8 @@ class _StartScreenState extends State<StartScreen>
                           offset: Offset(-screenWidth / 4, 0),
                           child: Image.asset(
                             'assets/images/whiteLogo.png',
-                            width: 400, // حجم ثابت
-                            height: 400, // حجم ثابت
+                            width: 400,
+                            height: 400,
                             fit: BoxFit.contain,
                           ),
                         ),

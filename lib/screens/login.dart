@@ -19,7 +19,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
 
-  // Ã°Å¸â€â€™ Error message variable
   String? _loginError;
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -32,7 +31,6 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // ðŸ”’ Dialog for locked accounts using JadeerDialog
   Future<void> _showPasswordResetRequiredDialog(String userType) async {
     final bool isAdmin = userType == 'Admin';
 
@@ -55,10 +53,8 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             textAlign: TextAlign.center,
           ),
-          // Ø§Ù„Ø£Ø²Ø±Ø§Ø±:
           primaryLabel: isAdmin ? 'OK' : 'Reset Password',
           primaryResult: isAdmin ? 'ok' : 'reset',
-          // Ù…Ø§ Ù†Ø­ØªØ§Ø¬ Ø²Ø± Ø«Ø§Ù†ÙŠ Ù‡Ù†Ø§ (Ù†ÙØ³ Ø§Ù„Ø³Ù„ÙˆÙƒ Ø§Ù„Ù‚Ø¯ÙŠÙ…)
           secondaryLabel: null,
           secondaryResult: null,
         ),
@@ -68,12 +64,10 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (isAdmin) {
-      // ÙƒØ§Ù† Ø²Ù…Ø§Ù† Ø²Ø± OK ÙŠÙ‚ÙÙ„ Ø§Ù„Ø¯ÙŠØ§Ù„ÙˆØº ÙˆÙŠØ±Ø¬Ø¹ Ù„Ù„ØµÙØ­Ø© Ø§Ù„Ù„ÙŠ Ù‚Ø¨Ù„
       if (result == 'ok') {
         Navigator.of(context).pop();
       }
     } else {
-      // ÙƒØ§Ù† Ø²Ù…Ø§Ù† Ø²Ø± Reset Password ÙŠÙˆØ¯Ù‘ÙŠ Ù„ØµÙØ­Ø© Ù†Ø³ÙŠØ§Ù† ÙƒÙ„Ù…Ø© Ø§Ù„Ø³Ø±
       if (result == 'reset') {
         Navigator.pushReplacementNamed(
           context,
@@ -117,7 +111,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // Ã°Å¸â€â€™ Check account lock status
   Future<Map<String, dynamic>?> _checkAccountLockStatus(String email) async {
     try {
       final querySnapshot = await _firestore
@@ -179,12 +172,10 @@ class _LoginScreenState extends State<LoginScreen> {
         'failedAttempts': failedAttempts,
       };
     } catch (e) {
-      print('Ã¢ÂÅ’ Error checking account lock status: $e');
       return null;
     }
   }
 
-  // Ã°Å¸â€â€™ Record failed login attempt
   Future<void> _recordFailedLoginAttempt(String email) async {
     try {
       final querySnapshot = await _firestore
@@ -194,7 +185,6 @@ class _LoginScreenState extends State<LoginScreen> {
           .get();
 
       if (querySnapshot.docs.isEmpty) {
-        // Ã¢Å“â€¦ Ã˜Â§Ã™â€žÃ˜Â¥Ã™Å Ã™â€¦Ã™Å Ã™â€ž Ã™â€¦Ã™Ë† Ã™â€¦Ã™Ë†Ã˜Â¬Ã™Ë†Ã˜Â¯Ã˜Å’ Ã˜Â¨Ã˜Â³ Ã™â€ Ã˜Â¹Ã˜Â±Ã˜Â¶ Ã˜Â±Ã˜Â³Ã˜Â§Ã™â€žÃ˜Â© Ã˜Â¹Ã˜Â§Ã™â€¦Ã˜Â©
         if (mounted) {
           setState(() {
             _loginError = 'Invalid credentials. Please try again.';
@@ -223,7 +213,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final newFailedAttempts = resetCounter ? 1 : failedAttempts + 1;
 
-      // Ã¢Å“â€¦ Update Firestore Ã˜Â£Ã™Ë†Ã™â€žÃ˜Â§Ã™â€¹
       await _firestore.collection('Users').doc(userId).update({
         'failedLoginAttempts': newFailedAttempts,
         'lastFailedLoginDate': FieldValue.serverTimestamp(),
@@ -231,10 +220,6 @@ class _LoginScreenState extends State<LoginScreen> {
         'mustResetPassword': newFailedAttempts >= 5,
       });
 
-      print(
-          'Ã¢Å“â€¦ Updated failedLoginAttempts to: $newFailedAttempts for user: $userId');
-
-      // Ã¢Å“â€¦ Update UI Ã˜Â¨Ã˜Â¹Ã˜Â¯Ã™Å Ã™â€
       if (mounted) {
         if (newFailedAttempts == 3 || newFailedAttempts == 4) {
           final remaining = 5 - newFailedAttempts;
@@ -247,7 +232,6 @@ class _LoginScreenState extends State<LoginScreen> {
             _loginError = 'Account locked due to multiple failed attempts.';
           });
 
-          // Ã¢Å“â€¦ Show dialog for locked account
           final userType = data['UserType'] ?? data['userType'] ?? '';
           Future.delayed(Duration(milliseconds: 100), () {
             if (mounted) {
@@ -261,7 +245,6 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     } catch (e) {
-      print('Ã¢ÂÅ’ Error recording failed login: $e');
       if (mounted) {
         setState(() {
           _loginError = 'An error occurred. Please try again.';
@@ -270,7 +253,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // Ã°Å¸â€â€™ Reset failed login attempts
   Future<void> _resetFailedLoginAttempts(String userId) async {
     try {
       await _firestore.collection('Users').doc(userId).update({
@@ -279,13 +261,10 @@ class _LoginScreenState extends State<LoginScreen> {
         'accountLocked': false,
         'mustResetPassword': false,
       });
-    } catch (e) {
-      print('Ã¢ÂÅ’ Error resetting failed attempts: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> _handleLogin() async {
-    // Ã°Å¸â€â€™ Clear previous error
     setState(() {
       _loginError = null;
     });
@@ -295,7 +274,6 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Ã°Å¸â€â€™ STEP 1: Check if account is locked
       final lockStatus =
           await _checkAccountLockStatus(_emailController.text.trim());
 
@@ -305,7 +283,6 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      // ðŸ”’ STEP 2: Check if user exists and if Company, check status BEFORE password verification
       final userQuery = await _firestore
           .collection('Users')
           .where('Email', isEqualTo: _emailController.text.trim().toLowerCase())
@@ -339,7 +316,6 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
 
-      // ðŸ”’ STEP 3: Now attempt password verification
       final userCredential = await _auth.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
@@ -347,7 +323,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final userId = userCredential.user!.uid;
 
-      // Ã°Å¸â€â€™ Reset failed attempts on successful login
       await _resetFailedLoginAttempts(userId);
 
       final userDoc = await _firestore.collection('Users').doc(userId).get();
@@ -432,9 +407,6 @@ class _LoginScreenState extends State<LoginScreen> {
         _loginError = 'Unknown user type: "$userType"';
       });
     } on FirebaseAuthException catch (e) {
-      print('Ã°Å¸â€Â´ FirebaseAuthException: ${e.code} - ${e.message}');
-
-      // Ã°Å¸â€â€™ Handle different error types
       if (e.code == 'user-not-found') {
         // Email doesn't exist - show error but DON'T record attempt
         if (mounted) {
@@ -444,7 +416,6 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
         // Wrong password - record the failed attempt
-        print('Ã°Å¸â€Â´ Wrong password detected, recording attempt...');
         await _recordFailedLoginAttempt(_emailController.text.trim());
       } else {
         if (mounted) {
@@ -460,7 +431,6 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     } catch (e) {
-      print('Ã¢ÂÅ’ Unexpected error: $e');
       if (mounted) {
         setState(() {
           _loginError = 'Unexpected error. Please try again.';
@@ -555,10 +525,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                 color: Colors.red, fontWeight: FontWeight.bold),
                           ),
                           validator: (v) {
-                            if (v == null || v.isEmpty)
+                            if (v == null || v.isEmpty) {
                               return 'Please enter your email';
-                            if (!v.contains('@'))
+                            }
+                            if (!v.contains('@')) {
                               return 'Please enter a valid email';
+                            }
                             return null;
                           },
                           onChanged: (_) {
@@ -628,7 +600,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             }
                           },
                         ),
-                        // Ã°Å¸â€â€™ Show error under password field
                         if (_loginError != null)
                           Padding(
                             padding: const EdgeInsets.only(top: 8),
@@ -703,7 +674,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   if (Navigator.of(context).canPop()) {
                     Navigator.of(context).pop();
                   } else {
-                    // If no previous route (e.g., after logout), go to welcome
                     Navigator.of(context).pushReplacement(
                       MaterialPageRoute(builder: (context) => WelcomeScreen()),
                     );

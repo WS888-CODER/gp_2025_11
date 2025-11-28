@@ -1,11 +1,8 @@
-// lib/screens/jobseeker_home.dart
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gp_2025_11/config/theme.dart';
-import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:gp_2025_11/screens/all_jobs.dart';
 import 'package:gp_2025_11/screens/job_card.dart';
 import 'package:gp_2025_11/screens/cv_enhancement.dart';

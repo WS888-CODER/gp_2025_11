@@ -4,7 +4,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gp_2025_11/config/theme.dart';
-import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 class AdminDashboard extends StatefulWidget {
@@ -92,9 +91,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black87;
-
     return ThemedScaffold(
       appBar: const _AdminDashboardAppBar(),
       body: Column(
@@ -236,77 +232,6 @@ class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
     return '${hours.toString().padLeft(2, '0')}:'
         '${minutes.toString().padLeft(2, '0')}:'
         '${secs.toString().padLeft(2, '0')}';
-  }
-
-  Future<void> _handleLogout() async {
-    final theme = Theme.of(context);
-
-    bool? confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: theme.colorScheme.primary.withOpacity(0.7),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(30),
-        ),
-        title: const Text(
-          'Confirm Logout',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: const Text(
-          'Are you sure you want to log out?',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white),
-        ),
-        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-        actionsPadding:
-            const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            style: TextButton.styleFrom(
-              backgroundColor: Colors.white.withOpacity(0.9),
-              foregroundColor: theme.colorScheme.primary,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 12,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-            ),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: TextButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 12,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-            ),
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      _sessionTimer?.cancel();
-      await FirebaseAuth.instance.signOut();
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/login');
-      }
-    }
   }
 
   @override
@@ -624,13 +549,11 @@ class _InfoRow extends StatelessWidget {
   const _InfoRow({
     required this.icon,
     required this.label,
-    this.trailing,
     this.labelColor,
   });
 
   final IconData icon;
   final String label;
-  final Widget? trailing;
   final Color? labelColor;
 
   @override
@@ -658,7 +581,6 @@ class _InfoRow extends StatelessWidget {
             ),
           ),
         ),
-        trailing ?? const SizedBox(),
       ],
     );
   }

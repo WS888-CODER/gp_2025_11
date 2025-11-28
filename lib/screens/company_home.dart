@@ -1,9 +1,7 @@
-// lib/screens/company_home.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gp_2025_11/config/theme.dart';
-import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'dart:async';
 
 class CompanyHome extends StatefulWidget {
@@ -587,8 +585,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                 ),
                 textButtonTheme: TextButtonThemeData(
                   style: TextButton.styleFrom(
-                    foregroundColor:
-                        const Color(0xFFFC686A), // أزرار OK و Cancel
+                    foregroundColor: const Color(0xFFFC686A),
                   ),
                 ),
                 datePickerTheme: DatePickerThemeData(
@@ -596,17 +593,16 @@ class _CompanyHomeState extends State<CompanyHome> {
                   headerForegroundColor: Colors.white,
                   weekdayStyle: const TextStyle(color: Colors.white),
                   yearStyle: const TextStyle(color: Colors.white),
-                  dayStyle:
-                      const TextStyle(color: Colors.white), // الأيام في الشبكة
+                  dayStyle: const TextStyle(color: Colors.white),
                   yearForegroundColor: MaterialStateColor.resolveWith((states) {
                     if (states.contains(MaterialState.selected)) {
-                      return Colors.white; // السنة المختارة
+                      return Colors.white;
                     }
-                    return Colors.white; // باقي السنوات
+                    return Colors.white;
                   }),
                   yearBackgroundColor: MaterialStateColor.resolveWith((states) {
                     if (states.contains(MaterialState.selected)) {
-                      return const Color(0xFFFC686A); // خلفية السنة المختارة
+                      return const Color(0xFFFC686A);
                     }
                     return Colors.transparent;
                   }),

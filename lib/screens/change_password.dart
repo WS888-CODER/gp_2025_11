@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gp_2025_11/config/theme.dart';
-import 'package:gp_2025_11/config/themed_scaffold.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -15,15 +14,11 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-
   bool _obscureCurrentPassword = true;
   bool _obscureNewPassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
-
   String? _errorMessage;
-
-  // Ø¹Ø´Ø§Ù† Ù†Ø¹Ø±Ù Ù…ØªÙ‰ Ù†Ù„ÙˆÙ‘Ù† Ø§Ù„Ù„ÙŠØ¨Ù„ Ø¨Ø§Ù„Ø£Ø­Ù…Ø± (Ù†ÙØ³ JobPostingPage)
   bool _submitted = false;
 
   @override

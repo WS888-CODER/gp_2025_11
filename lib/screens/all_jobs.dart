@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gp_2025_11/config/theme.dart';
-import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:gp_2025_11/screens/favorites.dart';
 import 'package:gp_2025_11/screens/job_card.dart';
 
@@ -396,9 +395,6 @@ class _JobsPageState extends State<JobsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
     final jobs = _applyFilters(_allJobs);
     final int filteredCount = jobs.length;
 

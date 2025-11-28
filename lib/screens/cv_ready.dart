@@ -10,15 +10,14 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../config/theme.dart';
-import '../config/themed_scaffold.dart';
 
 class PublishScreen extends StatefulWidget {
-  final String cvUrl; // Actually cvHistoryId
-  final bool isFromHistory; // ← نضيف هذا
+  final String cvUrl;
+  final bool isFromHistory;
   const PublishScreen({
     super.key,
     required this.cvUrl,
-    this.isFromHistory = false, // ← نضيف هذا
+    this.isFromHistory = false,
   });
 
   @override
@@ -55,7 +54,6 @@ class _PublishScreenState extends State<PublishScreen> {
             const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         actionsAlignment: MainAxisAlignment.center,
         actions: [
-          // âœ… Fixed: Removed Expanded from Dialog actions
           SizedBox(
             width: 120,
             child: TextButton(
@@ -99,35 +97,6 @@ class _PublishScreenState extends State<PublishScreen> {
     return result ?? false;
   }
 
-  // âœ… Fixed: Better PDF opening with fallback
-  Future<void> _openPDF(String url) async {
-    try {
-      final uri = Uri.parse(url);
-
-      // Try to launch with external application
-      final canLaunch = await canLaunchUrl(uri);
-
-      if (canLaunch) {
-        await launchUrl(
-          uri,
-          mode: LaunchMode.externalApplication,
-        );
-      } else {
-        // Fallback: Try platform default
-        await launchUrl(
-          uri,
-          mode: LaunchMode.platformDefault,
-        );
-      }
-    } catch (e) {
-      print('âŒ Error opening PDF: $e');
-
-      if (mounted) {
-        SnackHelper.error(context, 'Could not open PDF: ${e.toString()}');
-      }
-    }
-  }
-
   // Download PDF and save to device
   Future<void> _downloadPDF(String url) async {
     try {
@@ -161,7 +130,6 @@ class _PublishScreenState extends State<PublishScreen> {
         throw Exception('Failed to download PDF');
       }
     } catch (e) {
-      print('Error downloading PDF: $e');
       if (mounted) {
         SnackHelper.error(context, 'Failed to download CV');
       }
@@ -176,7 +144,6 @@ class _PublishScreenState extends State<PublishScreen> {
         appBar: const CustomHeader(
           title: 'CV Enhancement Results',
         ),
-
         body: StreamBuilder<DocumentSnapshot>(
           stream: FirebaseFirestore.instance
               .collection('CVHistory')
@@ -217,7 +184,6 @@ class _PublishScreenState extends State<PublishScreen> {
               suggestions = [];
             }
 
-            final jobTitle = cvData['JobTitle'] as String? ?? 'Not specified';
             final pdfUrl = cvData['NewCVURL'] as String?;
 
             return SingleChildScrollView(
@@ -225,7 +191,6 @@ class _PublishScreenState extends State<PublishScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ðŸ“„ PDF Preview Box
                   if (pdfUrl == null || pdfUrl.isEmpty)
                     Container(
                       width: double.infinity,
@@ -306,8 +271,6 @@ class _PublishScreenState extends State<PublishScreen> {
                             ),
                           ),
                           const SizedBox(height: 16),
-
-                          // âœ… Fixed: Removed Expanded from Row
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -360,8 +323,6 @@ class _PublishScreenState extends State<PublishScreen> {
                               ),
                             ],
                           ),
-
-                          // âœ… NEW: Debug URL button
                           const SizedBox(height: 8),
                         ],
                       ),
@@ -453,12 +414,9 @@ class _PublishScreenState extends State<PublishScreen> {
             );
           },
         ),
-        // Fixed Done button at the bottom
-        bottomNavigationBar: widget
-                .isFromHistory // ← ضيفي هذا السطر قبل Container
-            ? null // ← لو من الهيستوري، ما نعرض شي
+        bottomNavigationBar: widget.isFromHistory
+            ? null
             : Container(
-                // ← باقي الكود نفسه
                 padding: const EdgeInsets.all(20),
                 child: SizedBox(
                   width: double.infinity,

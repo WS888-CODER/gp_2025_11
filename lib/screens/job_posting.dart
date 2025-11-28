@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:gp_2025_11/config/theme.dart';
-import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -393,8 +392,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
           ),
           textAlign: TextAlign.center,
         ),
-        backgroundColor:
-            const Color(0xFFFF7B7B).withOpacity(0.8), // Same red as team leader
+        backgroundColor: const Color(0xFFFF7B7B).withOpacity(0.8),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
@@ -415,8 +413,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
           ),
           textAlign: TextAlign.center,
         ),
-        backgroundColor:
-            const Color(0xFF4A5FBC).withOpacity(0.8), // Brand purple
+        backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.8),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
@@ -444,7 +441,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
 
   Future<void> _selectStartDate() async {
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day); // Strip time
+    final today = DateTime(now.year, now.month, now.day);
 
     // Use existing date if it's today or future, otherwise use today
     final DateTime initialDate =
@@ -466,22 +463,17 @@ class _JobPostingPageState extends State<JobPostingPage> {
             colorScheme: scheme.copyWith(
               primary: const Color(0xFFFC686A),
               onPrimary: Colors.white,
-              onSurface: Colors.white, // السنوات والأرقام
+              onSurface: Colors.white,
               surface: const Color(0xFF4A5FBC).withOpacity(0.95),
             ),
             textTheme: theme.textTheme.copyWith(
-              // نص السنوات
               bodyLarge: const TextStyle(color: Colors.white),
-              // نص الأرقام في الكاليندر
               bodyMedium: const TextStyle(color: Colors.white),
-              // نص التاريخ المختار
               headlineMedium: const TextStyle(
                   color: Colors.white, fontWeight: FontWeight.bold),
-              // نص السنة في الـ header
               titleLarge: const TextStyle(color: Colors.white),
             ),
             inputDecorationTheme: InputDecorationTheme(
-              // للـ Input mode (لما تضغطين القلم)
               labelStyle: const TextStyle(color: Colors.white),
               hintStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
               enabledBorder: const UnderlineInputBorder(
@@ -493,7 +485,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
             ),
             textButtonTheme: TextButtonThemeData(
               style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFFFC686A), // أزرار OK و Cancel
+                foregroundColor: const Color(0xFFFC686A),
               ),
             ),
             datePickerTheme: DatePickerThemeData(
@@ -501,17 +493,16 @@ class _JobPostingPageState extends State<JobPostingPage> {
               headerForegroundColor: Colors.white,
               weekdayStyle: const TextStyle(color: Colors.white),
               yearStyle: const TextStyle(color: Colors.white),
-              dayStyle:
-                  const TextStyle(color: Colors.white), // الأيام في الشبكة
+              dayStyle: const TextStyle(color: Colors.white),
               yearForegroundColor: MaterialStateColor.resolveWith((states) {
                 if (states.contains(MaterialState.selected)) {
-                  return Colors.white; // السنة المختارة
+                  return Colors.white;
                 }
-                return Colors.white; // باقي السنوات
+                return Colors.white;
               }),
               yearBackgroundColor: MaterialStateColor.resolveWith((states) {
                 if (states.contains(MaterialState.selected)) {
-                  return const Color(0xFFFC686A); // خلفية السنة المختارة
+                  return const Color(0xFFFC686A);
                 }
                 return Colors.transparent;
               }),
@@ -550,7 +541,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
 
   Future<void> _selectEndDate() async {
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day); // Strip time
+    final today = DateTime(now.year, now.month, now.day);
 
     // First allowed date is the later of start date or today
     final DateTime firstAllowedDate =
@@ -578,22 +569,17 @@ class _JobPostingPageState extends State<JobPostingPage> {
             colorScheme: scheme.copyWith(
               primary: const Color(0xFFFC686A),
               onPrimary: Colors.white,
-              onSurface: Colors.white, // السنوات والأرقام
+              onSurface: Colors.white,
               surface: const Color(0xFF4A5FBC).withOpacity(0.95),
             ),
             textTheme: theme.textTheme.copyWith(
-              // نص السنوات
               bodyLarge: const TextStyle(color: Colors.white),
-              // نص الأرقام في الكاليندر
               bodyMedium: const TextStyle(color: Colors.white),
-              // نص التاريخ المختار
               headlineMedium: const TextStyle(
                   color: Colors.white, fontWeight: FontWeight.bold),
-              // نص السنة في الـ header
               titleLarge: const TextStyle(color: Colors.white),
             ),
             inputDecorationTheme: InputDecorationTheme(
-              // للـ Input mode (لما تضغطين القلم)
               labelStyle: const TextStyle(color: Colors.white),
               hintStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
               enabledBorder: const UnderlineInputBorder(
@@ -605,7 +591,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
             ),
             textButtonTheme: TextButtonThemeData(
               style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFFFC686A), // أزرار OK و Cancel
+                foregroundColor: const Color(0xFFFC686A),
               ),
             ),
             datePickerTheme: DatePickerThemeData(
@@ -613,17 +599,16 @@ class _JobPostingPageState extends State<JobPostingPage> {
               headerForegroundColor: Colors.white,
               weekdayStyle: const TextStyle(color: Colors.white),
               yearStyle: const TextStyle(color: Colors.white),
-              dayStyle:
-                  const TextStyle(color: Colors.white), // الأيام في الشبكة
+              dayStyle: const TextStyle(color: Colors.white),
               yearForegroundColor: MaterialStateColor.resolveWith((states) {
                 if (states.contains(MaterialState.selected)) {
-                  return Colors.white; // السنة المختارة
+                  return Colors.white;
                 }
-                return Colors.white; // باقي السنوات
+                return Colors.white;
               }),
               yearBackgroundColor: MaterialStateColor.resolveWith((states) {
                 if (states.contains(MaterialState.selected)) {
-                  return const Color(0xFFFC686A); // خلفية السنة المختارة
+                  return const Color(0xFFFC686A);
                 }
                 return Colors.transparent;
               }),
@@ -1110,9 +1095,9 @@ class _JobPostingPageState extends State<JobPostingPage> {
             );
           },
           borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(4.0),
-            child: const Icon(
+          child: const Padding(
+            padding: EdgeInsets.all(4.0),
+            child: Icon(
               Icons.info_outline,
               size: 18,
               color: Color(0xFFFD6C67),
@@ -1129,7 +1114,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
       final datesChanged =
           _startDate != _originalStartDate || _endDate != _originalEndDate;
       if (!datesChanged) {
-        return true; // Allow back without prompt
+        return true;
       }
     } else {
       // In create mode, check if user has entered any data
@@ -1142,16 +1127,16 @@ class _JobPostingPageState extends State<JobPostingPage> {
           _endDate != null;
 
       if (!hasData) {
-        return true; // Allow back without prompt if nothing entered
+        return true;
       }
     }
 
     // Show confirmation dialog (for create mode with data or if dates changed in edit mode)
     final shouldPop = await showDialog<bool>(
       context: context,
-      builder: (context) => JadeerDialog<bool>(
+      builder: (context) => const JadeerDialog<bool>(
         title: 'Abandon Changes?',
-        content: const Text(
+        content: Text(
           'Are you sure you want to go back? Any unsaved changes will be lost.',
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.white),

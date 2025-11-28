@@ -61,9 +61,9 @@ class _SignupScreenState extends State<SignupScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-        title: Row(
+        title: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
+          children: [
             Icon(Icons.error_outline, color: Colors.white, size: 28),
             SizedBox(width: 10),
             Text('Error',
@@ -160,8 +160,9 @@ class _SignupScreenState extends State<SignupScreen> {
     if (!password.contains(RegExp(r'[A-Z]'))) missing.add('uppercase letter');
     if (!password.contains(RegExp(r'[a-z]'))) missing.add('lowercase letter');
     if (!password.contains(RegExp(r'[0-9]'))) missing.add('number');
-    if (!password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]')))
+    if (!password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
       missing.add('special character');
+    }
     if (missing.isEmpty) return '';
     return 'Password must include: ${missing.join(', ')}';
   }
@@ -169,29 +170,23 @@ class _SignupScreenState extends State<SignupScreen> {
   Future<bool> _isEmailUnique(String email) async {
     try {
       String trimmedEmail = email.trim().toLowerCase();
-      print('ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Âµ Checking email: $trimmedEmail');
       final querySnapshot1 = await _firestore
           .collection('Users')
           .where('Email', isEqualTo: trimmedEmail)
           .get();
-      print(
-          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Âµ Method 1 (where): ${querySnapshot1.docs.length} docs');
+
       final allUsers = await _firestore.collection('Users').get();
       final matchingDocs = allUsers.docs.where((doc) {
         final data = doc.data();
         final docEmail = data['Email']?.toString().toLowerCase() ?? '';
         return docEmail == trimmedEmail;
       }).toList();
-      print(
-          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Âµ Method 2 (filter): ${matchingDocs.length} docs');
+
       if (querySnapshot1.docs.isNotEmpty || matchingDocs.isNotEmpty) {
-        print('ÃƒÂ¢Ã‚ÂÃ…â€™ Email EXISTS!');
         return false;
       }
-      print('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Email is UNIQUE');
       return true;
     } catch (e) {
-      print('ÃƒÂ¢Ã‚ÂÃ…â€™ ERROR: $e');
       return false;
     }
   }
@@ -208,15 +203,14 @@ class _SignupScreenState extends State<SignupScreen> {
           'Email': email,
           'UserType': userType,
           'CreatedAt': FieldValue.serverTimestamp(),
-          'ExpiresAt':
-              Timestamp.fromDate(DateTime.now().add(Duration(minutes: 2))),
+          'ExpiresAt': Timestamp.fromDate(
+              DateTime.now().add(const Duration(minutes: 2))),
           'Used': false,
         });
         return true;
       }
       return false;
     } catch (e) {
-      print('ÃƒÂ¢Ã‚ÂÃ…â€™ Error sending OTP: $e');
       return false;
     }
   }
@@ -342,9 +336,7 @@ class _SignupScreenState extends State<SignupScreen> {
       await _firestore.collection('Users').doc(userId).set({
         'UserID': userId,
         'UserType': 'Company',
-        'Email': _companyEmailController.text
-            .trim()
-            .toLowerCase(), // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ lowercase
+        'Email': _companyEmailController.text.trim().toLowerCase(),
         'Name': _companyFullNameController.text.trim(),
         'CompanyName': _companyNameController.text.trim(),
         'Phone': null,
@@ -386,11 +378,13 @@ class _SignupScreenState extends State<SignupScreen> {
       );
     } on FirebaseAuthException catch (e) {
       String message = 'An error occurred during signup';
-      if (e.code == 'email-already-in-use')
+      if (e.code == 'email-already-in-use') {
         message = 'Email already in use';
-      else if (e.code == 'weak-password')
+      } else if (e.code == 'weak-password') {
         message = 'Password is too weak';
-      else if (e.code == 'invalid-email') message = 'Invalid email format';
+      } else if (e.code == 'invalid-email') {
+        message = 'Invalid email format';
+      }
       _showErrorDialog(message);
     } catch (e) {
       _showErrorDialog('Signup failed: $e');
@@ -409,9 +403,7 @@ class _SignupScreenState extends State<SignupScreen> {
       await _firestore.collection('Users').doc(userId).set({
         'UserID': userId,
         'UserType': 'JobSeeker',
-        'Email': _seekerEmailController.text
-            .trim()
-            .toLowerCase(), // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ lowercase
+        'Email': _seekerEmailController.text.trim().toLowerCase(),
         'Name': _seekerNameController.text.trim(),
         'DoB': null,
         'Nationality': null,
@@ -449,11 +441,13 @@ class _SignupScreenState extends State<SignupScreen> {
       );
     } on FirebaseAuthException catch (e) {
       String message = 'An error occurred during signup';
-      if (e.code == 'email-already-in-use')
+      if (e.code == 'email-already-in-use') {
         message = 'Email already in use';
-      else if (e.code == 'weak-password')
+      } else if (e.code == 'weak-password') {
         message = 'Password is too weak';
-      else if (e.code == 'invalid-email') message = 'Invalid email format';
+      } else if (e.code == 'invalid-email') {
+        message = 'Invalid email format';
+      }
       _showErrorDialog(message);
     } catch (e) {
       _showErrorDialog('Signup failed: $e');
@@ -1110,7 +1104,6 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
               ),
             ),
-            // Fixed bottom navigation (step indicator + arrows)
             Positioned(
               bottom: 40,
               left: 40,

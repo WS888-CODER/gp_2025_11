@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import '../config/theme.dart';
-import '../config/themed_scaffold.dart';
 import 'cv_ready.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -34,7 +33,6 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
 
   // AI Credits tracking
   int _cvEnhancementCredits = 0;
-  bool _loadingCredits = true;
 
   @override
   void initState() {
@@ -58,9 +56,6 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
     try {
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) {
-        setState(() {
-          _loadingCredits = false;
-        });
         return;
       }
 
@@ -97,15 +92,9 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
 
         setState(() {
           _cvEnhancementCredits = credits;
-          _loadingCredits = false;
         });
       }
-    } catch (e) {
-      print('Error fetching credits: $e');
-      setState(() {
-        _loadingCredits = false;
-      });
-    }
+    } catch (e) {}
   }
 
   Future<void> _detectMissingSections() async {
@@ -307,7 +296,6 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
       ),
     );
 
-// ✅ امسح الـ CV إذا المستخدم أكد الخروج
     if (shouldPop == true && widget.cvHistoryId != null) {
       await FirebaseFirestore.instance
           .collection('CVHistory')
@@ -320,8 +308,6 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return PopScope(
       canPop: false,
       onPopInvoked: (didPop) async {
@@ -387,122 +373,75 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
     final progress = (_currentSectionIndex + 1) / _missingSections.length;
 
     return Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: scheme.surface,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    if (_currentSectionIndex > 0)
-                      TextButton.icon(
-                        onPressed: _goBack,
-                        icon: const Icon(Icons.arrow_back, size: 16),
-                        label: const Text('Back'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppTheme.primaryPurple,
-                        ),
-                      )
-                    else
-                      const SizedBox(width: 80),
-                    Expanded(
-                      child: Center(
-                        child: Text(
-                          'Section ${_currentSectionIndex + 1} of ${_missingSections.length}',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: scheme.onSurface,
-                          ),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  if (_currentSectionIndex > 0)
+                    TextButton.icon(
+                      onPressed: _goBack,
+                      icon: const Icon(Icons.arrow_back, size: 16),
+                      label: const Text('Back'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppTheme.primaryPurple,
+                      ),
+                    )
+                  else
+                    const SizedBox(width: 80),
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        'Section ${_currentSectionIndex + 1} of ${_missingSections.length}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: scheme.onSurface,
                         ),
                       ),
                     ),
-                    SizedBox(
-                      width: 80,
-                      child: TextButton(
-                        onPressed: _skipAll,
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppTheme.accentCoral,
-                        ),
-                        child: const Text('Skip All', style: TextStyle(fontWeight: FontWeight.w600)),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                LinearProgressIndicator(
-                  value: progress,
-                  backgroundColor: AppTheme.primaryPurple.withOpacity(0.15),
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                    AppTheme.primaryPurple,
                   ),
-                  minHeight: 6,
+                  SizedBox(
+                    width: 80,
+                    child: TextButton(
+                      onPressed: _skipAll,
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppTheme.accentCoral,
+                      ),
+                      child: const Text('Skip All',
+                          style: TextStyle(fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              LinearProgressIndicator(
+                value: progress,
+                backgroundColor: AppTheme.primaryPurple.withOpacity(0.15),
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  AppTheme.primaryPurple,
                 ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: _buildSectionForm(sectionName),
-          ),
-        ],
-      );
-  }
-
-  Widget _buildStyledTextField({
-    required TextEditingController controller,
-    required String labelText,
-    required String hintText,
-    TextInputType? keyboardType,
-    int? maxLines,
-    ColorScheme? scheme,
-  }) {
-    final colorScheme = scheme ?? Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: TextField(
-        controller: controller,
-        keyboardType: keyboardType,
-        maxLines: maxLines ?? 1,
-        decoration: InputDecoration(
-          labelText: labelText,
-          hintText: hintText,
-          hintStyle: const TextStyle(color: Colors.grey),
-          filled: true,
-          fillColor: Colors.transparent,
-          border: const OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(12)),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: const OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(12)),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: const OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(12)),
-            borderSide: BorderSide.none,
+                minHeight: 6,
+              ),
+            ],
           ),
         ),
-      ),
+        Expanded(
+          child: _buildSectionForm(sectionName),
+        ),
+      ],
     );
   }
 
@@ -845,7 +784,8 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  child: const Text('Skip', style: TextStyle(fontWeight: FontWeight.w600)),
+                  child: const Text('Skip',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -892,7 +832,8 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  child: const Text('Next', style: TextStyle(fontWeight: FontWeight.w600)),
+                  child: const Text('Next',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
@@ -979,21 +920,21 @@ class _SummaryFormState extends State<_SummaryForm> {
                   child: TextField(
                     controller: _controller,
                     maxLines: 6,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       hintText:
                           'e.g., Experienced software engineer with 5+ years...',
-                      hintStyle: const TextStyle(color: Colors.grey),
+                      hintStyle: TextStyle(color: Colors.grey),
                       filled: true,
                       fillColor: Colors.transparent,
-                      border: const OutlineInputBorder(
+                      border: OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(12)),
                         borderSide: BorderSide.none,
                       ),
-                      focusedBorder: const OutlineInputBorder(
+                      focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(12)),
                         borderSide: BorderSide.none,
                       ),
-                      enabledBorder: const OutlineInputBorder(
+                      enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(12)),
                         borderSide: BorderSide.none,
                       ),
@@ -1020,7 +961,8 @@ class _SummaryFormState extends State<_SummaryForm> {
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  child: const Text('Skip', style: TextStyle(fontWeight: FontWeight.w600)),
+                  child: const Text('Skip',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1045,7 +987,8 @@ class _SummaryFormState extends State<_SummaryForm> {
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  child: const Text('Next', style: TextStyle(fontWeight: FontWeight.w600)),
+                  child: const Text('Next',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
@@ -1188,7 +1131,8 @@ class _ExperienceFormState extends State<_ExperienceForm> {
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  child: const Text('Skip', style: TextStyle(fontWeight: FontWeight.w600)),
+                  child: const Text('Skip',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1204,7 +1148,8 @@ class _ExperienceFormState extends State<_ExperienceForm> {
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  child: const Text('Next', style: TextStyle(fontWeight: FontWeight.w600)),
+                  child: const Text('Next',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
@@ -1562,7 +1507,8 @@ class _EducationFormState extends State<_EducationForm> {
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  child: const Text('Skip', style: TextStyle(fontWeight: FontWeight.w600)),
+                  child: const Text('Skip',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1578,7 +1524,8 @@ class _EducationFormState extends State<_EducationForm> {
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  child: const Text('Next', style: TextStyle(fontWeight: FontWeight.w600)),
+                  child: const Text('Next',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
@@ -2024,7 +1971,8 @@ class _SkillsFormState extends State<_SkillsForm> {
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  child: const Text('Skip', style: TextStyle(fontWeight: FontWeight.w600)),
+                  child: const Text('Skip',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -2052,7 +2000,8 @@ class _SkillsFormState extends State<_SkillsForm> {
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  child: const Text('Next', style: TextStyle(fontWeight: FontWeight.w600)),
+                  child: const Text('Next',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
@@ -2193,7 +2142,8 @@ class _CertificationsFormState extends State<_CertificationsForm> {
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  child: const Text('Skip', style: TextStyle(fontWeight: FontWeight.w600)),
+                  child: const Text('Skip',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -2209,7 +2159,8 @@ class _CertificationsFormState extends State<_CertificationsForm> {
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  child: const Text('Next', style: TextStyle(fontWeight: FontWeight.w600)),
+                  child: const Text('Next',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
@@ -2637,7 +2588,8 @@ class _LanguagesFormState extends State<_LanguagesForm> {
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  child: const Text('Skip', style: TextStyle(fontWeight: FontWeight.w600)),
+                  child: const Text('Skip',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(width: 12),
