@@ -1376,35 +1376,56 @@ class _JobPostingPageState extends State<JobPostingPage> {
                             },
                             fieldViewBuilder: (context, textEditingController,
                                 focusNode, onFieldSubmitted) {
-                              return TextFormField(
-                                controller: textEditingController,
-                                focusNode: focusNode,
-                                enabled: !_isEdit,
-                                maxLength: 100,
-                                decoration: const InputDecoration(
-                                  hintText: 'Type or select specialty',
-                                  hintStyle: TextStyle(color: Colors.grey),
-                                  filled: true,
-                                  fillColor: Colors.transparent,
-                                  border: OutlineInputBorder(
-                                    borderRadius:
-                                        BorderRadius.all(Radius.circular(12)),
-                                    borderSide: BorderSide.none,
+                              return Focus(
+                                onFocusChange: (hasFocus) {
+                                  setState(() {});
+                                },
+                                child: TextFormField(
+                                  controller: textEditingController,
+                                  focusNode: focusNode,
+                                  enabled: !_isEdit,
+                                  maxLength: 100,
+                                  decoration: InputDecoration(
+                                    hintText: 'Select specialty',
+                                    hintStyle: const TextStyle(color: Colors.grey),
+                                    filled: true,
+                                    fillColor: Colors.transparent,
+                                    border: const OutlineInputBorder(
+                                      borderRadius:
+                                          BorderRadius.all(Radius.circular(12)),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    errorBorder: const OutlineInputBorder(
+                                      borderRadius:
+                                          BorderRadius.all(Radius.circular(12)),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    focusedErrorBorder: const OutlineInputBorder(
+                                      borderRadius:
+                                          BorderRadius.all(Radius.circular(12)),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    errorStyle: const TextStyle(height: 0, fontSize: 0),
+                                    errorMaxLines: 1,
+                                    counterText: '',
+                                    suffixIcon: GestureDetector(
+                                      onTap: () {
+                                        if (focusNode.hasFocus) {
+                                          focusNode.unfocus();
+                                        } else {
+                                          focusNode.requestFocus();
+                                        }
+                                      },
+                                      child: AnimatedRotation(
+                                        turns: focusNode.hasFocus ? 0.5 : 0,
+                                        duration: const Duration(milliseconds: 200),
+                                        child: const Icon(
+                                          Icons.arrow_drop_down,
+                                          color: Color(0xFFFD6C67),
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                  errorBorder: OutlineInputBorder(
-                                    borderRadius:
-                                        BorderRadius.all(Radius.circular(12)),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  focusedErrorBorder: OutlineInputBorder(
-                                    borderRadius:
-                                        BorderRadius.all(Radius.circular(12)),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  errorStyle: TextStyle(height: 0, fontSize: 0),
-                                  errorMaxLines: 1,
-                                  counterText: '',
-                                ),
                                 onChanged: (value) {
                                   setState(() {});
                                 },
@@ -1442,6 +1463,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                                         'Please choose a specialty from the list');
                                   }
                                 },
+                              ),
                               );
                             },
                             optionsViewBuilder: (context, onSelected, options) {
