@@ -293,13 +293,19 @@ class _CompanyProfileState extends State<CompanyProfile> {
     final websiteRaw = _websiteCtrl.text.trim();
     final desc = _desc.text.trim();
     final loc = _cleanLoc(_locCtrl.text);
-    final hasPhoneDigits = _phone.text.trim().isNotEmpty;
+    final phoneLocal = _phone.text.trim();
+    final hasPhoneDigits = phoneLocal.isNotEmpty;
 
     final oldPhoneE164 = (current[UserFields.phone] ?? '').toString().trim();
-    final phoneLocal = _phone.text.trim();
     final oldWebsite = (current[UserFields.website] ?? '').toString().trim();
 
+    final wasComplete = current[UserFields.isProfileComplete] == true;
     final hadLogoBefore = _hasAnyLogo(current);
+
+    final draftFromState = (_phoneE164Draft ?? '').trim();
+    final hasContactEmail = email.isNotEmpty;
+    final hasContactPhone = hasPhoneDigits || draftFromState.isNotEmpty;
+    final hasAnyContact = hasContactEmail || hasContactPhone;
 
     final formOk = _form.currentState?.validate() ?? false;
 
@@ -346,6 +352,37 @@ class _CompanyProfileState extends State<CompanyProfile> {
       return false;
     }
 
+    if (wasComplete) {
+      if (!_hasAnyLogo(current)) {
+        SnackHelper.error(
+          uiContext,
+          'Once your profile is complete, you must keep a company logo.',
+        );
+        return false;
+      }
+      if (desc.length < 150) {
+        SnackHelper.error(
+          uiContext,
+          'Once your profile is complete, description must be at least 150 characters.',
+        );
+        return false;
+      }
+      if (loc.isEmpty) {
+        SnackHelper.error(
+          uiContext,
+          'Once your profile is complete, location cannot be empty.',
+        );
+        return false;
+      }
+      if (!hasAnyContact) {
+        SnackHelper.error(
+          uiContext,
+          'Once your profile is complete, you must keep at least one contact method (email or phone).',
+        );
+        return false;
+      }
+    }
+
     setState(() {
       _saving = true;
     });
@@ -381,7 +418,11 @@ class _CompanyProfileState extends State<CompanyProfile> {
         hasLogoAfter = hadLogoBefore;
       }
 
-      final complete = desc.length >= 150 && loc.isNotEmpty && hasLogoAfter;
+      final complete = wasComplete ||
+          (desc.length >= 150 &&
+              loc.isNotEmpty &&
+              hasLogoAfter &&
+              hasAnyContact);
 
       final updates = <String, dynamic>{
         UserFields.description: desc,
@@ -426,8 +467,16 @@ class _CompanyProfileState extends State<CompanyProfile> {
         }
         _logoUrl = newLogoUrl;
       } else if (_logoUrl == '') {
-        updates[UserFields.photoUrl] = FieldValue.delete();
-        updates[UserFields.photoPath] = FieldValue.delete();
+        if (!wasComplete) {
+          updates[UserFields.photoUrl] = FieldValue.delete();
+          updates[UserFields.photoPath] = FieldValue.delete();
+        } else {
+          SnackHelper.error(
+            uiContext,
+            'You cannot remove the logo after the profile is marked complete.',
+          );
+          return false;
+        }
       }
 
       if (updates.isEmpty) {
@@ -453,10 +502,12 @@ class _CompanyProfileState extends State<CompanyProfile> {
         }
       }
 
-      if (_logoUrl == '' &&
+      if (!wasComplete &&
+          _logoUrl == '' &&
           (current[UserFields.photoPath]?.toString().isNotEmpty ?? false)) {
         await _deleteStorageFile(current[UserFields.photoPath]?.toString());
-      } else if (_logoUrl == '' &&
+      } else if (!wasComplete &&
+          _logoUrl == '' &&
           (current[UserFields.photoUrl]?.toString().isNotEmpty ?? false)) {
         await _deleteStorageFile(current[UserFields.photoUrl]?.toString());
       }
