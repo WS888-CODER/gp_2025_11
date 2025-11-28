@@ -1117,14 +1117,12 @@ class _JobPostingPageState extends State<JobPostingPage> {
         return true;
       }
     } else {
-      // In create mode, check if user has entered any data
+      // In create mode, check if user has entered any text data
       final hasData = _jobTitleController.text.trim().isNotEmpty ||
           _positionController.text.trim().isNotEmpty ||
-          _selectedSpecialty != null ||
+          (_selectedSpecialty != null && _selectedSpecialty!.trim().isNotEmpty) ||
           _jobDescriptionController.text.trim().isNotEmpty ||
-          _requirements.isNotEmpty ||
-          _startDate != null ||
-          _endDate != null;
+          _requirements.isNotEmpty;
 
       if (!hasData) {
         return true;
@@ -1161,6 +1159,15 @@ class _JobPostingPageState extends State<JobPostingPage> {
         resizeToAvoidBottomInset: false,
         appBar: CustomHeader(
           title: _isEdit ? 'Edit Job' : 'Create Job Posting',
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () async {
+              final shouldPop = await _onWillPop();
+              if (shouldPop && mounted) {
+                Navigator.of(context).pop();
+              }
+            },
+          ),
         ),
         body: SingleChildScrollView(
           child: Padding(
@@ -1514,36 +1521,43 @@ class _JobPostingPageState extends State<JobPostingPage> {
 
                   // AI Generate Button (only show in create mode)
                   if (!_isEdit) ...[
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        if (_loadingCredits)
-                          const Padding(
-                            padding: EdgeInsets.only(right: 12),
-                            child: Text(
-                              'Loading credits...',
-                              style:
-                                  TextStyle(fontSize: 12, color: Colors.grey),
-                            ),
-                          )
-                        else
-                          Padding(
-                            padding: const EdgeInsets.only(right: 12),
-                            child: Text(
-                              '$_aiCreditsRemaining credits remaining (resets daily)',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[700],
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
                     Align(
                       alignment: Alignment.centerRight,
-                      child: _aiCreditsRemaining > 0
+                      child: _loadingCredits
+                          ? Container(
+                              decoration: BoxDecoration(
+                                color: scheme.surface.withOpacity(0.5),
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              child: TextButton.icon(
+                                onPressed: null,
+                                icon: const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        Color(0xFF4A5FBC)),
+                                  ),
+                                ),
+                                label: const Text(
+                                  'Loading credits...',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 24, vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(30),
+                                  ),
+                                ),
+                              ),
+                            )
+                          : _aiCreditsRemaining > 0
                           ? Container(
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
@@ -1569,9 +1583,9 @@ class _JobPostingPageState extends State<JobPostingPage> {
                                 onPressed: _generateJobPost,
                                 icon: const Icon(Icons.auto_awesome,
                                     size: 20, color: Colors.white),
-                                label: const Text(
-                                  'Generate with AI',
-                                  style: TextStyle(
+                                label: Text(
+                                  'Generate with AI ($_aiCreditsRemaining left)',
+                                  style: const TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
                                     color: Colors.white,
@@ -1587,21 +1601,36 @@ class _JobPostingPageState extends State<JobPostingPage> {
                                 ),
                               ),
                             )
-                          : TextButton.icon(
-                              onPressed: null,
-                              icon: const Icon(Icons.auto_awesome, size: 18),
-                              label: const Text(
-                                'Generate with AI',
-                                style: TextStyle(
-                                    fontSize: 14, fontWeight: FontWeight.w600),
+                          : Container(
+                              decoration: BoxDecoration(
+                                color: scheme.surface,
+                                borderRadius: BorderRadius.circular(30),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.08),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 4),
+                                    spreadRadius: 0,
+                                  ),
+                                ],
                               ),
-                              style: TextButton.styleFrom(
-                                foregroundColor: Colors.white,
-                                backgroundColor: Colors.grey,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 8),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(30),
+                              child: TextButton(
+                                onPressed: null,
+                                child: Text(
+                                  'AI credits used (resets daily)',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: scheme.onSurface.withOpacity(0.4),
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 24, vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(30),
+                                  ),
                                 ),
                               ),
                             ),
