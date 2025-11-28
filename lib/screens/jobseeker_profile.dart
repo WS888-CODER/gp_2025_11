@@ -960,7 +960,9 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
       if (hasPhoneDigits) {
         FocusScope.of(context).requestFocus(_phoneFocus);
         SnackHelper.error(
-            context, 'Enter a valid phone number with country code');
+          context,
+          'Enter a valid phone number with country code',
+        );
         return;
       }
 
@@ -976,6 +978,7 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
     _form.currentState?.save();
 
     final current = widget.data;
+    final wasComplete = current[UserFields.isProfileComplete] == true;
 
     final emailValid = email.isNotEmpty && _email.hasMatch(email);
 
@@ -1053,14 +1056,13 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
 
     final currentPhone = (current[UserFields.phone] ?? '').toString().trim();
     final draft = (_phoneE164Draft ?? '').trim();
-    final hasDigits = hasPhoneDigits;
 
     String? newPhoneE164;
     if (draft.isNotEmpty && draft != currentPhone) {
       newPhoneE164 = draft;
     }
 
-    if (!hasDigits) {
+    if (!hasPhoneDigits) {
       if (currentPhone.isNotEmpty) {
         updates[UserFields.phone] = FieldValue.delete();
       }
@@ -1073,6 +1075,7 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
       return;
     }
 
+    // simulate next document after updates
     final next = <String, dynamic>{...current};
     updates.forEach((key, value) {
       if (value is FieldValue) {
@@ -1094,8 +1097,49 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
         mergedEmail.isNotEmpty && _email.hasMatch(mergedEmail);
     final phoneOk = mergedPhone.isNotEmpty;
 
+    final hasAnyContact = mergedEmailValid || phoneOk;
+
+    // once complete → لا يسمح تصير ناقصة
+    if (wasComplete) {
+      if (!photoOk) {
+        SnackHelper.error(
+          context,
+          'Once your profile is complete, you must keep a profile photo.',
+        );
+        return;
+      }
+      if (!cvOk) {
+        SnackHelper.error(
+          context,
+          'Once your profile is complete, you must keep a CV file.',
+        );
+        return;
+      }
+      if (!dobOk) {
+        SnackHelper.error(
+          context,
+          'Once your profile is complete, date of birth cannot be empty.',
+        );
+        return;
+      }
+      if (!natOk) {
+        SnackHelper.error(
+          context,
+          'Once your profile is complete, nationality cannot be empty.',
+        );
+        return;
+      }
+      if (!hasAnyContact) {
+        SnackHelper.error(
+          context,
+          'Once your profile is complete, you must keep at least one contact method (email or phone).',
+        );
+        return;
+      }
+    }
+
     final complete =
-        cvOk && photoOk && dobOk && natOk && (mergedEmailValid || phoneOk);
+        wasComplete || (cvOk && photoOk && dobOk && natOk && hasAnyContact);
     updates[UserFields.isProfileComplete] = complete;
 
     final uid = FirebaseAuth.instance.currentUser!.uid;

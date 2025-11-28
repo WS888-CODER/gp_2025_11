@@ -160,7 +160,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await FirebaseAuth.instance.signOut();
       if (!context.mounted) return;
 
-      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+      Navigator.of(context).pushNamedAndRemoveUntil('/start', (route) => false);
     } on FirebaseFunctionsException catch (e) {
       SnackHelper.error(
         context,
