@@ -461,8 +461,8 @@ export const generateJobPost = functions.https.onRequest(async (req, res) => {
     const prompt = `You are an expert HR professional writing job descriptions. Create a comprehensive, professional, and engaging job description for the following role:
 
 Job Title: "${title}"
-Position Level: "${position || 'Not specified'}"
-Speciality/Field: "${speciality || 'Not specified'}"
+Position Level: "${position || "Not specified"}"
+Speciality/Field: "${speciality || "Not specified"}"
 
 Write a detailed job description (approximately 300-500 words) that includes:
 
@@ -493,7 +493,8 @@ Provide ONLY the job description text without any markdown headers, labels, bold
       messages: [
         {
           role: "system",
-          content: "You are an expert HR professional who writes compelling, detailed job descriptions that attract top talent.",
+          content:
+            "You are an expert HR professional who writes compelling, detailed job descriptions that attract top talent.",
         },
         {
           role: "user",
@@ -1393,7 +1394,33 @@ export const deleteUserAccount = functions.https.onCall(
           console.warn("CV file delete warning:", err);
         }
       }
+      try {
+        const prefix = `NewCV/${userId}_`;
+        const [files] = await bucket.getFiles({ prefix });
 
+        if (files.length) {
+          await Promise.all(
+            files.map(async (file) => {
+              await file.delete();
+              console.log("Deleted NewCV file:", file.name);
+            })
+          );
+          console.log(
+            `Deleted ${files.length} NewCV file(s) for user: ${userId}`
+          );
+        } else {
+          console.log(`No NewCV files found for user: ${userId}`);
+        }
+      } catch (err) {
+        console.warn("NewCV files delete warning:", err);
+      }
+
+      await admin
+        .auth()
+        .deleteUser(userId)
+        .catch((err) => {
+          console.warn("Auth delete warning:", err);
+        });
       await admin
         .auth()
         .deleteUser(userId)
@@ -1714,7 +1741,13 @@ async function createProfessionalCV(newCVText) {
         } else if (sectionName === "Projects") {
           currentY = renderProjects(doc, content, colors, fonts, currentY);
         } else if (sectionName === "Certifications") {
-          currentY = renderCertifications(doc, content, colors, fonts, currentY);
+          currentY = renderCertifications(
+            doc,
+            content,
+            colors,
+            fonts,
+            currentY
+          );
         } else if (sectionName === "Languages") {
           currentY = renderLanguages(doc, content, colors, fonts, currentY);
         } else if (sectionName === "Awards") {
@@ -1744,7 +1777,13 @@ async function createProfessionalCV(newCVText) {
         } else if (sectionName === "Portfolio") {
           currentY = renderPortfolio(doc, content, colors, fonts, currentY);
         } else if (sectionName === "ExtracurricularActivities") {
-          currentY = renderExtracurricular(doc, content, colors, fonts, currentY);
+          currentY = renderExtracurricular(
+            doc,
+            content,
+            colors,
+            fonts,
+            currentY
+          );
         } else if (sectionName === "Interests") {
           currentY = renderInterests(doc, content, colors, fonts, currentY);
         }

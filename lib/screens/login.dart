@@ -172,7 +172,6 @@ class _LoginScreenState extends State<LoginScreen> {
         'failedAttempts': failedAttempts,
       };
     } catch (e) {
-      print('Ã¢ÂÅ’ Error checking account lock status: $e');
       return null;
     }
   }
