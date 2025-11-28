@@ -1,7 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:gp_2025_11/screens/jobseeker_profile.dart';
 
 class AppTheme {
   static const Color primaryPurple = Color(0xFF4A5FBC);

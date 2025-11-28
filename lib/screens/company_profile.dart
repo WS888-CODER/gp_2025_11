@@ -499,7 +499,10 @@ class _CompanyProfileState extends State<CompanyProfile> {
 
         final logoUrlLocal = _pendingLogoFile != null
             ? null
-            : (_logoUrl ?? data[UserFields.photoUrl])?.toString();
+            : ((_logoUrl == null || _logoUrl == '')
+                    ? data[UserFields.photoUrl]
+                    : _logoUrl)
+                ?.toString();
 
         final companyName =
             (data['CompanyName'] ?? data['Name'] ?? 'Company').toString();
@@ -977,6 +980,51 @@ class _EditCompanyPageState extends State<EditCompanyPage>
       vsync: this,
       initialIndex: widget.initialTabIndex,
     );
+
+    final parent = widget.parentState;
+    final data = widget.data;
+
+    final rawPhone = (data[UserFields.phone] ?? '').toString().trim();
+
+    // Description
+    if (parent._desc.text.isEmpty) {
+      parent._desc.text =
+          (data[UserFields.description] ?? '').toString().trim();
+    }
+
+    // Location
+    if (parent._locCtrl.text.isEmpty) {
+      parent._locCtrl.text =
+          (data[UserFields.location] ?? '').toString().trim();
+    }
+
+    // Email
+    if (parent._emailCtrl.text.isEmpty) {
+      parent._emailCtrl.text =
+          (data[UserFields.contactEmail] ?? '').toString().trim();
+    }
+
+    // Phone (controller = local part, draft = full E.164)
+    if (parent._phone.text.isEmpty) {
+      if (rawPhone.startsWith('+')) {
+        parent._phone.text = rawPhone.replaceFirst(RegExp(r'^\+\d+'), '');
+      } else {
+        parent._phone.text = rawPhone;
+      }
+    }
+    parent._phoneE164Draft ??= rawPhone.isEmpty ? null : rawPhone;
+
+    // Website
+    if (parent._websiteCtrl.text.isEmpty) {
+      parent._websiteCtrl.text =
+          (data[UserFields.website] ?? '').toString().trim();
+    }
+
+    // Logo url
+    parent._logoUrl ??= (data[UserFields.photoUrl] ?? '').toString().trim();
+
+    // Mark as filled
+    parent._filledFromServer = true;
   }
 
   @override
@@ -1021,6 +1069,121 @@ class _EditCompanyPageState extends State<EditCompanyPage>
     );
   }
 
+  bool _hasUnsavedChanges() {
+    final parent = widget.parentState;
+    final original = widget.data;
+
+    final origWebsite = (original[UserFields.website] ?? '').toString().trim();
+    final origDesc = (original[UserFields.description] ?? '').toString().trim();
+    final origLoc =
+        parent._cleanLoc((original[UserFields.location] ?? '').toString());
+    final currLoc = parent._cleanLoc(parent._locCtrl.text);
+    final origEmail =
+        (original[UserFields.contactEmail] ?? '').toString().trim();
+    final origPhone = (original[UserFields.phone] ?? '').toString().trim();
+    final origLogoUrl = (original[UserFields.photoUrl] ?? '').toString().trim();
+
+    final currWebsite = parent._websiteCtrl.text.trim();
+    final currDesc = parent._desc.text.trim();
+    final currEmail = parent._emailCtrl.text.trim();
+
+    final draftE164 = parent._phoneE164Draft?.trim() ?? '';
+
+    bool phoneChanged;
+    final initialE164 = origPhone;
+    final currentE164 = draftE164;
+
+    if (initialE164.isEmpty && currentE164.isEmpty) {
+      phoneChanged = false;
+    } else {
+      phoneChanged = currentE164 != initialE164;
+    }
+
+    final currLogoUrl =
+        ((parent._logoUrl ?? original[UserFields.photoUrl]) ?? '')
+            .toString()
+            .trim();
+
+    bool logoChanged = false;
+    if (parent._pendingLogoFile != null) {
+      logoChanged = true;
+    } else if (currLogoUrl != origLogoUrl) {
+      logoChanged = true;
+    }
+
+    final websiteChanged = currWebsite != origWebsite;
+    final descChanged = currDesc != origDesc;
+    final locChanged = currLoc != origLoc;
+    final emailChanged = currEmail != origEmail;
+
+    return websiteChanged ||
+        descChanged ||
+        locChanged ||
+        emailChanged ||
+        phoneChanged ||
+        logoChanged;
+  }
+
+  void _resetParentToOriginal() {
+    final parent = widget.parentState;
+    final data = widget.data;
+
+    final rawPhone = (data[UserFields.phone] ?? '').toString().trim();
+
+    parent.setState(() {
+      parent._desc.text =
+          (data[UserFields.description] ?? '').toString().trim();
+      parent._locCtrl.text =
+          (data[UserFields.location] ?? '').toString().trim();
+      parent._emailCtrl.text =
+          (data[UserFields.contactEmail] ?? '').toString().trim();
+      parent._websiteCtrl.text =
+          (data[UserFields.website] ?? '').toString().trim();
+
+      if (rawPhone.startsWith('+')) {
+        parent._phone.text = rawPhone.replaceFirst(RegExp(r'^\+\d+'), '');
+      } else {
+        parent._phone.text = rawPhone;
+      }
+      parent._phoneE164Draft = rawPhone.isEmpty ? null : rawPhone;
+
+      parent._pendingLogoFile = null;
+      parent._logoUrl = (data[UserFields.photoUrl] ?? '').toString().trim();
+    });
+  }
+
+  Future<bool?> _showLeaveConfirmDialogStyled(BuildContext context) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => const JadeerDialog<bool>(
+        title: 'Discard changes?',
+        primaryLabel: 'Discard',
+        primaryResult: true,
+        secondaryLabel: 'Cancel',
+        secondaryResult: false,
+        content: Text(
+          'You have unsaved changes. Are you sure you want to leave without saving?',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<bool> _handleWillPop() async {
+    if (!_hasUnsavedChanges()) {
+      return true;
+    }
+    final shouldLeave = await _showLeaveConfirmDialogStyled(context);
+    if (shouldLeave == true) {
+      _resetParentToOriginal();
+      return true;
+    }
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
     const brand = Color(0xFF4A5FBC);
@@ -1031,20 +1194,12 @@ class _EditCompanyPageState extends State<EditCompanyPage>
     final isDark = theme.brightness == Brightness.dark;
 
     return WillPopScope(
-      onWillPop: () async {
-        final hasChanges = _hasUnsavedChanges();
-        if (!hasChanges) return true;
-
-        final shouldLeave = await _showLeaveConfirmDialogStyled(context);
-        return shouldLeave ?? false;
-      },
+      onWillPop: _handleWillPop,
       child: ThemedScaffold(
-        // no appBar, we build a custom header in the body
         body: Container(
           color: isDark ? scheme.background : const Color(0xFFF5F5F5),
           child: Column(
             children: [
-              // header with gradient + tabs
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -1112,16 +1267,8 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                                   color: Colors.white,
                                 ),
                                 onPressed: () async {
-                                  final hasChanges = _hasUnsavedChanges();
-                                  if (!hasChanges) {
-                                    Navigator.of(context).pop();
-                                    return;
-                                  }
-
-                                  final shouldLeave =
-                                      await _showLeaveConfirmDialogStyled(
-                                          context);
-                                  if (shouldLeave == true && mounted) {
+                                  final shouldPop = await _handleWillPop();
+                                  if (shouldPop && mounted) {
                                     Navigator.of(context).pop();
                                   }
                                 },
@@ -1183,8 +1330,6 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                   ],
                 ),
               ),
-
-              // upload progress bar (if any)
               ValueListenableBuilder<double?>(
                 valueListenable: parent.progressNotifier,
                 builder: (context, progress, _) {
@@ -1684,70 +1829,6 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                     },
               child: const Text('Save changes'),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  bool _hasUnsavedChanges() {
-    final parent = widget.parentState;
-    final original = widget.data;
-
-    final origWebsite = (original[UserFields.website] ?? '').toString().trim();
-    final origDesc = (original[UserFields.description] ?? '').toString().trim();
-    final origLoc = (original[UserFields.location] ?? '').toString().trim();
-    final origEmail =
-        (original[UserFields.contactEmail] ?? '').toString().trim();
-    final origPhone = (original[UserFields.phone] ?? '').toString().trim();
-    final origLogoUrl = (original[UserFields.photoUrl] ?? '').toString().trim();
-
-    final currWebsite = parent._websiteCtrl.text.trim();
-    final currDesc = parent._desc.text.trim();
-    final currLoc = parent._locCtrl.text.trim();
-    final currEmail = parent._emailCtrl.text.trim();
-
-    final draftE164 = parent._phoneE164Draft?.trim() ?? '';
-    final currPhoneLocal = parent._phone.text.trim();
-
-    if (currWebsite != origWebsite) return true;
-    if (currDesc != origDesc) return true;
-    if (currLoc != origLoc) return true;
-    if (currEmail != origEmail) return true;
-
-    if (currPhoneLocal.isEmpty && origPhone.isNotEmpty) return true;
-    if (draftE164.isNotEmpty && draftE164 != origPhone) return true;
-
-    if (parent._pendingLogoFile != null) {
-      return true;
-    }
-
-    final currLogoUrl =
-        ((parent._logoUrl ?? original[UserFields.photoUrl]) ?? '')
-            .toString()
-            .trim();
-
-    if (currLogoUrl == '' && origLogoUrl.isNotEmpty) return true;
-
-    if (currLogoUrl.isNotEmpty && currLogoUrl != origLogoUrl) return true;
-
-    return false;
-  }
-
-  Future<bool?> _showLeaveConfirmDialogStyled(BuildContext context) {
-    return showDialog<bool>(
-      context: context,
-      builder: (context) => const JadeerDialog<bool>(
-        title: 'Discard changes?',
-        primaryLabel: 'Discard',
-        primaryResult: true,
-        secondaryLabel: 'Cancel',
-        secondaryResult: false,
-        content: Text(
-          'You have unsaved changes. Are you sure you want to leave without saving?',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Colors.white,
           ),
         ),
       ),

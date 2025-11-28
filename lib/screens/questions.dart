@@ -99,6 +99,8 @@ class _QuestionsPageState extends State<QuestionsPage> {
 
   // ===== Add Question (3 max) =====
   Future<void> _addQuestionDialog() async {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     if (_locked) {
       SnackHelper.error(context, 'Questions are locked.');
       return;
@@ -194,20 +196,24 @@ class _QuestionsPageState extends State<QuestionsPage> {
                   borderSide: BorderSide(color: Colors.white, width: 2),
                 ),
               ),
-              dropdownColor: Colors.black,
-              items: const [
+              dropdownColor: const Color(0xFF4A5FBC),
+              items: [
                 DropdownMenuItem(
                   value: 'technical',
                   child: Text(
                     'Technical',
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(
+                      color: scheme.surface,
+                    ),
                   ),
                 ),
                 DropdownMenuItem(
                   value: 'psychometric',
                   child: Text(
                     'Psychometric',
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(
+                      color: scheme.surface,
+                    ),
                   ),
                 ),
               ],
@@ -673,7 +679,10 @@ class _QuestionsPageState extends State<QuestionsPage> {
         appBar: CustomHeader(
           title: 'Job Questions',
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
+            icon: const Icon(
+              Icons.arrow_back,
+              color: Colors.white,
+            ),
             onPressed: () {
               if (_locked) {
                 Navigator.pop(context);
@@ -894,15 +903,21 @@ class _CenteredInfo extends StatelessWidget {
 
 class _EmptyState extends StatelessWidget {
   final VoidCallback? onGenerate;
+
   const _EmptyState({this.onGenerate});
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.help_outline, size: 64, color: Color(0xFF4A5FBC)),
+          Icon(
+            Icons.help_outline,
+            size: 64,
+            color: scheme.primary,
+          ),
           const SizedBox(height: 12),
           const Text('No questions yet',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
