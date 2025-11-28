@@ -1,4 +1,3 @@
-// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
@@ -19,7 +18,7 @@ import 'screens/change_password.dart';
 import 'screens/admin_dashboard.dart';
 import 'screens/job_posting.dart';
 import 'screens/questions.dart';
-import 'screens/job_details_view.dart';
+import 'screens/job_post_details.dart';
 import 'screens/jobseeker_home.dart';
 import 'screens/company_home.dart';
 import 'package:gp_2025_11/screens/favorites.dart';
@@ -72,7 +71,6 @@ class Jadeer extends StatelessWidget {
         '/profile/jobseeker': (context) => const JobSeekerProfile(),
         '/profile/company': (context) => const CompanyProfile(),
         '/favorites': (context) => const FavoritesPage(),
-
         '/jobseeker-home': (context) {
           final args = ModalRoute.of(context)!.settings.arguments
               as Map<String, dynamic>?;
@@ -83,7 +81,6 @@ class Jadeer extends StatelessWidget {
               as Map<String, dynamic>?;
           return CompanyHome(companyId: args?['companyId']);
         },
-
         '/settings': (context) {
           final args = ModalRoute.of(context)!.settings.arguments
               as Map<String, dynamic>;
@@ -109,7 +106,6 @@ class Jadeer extends StatelessWidget {
             hasJobSelection: args?['hasJobSelection'] ?? false,
           );
         },
-        // About page route
         '/about': (context) => const AboutPage(),
       },
     );

@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:gp_2025_11/config/theme.dart';
-import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 
@@ -162,7 +161,6 @@ class _QuestionsPageState extends State<QuestionsPage> {
                       maxLines: null,
                     ),
                     const SizedBox(height: 4),
-                    // fixed space for the min-length message to avoid jumping
                     SizedBox(
                       height: 20,
                       child: isBelowMin
@@ -1117,7 +1115,6 @@ class _JobHeaderCard extends StatelessWidget {
                   ),
               ],
             ),
-            // Orange arrow button positioned at bottom right
             if (onTap != null)
               Positioned(
                 bottom: -8,

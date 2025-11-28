@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:math';
 import 'dart:async';
 
@@ -16,7 +15,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   final _otpController = TextEditingController();
   bool _isLoading = false;
   bool _isResending = false;
-  String? _otpError; // Ù„Ø­ÙØ¸ Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ø®Ø·Ø£
+  String? _otpError;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseFunctions _functions =
       FirebaseFunctions.instanceFor(region: 'us-central1');
@@ -42,7 +41,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       _resendCountdown = 120;
     });
 
-    _resendTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_resendCountdown > 0) {
         setState(() {
           _resendCountdown--;
@@ -51,24 +50,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
         timer.cancel();
       }
     });
-  }
-
-  void _showErrorDialog(String message) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => JadeerDialog<void>(
-        title: 'Error',
-        content: Text(
-          message,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 15,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        primaryLabel: 'OK',
-      ),
-    );
   }
 
   void _showSuccessSnackBar(String message) {
@@ -91,7 +72,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
 
     setState(() {
       _isResending = true;
-      _otpError = null; // Ù…Ø³Ø­ Ø£ÙŠ Ø®Ø·Ø£ Ø³Ø§Ø¨Ù‚
+      _otpError = null;
     });
 
     try {
@@ -114,7 +95,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
           'UserType': userType,
           'CreatedAt': FieldValue.serverTimestamp(),
           'ExpiresAt': Timestamp.fromDate(
-            DateTime.now().add(Duration(minutes: 2)),
+            DateTime.now().add(const Duration(minutes: 2)),
           ),
           'Used': false,
         });
@@ -155,20 +136,14 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
         'companyName': companyName,
         'name': name,
       });
-
-      print('Company emails sent successfully');
-    } catch (e) {
-      print('âš ï¸ Error sending company emails: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> _verifyOTP(String email, String userId, String userType) async {
-    // Ù…Ø³Ø­ Ø£ÙŠ Ø®Ø·Ø£ Ø³Ø§Ø¨Ù‚
     setState(() {
       _otpError = null;
     });
 
-    // Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø£Ù† Ø§Ù„Ø­Ù‚Ù„ ØºÙŠØ± ÙØ§Ø±Øº
     if (_otpController.text.isEmpty) {
       setState(() {
         _otpError = 'Please enter the verification code.';
@@ -176,7 +151,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       return;
     }
 
-    // Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø£Ù† Ø§Ù„ÙƒÙˆØ¯ 6 Ø£Ø±Ù‚Ø§Ù…
     if (_otpController.text.length != 6) {
       setState(() {
         _otpError = 'The verification code must be 6 digits.';
@@ -234,7 +208,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
 
         if (userType == 'Admin') {
           _showSuccessSnackBar('Verification successful!');
-          await Future.delayed(Duration(milliseconds: 500));
+          await Future.delayed(const Duration(milliseconds: 500));
           Navigator.pushReplacementNamed(context, '/admin-dashboard');
         } else if (userType == 'Company') {
           DocumentSnapshot userDoc =
@@ -253,9 +227,9 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
             barrierDismissible: false,
             builder: (ctx) => WillPopScope(
               onWillPop: () async => false,
-              child: JadeerDialog<String>(
+              child: const JadeerDialog<String>(
                 title: 'Email Verified',
-                content: const Text(
+                content: Text(
                   'Your email has been verified successfully! Please check your email for instructions on submitting company verification documents.',
                   style: TextStyle(
                     color: Colors.white,
@@ -280,9 +254,9 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
             barrierDismissible: false,
             builder: (ctx) => WillPopScope(
               onWillPop: () async => false,
-              child: JadeerDialog<String>(
+              child: const JadeerDialog<String>(
                 title: 'Email Verified',
-                content: const Text(
+                content: Text(
                   'Your email has been verified successfully! You can now login to your account.',
                   style: TextStyle(
                     color: Colors.white,
@@ -340,15 +314,12 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       body: SizedBox.expand(
         child: Stack(
           children: [
-            // Ø®Ù„ÙÙŠØ© office.png
             Positioned.fill(
               child: Image.asset(
                 'assets/images/office.png',
                 fit: BoxFit.cover,
               ),
             ),
-
-            // Ù„ÙˆØ¬Ùˆ j_filled ÙÙŠ Ø£Ø¹Ù„Ù‰ Ø§Ù„ÙŠÙ…ÙŠÙ†
             Positioned(
               top: 50,
               right: 30,
@@ -359,12 +330,10 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                 fit: BoxFit.contain,
               ),
             ),
-
-            // Ø§Ù„Ù…Ø±Ø¨Ø¹ Ø§Ù„Ø¨Ù†ÙØ³Ø¬ÙŠ ÙÙŠ Ù…Ù†ØªØµÙ Ø§Ù„Ø´Ø§Ø´Ø©
             Center(
               child: Container(
                 width: MediaQuery.of(context).size.width * 0.85,
-                padding: EdgeInsets.all(40),
+                padding: const EdgeInsets.all(40),
                 decoration: BoxDecoration(
                   color: const Color(0xFF4A5FBC).withOpacity(0.8),
                   borderRadius: BorderRadius.circular(30),
@@ -372,10 +341,8 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                 child: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment
-                        .center, // ØªØºÙŠÙŠØ± Ù…Ù† start Ø¥Ù„Ù‰ center
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // Ø§Ù„Ø¹Ù†ÙˆØ§Ù† Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ
                       const Text(
                         'Enter Verification Code',
                         style: TextStyle(
@@ -383,19 +350,18 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
-                        textAlign: TextAlign.center, // Ø¥Ø¶Ø§ÙØ© textAlign
+                        textAlign: TextAlign.center,
                       ),
 
                       const SizedBox(height: 16),
 
-                      // Ø§Ù„Ù†Øµ Ø§Ù„ØªÙˆØ¶ÙŠØ­ÙŠ
                       Text(
                         'A 6-digit verification code has been sent to your email.',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.white.withOpacity(0.8),
                         ),
-                        textAlign: TextAlign.center, // Ø¥Ø¶Ø§ÙØ© textAlign
+                        textAlign: TextAlign.center,
                       ),
 
                       const SizedBox(height: 40),
@@ -437,10 +403,10 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                             borderSide: BorderSide(color: Colors.red),
                           ),
                           counterText: '',
-                          contentPadding: EdgeInsets.symmetric(vertical: 20),
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 20),
                         ),
                         onChanged: (value) {
-                          // Ù…Ø³Ø­ Ø§Ù„Ø®Ø·Ø£ Ø¹Ù†Ø¯ Ø¨Ø¯Ø§ÙŠØ© Ø§Ù„ÙƒØªØ§Ø¨Ø©
                           if (_otpError != null) {
                             setState(() {
                               _otpError = null;
@@ -449,7 +415,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                         },
                       ),
 
-                      // Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ø®Ø·Ø£
                       if (_otpError != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
@@ -466,7 +431,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
 
                       const SizedBox(height: 16),
 
-                      // Ù…Ø¤Ù‚Øª Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„Ø¥Ø±Ø³Ø§Ù„
                       if (_resendCountdown > 0)
                         Center(
                           child: Text(
@@ -480,11 +444,9 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
 
                       const SizedBox(height: 40),
 
-                      // Ø§Ù„Ø£Ø²Ø±Ø§Ø± - Resend Code ÙˆØ§Ù„Ø³Ù‡Ù…
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // Ø²Ø± Resend Code (Ø¨Ø¯ÙˆÙ† Ø¥Ø·Ø§Ø±)
                           TextButton.icon(
                             onPressed: (_isResending || _resendCountdown > 0)
                                 ? null
@@ -521,8 +483,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                               ),
                             ),
                           ),
-
-                          // Ø²Ø± Verify (Ø§Ù„Ø³Ù‡Ù…)
                           Container(
                             width: 45,
                             height: 45,
@@ -558,7 +518,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                 ),
               ),
             ),
-            // âœ… Ø¥Ø¶Ø§ÙØ© Ø³Ù‡Ù… Ø§Ù„Ø±Ø¬ÙˆØ¹ Ù„Ù„Ø®Ù„Ù ÙÙŠ Ø£Ø¹Ù„Ù‰ Ø§Ù„ÙŠØ³Ø§Ø± - Ø¢Ø®Ø± Ø¹Ù†ØµØ± ÙÙŠ Stack
             Positioned(
               top: 50,
               left: 30,

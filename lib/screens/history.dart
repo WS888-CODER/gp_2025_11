@@ -274,9 +274,7 @@ class _HistoryPageState extends State<HistoryPage>
                   : '',
               leadingIcon: Icons.mic,
               leadingBgColor: AppTheme.primaryPurple,
-              onTap: () {
-                // TODO: open mock interview details later
-              },
+              onTap: () {},
             );
           },
         );
@@ -335,9 +333,7 @@ class _HistoryPageState extends State<HistoryPage>
               ].join('  •  '),
               leadingIcon: Icons.work,
               leadingBgColor: AppTheme.primaryPurple,
-              onTap: () {
-                // TODO: open job application details later
-              },
+              onTap: () {},
             );
           },
         );

@@ -2,7 +2,6 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gp_2025_11/config/theme.dart';
-import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:provider/provider.dart';
 
 class SettingsScreen extends StatefulWidget {

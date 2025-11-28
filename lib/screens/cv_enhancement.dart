@@ -5,7 +5,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:gp_2025_11/config/themed_scaffold.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import '../config/theme.dart';
 
@@ -114,7 +113,6 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
         });
       }
     } catch (e) {
-      print('Error fetching credits: $e');
       setState(() {
         _loadingCredits = false;
       });
@@ -160,9 +158,7 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
                   userData?['CompanyName'] ?? userData?['Name'] ?? 'Company';
               companyLogo = userData?['PhotoURL'] ?? '';
             }
-          } catch (e) {
-            print('Error fetching company: $e');
-          }
+          } catch (e) {}
         }
 
         allJobsList.add({
@@ -196,7 +192,6 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
         _loadingJobs = false;
       });
     } catch (e) {
-      print('Error loading jobs: $e');
       setState(() {
         _loadingJobs = false;
       });

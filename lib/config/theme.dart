@@ -248,147 +248,6 @@ class JadeerDialog<T> extends StatelessWidget {
   }
 }
 
-class JobSeekerAppBar extends StatelessWidget implements PreferredSizeWidget {
-  final Widget title;
-
-  const JobSeekerAppBar({
-    super.key,
-    required this.title,
-  });
-
-  @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
-
-  Stream<Map<String, dynamic>> _userMiniStream(String userId) {
-    if (userId.isEmpty) {
-      return Stream.value({
-        'name': 'User',
-        'email': '',
-        'photo': '',
-        'complete': false,
-      });
-    }
-    return FirebaseFirestore.instance
-        .collection('Users')
-        .doc(userId)
-        .snapshots()
-        .map((snap) {
-      final d = snap.data() ?? {};
-      return {
-        'name': (d['Name'] ?? '').toString().trim(),
-        'email': (d['Email'] ?? '').toString().trim(),
-        'photo': (d['PhotoURL'] ?? '').toString().trim(),
-        'complete': d['IsProfileComplete'] == true,
-      };
-    });
-  }
-
-  String _initials(String nameOrEmail) {
-    final s = nameOrEmail.trim();
-    if (s.isEmpty) return 'U';
-    final parts = s.split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
-    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-    final base = s.contains('@') ? s.split('@').first : s;
-    return base.isNotEmpty
-        ? base.substring(0, base.length > 1 ? 2 : 1).toUpperCase()
-        : 'U';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    const brand = AppTheme.primaryPurple;
-    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
-
-    return AppBar(
-      backgroundColor: brand,
-      elevation: 0,
-      leadingWidth: 56,
-      leading: uid.isEmpty
-          ? null
-          : Padding(
-              padding: const EdgeInsets.only(left: 8),
-              child: StreamBuilder<Map<String, dynamic>>(
-                stream: _userMiniStream(uid),
-                builder: (context, snap) {
-                  final name = (snap.data?['name'] ?? '').toString();
-                  final email = (snap.data?['email'] ?? '').toString();
-                  final photo = (snap.data?['photo'] ?? '').toString();
-                  final complete = (snap.data?['complete'] == true);
-                  final placeholder = _initials(name.isNotEmpty ? name : email);
-
-                  final avatar = Hero(
-                    tag: 'profileAvatar',
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        CircleAvatar(
-                          radius: 22,
-                          backgroundImage:
-                              photo.isNotEmpty ? NetworkImage(photo) : null,
-                          backgroundColor: const Color(0xFFFF7B7B),
-                          foregroundColor: Colors.white,
-                          child: photo.isEmpty
-                              ? Text(
-                                  placeholder,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                  ),
-                                )
-                              : null,
-                        ),
-                      ],
-                    ),
-                  );
-
-                  return Tooltip(
-                    message:
-                        complete ? 'Profile complete' : 'Profile incomplete',
-                    child: InkWell(
-                      customBorder: const CircleBorder(),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const JobSeekerProfile(),
-                          ),
-                        );
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: avatar,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-      title: title,
-      actions: [
-        IconButton(
-          tooltip: 'Notifications',
-          icon: const Icon(Icons.notifications_none, color: Colors.white),
-          onPressed: () => SnackHelper.error(
-              context, 'Notifications will be available soon'),
-        ),
-        IconButton(
-          tooltip: 'Settings',
-          icon: const Icon(Icons.settings_outlined, color: Colors.white),
-          onPressed: () {
-            if (uid.isEmpty) return;
-            Navigator.pushNamed(
-              context,
-              '/settings',
-              arguments: {'userType': 'JobSeeker', 'userId': uid},
-            );
-          },
-        ),
-      ],
-    );
-  }
-}
-
 class AppSettingsNotifier extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.light;
 
@@ -581,6 +440,48 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class ThemedScaffold extends StatelessWidget {
+  final PreferredSizeWidget? appBar;
+  final Widget? body;
+  final Widget? bottomNavigationBar;
+  final Widget? floatingActionButton;
+  final Widget? drawer;
+  final Widget? endDrawer;
+  final bool? resizeToAvoidBottomInset;
+  final Color? overridePageBgColor;
+
+  const ThemedScaffold({
+    super.key,
+    this.appBar,
+    this.body,
+    this.bottomNavigationBar,
+    this.floatingActionButton,
+    this.drawer,
+    this.endDrawer,
+    this.resizeToAvoidBottomInset,
+    this.overridePageBgColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final Color pageBgColor = overridePageBgColor ??
+        (isDark ? const Color(0xFF0F0F12) : const Color(0xFFF7F6FC));
+
+    return Scaffold(
+      backgroundColor: pageBgColor,
+      appBar: appBar,
+      body: body,
+      bottomNavigationBar: bottomNavigationBar,
+      floatingActionButton: floatingActionButton,
+      drawer: drawer,
+      endDrawer: endDrawer,
+      resizeToAvoidBottomInset: resizeToAvoidBottomInset,
     );
   }
 }
