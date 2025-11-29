@@ -206,6 +206,27 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
           'lastLoginTime': FieldValue.serverTimestamp(),
         });
 
+        final args =
+            ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+        final fromForgotPassword = args['fromForgotPassword'] ?? false;
+
+        if (fromForgotPassword) {
+          _showSuccessSnackBar('Email verified successfully!');
+          await Future.delayed(const Duration(milliseconds: 500));
+
+          Navigator.pushReplacementNamed(
+            context,
+            '/forgot-password',
+            arguments: {
+              'email': email,
+              'emailVerified': true,
+            },
+          );
+
+          await _firestore.collection('AdminOTPs').doc(email).delete();
+          return;
+        }
+
         if (userType == 'Admin') {
           _showSuccessSnackBar('Verification successful!');
           await Future.delayed(const Duration(milliseconds: 500));

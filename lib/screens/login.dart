@@ -111,6 +111,37 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<bool> _sendSignupOTPEmail(
+      String email, String otp, String userType) async {
+    try {
+      final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
+      final callable = functions.httpsCallable('sendSignupOtp');
+
+      final result = await callable.call({
+        'email': email.trim(),
+        'otp': otp.trim(),
+        'userType': userType,
+      });
+
+      if (result.data != null && result.data['success'] == true) {
+        await _firestore.collection('AdminOTPs').doc(email).set({
+          'OTP': otp,
+          'Email': email,
+          'UserType': userType,
+          'CreatedAt': FieldValue.serverTimestamp(),
+          'ExpiresAt': Timestamp.fromDate(
+            DateTime.now().add(const Duration(minutes: 2)),
+          ),
+          'Used': false,
+        });
+        return true;
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<Map<String, dynamic>?> _checkAccountLockStatus(String email) async {
     try {
       final querySnapshot = await _firestore
@@ -293,20 +324,12 @@ class _LoginScreenState extends State<LoginScreen> {
         final userData = userQuery.docs.first.data();
         final userType = userData['UserType'] ?? userData['userType'] ?? '';
 
-        // If Company, check status before attempting password verification
         if (userType == 'Company') {
           final accountStatus = userData['AccountStatus'] ??
               userData['accountStatus'] ??
               'Pending';
 
-          if (accountStatus == 'Pending') {
-            setState(() {
-              _loginError =
-                  'Your account is pending approval from admin. Please wait.';
-              _isLoading = false;
-            });
-            return;
-          } else if (accountStatus == 'Rejected') {
+          if (accountStatus == 'Rejected') {
             setState(() {
               _loginError = 'Your account has been rejected. Contact support.';
               _isLoading = false;
@@ -322,7 +345,6 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       final userId = userCredential.user!.uid;
-
       await _resetFailedLoginAttempts(userId);
 
       final userDoc = await _firestore.collection('Users').doc(userId).get();
@@ -337,11 +359,47 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final data = userDoc.data() as Map<String, dynamic>;
       final userType = data['UserType'] ?? data['userType'] ?? '';
-
       final isEmailVerified =
           data['IsEmailVerified'] ?? data['isEmailVerified'] ?? false;
       final accountStatus =
           data['AccountStatus'] ?? data['accountStatus'] ?? 'Pending';
+
+// تحقق من Email Verification للـ JobSeeker و Company فقط
+      if ((userType == 'JobSeeker' || userType == 'Company') &&
+          !isEmailVerified) {
+        // أرسل OTP جديد
+        final otp = _generateOTP();
+        final otpSent = await _sendSignupOTPEmail(
+          _emailController.text.trim(),
+          otp,
+          userType,
+        );
+
+        if (otpSent) {
+          // انقله لصفحة OTP
+          Navigator.pushReplacementNamed(
+            context,
+            '/otp-verification',
+            arguments: {
+              'email': _emailController.text.trim(),
+              'userId': userId,
+              'userType': userType,
+            },
+          );
+          SnackHelper.success(context,
+              'Please verify your email. A new verification code has been sent.');
+          setState(() => _isLoading = false);
+          return;
+        } else {
+          await _auth.signOut();
+          setState(() {
+            _loginError =
+                'Failed to send verification code. Please try again later.';
+          });
+          setState(() => _isLoading = false);
+          return;
+        }
+      }
 
       if (userType == 'Admin') {
         final otp = _generateOTP();
@@ -390,6 +448,13 @@ class _LoginScreenState extends State<LoginScreen> {
           setState(() {
             _loginError = 'Please verify your email first. Check your inbox.';
           });
+        } else if (accountStatus == 'Pending') {
+          // ← أضفنا الكود هنا!
+          await _auth.signOut();
+          setState(() {
+            _loginError =
+                'Your account is pending approval from admin. Please wait.';
+          });
         } else if (accountStatus == 'Verified') {
           Navigator.pushReplacementNamed(
             context,
@@ -397,7 +462,6 @@ class _LoginScreenState extends State<LoginScreen> {
             arguments: {'companyId': userId},
           );
         }
-        // Note: pending/rejected cases are now checked BEFORE password verification
         setState(() => _isLoading = false);
         return;
       }
@@ -510,10 +574,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                 TextStyle(color: Colors.white.withOpacity(0.6)),
                             enabledBorder: UnderlineInputBorder(
                               borderSide: BorderSide(
-                                  color: Colors.white.withOpacity(0.5)),
+                                  color: _loginError != null
+                                      ? Colors.red
+                                      : Colors.white.withOpacity(0.5)),
                             ),
-                            focusedBorder: const UnderlineInputBorder(
-                              borderSide: BorderSide(color: Colors.white),
+                            focusedBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(
+                                  color: _loginError != null
+                                      ? Colors.red
+                                      : Colors.white),
                             ),
                             errorBorder: const UnderlineInputBorder(
                               borderSide: BorderSide(color: Colors.red),

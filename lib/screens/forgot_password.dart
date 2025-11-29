@@ -43,6 +43,37 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     super.dispose();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // تحقق إذا جاي من OTP verification
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    if (args != null && args['emailVerified'] == true) {
+      setState(() {
+        _userEmail = args['email'];
+        _currentStep = 2;
+      });
+
+      // يرسل OTP للـ password reset
+      Future.delayed(Duration.zero, () async {
+        String otp = _generateOTP();
+        bool otpSent = await _sendOTPEmail(_userEmail, otp);
+        if (otpSent) {
+          SnackHelper.success(
+              context, 'Password reset code sent to your email');
+          _startResendTimer();
+        } else {
+          setState(() {
+            _emailError =
+                'Failed to send password reset code. Please try again.';
+          });
+        }
+      });
+    }
+  }
+
   bool _isValidEmail(String email) {
     return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
   }
@@ -150,10 +181,33 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       Map<String, dynamic> userData =
           userSnapshot.docs.first.data() as Map<String, dynamic>;
       String userType = userData['UserType'] ?? userData['userType'] ?? '';
-
       if (userType == 'Admin') {
         setState(() {
           _emailError = 'Email not found. Please check and try again.';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      if (userType == 'Company') {
+        String accountStatus =
+            userData['AccountStatus'] ?? userData['accountStatus'] ?? 'Pending';
+        if (accountStatus == 'Rejected') {
+          setState(() {
+            _emailError =
+                'Your account has been rejected. Contact support for assistance.';
+            _isLoading = false;
+          });
+          return;
+        }
+      }
+
+      bool isEmailVerified =
+          userData['IsEmailVerified'] ?? userData['isEmailVerified'] ?? false;
+      if (!isEmailVerified) {
+        setState(() {
+          _emailError =
+              'Please verify your email first before resetting your password.';
           _isLoading = false;
         });
         return;
