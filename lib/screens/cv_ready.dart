@@ -141,8 +141,14 @@ class _PublishScreenState extends State<PublishScreen> {
     return WillPopScope(
       onWillPop: _onWillPop,
       child: ThemedScaffold(
-        appBar: const CustomHeader(
+        appBar: CustomHeader(
           title: 'CV Enhancement Results',
+          leading: widget.isFromHistory
+              ? IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => Navigator.of(context).pop(),
+                )
+              : null,
         ),
         body: StreamBuilder<DocumentSnapshot>(
           stream: FirebaseFirestore.instance
