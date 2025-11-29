@@ -1025,20 +1025,17 @@ class _JobPostingPageState extends State<JobPostingPage> {
     bool isBold = false,
     bool required = true,
   }) {
-    final theme = Theme.of(context);
+    final scheme = Theme.of(context).colorScheme;
     final showError = _submitted && isInvalid && required;
-
-    final baseColor =
-        showError ? theme.colorScheme.error : theme.colorScheme.onSurface;
 
     final baseStyle = TextStyle(
       fontSize: 16,
       fontWeight: isBold ? FontWeight.w600 : FontWeight.w500,
-      color: baseColor,
+      color: showError ? Colors.red : scheme.onSurface,
     );
 
-    // Only show asterisk when there's an error (after submission)
-    if (!showError) {
+    // Show asterisk for all required fields
+    if (!required) {
       return Text(text, style: baseStyle);
     }
 
@@ -1046,11 +1043,11 @@ class _JobPostingPageState extends State<JobPostingPage> {
       text: TextSpan(
         text: text,
         style: baseStyle,
-        children: [
+        children: const [
           TextSpan(
             text: ' *',
             style: TextStyle(
-              color: theme.colorScheme.error,
+              color: Colors.red,
               fontWeight: FontWeight.bold,
             ),
           ),
