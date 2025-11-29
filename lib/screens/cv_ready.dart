@@ -149,6 +149,7 @@ class _PublishScreenState extends State<PublishScreen> {
                   onPressed: () => Navigator.of(context).pop(),
                 )
               : null,
+          showBack: false,
         ),
         body: StreamBuilder<DocumentSnapshot>(
           stream: FirebaseFirestore.instance
