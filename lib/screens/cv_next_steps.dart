@@ -320,6 +320,18 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
       child: ThemedScaffold(
         appBar: CustomHeader(
           title: _isEnhancing ? 'Enhancing CV' : 'Complete Your CV',
+          leading: Padding(
+            padding: const EdgeInsets.only(left: 8, right: 8, bottom: 16),
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () async {
+                final shouldPop = await _onWillPop();
+                if (shouldPop && mounted) {
+                  Navigator.pop(context);
+                }
+              },
+            ),
+          ),
         ),
         body: _buildBody(),
       ),
