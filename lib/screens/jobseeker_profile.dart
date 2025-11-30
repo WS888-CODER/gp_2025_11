@@ -17,6 +17,7 @@ import 'package:intl_phone_field/phone_number.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 const kUsersCollection = 'Users';
+const kApplicationsCollection = 'Applications';
 
 class UserFields {
   static const cvUrl = 'CVURL';
@@ -1075,7 +1076,6 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
       return;
     }
 
-    // simulate next document after updates
     final next = <String, dynamic>{...current};
     updates.forEach((key, value) {
       if (value is FieldValue) {
@@ -1099,50 +1099,65 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
 
     final hasAnyContact = mergedEmailValid || phoneOk;
 
-    // once complete → لا يسمح تصير ناقصة
-    if (wasComplete) {
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+
+    bool hasApplications = false;
+    try {
+      final appsSnap = await FirebaseFirestore.instance
+          .collection(kApplicationsCollection)
+          .where('UserID', isEqualTo: uid)
+          .limit(1)
+          .get();
+      hasApplications = appsSnap.docs.isNotEmpty;
+    } catch (_) {
+      SnackHelper.error(
+        context,
+        'Could not verify your applications. Please try again.',
+      );
+      return;
+    }
+
+    if (wasComplete && hasApplications) {
       if (!photoOk) {
         SnackHelper.error(
           context,
-          'Once your profile is complete, you must keep a profile photo.',
+          'While you have applications, you must keep a profile photo.',
         );
         return;
       }
       if (!cvOk) {
         SnackHelper.error(
           context,
-          'Once your profile is complete, you must keep a CV file.',
+          'While you have applications, you must keep a CV file.',
         );
         return;
       }
       if (!dobOk) {
         SnackHelper.error(
           context,
-          'Once your profile is complete, date of birth cannot be empty.',
+          'While you have applications, date of birth cannot be empty.',
         );
         return;
       }
       if (!natOk) {
         SnackHelper.error(
           context,
-          'Once your profile is complete, nationality cannot be empty.',
+          'While you have applications, nationality cannot be empty.',
         );
         return;
       }
       if (!hasAnyContact) {
         SnackHelper.error(
           context,
-          'Once your profile is complete, you must keep at least one contact method (email or phone).',
+          'While you have applications, you must keep at least one contact method (email or phone).',
         );
         return;
       }
     }
 
-    final complete =
-        wasComplete || (cvOk && photoOk && dobOk && natOk && hasAnyContact);
+    final complete = (wasComplete && hasApplications) ||
+        (cvOk && photoOk && dobOk && natOk && hasAnyContact);
     updates[UserFields.isProfileComplete] = complete;
-
-    final uid = FirebaseAuth.instance.currentUser!.uid;
 
     setState(() => _saving = true);
     try {

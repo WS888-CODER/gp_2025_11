@@ -14,6 +14,7 @@ import 'package:intl_phone_field/phone_number.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 const kUsersCollection = 'Users';
+const kJobsCollection = 'Jobs';
 
 class UserFields {
   static const photoUrl = 'PhotoURL';
@@ -352,32 +353,50 @@ class _CompanyProfileState extends State<CompanyProfile> {
       return false;
     }
 
-    if (wasComplete) {
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+
+    bool hasJobs = false;
+    try {
+      final jobsSnap = await FirebaseFirestore.instance
+          .collection(kJobsCollection)
+          .where('UserID', isEqualTo: uid)
+          .limit(1)
+          .get();
+      hasJobs = jobsSnap.docs.isNotEmpty;
+    } catch (_) {
+      SnackHelper.error(
+        uiContext,
+        'Could not verify your job posts. Please try again.',
+      );
+      return false;
+    }
+
+    if (wasComplete && hasJobs) {
       if (!_hasAnyLogo(current)) {
         SnackHelper.error(
           uiContext,
-          'Once your profile is complete, you must keep a company logo.',
+          'While you have job posts, you must keep a company logo.',
         );
         return false;
       }
       if (desc.length < 150) {
         SnackHelper.error(
           uiContext,
-          'Once your profile is complete, description must be at least 150 characters.',
+          'While you have job posts, description must be at least 150 characters.',
         );
         return false;
       }
       if (loc.isEmpty) {
         SnackHelper.error(
           uiContext,
-          'Once your profile is complete, location cannot be empty.',
+          'While you have job posts, location cannot be empty.',
         );
         return false;
       }
       if (!hasAnyContact) {
         SnackHelper.error(
           uiContext,
-          'Once your profile is complete, you must keep at least one contact method (email or phone).',
+          'While you have job posts, you must keep at least one contact method (email or phone).',
         );
         return false;
       }
@@ -467,13 +486,13 @@ class _CompanyProfileState extends State<CompanyProfile> {
         }
         _logoUrl = newLogoUrl;
       } else if (_logoUrl == '') {
-        if (!wasComplete) {
+        if (!wasComplete || !hasJobs) {
           updates[UserFields.photoUrl] = FieldValue.delete();
           updates[UserFields.photoPath] = FieldValue.delete();
         } else {
           SnackHelper.error(
             uiContext,
-            'You cannot remove the logo after the profile is marked complete.',
+            'You cannot remove the logo while you have job posts.',
           );
           return false;
         }
@@ -484,7 +503,6 @@ class _CompanyProfileState extends State<CompanyProfile> {
         return false;
       }
 
-      final uid = FirebaseAuth.instance.currentUser!.uid;
       await FirebaseFirestore.instance
           .collection(kUsersCollection)
           .doc(uid)
