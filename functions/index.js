@@ -995,6 +995,8 @@ The CV should ideally contain these sections:
 
 Review the CV text below and return the names of sections that are MISSING or have NO ACTUAL CONTENT.
 
+IMPORTANT: If the CV has no text or is completely empty, return ALL seven sections as missing.
+
 CRITICAL RULES:
 - BE SMART about recognizing sections even WITHOUT explicit headers
 - A section EXISTS if the information is present ANYWHERE in the CV, regardless of formatting
