@@ -976,6 +976,25 @@ export const detectMissingSections = v2.https.onCall(
       console.log(`📊 CV text length: ${oldCVText.length} characters`);
       console.log(`💼 Has job: ${hasJob}`);
 
+      // If CV is blank, return all sections as missing
+      if (oldCVText.trim().length === 0) {
+        console.log(`⚠️ CV is blank, returning all sections as missing`);
+        return {
+          success: true,
+          missingSections: [
+            "PersonalInformation",
+            "Summary",
+            "Experience",
+            "Education",
+            "Skills",
+            "Certifications",
+            "Languages"
+          ],
+          hasMissingSections: true,
+          suggestedSkills: null,
+        };
+      }
+
       // Initialize OpenAI
       const openai = new OpenAI({
         apiKey: process.env.OPENAI_API_KEY,
