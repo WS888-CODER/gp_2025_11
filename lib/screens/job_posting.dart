@@ -1117,7 +1117,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
       // In create mode, check if user has entered any text data
       final hasData = _jobTitleController.text.trim().isNotEmpty ||
           _positionController.text.trim().isNotEmpty ||
-          (_selectedSpecialty != null && _selectedSpecialty!.trim().isNotEmpty) ||
+          (_selectedSpecialty != null &&
+              _selectedSpecialty!.trim().isNotEmpty) ||
           _jobDescriptionController.text.trim().isNotEmpty ||
           _requirements.isNotEmpty;
 
@@ -1391,7 +1392,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
                                   maxLength: 100,
                                   decoration: InputDecoration(
                                     hintText: 'Select specialty',
-                                    hintStyle: const TextStyle(color: Colors.grey),
+                                    hintStyle:
+                                        const TextStyle(color: Colors.grey),
                                     filled: true,
                                     fillColor: Colors.transparent,
                                     border: const OutlineInputBorder(
@@ -1404,12 +1406,14 @@ class _JobPostingPageState extends State<JobPostingPage> {
                                           BorderRadius.all(Radius.circular(12)),
                                       borderSide: BorderSide.none,
                                     ),
-                                    focusedErrorBorder: const OutlineInputBorder(
+                                    focusedErrorBorder:
+                                        const OutlineInputBorder(
                                       borderRadius:
                                           BorderRadius.all(Radius.circular(12)),
                                       borderSide: BorderSide.none,
                                     ),
-                                    errorStyle: const TextStyle(height: 0, fontSize: 0),
+                                    errorStyle:
+                                        const TextStyle(height: 0, fontSize: 0),
                                     errorMaxLines: 1,
                                     counterText: '',
                                     suffixIcon: GestureDetector(
@@ -1422,7 +1426,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
                                       },
                                       child: AnimatedRotation(
                                         turns: focusNode.hasFocus ? 0.5 : 0,
-                                        duration: const Duration(milliseconds: 200),
+                                        duration:
+                                            const Duration(milliseconds: 200),
                                         child: const Icon(
                                           Icons.arrow_drop_down,
                                           color: Color(0xFFFD6C67),
@@ -1430,44 +1435,44 @@ class _JobPostingPageState extends State<JobPostingPage> {
                                       ),
                                     ),
                                   ),
-                                onChanged: (value) {
-                                  setState(() {});
-                                },
-                                onFieldSubmitted: (value) {
-                                  final match = _specialtyOptions.firstWhere(
-                                    (option) =>
-                                        option.toLowerCase() ==
-                                        value.toLowerCase(),
-                                    orElse: () => '',
-                                  );
+                                  onChanged: (value) {
+                                    setState(() {});
+                                  },
+                                  onFieldSubmitted: (value) {
+                                    final match = _specialtyOptions.firstWhere(
+                                      (option) =>
+                                          option.toLowerCase() ==
+                                          value.toLowerCase(),
+                                      orElse: () => '',
+                                    );
 
-                                  if (match.isNotEmpty) {
-                                    setState(() {
-                                      _selectedSpecialty = match;
-                                      textEditingController.text = match;
-                                      textEditingController.selection =
-                                          TextSelection.fromPosition(
-                                        TextPosition(offset: match.length),
-                                      );
-                                    });
-                                  } else {
-                                    if (_selectedSpecialty != null &&
-                                        _specialtyOptions
-                                            .contains(_selectedSpecialty)) {
-                                      final last = _selectedSpecialty!;
-                                      textEditingController.text = last;
-                                      textEditingController.selection =
-                                          TextSelection.fromPosition(
-                                        TextPosition(offset: last.length),
-                                      );
+                                    if (match.isNotEmpty) {
+                                      setState(() {
+                                        _selectedSpecialty = match;
+                                        textEditingController.text = match;
+                                        textEditingController.selection =
+                                            TextSelection.fromPosition(
+                                          TextPosition(offset: match.length),
+                                        );
+                                      });
                                     } else {
-                                      textEditingController.clear();
+                                      if (_selectedSpecialty != null &&
+                                          _specialtyOptions
+                                              .contains(_selectedSpecialty)) {
+                                        final last = _selectedSpecialty!;
+                                        textEditingController.text = last;
+                                        textEditingController.selection =
+                                            TextSelection.fromPosition(
+                                          TextPosition(offset: last.length),
+                                        );
+                                      } else {
+                                        textEditingController.clear();
+                                      }
+                                      _showWarningSnackBar(
+                                          'Please choose a specialty from the list');
                                     }
-                                    _showWarningSnackBar(
-                                        'Please choose a specialty from the list');
-                                  }
-                                },
-                              ),
+                                  },
+                                ),
                               );
                             },
                             optionsViewBuilder: (context, onSelected, options) {
@@ -1516,7 +1521,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                     ),
                   if (!_isEdit) const SizedBox(height: 16),
 
-                  // AI Generate Button (only show in create mode)
+                  // AI Generate Button
                   if (!_isEdit) ...[
                     Align(
                       alignment: Alignment.centerRight,
@@ -1555,87 +1560,88 @@ class _JobPostingPageState extends State<JobPostingPage> {
                               ),
                             )
                           : _aiCreditsRemaining > 0
-                          ? Container(
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    Color(0xFF6B4CE6), // Vibrant purple
-                                    Color(0xFF4A5FBC), // Brand purple
-                                    Color(0xFF3B8FD9), // Blue accent
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(30),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF6B4CE6)
-                                        .withOpacity(0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 3),
-                                  ),
-                                ],
-                              ),
-                              child: TextButton.icon(
-                                onPressed: _generateJobPost,
-                                icon: const Icon(Icons.auto_awesome,
-                                    size: 20, color: Colors.white),
-                                label: Text(
-                                  'Generate with AI ($_aiCreditsRemaining left)',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                                style: TextButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 24, vertical: 12),
-                                  shape: RoundedRectangleBorder(
+                              ? Container(
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        Color(0xFF6B4CE6), // Vibrant purple
+                                        Color(0xFF4A5FBC), // Brand purple
+                                        Color(0xFF3B8FD9), // Blue accent
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
                                     borderRadius: BorderRadius.circular(30),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF6B4CE6)
+                                            .withOpacity(0.3),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 3),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                              ),
-                            )
-                          : Container(
-                              decoration: BoxDecoration(
-                                color: scheme.surface,
-                                borderRadius: BorderRadius.circular(30),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.08),
-                                    blurRadius: 20,
-                                    offset: const Offset(0, 4),
-                                    spreadRadius: 0,
+                                  child: TextButton.icon(
+                                    onPressed: _generateJobPost,
+                                    icon: const Icon(Icons.auto_awesome,
+                                        size: 20, color: Colors.white),
+                                    label: Text(
+                                      'Generate with AI ($_aiCreditsRemaining left)',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 24, vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(30),
+                                      ),
+                                    ),
                                   ),
-                                ],
-                              ),
-                              child: TextButton(
-                                onPressed: null,
-                                child: Text(
-                                  'AI credits used (resets daily)',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: scheme.onSurface.withOpacity(0.4),
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                                style: TextButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 24, vertical: 12),
-                                  shape: RoundedRectangleBorder(
+                                )
+                              : Container(
+                                  decoration: BoxDecoration(
+                                    color: scheme.surface,
                                     borderRadius: BorderRadius.circular(30),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.08),
+                                        blurRadius: 20,
+                                        offset: const Offset(0, 4),
+                                        spreadRadius: 0,
+                                      ),
+                                    ],
+                                  ),
+                                  child: TextButton(
+                                    onPressed: null,
+                                    child: Text(
+                                      'AI credits used (resets daily)',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color:
+                                            scheme.onSurface.withOpacity(0.4),
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 24, vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(30),
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ),
                     ),
                     const SizedBox(height: 12),
                   ],
 
-                  // Job Description (hide in edit mode)
+                  // Job Description
                   if (!_isEdit)
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1709,7 +1715,7 @@ class _JobPostingPageState extends State<JobPostingPage> {
                     ),
                   if (!_isEdit) const SizedBox(height: 16),
 
-                  // Requirements (only show in create mode)
+                  // Requirements
                   if (!_isEdit)
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

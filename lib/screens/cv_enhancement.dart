@@ -636,22 +636,19 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(40),
                     decoration: BoxDecoration(
-                      color: _cvEnhancementCredits <= 0
-                          ? scheme.surfaceVariant.withOpacity(0.5)
-                          : scheme.surface,
-                      border: _cvEnhancementCredits <= 0
-                          ? Border.all(color: scheme.outline, width: 2)
-                          : null,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: _cvEnhancementCredits <= 0
-                          ? []
-                          : [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.08),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
+                      color: scheme.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(
+                            Theme.of(context).brightness == Brightness.dark
+                                ? 0.12
+                                : 0.05,
+                          ),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: _selectedFile == null
                         ? Column(

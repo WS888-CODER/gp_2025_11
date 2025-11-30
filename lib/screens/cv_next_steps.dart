@@ -578,12 +578,16 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
                 Container(
                   decoration: BoxDecoration(
                     color: scheme.surface,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+                        color: Colors.black.withOpacity(
+                          Theme.of(context).brightness == Brightness.dark
+                              ? 0.12
+                              : 0.05,
+                        ),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
@@ -592,19 +596,13 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
                     decoration: InputDecoration(
                       labelText: 'Full Name',
                       labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+                      floatingLabelStyle:
+                          const TextStyle(color: Color(0xFF4A5FBC)),
                       hintText: 'e.g., John Doe',
                       hintStyle: const TextStyle(color: Colors.grey),
                       filled: true,
                       fillColor: Colors.transparent,
                       border: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                        borderSide: BorderSide.none,
-                      ),
-                      enabledBorder: const OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(12)),
                         borderSide: BorderSide.none,
                       ),
@@ -615,12 +613,16 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
                 Container(
                   decoration: BoxDecoration(
                     color: scheme.surface,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+                        color: Colors.black.withOpacity(
+                          Theme.of(context).brightness == Brightness.dark
+                              ? 0.12
+                              : 0.05,
+                        ),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
@@ -630,19 +632,13 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
                     decoration: InputDecoration(
                       labelText: 'Email',
                       labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+                      floatingLabelStyle:
+                          const TextStyle(color: Color(0xFF4A5FBC)),
                       hintText: 'e.g., john@example.com',
                       hintStyle: const TextStyle(color: Colors.grey),
                       filled: true,
                       fillColor: Colors.transparent,
                       border: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                        borderSide: BorderSide.none,
-                      ),
-                      enabledBorder: const OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(12)),
                         borderSide: BorderSide.none,
                       ),
@@ -653,12 +649,16 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
                 Container(
                   decoration: BoxDecoration(
                     color: scheme.surface,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+                        color: Colors.black.withOpacity(
+                          Theme.of(context).brightness == Brightness.dark
+                              ? 0.12
+                              : 0.05,
+                        ),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
@@ -668,6 +668,8 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
                     decoration: InputDecoration(
                       labelText: 'Phone',
                       labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+                      floatingLabelStyle:
+                          const TextStyle(color: Color(0xFF4A5FBC)),
                       hintText: 'e.g., +1 234 567 8900',
                       hintStyle: const TextStyle(color: Colors.grey),
                       filled: true,
@@ -676,14 +678,6 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
                         borderRadius: BorderRadius.all(Radius.circular(12)),
                         borderSide: BorderSide.none,
                       ),
-                      focusedBorder: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                        borderSide: BorderSide.none,
-                      ),
-                      enabledBorder: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                        borderSide: BorderSide.none,
-                      ),
                     ),
                   ),
                 ),
@@ -691,12 +685,16 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
                 Container(
                   decoration: BoxDecoration(
                     color: scheme.surface,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+                        color: Colors.black.withOpacity(
+                          Theme.of(context).brightness == Brightness.dark
+                              ? 0.12
+                              : 0.05,
+                        ),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
@@ -705,19 +703,13 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
                     decoration: InputDecoration(
                       labelText: 'Location',
                       labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+                      floatingLabelStyle:
+                          const TextStyle(color: Color(0xFF4A5FBC)),
                       hintText: 'e.g., New York, USA',
                       hintStyle: const TextStyle(color: Colors.grey),
                       filled: true,
                       fillColor: Colors.transparent,
                       border: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                        borderSide: BorderSide.none,
-                      ),
-                      enabledBorder: const OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(12)),
                         borderSide: BorderSide.none,
                       ),
@@ -728,12 +720,16 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
                 Container(
                   decoration: BoxDecoration(
                     color: scheme.surface,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+                        color: Colors.black.withOpacity(
+                          Theme.of(context).brightness == Brightness.dark
+                              ? 0.12
+                              : 0.05,
+                        ),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
@@ -743,20 +739,14 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
                     decoration: InputDecoration(
                       labelText: 'Links (LinkedIn, Portfolio, etc.)',
                       labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+                      floatingLabelStyle:
+                          const TextStyle(color: Color(0xFF4A5FBC)),
                       hintText:
                           'e.g., linkedin.com/in/johndoe, github.com/johndoe',
                       hintStyle: const TextStyle(color: Colors.grey),
                       filled: true,
                       fillColor: Colors.transparent,
                       border: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                        borderSide: BorderSide.none,
-                      ),
-                      enabledBorder: const OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(12)),
                         borderSide: BorderSide.none,
                       ),
@@ -783,8 +773,10 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  child: const Text('Skip',
-                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  child: const Text(
+                    'Skip',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -831,8 +823,10 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  child: const Text('Next',
-                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  child: const Text(
+                    'Next',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
                 ),
               ),
             ],
@@ -907,12 +901,16 @@ class _SummaryFormState extends State<_SummaryForm> {
                 Container(
                   decoration: BoxDecoration(
                     color: scheme.surface,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+                        color: Colors.black.withOpacity(
+                          Theme.of(context).brightness == Brightness.dark
+                              ? 0.12
+                              : 0.05,
+                        ),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
@@ -1159,8 +1157,12 @@ class _ExperienceFormState extends State<_ExperienceForm> {
   }
 
   Widget _buildExperienceEntry(
-      int index, Map<String, TextEditingController> exp) {
+    int index,
+    Map<String, TextEditingController> exp,
+  ) {
     final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       decoration: BoxDecoration(
         color: scheme.surface,
@@ -1168,7 +1170,7 @@ class _ExperienceFormState extends State<_ExperienceForm> {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(
-              Theme.of(context).brightness == Brightness.dark ? 0.12 : 0.05,
+              isDark ? 0.12 : 0.05,
             ),
             blurRadius: 12,
             offset: const Offset(0, 4),
@@ -1197,17 +1199,13 @@ class _ExperienceFormState extends State<_ExperienceForm> {
             const SizedBox(height: 12),
             Container(
               decoration: BoxDecoration(
-                color: scheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: scheme.outline.withOpacity(0.2),
-                  width: 1,
-                ),
+                color: isDark ? Colors.transparent : scheme.surface,
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
@@ -1216,21 +1214,18 @@ class _ExperienceFormState extends State<_ExperienceForm> {
                 decoration: InputDecoration(
                   labelText: 'Job Title',
                   labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+                  floatingLabelStyle: const TextStyle(color: Color(0xFF4A5FBC)),
                   hintText: 'e.g., Software Engineer',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
-                  fillColor: Colors.transparent,
-                  border: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
+                  fillColor: isDark
+                      ? scheme.surface.withOpacity(0.4)
+                      : Colors.transparent,
+                  border: OutlineInputBorder(
+                    borderRadius: const BorderRadius.all(Radius.circular(12)),
+                    borderSide: isDark
+                        ? const BorderSide(color: Color(0xFF4A5FBC), width: 1.4)
+                        : BorderSide.none,
                   ),
                 ),
               ),
@@ -1238,17 +1233,13 @@ class _ExperienceFormState extends State<_ExperienceForm> {
             const SizedBox(height: 12),
             Container(
               decoration: BoxDecoration(
-                color: scheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: scheme.outline.withOpacity(0.2),
-                  width: 1,
-                ),
+                color: isDark ? Colors.transparent : scheme.surface,
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
@@ -1257,21 +1248,18 @@ class _ExperienceFormState extends State<_ExperienceForm> {
                 decoration: InputDecoration(
                   labelText: 'Company',
                   labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+                  floatingLabelStyle: const TextStyle(color: Color(0xFF4A5FBC)),
                   hintText: 'e.g., Google',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
-                  fillColor: Colors.transparent,
-                  border: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
+                  fillColor: isDark
+                      ? scheme.surface.withOpacity(0.4)
+                      : Colors.transparent,
+                  border: OutlineInputBorder(
+                    borderRadius: const BorderRadius.all(Radius.circular(12)),
+                    borderSide: isDark
+                        ? const BorderSide(color: Color(0xFF4A5FBC), width: 1.4)
+                        : BorderSide.none,
                   ),
                 ),
               ),
@@ -1279,17 +1267,13 @@ class _ExperienceFormState extends State<_ExperienceForm> {
             const SizedBox(height: 12),
             Container(
               decoration: BoxDecoration(
-                color: scheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: scheme.outline.withOpacity(0.2),
-                  width: 1,
-                ),
+                color: isDark ? Colors.transparent : scheme.surface,
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
@@ -1298,21 +1282,18 @@ class _ExperienceFormState extends State<_ExperienceForm> {
                 decoration: InputDecoration(
                   labelText: 'Years',
                   labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+                  floatingLabelStyle: const TextStyle(color: Color(0xFF4A5FBC)),
                   hintText: 'e.g., 2020-2023',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
-                  fillColor: Colors.transparent,
-                  border: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
+                  fillColor: isDark
+                      ? scheme.surface.withOpacity(0.4)
+                      : Colors.transparent,
+                  border: OutlineInputBorder(
+                    borderRadius: const BorderRadius.all(Radius.circular(12)),
+                    borderSide: isDark
+                        ? const BorderSide(color: Color(0xFF4A5FBC), width: 1.4)
+                        : BorderSide.none,
                   ),
                 ),
               ),
@@ -1320,17 +1301,13 @@ class _ExperienceFormState extends State<_ExperienceForm> {
             const SizedBox(height: 12),
             Container(
               decoration: BoxDecoration(
-                color: scheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: scheme.outline.withOpacity(0.2),
-                  width: 1,
-                ),
+                color: isDark ? Colors.transparent : scheme.surface,
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
@@ -1340,21 +1317,16 @@ class _ExperienceFormState extends State<_ExperienceForm> {
                 decoration: InputDecoration(
                   labelText: 'Description',
                   labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+                  floatingLabelStyle: const TextStyle(color: Color(0xFF4A5FBC)),
                   hintText: 'Describe your responsibilities and achievements',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
                   fillColor: Colors.transparent,
-                  border: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
+                  border: OutlineInputBorder(
+                    borderRadius: const BorderRadius.all(Radius.circular(12)),
+                    borderSide: isDark
+                        ? const BorderSide(color: Color(0xFF4A5FBC), width: 1.4)
+                        : BorderSide.none,
                   ),
                 ),
               ),
@@ -1546,8 +1518,12 @@ class _EducationFormState extends State<_EducationForm> {
   }
 
   Widget _buildEducationEntry(
-      int index, Map<String, TextEditingController> edu) {
+    int index,
+    Map<String, TextEditingController> edu,
+  ) {
     final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       decoration: BoxDecoration(
         color: scheme.surface,
@@ -1555,7 +1531,7 @@ class _EducationFormState extends State<_EducationForm> {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(
-              Theme.of(context).brightness == Brightness.dark ? 0.12 : 0.05,
+              isDark ? 0.12 : 0.05,
             ),
             blurRadius: 12,
             offset: const Offset(0, 4),
@@ -1584,17 +1560,13 @@ class _EducationFormState extends State<_EducationForm> {
             const SizedBox(height: 12),
             Container(
               decoration: BoxDecoration(
-                color: scheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: scheme.outline.withOpacity(0.2),
-                  width: 1,
-                ),
+                color: isDark ? Colors.transparent : scheme.surface,
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
@@ -1603,21 +1575,21 @@ class _EducationFormState extends State<_EducationForm> {
                 decoration: InputDecoration(
                   labelText: 'Degree',
                   labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+                  floatingLabelStyle: const TextStyle(color: Color(0xFF4A5FBC)),
                   hintText: 'e.g., Bachelor of Computer Science',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
-                  fillColor: Colors.transparent,
-                  border: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
+                  fillColor: isDark
+                      ? scheme.surface.withOpacity(0.4)
+                      : Colors.transparent,
+                  border: OutlineInputBorder(
+                    borderRadius: const BorderRadius.all(Radius.circular(12)),
+                    borderSide: isDark
+                        ? const BorderSide(
+                            color: Color(0xFF4A5FBC),
+                            width: 1.4,
+                          )
+                        : BorderSide.none,
                   ),
                 ),
               ),
@@ -1625,17 +1597,13 @@ class _EducationFormState extends State<_EducationForm> {
             const SizedBox(height: 12),
             Container(
               decoration: BoxDecoration(
-                color: scheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: scheme.outline.withOpacity(0.2),
-                  width: 1,
-                ),
+                color: isDark ? Colors.transparent : scheme.surface,
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
@@ -1644,21 +1612,21 @@ class _EducationFormState extends State<_EducationForm> {
                 decoration: InputDecoration(
                   labelText: 'Institution',
                   labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+                  floatingLabelStyle: const TextStyle(color: Color(0xFF4A5FBC)),
                   hintText: 'e.g., MIT',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
-                  fillColor: Colors.transparent,
-                  border: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
+                  fillColor: isDark
+                      ? scheme.surface.withOpacity(0.4)
+                      : Colors.transparent,
+                  border: OutlineInputBorder(
+                    borderRadius: const BorderRadius.all(Radius.circular(12)),
+                    borderSide: isDark
+                        ? const BorderSide(
+                            color: Color(0xFF4A5FBC),
+                            width: 1.4,
+                          )
+                        : BorderSide.none,
                   ),
                 ),
               ),
@@ -1666,17 +1634,13 @@ class _EducationFormState extends State<_EducationForm> {
             const SizedBox(height: 12),
             Container(
               decoration: BoxDecoration(
-                color: scheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: scheme.outline.withOpacity(0.2),
-                  width: 1,
-                ),
+                color: isDark ? Colors.transparent : scheme.surface,
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
@@ -1685,21 +1649,21 @@ class _EducationFormState extends State<_EducationForm> {
                 decoration: InputDecoration(
                   labelText: 'Years',
                   labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+                  floatingLabelStyle: const TextStyle(color: Color(0xFF4A5FBC)),
                   hintText: 'e.g., 2016-2020',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
-                  fillColor: Colors.transparent,
-                  border: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
+                  fillColor: isDark
+                      ? scheme.surface.withOpacity(0.4)
+                      : Colors.transparent,
+                  border: OutlineInputBorder(
+                    borderRadius: const BorderRadius.all(Radius.circular(12)),
+                    borderSide: isDark
+                        ? const BorderSide(
+                            color: Color(0xFF4A5FBC),
+                            width: 1.4,
+                          )
+                        : BorderSide.none,
                   ),
                 ),
               ),
@@ -2191,8 +2155,12 @@ class _CertificationsFormState extends State<_CertificationsForm> {
   }
 
   Widget _buildCertificationEntry(
-      int index, Map<String, TextEditingController> cert) {
+    int index,
+    Map<String, TextEditingController> cert,
+  ) {
     final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       decoration: BoxDecoration(
         color: scheme.surface,
@@ -2200,7 +2168,7 @@ class _CertificationsFormState extends State<_CertificationsForm> {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(
-              Theme.of(context).brightness == Brightness.dark ? 0.12 : 0.05,
+              isDark ? 0.12 : 0.05,
             ),
             blurRadius: 12,
             offset: const Offset(0, 4),
@@ -2229,17 +2197,13 @@ class _CertificationsFormState extends State<_CertificationsForm> {
             const SizedBox(height: 12),
             Container(
               decoration: BoxDecoration(
-                color: scheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: scheme.outline.withOpacity(0.2),
-                  width: 1,
-                ),
+                color: isDark ? Colors.transparent : scheme.surface,
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
@@ -2248,21 +2212,21 @@ class _CertificationsFormState extends State<_CertificationsForm> {
                 decoration: InputDecoration(
                   labelText: 'Certification Name',
                   labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+                  floatingLabelStyle: const TextStyle(color: Color(0xFF4A5FBC)),
                   hintText: 'e.g., AWS Certified Solutions Architect',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
-                  fillColor: Colors.transparent,
-                  border: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
+                  fillColor: isDark
+                      ? scheme.surface.withOpacity(0.4)
+                      : Colors.transparent,
+                  border: OutlineInputBorder(
+                    borderRadius: const BorderRadius.all(Radius.circular(12)),
+                    borderSide: isDark
+                        ? const BorderSide(
+                            color: Color(0xFF4A5FBC),
+                            width: 1.4,
+                          )
+                        : BorderSide.none,
                   ),
                 ),
               ),
@@ -2270,17 +2234,13 @@ class _CertificationsFormState extends State<_CertificationsForm> {
             const SizedBox(height: 12),
             Container(
               decoration: BoxDecoration(
-                color: scheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: scheme.outline.withOpacity(0.2),
-                  width: 1,
-                ),
+                color: isDark ? Colors.transparent : scheme.surface,
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
@@ -2289,21 +2249,21 @@ class _CertificationsFormState extends State<_CertificationsForm> {
                 decoration: InputDecoration(
                   labelText: 'Issuer',
                   labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+                  floatingLabelStyle: const TextStyle(color: Color(0xFF4A5FBC)),
                   hintText: 'e.g., Amazon Web Services',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
-                  fillColor: Colors.transparent,
-                  border: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
+                  fillColor: isDark
+                      ? scheme.surface.withOpacity(0.4)
+                      : Colors.transparent,
+                  border: OutlineInputBorder(
+                    borderRadius: const BorderRadius.all(Radius.circular(12)),
+                    borderSide: isDark
+                        ? const BorderSide(
+                            color: Color(0xFF4A5FBC),
+                            width: 1.4,
+                          )
+                        : BorderSide.none,
                   ),
                 ),
               ),
@@ -2311,17 +2271,13 @@ class _CertificationsFormState extends State<_CertificationsForm> {
             const SizedBox(height: 12),
             Container(
               decoration: BoxDecoration(
-                color: scheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: scheme.outline.withOpacity(0.2),
-                  width: 1,
-                ),
+                color: isDark ? Colors.transparent : scheme.surface,
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
@@ -2330,21 +2286,21 @@ class _CertificationsFormState extends State<_CertificationsForm> {
                 decoration: InputDecoration(
                   labelText: 'Year',
                   labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+                  floatingLabelStyle: const TextStyle(color: Color(0xFF4A5FBC)),
                   hintText: 'e.g., 2023',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
-                  fillColor: Colors.transparent,
-                  border: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
+                  fillColor: isDark
+                      ? scheme.surface.withOpacity(0.4)
+                      : Colors.transparent,
+                  border: OutlineInputBorder(
+                    borderRadius: const BorderRadius.all(Radius.circular(12)),
+                    borderSide: isDark
+                        ? const BorderSide(
+                            color: Color(0xFF4A5FBC),
+                            width: 1.4,
+                          )
+                        : BorderSide.none,
                   ),
                 ),
               ),
@@ -2644,6 +2600,8 @@ class _LanguagesFormState extends State<_LanguagesForm> {
 
   Widget _buildLanguageEntry(int index, Map<String, String?> lang) {
     final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       decoration: BoxDecoration(
         color: scheme.surface,
@@ -2651,7 +2609,7 @@ class _LanguagesFormState extends State<_LanguagesForm> {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(
-              Theme.of(context).brightness == Brightness.dark ? 0.12 : 0.05,
+              isDark ? 0.12 : 0.05,
             ),
             blurRadius: 12,
             offset: const Offset(0, 4),
@@ -2680,17 +2638,13 @@ class _LanguagesFormState extends State<_LanguagesForm> {
             const SizedBox(height: 12),
             Container(
               decoration: BoxDecoration(
-                color: scheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: scheme.outline.withOpacity(0.2),
-                  width: 1,
-                ),
+                color: isDark ? Colors.transparent : scheme.surface,
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
@@ -2699,21 +2653,21 @@ class _LanguagesFormState extends State<_LanguagesForm> {
                 decoration: InputDecoration(
                   labelText: 'Language',
                   labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+                  floatingLabelStyle: const TextStyle(color: Color(0xFF4A5FBC)),
                   hintText: 'Select a language',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
-                  fillColor: Colors.transparent,
-                  border: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
+                  fillColor: isDark
+                      ? scheme.surface.withOpacity(0.4)
+                      : Colors.transparent,
+                  border: OutlineInputBorder(
+                    borderRadius: const BorderRadius.all(Radius.circular(12)),
+                    borderSide: isDark
+                        ? const BorderSide(
+                            color: Color(0xFF4A5FBC),
+                            width: 1.4,
+                          )
+                        : BorderSide.none,
                   ),
                   contentPadding:
                       const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
@@ -2750,17 +2704,13 @@ class _LanguagesFormState extends State<_LanguagesForm> {
             const SizedBox(height: 12),
             Container(
               decoration: BoxDecoration(
-                color: scheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: scheme.outline.withOpacity(0.2),
-                  width: 1,
-                ),
+                color: isDark ? Colors.transparent : scheme.surface,
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
@@ -2769,21 +2719,21 @@ class _LanguagesFormState extends State<_LanguagesForm> {
                 decoration: InputDecoration(
                   labelText: 'Proficiency',
                   labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+                  floatingLabelStyle: const TextStyle(color: Color(0xFF4A5FBC)),
                   hintText: 'Select proficiency level',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
-                  fillColor: Colors.transparent,
-                  border: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
+                  fillColor: isDark
+                      ? scheme.surface.withOpacity(0.4)
+                      : Colors.transparent,
+                  border: OutlineInputBorder(
+                    borderRadius: const BorderRadius.all(Radius.circular(12)),
+                    borderSide: isDark
+                        ? const BorderSide(
+                            color: Color(0xFF4A5FBC),
+                            width: 1.4,
+                          )
+                        : BorderSide.none,
                   ),
                   contentPadding:
                       const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
