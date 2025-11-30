@@ -1074,13 +1074,12 @@ class _EditCompanyPageState extends State<EditCompanyPage>
     }
 
     // Phone (controller = local part, draft = full E.164)
-    if (parent._phone.text.isEmpty) {
-      if (rawPhone.startsWith('+')) {
-        parent._phone.text = rawPhone.replaceFirst(RegExp(r'^\+\d+'), '');
-      } else {
-        parent._phone.text = rawPhone;
-      }
+    if (rawPhone.startsWith('+')) {
+      parent._phone.text = _stripDialCode(rawPhone);
+    } else {
+      parent._phone.text = rawPhone;
     }
+
     parent._phoneE164Draft ??= rawPhone.isEmpty ? null : rawPhone;
 
     // Website
@@ -1094,6 +1093,12 @@ class _EditCompanyPageState extends State<EditCompanyPage>
 
     // Mark as filled
     parent._filledFromServer = true;
+  }
+
+  String _stripDialCode(String e164) {
+    final match = RegExp(r'^\+(\d{1,3})').firstMatch(e164);
+    if (match == null) return e164;
+    return e164.substring(match.end);
   }
 
   @override
@@ -1210,10 +1215,11 @@ class _EditCompanyPageState extends State<EditCompanyPage>
           (data[UserFields.website] ?? '').toString().trim();
 
       if (rawPhone.startsWith('+')) {
-        parent._phone.text = rawPhone.replaceFirst(RegExp(r'^\+\d+'), '');
+        parent._phone.text = _stripDialCode(rawPhone);
       } else {
         parent._phone.text = rawPhone;
       }
+
       parent._phoneE164Draft = rawPhone.isEmpty ? null : rawPhone;
 
       parent._pendingLogoFile = null;
