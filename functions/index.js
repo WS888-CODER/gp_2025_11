@@ -976,9 +976,9 @@ export const detectMissingSections = v2.https.onCall(
       console.log(`📊 CV text length: ${oldCVText.length} characters`);
       console.log(`💼 Has job: ${hasJob}`);
 
-      // If CV is blank, return all sections as missing
-      if (oldCVText.trim().length === 0) {
-        console.log(`⚠️ CV is blank, returning all sections as missing`);
+      // If CV is blank or only contains page numbers, return all sections as missing
+      if (oldCVText.trim().length < 20) {
+        console.log(`⚠️ CV is blank (only ${oldCVText.trim().length} chars: "${oldCVText.trim()}"), returning all sections as missing`);
         return {
           success: true,
           missingSections: [
