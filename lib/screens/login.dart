@@ -69,7 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } else {
       if (result == 'reset') {
-        Navigator.pushReplacementNamed(
+        Navigator.pushNamed(
           context,
           '/forgot-password',
           arguments: {'email': _emailController.text.trim()},
