@@ -1208,7 +1208,6 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
             ),
           ),
         ),
-        // Fixed button at the bottom
         Padding(
           padding: const EdgeInsets.all(20),
           child: SizedBox(

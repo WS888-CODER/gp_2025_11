@@ -317,8 +317,7 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
           Navigator.pop(context);
         }
       },
-      child: Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.background,
+      child: ThemedScaffold(
         appBar: CustomHeader(
           title: _isEnhancing ? 'Enhancing CV' : 'Complete Your CV',
         ),
@@ -1162,9 +1161,20 @@ class _ExperienceFormState extends State<_ExperienceForm> {
   Widget _buildExperienceEntry(
       int index, Map<String, TextEditingController> exp) {
     final scheme = Theme.of(context).colorScheme;
-    return Card(
-      color: scheme.surface,
-      margin: const EdgeInsets.only(bottom: 16),
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(
+              Theme.of(context).brightness == Brightness.dark ? 0.12 : 0.05,
+            ),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -1538,9 +1548,20 @@ class _EducationFormState extends State<_EducationForm> {
   Widget _buildEducationEntry(
       int index, Map<String, TextEditingController> edu) {
     final scheme = Theme.of(context).colorScheme;
-    return Card(
-      color: scheme.surface,
-      margin: const EdgeInsets.only(bottom: 16),
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(
+              Theme.of(context).brightness == Brightness.dark ? 0.12 : 0.05,
+            ),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -1822,7 +1843,6 @@ class _SkillsFormState extends State<_SkillsForm> {
                 ),
                 const SizedBox(height: 20),
 
-                // Custom Skills Section (moved to top)
                 Row(
                   children: [
                     Expanded(
@@ -2173,9 +2193,20 @@ class _CertificationsFormState extends State<_CertificationsForm> {
   Widget _buildCertificationEntry(
       int index, Map<String, TextEditingController> cert) {
     final scheme = Theme.of(context).colorScheme;
-    return Card(
-      color: scheme.surface,
-      margin: const EdgeInsets.only(bottom: 16),
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(
+              Theme.of(context).brightness == Brightness.dark ? 0.12 : 0.05,
+            ),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -2613,9 +2644,20 @@ class _LanguagesFormState extends State<_LanguagesForm> {
 
   Widget _buildLanguageEntry(int index, Map<String, String?> lang) {
     final scheme = Theme.of(context).colorScheme;
-    return Card(
-      color: scheme.surface,
-      margin: const EdgeInsets.only(bottom: 16),
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(
+              Theme.of(context).brightness == Brightness.dark ? 0.12 : 0.05,
+            ),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

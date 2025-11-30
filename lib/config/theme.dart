@@ -395,7 +395,6 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
                 else if (showBack && canPop)
                   Padding(
                     padding: const EdgeInsets.only(
-                      //top: MediaQuery.of(context).padding.top,
                       left: 8,
                       right: 8,
                       bottom: 16,
@@ -407,7 +406,6 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
                       },
                     ),
                   ),
-                // --------------------------------
 
                 if (actions != null && actions!.isNotEmpty)
                   Align(

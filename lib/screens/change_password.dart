@@ -419,7 +419,6 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               ),
             ),
           ),
-          // Fixed button at the bottom
           Padding(
             padding: const EdgeInsets.all(20),
             child: SizedBox(

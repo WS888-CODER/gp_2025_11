@@ -29,7 +29,6 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
     super.dispose();
   }
 
-  // Same validation logic as signup (Full Name):
   // - Letters and spaces only
   // - At least two words
   bool _isValidFullName(String name) {
@@ -201,7 +200,6 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                   ),
                 ),
               ),
-              // Fixed Save Changes button at the bottom
               if (_isEditing)
                 Container(
                   padding: const EdgeInsets.all(20),
