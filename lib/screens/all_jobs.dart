@@ -33,6 +33,7 @@ List<String> kSpecialtyOptions = [
   "Industrial Engineering",
   "Chemical Engineering",
   "Civil Engineering",
+  "Petroleum Engineer",
 
   // --- Business & Operations ---
   "Business Administration",

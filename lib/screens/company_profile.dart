@@ -1130,8 +1130,25 @@ class _EditCompanyPageState extends State<EditCompanyPage>
             Text(
               '• A company logo is uploaded\n'
               '• Description is at least 150 characters (max 900)\n'
-              '• Location is set\n'
-              '• Website is optional but recommended',
+              '• Location is set\n',
+              style: TextStyle(
+                color: Colors.white,
+                height: 1.4,
+              ),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'And at least one contact method:',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                height: 1.4,
+              ),
+            ),
+            SizedBox(height: 6),
+            Text(
+              '• A valid contact email, or\n'
+              '• A valid phone number with country code',
               style: TextStyle(
                 color: Colors.white,
                 height: 1.4,
