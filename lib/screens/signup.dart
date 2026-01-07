@@ -84,7 +84,7 @@ class _SignupScreenState extends State<SignupScreen> {
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
             style: TextButton.styleFrom(
-              backgroundColor: Colors.white.withOpacity(0.9),
+              backgroundColor: Colors.white.withOpacity(0.95),
               foregroundColor: const Color(0xFF4A5FBC),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               shape: RoundedRectangleBorder(
@@ -231,13 +231,12 @@ class _SignupScreenState extends State<SignupScreen> {
     if (_selectedTab == 0) {
       // Company validation
       if (_currentStep == 0) {
-        // Step 1: Company Name only
+        // Step 1: Company Name + Full Name + Email
         if (_companyNameController.text.trim().isEmpty) {
           setState(() => _companyNameError = 'Please enter company name');
           hasErrors = true;
         }
-      } else if (_currentStep == 1) {
-        // Step 2: Full Name + Email - validate all fields at once
+
         if (_companyFullNameController.text.trim().isEmpty) {
           setState(() => _companyFullNameError = 'Please enter your full name');
           hasErrors = true;
@@ -265,8 +264,8 @@ class _SignupScreenState extends State<SignupScreen> {
             hasErrors = true;
           }
         }
-      } else if (_currentStep == 2) {
-        // Step 3: Password validation
+      } else if (_currentStep == 1) {
+        // Step 2: Password validation
         if (_companyPasswordController.text.isEmpty) {
           setState(() => _companyPasswordError = 'Please enter a password');
           hasErrors = true;
@@ -502,14 +501,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     fontSize: 12,
                     fontWeight: FontWeight.bold)),
           ),
-      ],
-    );
-  }
-
-  Widget _buildCompanyStep2() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+        const SizedBox(height: 30),
         const Text('Full Name',
             style: TextStyle(
                 fontSize: 16,
@@ -607,7 +599,7 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  Widget _buildCompanyStep3() {
+  Widget _buildCompanyStep2() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -652,8 +644,41 @@ class _SignupScreenState extends State<SignupScreen> {
               setState(() {
                 _companyPasswordError = null;
               });
+            } else {
+              setState(() {});
             }
           },
+        ),
+        Container(
+          margin: const EdgeInsets.only(top: 12),
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 8),
+              _buildPasswordRequirement(
+                'At least 8 characters',
+                _companyPasswordController.text.length >= 8,
+              ),
+              _buildPasswordRequirement(
+                'One uppercase letter (A-Z)',
+                _companyPasswordController.text.contains(RegExp(r'[A-Z]')),
+              ),
+              _buildPasswordRequirement(
+                'One lowercase letter (a-z)',
+                _companyPasswordController.text.contains(RegExp(r'[a-z]')),
+              ),
+              _buildPasswordRequirement(
+                'One number (0-9)',
+                _companyPasswordController.text.contains(RegExp(r'[0-9]')),
+              ),
+              _buildPasswordRequirement(
+                'One special character (!@#\$%...)',
+                _companyPasswordController.text
+                    .contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]')),
+              ),
+            ],
+          ),
         ),
         if (_companyPasswordError != null)
           Padding(
@@ -704,11 +729,11 @@ class _SignupScreenState extends State<SignupScreen> {
             ),
           ),
           onChanged: (value) {
-            if (_companyPasswordError != null) {
-              setState(() {
+            setState(() {
+              if (_companyPasswordError != null) {
                 _companyPasswordError = null;
-              });
-            }
+              }
+            });
           },
         ),
       ],
@@ -854,12 +879,45 @@ class _SignupScreenState extends State<SignupScreen> {
             ),
           ),
           onChanged: (value) {
-            if (_seekerPasswordError != null) {
+            if (_companyPasswordError != null) {
               setState(() {
-                _seekerPasswordError = null;
+                _companyPasswordError = null;
               });
+            } else {
+              setState(() {});
             }
           },
+        ),
+        Container(
+          margin: const EdgeInsets.only(top: 12),
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 8),
+              _buildPasswordRequirement(
+                'At least 8 characters',
+                _seekerPasswordController.text.length >= 8,
+              ),
+              _buildPasswordRequirement(
+                'One uppercase letter (A-Z)',
+                _seekerPasswordController.text.contains(RegExp(r'[A-Z]')),
+              ),
+              _buildPasswordRequirement(
+                'One lowercase letter (a-z)',
+                _seekerPasswordController.text.contains(RegExp(r'[a-z]')),
+              ),
+              _buildPasswordRequirement(
+                'One number (0-9)',
+                _seekerPasswordController.text.contains(RegExp(r'[0-9]')),
+              ),
+              _buildPasswordRequirement(
+                'One special character (!@#\$%...)',
+                _seekerPasswordController.text
+                    .contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]')),
+              ),
+            ],
+          ),
         ),
         if (_seekerPasswordError != null)
           Padding(
@@ -910,11 +968,11 @@ class _SignupScreenState extends State<SignupScreen> {
             ),
           ),
           onChanged: (value) {
-            if (_seekerPasswordError != null) {
-              setState(() {
-                _seekerPasswordError = null;
-              });
-            }
+            setState(() {
+              if (_companyPasswordError != null) {
+                _companyPasswordError = null;
+              }
+            });
           },
         ),
       ],
@@ -922,7 +980,7 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Widget _buildStepIndicator() {
-    int totalSteps = _selectedTab == 0 ? 3 : 2;
+    int totalSteps = 2;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(
@@ -950,7 +1008,7 @@ class _SignupScreenState extends State<SignupScreen> {
     if (!isValid) return;
 
     if (_selectedTab == 0) {
-      if (_currentStep < 2) {
+      if (_currentStep < 1) {
         setState(() => _currentStep++);
       } else {
         setState(() => _isLoading = true);
@@ -986,7 +1044,7 @@ class _SignupScreenState extends State<SignupScreen> {
               bottom: 0,
               left: 0,
               right: 0,
-              height: MediaQuery.of(context).size.height * 0.85,
+              height: MediaQuery.of(context).size.height * 0.99,
               child: CustomPaint(painter: WavePainter()),
             ),
             Positioned(
@@ -1003,7 +1061,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: 280),
+                        const SizedBox(height: 150),
                         const Text('Sign Up',
                             style: TextStyle(
                                 fontSize: 32,
@@ -1075,9 +1133,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         if (_selectedTab == 0)
                           _currentStep == 0
                               ? _buildCompanyStep1()
-                              : _currentStep == 1
-                                  ? _buildCompanyStep2()
-                                  : _buildCompanyStep3()
+                              : _buildCompanyStep2()
                         else
                           _currentStep == 0
                               ? _buildJobSeekerStep1()
@@ -1159,6 +1215,33 @@ class _SignupScreenState extends State<SignupScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildPasswordRequirement(String text, bool isMet) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(
+            isMet ? Icons.check_circle : Icons.circle_outlined,
+            size: 16,
+            color:
+                isMet ? const Color(0xFFFF7B7B) : Colors.white.withOpacity(0.5),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.normal,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -130,6 +130,32 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     }
   }
 
+  Widget _buildPasswordRequirement(String text, bool isMet) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(
+            isMet ? Icons.check_circle : Icons.circle_outlined,
+            size: 16,
+            color: isMet ? const Color(0xFFFF7B7B) : Colors.grey.shade400,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 12,
+                fontWeight: FontWeight.normal,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildLabel(
     String text,
     bool isInvalid, {
@@ -317,6 +343,45 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                         onChanged: (_) => setState(() {}),
                         validator: (value) =>
                             (value == null || value.isEmpty) ? '' : null,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+// Password Requirements
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildPasswordRequirement(
+                            'At least 8 characters',
+                            _newPasswordController.text.length >= 8,
+                          ),
+                          _buildPasswordRequirement(
+                            'One uppercase letter (A-Z)',
+                            _newPasswordController.text
+                                .contains(RegExp(r'[A-Z]')),
+                          ),
+                          _buildPasswordRequirement(
+                            'One lowercase letter (a-z)',
+                            _newPasswordController.text
+                                .contains(RegExp(r'[a-z]')),
+                          ),
+                          _buildPasswordRequirement(
+                            'One number (0-9)',
+                            _newPasswordController.text
+                                .contains(RegExp(r'[0-9]')),
+                          ),
+                          _buildPasswordRequirement(
+                            'One special character (!@#\$%...)',
+                            _newPasswordController.text
+                                .contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]')),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 24),
