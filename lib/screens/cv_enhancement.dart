@@ -172,15 +172,25 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
         });
       }
 
-      final wishlistDocs = await FirebaseFirestore.instance
-          .collection('Favourite')
-          .where('UserID', isEqualTo: currentUser.uid)
+// جيب الـ favorites من User document
+      final userDoc = await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(currentUser.uid)
           .get();
 
-      final wishlistJobIds = wishlistDocs.docs
-          .map((d) => d.data()['JobID']?.toString() ?? '')
-          .where((id) => id.isNotEmpty)
-          .toSet();
+      Set<String> wishlistJobIds = {};
+      if (userDoc.exists) {
+        final userData = userDoc.data();
+        final favoriteField = userData?['favorite'];
+
+        if (favoriteField is List) {
+          wishlistJobIds = favoriteField
+              .map((e) => e.toString().trim())
+              .where((id) => id.isNotEmpty)
+              .cast<String>()
+              .toSet();
+        }
+      }
 
       List<Map<String, dynamic>> wishlistJobsList = allJobsList
           .where((job) => wishlistJobIds.contains(job['id']))
