@@ -111,21 +111,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
   // Check if email domain is a public domain (for Company validation only)
   bool _isPublicEmailDomain(String email) {
-    final publicDomains = [
-      'gmail.com',
-      'yahoo.com',
-      'hotmail.com',
-      'outlook.com',
-      'live.com',
-      'icloud.com',
-      'aol.com',
-      'msn.com',
-      'mail.com',
-      'protonmail.com',
-      'zoho.com',
-      'yandex.com',
-      'gmx.com',
-    ];
+    final publicDomains = [];
 
     final emailLower = email.trim().toLowerCase();
     final domain = emailLower.split('@').last;
