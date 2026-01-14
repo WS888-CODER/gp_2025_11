@@ -397,6 +397,33 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
   }
 
+  Widget _buildPasswordRequirement(String text, bool isMet) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(
+            isMet ? Icons.check_circle : Icons.circle_outlined,
+            size: 16,
+            color:
+                isMet ? const Color(0xFFFF7B7B) : Colors.white.withOpacity(0.5),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.normal,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showSuccessDialog(String message) {
     showDialog(
       context: context,
@@ -809,19 +836,58 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                 setState(() {
                                   _passwordError = null;
                                 });
+                              } else {
+                                setState(() {});
                               }
                             },
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Must include: uppercase, lowercase, number, special character',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.white.withOpacity(0.7),
-                              fontStyle: FontStyle.italic,
+                          Container(
+                            margin: const EdgeInsets.only(top: 12),
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 8),
+                                _buildPasswordRequirement(
+                                  'At least 8 characters',
+                                  _newPasswordController.text.length >= 8,
+                                ),
+                                _buildPasswordRequirement(
+                                  'One uppercase letter (A-Z)',
+                                  _newPasswordController.text
+                                      .contains(RegExp(r'[A-Z]')),
+                                ),
+                                _buildPasswordRequirement(
+                                  'One lowercase letter (a-z)',
+                                  _newPasswordController.text
+                                      .contains(RegExp(r'[a-z]')),
+                                ),
+                                _buildPasswordRequirement(
+                                  'One number (0-9)',
+                                  _newPasswordController.text
+                                      .contains(RegExp(r'[0-9]')),
+                                ),
+                                _buildPasswordRequirement(
+                                  'One special character (!@#\$%...)',
+                                  _newPasswordController.text.contains(
+                                      RegExp(r'[!@#$%^&*(),.?":{}|<>]')),
+                                ),
+                              ],
                             ),
-                            textAlign: TextAlign.center,
                           ),
+                          if (_passwordError != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                _passwordError!,
+                                style: const TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
                           const SizedBox(height: 24),
                           TextFormField(
                             controller: _confirmPasswordController,

@@ -269,12 +269,7 @@ export const sendCompanyDocumentRequest = functions.https.onCall(
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
           <div style="background-color: white; padding: 40px; border-radius: 10px;">
             <p>Dear ${companyName || "Company Representative"},</p>
-            <p>Please provide the following:</p>
-            <ul>
-              <li>Commercial Registration</li>
-              <li>Tax Certificate</li>
-              <li>Company License</li>
-            </ul>
+            <p>Please provide us with an Employment Letter from your company to verify your employment status. The letter should include your name, job title, and employment start date.</p>
             <p>You will receive an email from Jadeer informing you whether your registration has been accepted or rejected.</p>
           </div>
         </div>
