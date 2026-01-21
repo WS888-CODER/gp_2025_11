@@ -244,8 +244,44 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
     }
   }
 
-  void _skipAll() {
-    _enhanceCV();
+  Future<void> _skipAll() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => JadeerDialog<bool>(
+        title: '⚠️ Skip All Sections?',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Completing these sections significantly improves your CV quality and makes it more attractive to employers.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Missing: ${_missingSections.join(", ")}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+        secondaryLabel: 'Go Back',
+        secondaryResult: false,
+        primaryLabel: 'Skip Anyway',
+        primaryResult: true,
+      ),
+    );
+
+    if (result == true) {
+      _enhanceCV();
+    }
   }
 
   void _goBack() {
