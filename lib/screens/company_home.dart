@@ -639,10 +639,13 @@ class _CompanyHomeState extends State<CompanyHome> {
 
         if (newEndDate == null || !mounted) return;
 
-        // Update both JobStatus and EndDate
+        // Update EndDate first, then JobStatus (Firestore rules require separate updates)
+        await FirebaseFirestore.instance.collection('Jobs').doc(jobId).update({
+          'EndDate': newEndDate,
+        });
+
         await FirebaseFirestore.instance.collection('Jobs').doc(jobId).update({
           'JobStatus': 'Open',
-          'EndDate': newEndDate,
         });
 
         if (!mounted) return;
