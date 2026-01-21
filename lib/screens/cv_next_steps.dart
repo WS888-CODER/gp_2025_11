@@ -1176,6 +1176,7 @@ class _ExperienceFormState extends State<_ExperienceForm> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: scheme.surface,
         borderRadius: BorderRadius.circular(16),
@@ -1537,6 +1538,7 @@ class _EducationFormState extends State<_EducationForm> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: scheme.surface,
         borderRadius: BorderRadius.circular(16),
@@ -2174,6 +2176,7 @@ class _CertificationsFormState extends State<_CertificationsForm> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: scheme.surface,
         borderRadius: BorderRadius.circular(16),
@@ -2615,6 +2618,7 @@ class _LanguagesFormState extends State<_LanguagesForm> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: scheme.surface,
         borderRadius: BorderRadius.circular(16),
