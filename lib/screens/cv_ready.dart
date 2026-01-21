@@ -337,9 +337,9 @@ class _PublishScreenState extends State<PublishScreen> {
 
                   const SizedBox(height: 24),
 
-                  // AI Suggestions Section
+                  // AI Improvements Section
                   const Text(
-                    'Suggestions:',
+                    'What was improved:',
                     style: TextStyle(
                       color: AppTheme.primaryPurple,
                       fontWeight: FontWeight.bold,
@@ -348,7 +348,7 @@ class _PublishScreenState extends State<PublishScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Suggestions List
+                  // Improvements List
                   suggestions.isEmpty
                       ? Container(
                           padding: const EdgeInsets.all(16),
@@ -365,7 +365,7 @@ class _PublishScreenState extends State<PublishScreen> {
                           ),
                           child: Center(
                             child: Text(
-                              'No suggestions available yet.',
+                              'No improvements recorded.',
                               style: TextStyle(color: scheme.onSurfaceVariant),
                             ),
                           ),

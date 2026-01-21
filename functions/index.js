@@ -628,19 +628,20 @@ CV TAILORING RULES (when job title/description is provided):
    - Just enhance grammar, formatting, and professionalism
    - Don't remove or condense anything
 
-5. IN SUGGESTIONS:
-   - Mention which items you removed and why (too brief, not relevant to target role)
-   - Mention which sections you emphasized
-   - Be transparent about your tailoring decisions
+5. IN SUGGESTIONS (what was improved):
+   - Provide a high-level summary of the changes you made to enhance this CV
+   - List the main improvements and enhancements applied (e.g., "Restructured work experience for better readability", "Enhanced summary with key achievements")
+   - Mention if you optimized any sections for ATS or the target job
+   - Be clear and concise about what was actually changed
+   - Maximum 5 items, but you can provide less if not needed
 
 Enhance the following CV text to make it:
 - Professional and grammatically correct
 - Optimized for ATS (Applicant Tracking Systems)
 - Concise and well-structured
 - Tailored for the target job if provided
-- In the suggestions section, provide the CV owner with suggestions based on the content of the CV
-- If important sections are missing (like skills, education, experience), mention them in the suggestions section
-- Maximum 5 suggestions, but you can provide less if not needed
+- In the suggestions field, provide a summary of what improvements you made to this CV (high-level changes only)
+- Focus on what YOU changed, not what the user should do in the future
 
 ---
 
@@ -802,11 +803,11 @@ Return ONLY valid JSON in the following structure:
     }
   ],
   "suggestions": [
-    "Suggestion 1",
-    "Suggestion 2",
-    "Suggestion 3",
-    "Suggestion 4",
-    "Suggestion 5"
+    "...",
+    "...",
+    "...",
+    "...",
+    "..."
   ]
 }
 
