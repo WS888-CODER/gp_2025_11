@@ -4,6 +4,13 @@ import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/screens/favorites.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+String effectiveStatusFromDates(DateTime? start, DateTime? end) {
+  final now = DateTime.now();
+  if (end != null && end.isBefore(now)) return 'Closed';
+  if (start != null && start.isAfter(now)) return 'Soon';
+  return 'Open';
+}
+
 class JobFields {
   static const jobId = 'JobID';
   static const title = 'JobTitle';
@@ -277,7 +284,10 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
 
     final job = widget.job;
     final company = widget.company;
-    final isClosed = job.status.trim().toLowerCase() == 'closed';
+    final status = effectiveStatusFromDates(job.startDate, job.endDate);
+    final isClosed = status == 'Closed';
+    final isSoon = status == 'Soon';
+    final disabled = isClosed || isSoon;
 
     return ThemedScaffold(
       appBar: CustomHeader(
@@ -308,30 +318,35 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
           ],
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: SafeArea(
-          top: false,
-          minimum: const EdgeInsets.only(bottom: 8),
-          child: FilledButton(
-            onPressed: isClosed
-                ? null
-                : () => SnackHelper.error(
-                    context, 'Application functionality coming soon'),
-            style: FilledButton.styleFrom(
-              backgroundColor:
-                  isClosed ? onSurface.withOpacity(0.6) : scheme.primary,
-              disabledBackgroundColor: onSurface.withOpacity(0.6),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(28),
-              ),
-              textStyle: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+        child: FilledButton(
+          onPressed: () {
+            if (isClosed) {
+              SnackHelper.error(context, 'This job is closed.');
+              return;
+            }
+
+            if (isSoon) {
+              SnackHelper.error(context, 'Applications are not open yet.');
+              return;
+            }
+
+            SnackHelper.error(context, 'Application functionality coming soon');
+          },
+          style: FilledButton.styleFrom(
+            backgroundColor:
+                disabled ? onSurface.withOpacity(0.6) : scheme.primary,
+            disabledBackgroundColor: onSurface.withOpacity(0.6),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: const Text('Apply'),
+            textStyle: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
           ),
+          child: const Text('Apply'),
         ),
       ),
       body: ListView(
@@ -403,20 +418,22 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                                 ),
                               ),
                             ),
-                            if (isClosed)
+                            if (isClosed || isSoon)
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
+                                    horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: onSurface.withOpacity(0.45),
+                                  color: isClosed
+                                      ? Colors.grey.shade600
+                                      : scheme.primary.withOpacity(0.15),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: const Text(
-                                  'Closed',
+                                child: Text(
+                                  isClosed ? 'Closed' : 'Soon',
                                   style: TextStyle(
-                                    color: Colors.white,
+                                    color: isClosed
+                                        ? Colors.white
+                                        : scheme.primary,
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -811,7 +828,10 @@ class _JobCardState extends State<JobCard> {
 
     final job = widget.job;
     final company = widget.company;
-    final isClosed = job.status.trim().toLowerCase() == 'closed';
+    final status = effectiveStatusFromDates(job.startDate, job.endDate);
+    final isClosed = status == 'Closed';
+    final isSoon = status == 'Soon';
+    final disabled = isClosed || isSoon;
 
     return Container(
       decoration: BoxDecoration(
@@ -923,7 +943,7 @@ class _JobCardState extends State<JobCard> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  if (job.specialty.isNotEmpty && !isClosed)
+                  if (job.specialty.isNotEmpty && !isClosed && !isSoon)
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 4),
@@ -940,18 +960,20 @@ class _JobCardState extends State<JobCard> {
                         ),
                       ),
                     ),
-                  if (isClosed)
+                  if (isClosed || isSoon)
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: onSurface.withOpacity(0.45),
+                        color: isClosed
+                            ? Colors.grey.shade600
+                            : scheme.primary.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Text(
-                        'Closed',
+                      child: Text(
+                        isClosed ? 'Closed' : 'Soon',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: isClosed ? Colors.white : scheme.primary,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
@@ -959,15 +981,25 @@ class _JobCardState extends State<JobCard> {
                     ),
                   const Spacer(),
                   FilledButton(
-                    onPressed: isClosed
-                        ? null
-                        : () => SnackHelper.error(
-                            context, 'Application functionality coming soon'),
+                    onPressed: () {
+                      if (isClosed) {
+                        SnackHelper.error(context, 'This job is closed.');
+                        return;
+                      }
+
+                      if (isSoon) {
+                        SnackHelper.error(
+                            context, 'Applications are not open yet.');
+                        return;
+                      }
+
+                      SnackHelper.error(context, 'Coming soon');
+                    },
                     style: FilledButton.styleFrom(
-                      backgroundColor: isClosed
-                          ? onSurface.withOpacity(0.5)
+                      backgroundColor: disabled
+                          ? onSurface.withOpacity(0.6)
                           : scheme.primary,
-                      disabledBackgroundColor: onSurface.withOpacity(0.5),
+                      disabledBackgroundColor: onSurface.withOpacity(0.6),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),

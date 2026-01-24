@@ -4,6 +4,29 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gp_2025_11/config/theme.dart';
 import 'dart:async';
 
+DateTime? _asDate(dynamic v) {
+  if (v == null) return null;
+  if (v is DateTime) return v;
+  if (v is Timestamp) return v.toDate();
+  if (v is String && v.isNotEmpty) return DateTime.tryParse(v);
+  return null;
+}
+
+String effectiveStatusFromDates({
+  required DateTime? start,
+  required DateTime? end,
+  required String? storedStatus,
+}) {
+  final now = DateTime.now();
+
+  // If company manually closed it
+  if ((storedStatus ?? '').toLowerCase() == 'closed') return 'Closed';
+
+  if (end != null && end.isBefore(now)) return 'Closed';
+  if (start != null && start.isAfter(now)) return 'Soon';
+  return 'Open';
+}
+
 class CompanyHome extends StatefulWidget {
   const CompanyHome({
     super.key,
@@ -1108,19 +1131,54 @@ class _CompanyHomeState extends State<CompanyHome> {
                           final position = (data['Position'] ?? '').toString();
                           final specialty =
                               (data['Specialty'] ?? '').toString();
-                          final endDateField = data['EndDate'];
-                          DateTime? endDate;
-                          if (endDateField is Timestamp) {
-                            endDate = endDateField.toDate();
-                          }
-                          final now = DateTime.now();
 
-                          final jobStatus =
+                          DateTime? asDate(dynamic v) {
+                            if (v == null) return null;
+                            if (v is DateTime) return v;
+                            if (v is Timestamp) return v.toDate();
+                            if (v is String && v.isNotEmpty)
+                              return DateTime.tryParse(v);
+                            return null;
+                          }
+
+                          String effectiveStatusFromDates({
+                            required DateTime? start,
+                            required DateTime? end,
+                            required String? storedStatus,
+                          }) {
+                            final now = DateTime.now();
+
+                            // manual close
+                            if ((storedStatus ?? '').toLowerCase() == 'closed')
+                              return 'Closed';
+
+                            if (end != null && end.isBefore(now))
+                              return 'Closed';
+                            if (start != null && start.isAfter(now))
+                              return 'Soon';
+                            return 'Open';
+                          }
+
+                          final startDate = asDate(data['StartDate']);
+                          final endDate = asDate(data['EndDate']);
+                          final storedStatus =
                               (data['JobStatus'] ?? 'Open').toString();
-                          final isClosed = jobStatus == 'Closed' ||
-                              (endDate != null && endDate.isBefore(now));
-                          final scheme = Theme.of(context).colorScheme;
+
+                          final status = effectiveStatusFromDates(
+                            start: startDate,
+                            end: endDate,
+                            storedStatus: storedStatus,
+                          );
+
+                          final isClosed = status == 'Closed';
+                          final isSoon = status == 'Soon';
+
+                          final theme = Theme.of(context);
+                          final scheme = theme.colorScheme;
                           final primary = scheme.primary;
+                          final onSurface = scheme.onSurface;
+                          final isDark = theme.brightness == Brightness.dark;
+
                           return Container(
                             margin: const EdgeInsets.only(bottom: 16),
                             decoration: BoxDecoration(
@@ -1167,10 +1225,10 @@ class _CompanyHomeState extends State<CompanyHome> {
                                                   style: TextStyle(
                                                     fontWeight: FontWeight.w700,
                                                     fontSize: 18,
-                                                    color: isClosed
-                                                        ? scheme.onSurface
+                                                    color: (isClosed || isSoon)
+                                                        ? onSurface
                                                             .withOpacity(0.6)
-                                                        : scheme.onSurface,
+                                                        : onSurface,
                                                     letterSpacing: -0.5,
                                                   ),
                                                 ),
@@ -1181,10 +1239,10 @@ class _CompanyHomeState extends State<CompanyHome> {
                                                           (e) => e.isNotEmpty)
                                                       .join(' / '),
                                                   style: TextStyle(
-                                                    color: isClosed
-                                                        ? scheme.onSurface
+                                                    color: (isClosed || isSoon)
+                                                        ? onSurface
                                                             .withOpacity(0.5)
-                                                        : scheme.onSurface
+                                                        : onSurface
                                                             .withOpacity(0.7),
                                                     fontSize: 14,
                                                     fontWeight: FontWeight.w500,
@@ -1193,23 +1251,29 @@ class _CompanyHomeState extends State<CompanyHome> {
                                               ],
                                             ),
                                           ),
-                                          if (isClosed)
+
+                                          // Badge: Closed / Soon
+                                          if (isClosed || isSoon)
                                             Container(
                                               padding:
                                                   const EdgeInsets.symmetric(
                                                       horizontal: 12,
                                                       vertical: 6),
                                               decoration: BoxDecoration(
-                                                color: theme.colorScheme.error
-                                                    .withOpacity(0.15),
+                                                color: isClosed
+                                                    ? scheme.error
+                                                        .withOpacity(0.15)
+                                                    : scheme.secondary
+                                                        .withOpacity(0.15),
                                                 borderRadius:
                                                     BorderRadius.circular(20),
                                               ),
                                               child: Text(
-                                                'Closed',
+                                                isClosed ? 'Closed' : 'Soon',
                                                 style: TextStyle(
-                                                  color:
-                                                      theme.colorScheme.error,
+                                                  color: isClosed
+                                                      ? scheme.error
+                                                      : scheme.secondary,
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.w700,
                                                 ),
@@ -1236,10 +1300,8 @@ class _CompanyHomeState extends State<CompanyHome> {
                                                   onTap: () async {
                                                     final canProceed =
                                                         await _checkProfileComplete();
-                                                    if (!canProceed ||
-                                                        !mounted) {
+                                                    if (!canProceed || !mounted)
                                                       return;
-                                                    }
 
                                                     final start =
                                                         data['StartDate'];
@@ -1258,11 +1320,9 @@ class _CompanyHomeState extends State<CompanyHome> {
                                                         MainAxisAlignment
                                                             .center,
                                                     children: [
-                                                      Icon(
-                                                        Icons.edit_outlined,
-                                                        color: primary,
-                                                        size: 20,
-                                                      ),
+                                                      Icon(Icons.edit_outlined,
+                                                          color: primary,
+                                                          size: 20),
                                                       const SizedBox(width: 6),
                                                       Text(
                                                         'Edit',
@@ -1310,11 +1370,10 @@ class _CompanyHomeState extends State<CompanyHome> {
                                                             .center,
                                                     children: [
                                                       Icon(
-                                                        Icons
-                                                            .visibility_outlined,
-                                                        color: primary,
-                                                        size: 20,
-                                                      ),
+                                                          Icons
+                                                              .visibility_outlined,
+                                                          color: primary,
+                                                          size: 20),
                                                       const SizedBox(width: 6),
                                                       Text(
                                                         'View',

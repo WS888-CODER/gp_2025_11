@@ -12,6 +12,33 @@ class JobDetailsView extends StatefulWidget {
 class _JobDetailsViewState extends State<JobDetailsView> {
   Map<String, dynamic>? _jobData;
   bool _loading = true;
+  String _computeJobStatus({
+    required DateTime? start,
+    required DateTime? end,
+  }) {
+    final now = DateTime.now();
+
+    if (end != null && end.isBefore(now)) return 'Closed';
+    if (start != null && start.isAfter(now)) return 'Soon';
+    return 'Open';
+  }
+
+  Future<void> _syncJobStatusIfNeeded(String jobId, String computed) async {
+    if (_jobData == null) return;
+
+    final stored = (_jobData!['JobStatus'] ?? '').toString().trim();
+    if (stored == computed) return;
+
+    try {
+      await FirebaseFirestore.instance.collection('Jobs').doc(jobId).update({
+        'JobStatus': computed,
+      });
+
+      setState(() {
+        _jobData!['JobStatus'] = computed;
+      });
+    } catch (_) {}
+  }
 
   @override
   void initState() {
@@ -43,10 +70,21 @@ class _JobDetailsViewState extends State<JobDetailsView> {
         return;
       }
 
+      final data = doc.data();
+
+      final startDate = _asDate(data?['StartDate']);
+      final endDate = _asDate(data?['EndDate']);
+
+      final computed = _computeJobStatus(start: startDate, end: endDate);
+
       setState(() {
-        _jobData = doc.data();
+        _jobData = data;
         _loading = false;
+
+        _jobData!['JobStatus'] = computed;
       });
+
+      await _syncJobStatusIfNeeded(jobId, computed);
     } catch (e) {
       if (!mounted) return;
       SnackHelper.error(context, 'Error loading job: $e');
@@ -98,6 +136,9 @@ class _JobDetailsViewState extends State<JobDetailsView> {
     switch (status) {
       case 'Open':
         statusColor = Colors.green;
+        break;
+      case 'Soon':
+        statusColor = const Color(0xFFFD6C67);
         break;
       case 'Closed':
         statusColor = Colors.redAccent;

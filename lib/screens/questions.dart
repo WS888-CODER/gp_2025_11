@@ -12,6 +12,25 @@ class QuestionsPage extends StatefulWidget {
 }
 
 class _QuestionsPageState extends State<QuestionsPage> {
+  String _computeJobStatus({
+    required DateTime? start,
+    required DateTime? end,
+  }) {
+    final now = DateTime.now();
+
+    if (end != null && end.isBefore(now)) return 'Closed';
+    if (start != null && start.isAfter(now)) return 'Soon';
+    return 'Open';
+  }
+
+  DateTime? _asDate(dynamic v) {
+    if (v == null) return null;
+    if (v is DateTime) return v;
+    if (v is Timestamp) return v.toDate();
+    if (v is String && v.isNotEmpty) return DateTime.tryParse(v);
+    return null;
+  }
+
   Map<String, dynamic>? _jobData;
   String? _jobId;
   static const int kMaxQuestionLength = 500;
@@ -601,12 +620,16 @@ class _QuestionsPageState extends State<QuestionsPage> {
       final newJobDoc = jobs.doc();
       final jobId = newJobDoc.id;
 
+      final start = _asDate(_jobData?['StartDate']);
+      final end = _asDate(_jobData?['EndDate']);
+
       final jobDataToSave = {
         ..._jobData!,
         'JobID': jobId,
-        'JobStatus': 'Open',
+        'JobStatus': _computeJobStatus(start: start, end: end),
         'Questions': _questions,
         'QuestionsLocked': true,
+        'QuestionsUserAddedCount': _userAddedCount,
       };
 
       await newJobDoc.set(jobDataToSave);
@@ -958,13 +981,18 @@ class _JobHeaderCard extends StatelessWidget {
     if (v == null) return null;
     if (v is DateTime) return v;
     if (v is Timestamp) return v.toDate();
-    if (v is String && v.isNotEmpty) {
-      return DateTime.tryParse(v);
-    }
+    if (v is String && v.isNotEmpty) return DateTime.tryParse(v);
     return null;
   }
 
   String _fmtDate(DateTime d) => '${d.day}/${d.month}/${d.year}';
+
+  String _computeStatus(DateTime? start, DateTime? end) {
+    final now = DateTime.now();
+    if (end != null && end.isBefore(now)) return 'Closed';
+    if (start != null && start.isAfter(now)) return 'Soon';
+    return 'Open';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -973,7 +1001,6 @@ class _JobHeaderCard extends StatelessWidget {
     final title = (jobData['JobTitle'] ?? '').toString();
     final position = (jobData['Position'] ?? '').toString();
     final specialty = (jobData['Specialty'] ?? '').toString();
-    final status = (jobData['JobStatus'] ?? '').toString();
 
     final start = _asDate(jobData['StartDate']);
     final end = _asDate(jobData['EndDate']);
@@ -987,10 +1014,15 @@ class _JobHeaderCard extends StatelessWidget {
       dateRange = 'Ends: ${_fmtDate(end)}';
     }
 
+    final status = _computeStatus(start, end);
+
     Color statusColor;
     switch (status) {
       case 'Open':
         statusColor = Colors.green;
+        break;
+      case 'Soon':
+        statusColor = const Color(0xFFFD6C67);
         break;
       case 'Closed':
         statusColor = Colors.redAccent;
@@ -1027,7 +1059,6 @@ class _JobHeaderCard extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Title + status chip
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1041,27 +1072,25 @@ class _JobHeaderCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (status.isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          status,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: statusColor,
-                          ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        status,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: statusColor,
                         ),
                       ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 6),
-
                 if (position.isNotEmpty)
                   Row(
                     children: [
@@ -1081,9 +1110,7 @@ class _JobHeaderCard extends StatelessWidget {
                       ),
                     ],
                   ),
-
                 if (position.isNotEmpty) const SizedBox(height: 4),
-
                 if (specialty.isNotEmpty)
                   Row(
                     children: [
@@ -1104,10 +1131,8 @@ class _JobHeaderCard extends StatelessWidget {
                       ),
                     ],
                   ),
-
-                if (specialty.isNotEmpty && dateRange != null)
+                if ((specialty.isNotEmpty) && dateRange != null)
                   const SizedBox(height: 4),
-
                 if (dateRange != null)
                   Row(
                     children: [

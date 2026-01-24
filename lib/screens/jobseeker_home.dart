@@ -10,6 +10,25 @@ import 'package:gp_2025_11/screens/history.dart';
 import 'package:gp_2025_11/screens/favorites.dart';
 import 'package:gp_2025_11/screens/jobseeker_profile.dart';
 
+String effectiveStatusFromDates(dynamic start, dynamic end) {
+  final now = DateTime.now();
+
+  final DateTime startDate =
+      start is Timestamp ? start.toDate() : start as DateTime;
+
+  final DateTime endDate = end is Timestamp ? end.toDate() : end as DateTime;
+
+  if (now.isBefore(startDate)) {
+    return 'Soon';
+  }
+
+  if (now.isAfter(endDate)) {
+    return 'Closed';
+  }
+
+  return 'Open';
+}
+
 class JobSeekerHome extends StatefulWidget {
   const JobSeekerHome({super.key, this.userId});
   final String? userId;
@@ -661,6 +680,13 @@ class _JobsPreviewCompact extends StatefulWidget {
 }
 
 class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
+  String _effective(Job j) {
+    final raw = j.status.trim().toLowerCase();
+    if (raw == 'closed') return 'Closed';
+
+    return effectiveStatusFromDates(j.startDate, j.endDate);
+  }
+
   List<Job> _finalJobs = [];
   Map<String, CompanyInfo> _companyByUserId = {};
   bool _loadingCompanies = false;
@@ -838,9 +864,7 @@ class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
 
         final allJobs = docs.map((d) => Job.fromDoc(d)).toList();
 
-        final openJobs = allJobs
-            .where((j) => j.status.trim().toLowerCase() != 'closed')
-            .toList();
+        final openJobs = allJobs.where((j) => _effective(j) == 'Open').toList();
 
         List<Job> prioritized = [];
 

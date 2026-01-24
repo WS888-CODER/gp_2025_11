@@ -7,6 +7,13 @@ import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/screens/favorites.dart';
 import 'package:gp_2025_11/screens/job_card.dart';
 
+String effectiveStatusFromDates(DateTime? start, DateTime? end) {
+  final now = DateTime.now();
+  if (end != null && end.isBefore(now)) return 'Closed';
+  if (start != null && start.isAfter(now)) return 'Soon';
+  return 'Open';
+}
+
 const kJobsCollection = 'Jobs';
 const kUsersCollection = 'Users';
 List<String> kSpecialtyOptions = [
@@ -144,7 +151,7 @@ class _JobsPageState extends State<JobsPage> {
   String _selectedSpecialty = 'All';
   SortOrder _sort = SortOrder.newestFirst;
   bool _forYou = false;
-  bool _showClosedJobs = false;
+  bool _showAllJobs = false;
   bool _showProfileReminder = false;
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
@@ -280,8 +287,11 @@ class _JobsPageState extends State<JobsPage> {
   List<Job> _applyFilters(List<Job> jobs) {
     Iterable<Job> res = jobs;
 
-    if (!_showClosedJobs) {
-      res = res.where((j) => j.status != 'Closed');
+    if (!_showAllJobs) {
+      res = res.where((j) {
+        final s = effectiveStatusFromDates(j.startDate, j.endDate);
+        return s == 'Open';
+      });
     }
 
     if (_forYou) {
@@ -584,7 +594,7 @@ class _JobsPageState extends State<JobsPage> {
                                   _sort = SortOrder.newestFirst;
                                   _search = '';
                                   _searchController.text = '';
-                                  _showClosedJobs = false;
+                                  _showAllJobs = false;
                                 }
 
                                 final hasCv = _profile.cvUrl != null;
@@ -603,7 +613,7 @@ class _JobsPageState extends State<JobsPage> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                'Show closed',
+                                'Show all',
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w500,
@@ -649,9 +659,9 @@ class _JobsPageState extends State<JobsPage> {
                                 child: Transform.scale(
                                   scale: 0.9,
                                   child: Switch.adaptive(
-                                    value: _showClosedJobs,
+                                    value: _showAllJobs,
                                     onChanged: (val) {
-                                      setState(() => _showClosedJobs = val);
+                                      setState(() => _showAllJobs = val);
                                     },
                                   ),
                                 ),

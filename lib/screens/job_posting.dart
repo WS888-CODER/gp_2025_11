@@ -914,16 +914,24 @@ class _JobPostingPageState extends State<JobPostingPage> {
   Future<void> _submitForm() async {
     setState(() => _submitted = true);
 
+    // Basic form validation
     if (!_formKey.currentState!.validate()) return;
-// Specialty is required in create mode
+
+    // Specialty is required in create mode
     if (!_isEdit && _getSpecialtyValue().trim().isEmpty) {
       _showWarningSnackBar('Please select a specialty');
       return;
     }
 
-    // Check required fields
+    // Dates are required
     if (_startDate == null || _endDate == null) {
       _showWarningSnackBar('Please select start and end dates');
+      return;
+    }
+
+    // Ensure end >= start
+    if (_endDate!.isBefore(_startDate!)) {
+      _showWarningSnackBar('End date must be after start date');
       return;
     }
 
@@ -936,49 +944,81 @@ class _JobPostingPageState extends State<JobPostingPage> {
 
     final userId = currentUser.uid;
 
+    // Helper to compute status based on dates
+    String computeStatus(DateTime start, DateTime end) {
+      final now = DateTime.now();
+      if (end.isBefore(now)) return 'Closed';
+      if (start.isAfter(now)) return 'Soon';
+      return 'Open';
+    }
+
     try {
       final jobs = FirebaseFirestore.instance.collection('Jobs');
 
       if (_isEdit && _jobId != null && _jobId!.isNotEmpty) {
-        // EDIT MODE - Only update StartDate and EndDate
-        await jobs.doc(_jobId).update({
+        // EDIT MODE
+        // Your UI says: only dates can be edited
+        final docRef = jobs.doc(_jobId!);
+
+        // Read current status to avoid overriding manual "Closed"
+        final snap = await docRef.get();
+        final currentStatus =
+            (snap.data()?['JobStatus'] ?? 'Open').toString().trim();
+
+        final bool isManuallyClosed = currentStatus == 'Closed';
+
+        final updates = <String, dynamic>{
           'StartDate': _startDate,
           'EndDate': _endDate,
-        });
-        SnackHelper.success(context, 'Job dates updated successfully');
-
-        if (!mounted) return;
-        Navigator.pop(context);
-      } else {
-        if (_requirements.isEmpty) {
-          _showWarningSnackBar('Please add at least one requirement');
-          return;
-        }
-
-        final keywords = _extractKeywords();
-
-        final jobData = <String, dynamic>{
-          'JobTitle': _jobTitleController.text.trim(),
-          'JobDescription': _jobDescriptionController.text.trim(),
-          'Position': _positionController.text.trim(),
-          'Specialty': _getSpecialtyValue(),
-          'Requirements': List<String>.from(_requirements),
-          'StartDate': _startDate,
-          'EndDate': _endDate,
-          'JobKeywords': keywords,
-          'UserID': userId,
-          'PostedAt': FieldValue.serverTimestamp(),
         };
 
+        // If it's not manually closed, let dates determine the status
+        if (!isManuallyClosed) {
+          updates['JobStatus'] = computeStatus(_startDate!, _endDate!);
+        }
+
+        await docRef.update(updates);
+
+        SnackHelper.success(context, 'Job updated successfully');
         if (!mounted) return;
-        Navigator.pushReplacementNamed(
-          context,
-          '/questions',
-          arguments: {
-            'jobData': jobData,
-          },
-        );
+        Navigator.pop(context);
+        return;
       }
+
+      // CREATE MODE
+      if (_requirements.isEmpty) {
+        _showWarningSnackBar('Please add at least one requirement');
+        return;
+      }
+
+      final keywords = _extractKeywords();
+
+      final jobData = <String, dynamic>{
+        'JobTitle': _jobTitleController.text.trim(),
+        'JobDescription': _jobDescriptionController.text.trim(),
+        'Position': _positionController.text.trim(),
+        'Specialty': _getSpecialtyValue(),
+        'Requirements': List<String>.from(_requirements),
+        'StartDate': _startDate,
+        'EndDate': _endDate,
+        'JobKeywords': keywords,
+        'UserID': userId,
+        'PostedAt': FieldValue.serverTimestamp(),
+
+        // ✅ 3-state status
+        'JobStatus': computeStatus(_startDate!, _endDate!),
+      };
+
+      if (!mounted) return;
+
+      // Continue to questions page (it should do the actual add/set to Firestore)
+      Navigator.pushReplacementNamed(
+        context,
+        '/questions',
+        arguments: {
+          'jobData': jobData,
+        },
+      );
     } catch (e) {
       if (!mounted) return;
       SnackHelper.error(context, 'Error: $e');
