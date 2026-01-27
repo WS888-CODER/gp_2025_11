@@ -146,7 +146,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final querySnapshot = await _firestore
           .collection('Users')
-          .where('Email', isEqualTo: email.trim().toLowerCase())
+          .where('Email', isEqualTo: email.toLowerCase())
           .limit(1)
           .get();
 
@@ -211,7 +211,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final querySnapshot = await _firestore
           .collection('Users')
-          .where('Email', isEqualTo: email.trim().toLowerCase())
+          .where('Email', isEqualTo: email.toLowerCase())
           .limit(1)
           .get();
 
@@ -305,8 +305,9 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final lockStatus =
-          await _checkAccountLockStatus(_emailController.text.trim());
+      final normalizedEmail = _emailController.text.trim().toLowerCase();
+
+      final lockStatus = await _checkAccountLockStatus(normalizedEmail);
 
       if (lockStatus != null && lockStatus['locked'] == true) {
         setState(() => _isLoading = false);
@@ -316,7 +317,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final userQuery = await _firestore
           .collection('Users')
-          .where('Email', isEqualTo: _emailController.text.trim().toLowerCase())
+          .where('Email', isEqualTo: normalizedEmail)
           .limit(1)
           .get();
 
@@ -364,24 +365,21 @@ class _LoginScreenState extends State<LoginScreen> {
       final accountStatus =
           data['AccountStatus'] ?? data['accountStatus'] ?? 'Pending';
 
-// تحقق من Email Verification للـ JobSeeker و Company فقط
       if ((userType == 'JobSeeker' || userType == 'Company') &&
           !isEmailVerified) {
-        // أرسل OTP جديد
         final otp = _generateOTP();
         final otpSent = await _sendSignupOTPEmail(
-          _emailController.text.trim(),
+          normalizedEmail,
           otp,
           userType,
         );
 
         if (otpSent) {
-          // انقله لصفحة OTP
           Navigator.pushReplacementNamed(
             context,
             '/otp-verification',
             arguments: {
-              'email': _emailController.text.trim(),
+              'email': normalizedEmail,
               'userId': userId,
               'userType': userType,
             },
@@ -403,16 +401,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (userType == 'Admin') {
         final otp = _generateOTP();
-        final ok = await _sendOTPEmail(_emailController.text.trim(), otp);
+        final ok = await _sendOTPEmail(normalizedEmail, otp);
         if (ok) {
           SnackHelper.success(context, 'Verification code sent to your email');
           Navigator.pushReplacementNamed(
             context,
             '/otp-verification',
-            arguments: {
-              'email': _emailController.text.trim(),
-              'userId': userId
-            },
+            arguments: {'email': normalizedEmail, 'userId': userId},
           );
         } else {
           await _auth.signOut();
@@ -480,7 +475,8 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
         // Wrong password - record the failed attempt
-        await _recordFailedLoginAttempt(_emailController.text.trim());
+        await _recordFailedLoginAttempt(
+            _emailController.text.trim().toLowerCase());
       } else {
         if (mounted) {
           setState(() {
