@@ -9,6 +9,7 @@ import 'package:gp_2025_11/screens/cv_enhancement.dart';
 import 'package:gp_2025_11/screens/history.dart';
 import 'package:gp_2025_11/screens/favorites.dart';
 import 'package:gp_2025_11/screens/jobseeker_profile.dart';
+import 'package:gp_2025_11/screens/mock_interview.dart';
 
 String effectiveStatusFromDates(dynamic start, dynamic end) {
   final now = DateTime.now();
@@ -408,8 +409,13 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
                             Color(0xFF4A5FBC),
                           ],
                           onTap: () {
-                            SnackHelper.error(context,
-                                'Mock Interviews will be available soon');
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const MockInterviewSpecialtyScreen(),
+                              ),
+                            );
                           },
                         ),
                       ),

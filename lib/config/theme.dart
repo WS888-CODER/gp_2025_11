@@ -193,12 +193,19 @@ class JadeerDialog<T> extends StatelessWidget {
           ? null
           : ConstrainedBox(
               constraints: BoxConstraints(
-                // dialog body width is controlled here for all usages
                 minWidth: width,
                 maxWidth: width,
               ),
               child: SingleChildScrollView(
-                child: content!,
+                child: Center(
+                  child: DefaultTextStyle(
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                    ),
+                    child: content!,
+                  ),
+                ),
               ),
             ),
 

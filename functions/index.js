@@ -3102,3 +3102,4 @@ export const autoCloseExpiredJobs = v2.scheduler.onSchedule(
 );
 
 export { generateInterviewQuestions };
+export { generateMockInterviewQuestions } from "./mockinterview/mock_interview_questions.js";

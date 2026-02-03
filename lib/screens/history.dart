@@ -273,7 +273,7 @@ class _HistoryPageState extends State<HistoryPage>
                   ? DateFormat('MMM dd, yyyy - hh:mm a').format(date)
                   : '',
               leadingIcon: Icons.mic,
-              leadingBgColor: AppTheme.primaryPurple,
+              leadingBgColor: AppTheme.accentCoral,
               onTap: () {},
             );
           },
@@ -332,7 +332,7 @@ class _HistoryPageState extends State<HistoryPage>
                 if (status.isNotEmpty) status,
               ].join('  •  '),
               leadingIcon: Icons.work,
-              leadingBgColor: AppTheme.primaryPurple,
+              leadingBgColor: AppTheme.accentCoral,
               onTap: () {},
             );
           },

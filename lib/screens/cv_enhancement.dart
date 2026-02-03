@@ -80,6 +80,7 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
           FirebaseFirestore.instance.collection('Users').doc(currentUser.uid);
 
       final userDoc = await userDocRef.get();
+      if (!mounted) return;
 
       if (userDoc.exists) {
         final data = userDoc.data();
@@ -104,8 +105,10 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
               'AiUsage.MockInterview': 2,
               'AiUsage.LastReset': FieldValue.serverTimestamp(),
             });
+            if (!mounted) return;
           }
         }
+        if (!mounted) return;
 
         setState(() {
           _cvEnhancementCredits = credits;
@@ -172,7 +175,6 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
         });
       }
 
-// جيب الـ favorites من User document
       final userDoc = await FirebaseFirestore.instance
           .collection('Users')
           .doc(currentUser.uid)
@@ -195,6 +197,7 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
       List<Map<String, dynamic>> wishlistJobsList = allJobsList
           .where((job) => wishlistJobIds.contains(job['id']))
           .toList();
+      if (!mounted) return;
 
       setState(() {
         _allJobs = allJobsList;
@@ -252,12 +255,14 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
         SnackHelper.error(context, 'File is larger than 10MB.');
         return;
       }
+      if (!mounted) return;
 
       setState(() {
         _selectedFile = file;
       });
 
       await _uploadAndExtractCV();
+      if (!mounted) return;
     }
   }
 
@@ -269,6 +274,7 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
       SnackHelper.error(context, 'User not authenticated.');
       return;
     }
+    if (!mounted) return;
 
     setState(() {
       _isUploading = true;
@@ -292,6 +298,7 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
         'NewCVURL': '',
         'UserID': currentUser.uid,
       });
+      if (!mounted) return;
 
       setState(() {
         _cvHistoryId = cvHistoryId;
@@ -320,6 +327,7 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
       });
 
       await uploadTask;
+      if (!mounted) return;
 
       setState(() {
         _isUploading = false;
@@ -413,6 +421,7 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
           'Description': savedJobDescription,
         });
       }
+      if (!mounted) return;
 
       setState(() {
         _isSaving = false;

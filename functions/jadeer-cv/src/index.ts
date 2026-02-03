@@ -8,7 +8,6 @@ import { PDFParse } from "pdf-parse";
 // @ts-ignore - CJS module
 import textract from "textract";
 
-// احمِ التهيئة على ESM
 if (!admin.apps || admin.apps.length === 0) {
   admin.initializeApp();
 }
