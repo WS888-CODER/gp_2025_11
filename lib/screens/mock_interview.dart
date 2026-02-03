@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:gp_2025_11/config/theme.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -57,11 +58,137 @@ class _MockInterviewSpecialtyScreenState
     'Media & Communication':
         'Communication skills, storytelling, and public-facing roles.',
   };
+  Future<bool> consumeMockInterviewCredit() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+
+    final userDocRef =
+        FirebaseFirestore.instance.collection('Users').doc(user.uid);
+
+    return FirebaseFirestore.instance.runTransaction<bool>((tx) async {
+      final snap = await tx.get(userDocRef);
+      final data = snap.data() ?? {};
+      final aiUsage = (data['AiUsage'] as Map<String, dynamic>?) ?? {};
+
+      int credits = (aiUsage['MockInterview'] ?? 2) as int;
+
+      if (credits <= 0) return false;
+
+      tx.update(userDocRef, {
+        'AiUsage.MockInterview': credits - 1,
+      });
+
+      return true;
+    });
+  }
 
   @override
   void dispose() {
     _search.dispose();
     super.dispose();
+  }
+
+  int _mockInterviewCredits = 0;
+  bool _loadingCredits = true;
+  @override
+  void initState() {
+    super.initState();
+    _loadCredits();
+  }
+
+  Future<void> _loadCredits() async {
+    setState(() => _loadingCredits = true);
+    final usage = await fetchAndResetAiUsageIfNeeded();
+    if (!mounted) return;
+    setState(() {
+      _mockInterviewCredits = usage['MockInterview'] ?? 0;
+      _loadingCredits = false;
+    });
+  }
+
+  Widget _buildMockCreditsInfo() {
+    if (_loadingCredits) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF4A5FBC).withOpacity(0.10),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: const Color(0xFF4A5FBC).withOpacity(0.25),
+            width: 1,
+          ),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              height: 16,
+              width: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: 8),
+            Text('Loading credits...'),
+          ],
+        ),
+      );
+    }
+
+    final hasCredits = _mockInterviewCredits > 0;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: hasCredits
+            ? const Color(0xFF4A5FBC).withOpacity(0.10)
+            : Colors.red.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: hasCredits
+              ? const Color(0xFF4A5FBC).withOpacity(0.25)
+              : Colors.red.withOpacity(0.25),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            hasCredits ? Icons.auto_awesome : Icons.warning_rounded,
+            color: hasCredits ? const Color(0xFF4A5FBC) : Colors.red,
+            size: 22,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  hasCredits
+                      ? 'Mock Interview Credits'
+                      : 'No Credits Remaining',
+                  style: TextStyle(
+                    color: hasCredits ? const Color(0xFF4A5FBC) : Colors.red,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  hasCredits
+                      ? '$_mockInterviewCredits ${_mockInterviewCredits == 1 ? 'credit' : 'credits'} remaining today'
+                      : 'Credits reset daily at midnight',
+                  style: TextStyle(
+                    color: hasCredits
+                        ? const Color(0xFF4A5FBC).withOpacity(0.75)
+                        : Colors.red.withOpacity(0.75),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -78,6 +205,9 @@ class _MockInterviewSpecialtyScreenState
     }).toList();
     final shadowColor =
         isDark ? Colors.black.withOpacity(0.6) : Colors.black.withOpacity(0.07);
+    final canContinue =
+        _selected != null && !_loadingCredits && _mockInterviewCredits > 0;
+
     return ThemedScaffold(
       appBar: const CustomHeader(
         title: 'Choose your specialty',
@@ -90,8 +220,9 @@ class _MockInterviewSpecialtyScreenState
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
+              _buildMockCreditsInfo(),
+              const SizedBox(height: 12),
               // Search
-
               Container(
                 decoration: BoxDecoration(
                   color: isDark ? scheme.surface : Colors.white,
@@ -257,6 +388,7 @@ class _MockInterviewSpecialtyScreenState
         ),
       ),
       // Continue button
+
       bottomNavigationBar: SafeArea(
         minimum:
             const EdgeInsets.symmetric(horizontal: 16).copyWith(bottom: 16),
@@ -264,9 +396,9 @@ class _MockInterviewSpecialtyScreenState
           width: double.infinity,
           height: 54,
           child: FilledButton(
-            onPressed: _selected == null
-                ? null
-                : () => _confirmPermissionsThenStart(_selected!),
+            onPressed: canContinue
+                ? () => _confirmPermissionsThenStart(_selected!)
+                : null,
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFF4A5FBC),
               foregroundColor: Colors.white,
@@ -322,6 +454,29 @@ class _MockInterviewSpecialtyScreenState
     }
 
     try {
+      // 1) reset if needed
+      final usage = await fetchAndResetAiUsageIfNeeded();
+      if (!mounted) return;
+      setState(() {
+        _mockInterviewCredits = usage['MockInterview'] ?? _mockInterviewCredits;
+      });
+
+      // 2) consume credit
+      final ok = await consumeMockInterviewCredit();
+      if (!ok) {
+        if (!mounted) return;
+        SnackHelper.error(
+          context,
+          'You have no Mock Interview credits remaining today. Credits reset at midnight.',
+        );
+        return;
+      }
+
+      if (!mounted) return;
+      setState(() =>
+          _mockInterviewCredits = (_mockInterviewCredits - 1).clamp(0, 999));
+
+      // 3) create interview doc
       final docRef =
           FirebaseFirestore.instance.collection('MockInterviews').doc();
 
@@ -332,17 +487,12 @@ class _MockInterviewSpecialtyScreenState
         'Date': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-      // 2) generate questions (for now: static generator)
       final questions = _generateQuestionsForSpecialty(specialty);
 
-      // 3) save questions into existing field from screenshot
-      await docRef.set({
-        'Questions': questions,
-      }, SetOptions(merge: true));
+      await docRef.set({'Questions': questions}, SetOptions(merge: true));
 
       if (!mounted) return;
 
-      // 4) go to start screen (or directly to session later)
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -353,6 +503,7 @@ class _MockInterviewSpecialtyScreenState
         ),
       );
     } catch (e) {
+      await refundMockInterviewCredit();
       if (!mounted) return;
       SnackHelper.error(context, 'Failed to start mock interview: $e');
     }
@@ -432,12 +583,68 @@ class _MockInterviewSessionScreenState
   Timer? _recordTimer;
 
   late List<String> _answerUrls;
+  late final FlutterTts _tts;
+  bool _ttsReady = false;
+  bool _isSpeaking = false;
 
   @override
   void initState() {
     super.initState();
     _initPermissionsAndCamera();
     _answerUrls = List<String>.filled(widget.questions.length, '');
+
+    _tts = FlutterTts();
+    _initTts();
+  }
+
+  Future<void> _initTts() async {
+    try {
+      await _tts.setLanguage('en-US');
+      await _tts.setSpeechRate(0.48);
+      await _tts.setPitch(1.0);
+
+      _tts.setStartHandler(() {
+        if (!mounted) return;
+        setState(() => _isSpeaking = true);
+      });
+
+      _tts.setCompletionHandler(() {
+        if (!mounted) return;
+        setState(() => _isSpeaking = false);
+      });
+
+      _tts.setErrorHandler((_) {
+        if (!mounted) return;
+        setState(() => _isSpeaking = false);
+      });
+      if (!mounted) return;
+      setState(() => _ttsReady = true);
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _speakCurrentQuestion();
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _ttsReady = false);
+    }
+  }
+
+  Future<void> _speakCurrentQuestion() async {
+    if (!_ttsReady) return;
+    if (_isRecording) return;
+    await _tts.stop();
+    await _tts.speak(_currentQuestion);
+  }
+
+  Future<void> _toggleSpeak() async {
+    if (!_ttsReady) return;
+
+    if (_isSpeaking) {
+      await _tts.stop();
+      return;
+    }
+    await _speakCurrentQuestion();
   }
 
   Future<void> _initPermissionsAndCamera() async {
@@ -503,6 +710,7 @@ class _MockInterviewSessionScreenState
 
   @override
   void dispose() {
+    _tts.stop();
     _recordTimer?.cancel();
     _recorder.dispose();
     _camera?.dispose();
@@ -530,6 +738,10 @@ class _MockInterviewSessionScreenState
       _index++;
       _recordDuration = Duration.zero;
     });
+
+    await Future.delayed(const Duration(milliseconds: 150));
+    if (!mounted) return;
+    await _speakCurrentQuestion();
   }
 
   void _startTimer() {
@@ -684,200 +896,282 @@ class _MockInterviewSessionScreenState
     final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return ThemedScaffold(
-      appBar: const CustomHeader(
-        title: 'Mock Interview',
-        showBack: true,
-      ),
-      body: Container(
-        color: isDark ? scheme.background : const Color(0xFFF5F5F5),
-        child: _initializing
-            ? const Center(child: CircularProgressIndicator())
-            : (_error != null)
-                ? Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (didPop) return;
+
+        final shouldExit = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => const JadeerDialog<bool>(
+            title: 'Exit Interview?',
+            content: Text(
+              'If you exit the interview now:\n\n'
+              '• This attempt will be counted\n'
+              '• No interview report will be generated\n\n'
+              'Are you sure you want to exit?',
+              textAlign: TextAlign.center,
+            ),
+            primaryLabel: 'Exit anyway',
+            primaryResult: true,
+            secondaryLabel: 'Continue interview',
+            secondaryResult: false,
+          ),
+        );
+
+        if (shouldExit == true && context.mounted) {
+          Navigator.pop(context);
+        }
+      },
+      child: ThemedScaffold(
+        appBar: const CustomHeader(
+          title: 'Mock Interview',
+          showBack: true,
+        ),
+        body: Container(
+          color: isDark ? scheme.background : const Color(0xFFF5F5F5),
+          child: _initializing
+              ? const Center(child: CircularProgressIndicator())
+              : (_error != null)
+                  ? Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            _error!,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: scheme.error),
+                          ),
+                          const SizedBox(height: 12),
+                          FilledButton(
+                            onPressed: _initPermissionsAndCamera,
+                            child: const Text('Try again'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : Column(
                       children: [
-                        Text(
-                          _error!,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: scheme.error),
+                        // Camera preview
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(22),
+                            child: SizedBox(
+                              height: 320,
+                              width: double.infinity,
+                              child: CameraPreview(_camera!),
+                            ),
+                          ),
                         ),
-                        const SizedBox(height: 12),
-                        FilledButton(
-                          onPressed: _initPermissionsAndCamera,
-                          child: const Text('Try again'),
+
+                        // Question card
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: isDark ? scheme.surface : Colors.white,
+                              borderRadius: BorderRadius.circular(18),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black
+                                      .withOpacity(isDark ? 0.6 : 0.08),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Question ${_index + 1}/${widget.questions.length}',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: isDark
+                                        ? scheme.onSurface.withOpacity(0.7)
+                                        : Colors.black54,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        _currentQuestion,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w800,
+                                          height: 1.3,
+                                        ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      onPressed: _toggleSpeak,
+                                      icon: Icon(
+                                        size: 30,
+                                        _isSpeaking
+                                            ? Icons.stop_circle
+                                            : Icons.volume_up_rounded,
+                                        color: _isSpeaking
+                                            ? const Color(0xFFFC686A)
+                                            : const Color(0xFF4A5FBC),
+                                      ),
+                                      tooltip: _isSpeaking ? 'Stop' : 'Listen',
+                                    ),
+                                  ],
+                                ),
+                                Text(
+                                  'Answer by voice, then press Next.',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isDark
+                                        ? scheme.onSurface.withOpacity(0.7)
+                                        : Colors.black54,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 50),
+
+                        Center(
+                          child: GestureDetector(
+                            onTap: _toggleRecording,
+                            child: Container(
+                              width: 84,
+                              height: 84,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: _isRecording
+                                    ? const Color(0xFFFC686A)
+                                    : const Color(0xFF4A5FBC),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black
+                                        .withOpacity(isDark ? 0.6 : 0.12),
+                                    blurRadius: 14,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                _isRecording
+                                    ? Icons.stop_rounded
+                                    : Icons.mic_rounded,
+                                size: 40,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 10),
+
+                        Text(
+                          _isRecording
+                              ? 'Recording… ${_fmt(_recordDuration)}'
+                              : (_answerUrls[_index].isNotEmpty
+                                  ? 'Answer recorded ✅'
+                                  : 'Tap the mic to record'),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: isDark
+                                ? scheme.onSurface.withOpacity(0.8)
+                                : Colors.black87,
+                          ),
+                        ),
+
+                        const Spacer(),
+
+                        // Next / Finish
+                        SafeArea(
+                          minimum: const EdgeInsets.symmetric(horizontal: 16)
+                              .copyWith(bottom: 16),
+                          child: SizedBox(
+                            width: double.infinity,
+                            height: 54,
+                            child: FilledButton(
+                              onPressed: _next,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFF4A5FBC),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(28),
+                                ),
+                              ),
+                              child: Text(_isLast ? 'Finish' : 'Next'),
+                            ),
+                          ),
                         ),
                       ],
                     ),
-                  )
-                : Column(
-                    children: [
-                      // Camera preview
-                      Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(22),
-                          child: AspectRatio(
-                            aspectRatio: _camera!.value.aspectRatio,
-                            child: CameraPreview(_camera!),
-                          ),
-                        ),
-                      ),
-
-                      // Question card
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: isDark ? scheme.surface : Colors.white,
-                            borderRadius: BorderRadius.circular(18),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black
-                                    .withOpacity(isDark ? 0.6 : 0.08),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Question ${_index + 1}/${widget.questions.length}',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: isDark
-                                      ? scheme.onSurface.withOpacity(0.7)
-                                      : Colors.black54,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                _currentQuestion,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                  height: 1.3,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                'Answer by voice, then press Next.',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: isDark
-                                      ? scheme.onSurface.withOpacity(0.7)
-                                      : Colors.black54,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 12),
-                                decoration: BoxDecoration(
-                                  color: isDark ? scheme.surface : Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black
-                                          .withOpacity(isDark ? 0.6 : 0.08),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      _isRecording ? Icons.mic : Icons.mic_none,
-                                      color: _isRecording
-                                          ? const Color(0xFFFC686A)
-                                          : scheme.primary,
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text(
-                                        _isRecording
-                                            ? 'Recording… ${_fmt(_recordDuration)}'
-                                            : (_answerUrls[_index].isNotEmpty
-                                                ? 'Answer recorded ✅'
-                                                : 'Tap to record your answer'),
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          color: isDark
-                                              ? scheme.onSurface
-                                              : Colors.black87,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    SizedBox(
-                                      height: 42,
-                                      child: FilledButton(
-                                        onPressed: _toggleRecording,
-                                        style: FilledButton.styleFrom(
-                                          backgroundColor: _isRecording
-                                              ? const Color(0xFFFC686A)
-                                              : const Color(0xFF4A5FBC),
-                                          foregroundColor: Colors.white,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(14),
-                                          ),
-                                        ),
-                                        child: Text(
-                                            _isRecording ? 'Stop' : 'Record'),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const Spacer(),
-
-                      // Next / Finish
-                      SafeArea(
-                        minimum: const EdgeInsets.symmetric(horizontal: 16)
-                            .copyWith(bottom: 16),
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: 54,
-                          child: FilledButton(
-                            onPressed: _next,
-                            style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFF4A5FBC),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(28),
-                              ),
-                            ),
-                            child: Text(_isLast ? 'Finish' : 'Next'),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+        ),
       ),
     );
   }
+}
+
+Future<Map<String, int>> fetchAndResetAiUsageIfNeeded() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return {'CvEnhancement': 0, 'MockInterview': 0};
+
+  final userDocRef =
+      FirebaseFirestore.instance.collection('Users').doc(user.uid);
+
+  final snap = await userDocRef.get();
+  final data = snap.data() ?? {};
+  final aiUsage = (data['AiUsage'] as Map<String, dynamic>?) ?? {};
+
+  int cv = (aiUsage['CvEnhancement'] ?? 2) as int;
+  int mock = (aiUsage['MockInterview'] ?? 2) as int;
+  final lastReset = aiUsage['LastReset'] as Timestamp?;
+
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+
+  bool shouldReset;
+  if (lastReset == null) {
+    shouldReset = true;
+  } else {
+    final last = lastReset.toDate();
+    final lastDay = DateTime(last.year, last.month, last.day);
+    shouldReset = lastDay.isBefore(today);
+  }
+
+  if (shouldReset) {
+    cv = 2;
+    mock = 2;
+    await userDocRef.update({
+      'AiUsage.CvEnhancement': 2,
+      'AiUsage.MockInterview': 2,
+      'AiUsage.LastReset': FieldValue.serverTimestamp(),
+    });
+  }
+
+  return {'CvEnhancement': cv, 'MockInterview': mock};
+}
+
+Future<void> refundMockInterviewCredit() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
+
+  final userDocRef =
+      FirebaseFirestore.instance.collection('Users').doc(user.uid);
+
+  await FirebaseFirestore.instance.runTransaction((tx) async {
+    final snap = await tx.get(userDocRef);
+    final data = snap.data() ?? {};
+    final aiUsage = (data['AiUsage'] as Map<String, dynamic>?) ?? {};
+    final credits = (aiUsage['MockInterview'] ?? 0) as int;
+
+    tx.update(userDocRef, {'AiUsage.MockInterview': credits + 1});
+  });
 }
