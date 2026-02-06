@@ -188,23 +188,76 @@ class _HistoryPageState extends State<HistoryPage>
         }
 
         final docs = snapshot.data!.docs;
+        
+        // ✅ FILTER: Only show CVs that have been enhanced (NewCVText is not null/empty)
+        final enhancedCVs = docs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final newCVText = data['NewCVText'];
+          
+          // Only include if NewCVText exists and is not empty
+          if (newCVText == null) return false;
+          if (newCVText is String && newCVText.isEmpty) return false;
+          if (newCVText is List && newCVText.isEmpty) return false;
+          
+          return true;
+        }).toList();
+        
+        // ✅ Show empty state if no enhanced CVs exist
+        if (enhancedCVs.isEmpty) {
+          return const EmptyState(
+            icon: Icons.description_outlined,
+            title: 'No CV Enhancements Yet',
+            subtitle: 'Your CV enhancement history will appear here',
+          );
+        }
+        
         return ListView.separated(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          itemCount: docs.length,
+          itemCount: enhancedCVs.length,
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
-            final data = docs[index].data() as Map<String, dynamic>;
+            final data = enhancedCVs[index].data() as Map<String, dynamic>;
             final date = (data['Date'] as Timestamp?)?.toDate();
             final title = (data['JobTitle'] ?? 'CV Enhancement').toString();
             final cvHistoryId =
-                (data['CVHistoryID'] ?? docs[index].id).toString();
+                (data['CVHistoryID'] ?? enhancedCVs[index].id).toString();
+
+            // ✅ CALCULATE DAYS LEFT
+            int? daysLeft;
+            String? expiryText;
+            Color? expiryColor;
+
+            if (date != null) {
+              final now = DateTime.now();
+              final age = now.difference(date).inDays;
+              daysLeft = 30 - age;
+              
+              if (daysLeft <= 0) {
+                expiryText = 'Expires today';
+                expiryColor = Colors.red;
+              } else if (daysLeft <= 9) {
+                expiryText = '$daysLeft days left';
+                expiryColor = Colors.red;
+              } else if (daysLeft <= 19) {
+                expiryText = '$daysLeft days left';
+                expiryColor = Colors.orange;
+              } else {
+                expiryText = '$daysLeft days left';
+                expiryColor = Colors.green;
+              }
+            }
+
+            // ✅ BUILD SUBTITLE - ONLY DATE (badge shows expiry)
+            final subtitleText = date != null 
+                ? DateFormat('MMM dd, yyyy').format(date)
+                : '';
 
             return _historyTile(
               context,
               title: title.isEmpty ? 'CV Enhancement' : title,
-              subtitle: date != null
-                  ? DateFormat('MMM dd, yyyy - hh:mm a').format(date)
-                  : '',
+              subtitle: subtitleText,
+              expiryText: expiryText,
+              expiryColor: expiryColor,
               leadingIcon: Icons.description,
               leadingBgColor: AppTheme.accentCoral,
               onTap: () {
@@ -217,6 +270,55 @@ class _HistoryPageState extends State<HistoryPage>
                     ),
                   ),
                 );
+              },
+              onDelete: () async {
+                // ✅ Show confirmation dialog with app theme
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => const JadeerDialog<bool>(
+                    title: 'Delete CV Enhancement',
+                    content: Text(
+                      'Are you sure you want to delete this CV enhancement? This action cannot be undone.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 15,
+                      ),
+                    ),
+                    secondaryLabel: 'Cancel',
+                    secondaryResult: false,
+                    primaryLabel: 'Delete',
+                    primaryResult: true,
+                  ),
+                );
+
+                if (confirm == true) {
+                  try {
+                    // Delete from Firestore
+                    await FirebaseFirestore.instance
+                        .collection('CVHistory')
+                        .doc(cvHistoryId)
+                        .delete();
+
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('CV enhancement deleted successfully'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error deleting CV: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                }
               },
             );
           },
@@ -256,25 +358,121 @@ class _HistoryPageState extends State<HistoryPage>
         }
 
         final docs = snapshot.data!.docs;
+        
+        // ✅ FILTER: Only show completed mock interviews
+        final completedInterviews = docs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          // Add any filtering logic if needed
+          return true;
+        }).toList();
+        
+        if (completedInterviews.isEmpty) {
+          return const EmptyState(
+            icon: Icons.mic_none,
+            title: 'No Mock Interviews Yet',
+            subtitle: 'Your mock interview history will appear here',
+          );
+        }
+        
         return ListView.separated(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          itemCount: docs.length,
+          itemCount: completedInterviews.length,
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
-            final data = docs[index].data() as Map<String, dynamic>;
+            final data = completedInterviews[index].data() as Map<String, dynamic>;
             final date = (data['Date'] as Timestamp?)?.toDate();
             final specialty =
                 (data['Specialty'] ?? 'Mock Interview').toString();
+            final mockInterviewId = completedInterviews[index].id;
+
+            // ✅ CALCULATE DAYS LEFT
+            int? daysLeft;
+            String? expiryText;
+            Color? expiryColor;
+
+            if (date != null) {
+              final now = DateTime.now();
+              final age = now.difference(date).inDays;
+              daysLeft = 30 - age;
+              
+              if (daysLeft <= 0) {
+                expiryText = 'Expires today';
+                expiryColor = Colors.red;
+              } else if (daysLeft <= 9) {
+                expiryText = '$daysLeft days left';
+                expiryColor = Colors.red;
+              } else if (daysLeft <= 19) {
+                expiryText = '$daysLeft days left';
+                expiryColor = Colors.orange;
+              } else {
+                expiryText = '$daysLeft days left';
+                expiryColor = Colors.green;
+              }
+            }
+
+            // ✅ BUILD SUBTITLE - ONLY DATE (badge shows expiry)
+            final subtitleText = date != null 
+                ? DateFormat('MMM dd, yyyy').format(date)
+                : '';
 
             return _historyTile(
               context,
               title: specialty.isEmpty ? 'Mock Interview' : specialty,
-              subtitle: date != null
-                  ? DateFormat('MMM dd, yyyy - hh:mm a').format(date)
-                  : '',
+              subtitle: subtitleText,
+              expiryText: expiryText,
+              expiryColor: expiryColor,
               leadingIcon: Icons.mic,
               leadingBgColor: AppTheme.accentCoral,
               onTap: () {},
+              onDelete: () async {
+                // ✅ Show confirmation dialog with app theme
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => const JadeerDialog<bool>(
+                    title: 'Delete Mock Interview',
+                    content: Text(
+                      'Are you sure you want to delete this mock interview? This action cannot be undone.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 15,
+                      ),
+                    ),
+                    secondaryLabel: 'Cancel',
+                    secondaryResult: false,
+                    primaryLabel: 'Delete',
+                    primaryResult: true,
+                  ),
+                );
+
+                if (confirm == true) {
+                  try {
+                    // Delete from Firestore
+                    await FirebaseFirestore.instance
+                        .collection('MockInterviews')
+                        .doc(mockInterviewId)
+                        .delete();
+
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Mock interview deleted successfully'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error deleting mock interview: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                }
+              },
             );
           },
         );
@@ -346,9 +544,12 @@ class _HistoryPageState extends State<HistoryPage>
     BuildContext context, {
     required String title,
     required String subtitle,
+    String? expiryText,  // ✅ ADDED THIS
+    Color? expiryColor,
     required IconData leadingIcon,
     required Color leadingBgColor,
     VoidCallback? onTap,
+    VoidCallback? onDelete,  // ✅ ADDED THIS
   }) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
@@ -387,18 +588,51 @@ class _HistoryPageState extends State<HistoryPage>
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: isDark
-                            ? scheme.onSurface.withOpacity(0.7)
-                            : Colors.grey.shade600,
-                      ),
+                    // ✅ UPDATED SUBTITLE WITH BADGE
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            subtitle,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isDark
+                                  ? scheme.onSurface.withOpacity(0.7)
+                                  : Colors.grey.shade600,
+                            ),
+                          ),
+                        ),
+                        if (expiryColor != null && expiryText != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: expiryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: expiryColor, width: 1),
+                            ),
+                            child: Text(
+                              expiryText,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: expiryColor,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ],
                 ),
               ),
+              // ✅ DELETE BUTTON
+              if (onDelete != null)
+                IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  color: Colors.red.shade400,
+                  iconSize: 22,
+                  onPressed: onDelete,
+                  tooltip: 'Delete',
+                ),
               Icon(Icons.chevron_right,
                   color: isDark
                       ? scheme.onSurface.withOpacity(0.5)

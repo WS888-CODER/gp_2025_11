@@ -2,6 +2,7 @@ import express from "express";
 import OpenAI from "openai";
 import * as functions from "firebase-functions";
 import * as v2 from "firebase-functions/v2";
+import { onSchedule } from "firebase-functions/v2/scheduler";
 import admin from "firebase-admin";
 import nodemailer from "nodemailer";
 import mammoth from "mammoth";
@@ -10,6 +11,7 @@ import os from "os";
 import fs from "fs";
 import PDFDocument from "pdfkit";
 import { generateInterviewQuestions } from "./interview/generateQuestions.js";
+
 
 // ============================================
 // 🔧 Initialize Services
@@ -3103,3 +3105,114 @@ export const autoCloseExpiredJobs = v2.scheduler.onSchedule(
 
 export { generateInterviewQuestions };
 export { generateMockInterviewQuestions } from "./mockinterview/mock_interview_questions.js";
+
+export const deleteOldCVHistory = onSchedule(
+  {
+    schedule: "0 0 * * *",
+    timeZone: "UTC",
+    region: "us-central1",
+  },
+  async (event) => {
+    console.log("Starting deleteOldCVHistory function");
+
+    try {
+      const db = admin.firestore();
+      
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+      const oneMonthAgoTimestamp = admin.firestore.Timestamp.fromDate(oneMonthAgo);
+
+      console.log("Querying CVHistory older than:", oneMonthAgo.toISOString());
+
+      const oldCVsQuery = db
+        .collection("CVHistory")
+        .where("Date", "<", oneMonthAgoTimestamp);
+
+      const snapshot = await oldCVsQuery.get();
+
+      if (snapshot.empty) {
+        console.log("No old CV history records found to delete");
+        return;
+      }
+
+      console.log(`Found ${snapshot.size} CV history records to delete`);
+
+      const batchSize = 500;
+      let deletedCount = 0;
+      let batch = db.batch();
+      let batchCount = 0;
+
+      for (const doc of snapshot.docs) {
+        batch.delete(doc.ref);
+        batchCount++;
+
+        if (batchCount >= batchSize) {
+          await batch.commit();
+          deletedCount += batchCount;
+          console.log(`Deleted ${deletedCount} records so far...`);
+          batch = db.batch();
+          batchCount = 0;
+        }
+      }
+
+      if (batchCount > 0) {
+        await batch.commit();
+        deletedCount += batchCount;
+      }
+
+      console.log(`Successfully deleted ${deletedCount} old CV history records`);
+    } catch (error) {
+      console.error("Error in deleteOldCVHistory:", error);
+      throw error;
+    }
+  }
+);
+
+// ✅ Add this function to your functions/index.js file
+// This should be added AFTER the deleteOldCVHistory function
+
+// Auto-delete Mock Interviews older than 30 days (runs daily at midnight)
+export const deleteOldMockInterviews = onSchedule(
+  {
+    schedule: "0 0 * * *",
+    timeZone: "UTC",
+    region: "us-central1",
+  },
+  async (event) => {
+    const now = new Date();
+    const oneMonthAgo = new Date(now);
+    oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+
+    try {
+      const db = admin.firestore();
+      
+      // Query for Mock Interviews older than 30 days
+      const oldMockInterviewsSnapshot = await db
+        .collection("MockInterviews")
+        .where("Date", "<", oneMonthAgo)
+        .get();
+
+      if (oldMockInterviewsSnapshot.empty) {
+        console.log("No old mock interviews to delete");
+        return null;
+      }
+
+      // Delete in batches of 500 (Firestore limit)
+      const batch = db.batch();
+      let deleteCount = 0;
+
+      oldMockInterviewsSnapshot.forEach((doc) => {
+        batch.delete(doc.ref);
+        deleteCount++;
+      });
+
+      await batch.commit();
+      console.log(`Deleted ${deleteCount} old mock interviews`);
+
+      return { success: true, deletedCount: deleteCount };
+    } catch (error) {
+      console.error("Error deleting old mock interviews:", error);
+      return { success: false, error: error.message };
+    }
+  }
+);

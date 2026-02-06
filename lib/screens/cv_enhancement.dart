@@ -52,19 +52,38 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
   }
 
   @override
-  void dispose() {
-    if (!_navigatedSuccessfully && _cvHistoryId != null) {
-      FirebaseFirestore.instance
+void dispose() async {
+  if (!_navigatedSuccessfully && _cvHistoryId != null) {
+    try {
+      final cvDoc = await FirebaseFirestore.instance
           .collection('CVHistory')
           .doc(_cvHistoryId)
-          .delete();
+          .get();
+      
+      if (cvDoc.exists) {
+        final data = cvDoc.data();
+        final newCVURL = data?['NewCVURL']?.toString() ?? '';
+        final newCVText = data?['NewCVText']?.toString() ?? '';
+        
+        if (newCVURL.isEmpty && newCVText.isEmpty) {
+          await FirebaseFirestore.instance
+              .collection('CVHistory')
+              .doc(_cvHistoryId)
+              .delete();
+          print('Deleted incomplete CV history: $_cvHistoryId');
+        }
+      }
+    } catch (e) {
+      print('Error checking CV history: $e');
     }
-    _jobTitleController.dispose();
-    _jobDescriptionController.dispose();
-    _searchController.dispose();
-    _extractionListener?.cancel();
-    super.dispose();
   }
+  
+  _jobTitleController.dispose();
+  _jobDescriptionController.dispose();
+  _searchController.dispose();
+  _extractionListener?.cancel();
+  super.dispose();
+}
 
   Future<void> _fetchCredits() async {
     try {
