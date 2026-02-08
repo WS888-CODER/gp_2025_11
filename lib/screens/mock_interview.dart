@@ -8,6 +8,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:gp_2025_11/config/theme.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
@@ -567,6 +568,18 @@ class MockInterviewSessionScreen extends StatefulWidget {
 
 class _MockInterviewSessionScreenState
     extends State<MockInterviewSessionScreen> {
+  final AudioPlayer _player = AudioPlayer();
+  bool _isUploadingAnswer = false;
+  double _uploadProgress = 0.0;
+  StreamSubscription<TaskSnapshot>? _uploadSub;
+
+  String? _currentPlaybackUrl;
+  bool _isPlaying = false;
+  bool get _canGoNext =>
+      !_isRecording &&
+      !_isUploadingAnswer &&
+      _answerUrls[_index].trim().isNotEmpty;
+
   CameraController? _camera;
   bool _initializing = true;
   String? _error;
@@ -590,11 +603,20 @@ class _MockInterviewSessionScreenState
   @override
   void initState() {
     super.initState();
-    _initPermissionsAndCamera();
     _answerUrls = List<String>.filled(widget.questions.length, '');
-
     _tts = FlutterTts();
-    _initTts();
+
+    _initTts().then((_) {
+      if (!mounted) return;
+      _initPermissionsAndCamera();
+    });
+
+    _player.playerStateStream.listen((state) {
+      if (!mounted) return;
+      if (state.processingState == ProcessingState.completed) {
+        setState(() => _isPlaying = false);
+      }
+    });
   }
 
   Future<void> _initTts() async {
@@ -619,11 +641,6 @@ class _MockInterviewSessionScreenState
       });
       if (!mounted) return;
       setState(() => _ttsReady = true);
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _speakCurrentQuestion();
-      });
     } catch (_) {
       if (!mounted) return;
       setState(() => _ttsReady = false);
@@ -688,7 +705,7 @@ class _MockInterviewSessionScreenState
       final controller = CameraController(
         front,
         ResolutionPreset.medium,
-        enableAudio: true,
+        enableAudio: false,
       );
 
       await controller.initialize();
@@ -706,6 +723,10 @@ class _MockInterviewSessionScreenState
         _initializing = false;
       });
     }
+
+    await Future.delayed(const Duration(milliseconds: 300));
+    if (!mounted) return;
+    await _speakCurrentQuestion();
   }
 
   @override
@@ -714,7 +735,36 @@ class _MockInterviewSessionScreenState
     _recordTimer?.cancel();
     _recorder.dispose();
     _camera?.dispose();
+    _uploadSub?.cancel();
+    _player.dispose();
     super.dispose();
+  }
+
+  Future<void> _togglePlayback() async {
+    final url = _answerUrls[_index].trim();
+    if (url.isEmpty) return;
+
+    try {
+      if (_isPlaying) {
+        await _player.pause();
+        if (!mounted) return;
+        setState(() => _isPlaying = false);
+        return;
+      }
+
+      if (_currentPlaybackUrl != url) {
+        await _player.setUrl(url);
+        _currentPlaybackUrl = url;
+      }
+
+      await _player.play();
+      if (!mounted) return;
+      setState(() => _isPlaying = true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isPlaying = false);
+      SnackHelper.error(context, 'Playback error: $e');
+    }
   }
 
   Future<void> _next() async {
@@ -759,10 +809,30 @@ class _MockInterviewSessionScreenState
     return '$m:$s';
   }
 
+  Future<String> _uploadAudioAndGetUrlWithProgress(File file) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'unknown';
+    final storagePath =
+        'mock_interviews/$uid/${widget.mockInterviewId}/q${_index + 1}.m4a';
+
+    final ref = FirebaseStorage.instance.ref().child(storagePath);
+    final task = ref.putFile(file, SettableMetadata(contentType: 'audio/m4a'));
+
+    _uploadSub?.cancel();
+    _uploadSub = task.snapshotEvents.listen((s) {
+      final total = s.totalBytes;
+      if (total == 0) return;
+      final p = s.bytesTransferred / total;
+      if (!mounted) return;
+      setState(() => _uploadProgress = p);
+    });
+
+    await task;
+    return await ref.getDownloadURL();
+  }
+
   Future<void> _toggleRecording() async {
     try {
       if (_isRecording) {
-        // Stop
         final path = await _recorder.stop();
         _recordTimer?.cancel();
 
@@ -774,23 +844,35 @@ class _MockInterviewSessionScreenState
           return;
         }
 
-        // Upload to Firebase Storage
-        final url = await _uploadAudioAndGetUrl(File(path));
+        // ✅ Show uploading state
+        setState(() {
+          _isUploadingAnswer = true;
+          _uploadProgress = 0.0;
+        });
 
-        // Save URL in local list + Firestore AnswersRecordsURL[index]
-        _answerUrls[_index] = url;
+        try {
+          final url = await _uploadAudioAndGetUrlWithProgress(File(path));
+          _answerUrls[_index] = url;
 
-        await FirebaseFirestore.instance
-            .collection('MockInterviews')
-            .doc(widget.mockInterviewId)
-            .set({
-          'AnswersRecordsURL': _answerUrls,
-        }, SetOptions(merge: true));
+          await FirebaseFirestore.instance
+              .collection('MockInterviews')
+              .doc(widget.mockInterviewId)
+              .set({'AnswersRecordsURL': _answerUrls}, SetOptions(merge: true));
 
-        if (!mounted) return;
-        SnackHelper.success(context, 'Answer recorded ✅');
+          if (!mounted) return;
+          setState(() => _isUploadingAnswer = false);
+
+          SnackHelper.success(
+              context, 'Uploaded ✅ You can press Next.'); //chnage massage
+        } catch (e) {
+          if (!mounted) return;
+          setState(() => _isUploadingAnswer = false);
+          SnackHelper.error(context, 'Upload failed: $e');
+        }
+
         return;
       }
+
       if (_answerUrls[_index].trim().isNotEmpty) {
         final overwrite = await showDialog<bool>(
           context: context,
@@ -812,9 +894,11 @@ class _MockInterviewSessionScreenState
         if (!mounted) return;
         setState(() {});
       }
+      await Permission.microphone.request();
 
       // Start
       final hasMic = await _recorder.hasPermission();
+
       if (!hasMic) {
         if (!mounted) return;
         SnackHelper.error(context, 'Microphone permission is required.');
@@ -825,6 +909,7 @@ class _MockInterviewSessionScreenState
       final fileName =
           'mock_${widget.mockInterviewId}_q${_index + 1}_${DateTime.now().millisecondsSinceEpoch}.m4a';
       final path = '${dir.path}/$fileName';
+      await _tts.stop();
 
       await _recorder.start(
         const RecordConfig(
@@ -846,21 +931,6 @@ class _MockInterviewSessionScreenState
       });
       SnackHelper.error(context, 'Recording error: $e');
     }
-  }
-
-  Future<String> _uploadAudioAndGetUrl(File file) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'unknown';
-    final storagePath =
-        'mock_interviews/$uid/${widget.mockInterviewId}/q${_index + 1}.m4a';
-
-    final ref = FirebaseStorage.instance.ref().child(storagePath);
-
-    await ref.putFile(
-      file,
-      SettableMetadata(contentType: 'audio/mp4'),
-    );
-
-    return await ref.getDownloadURL();
   }
 
   Future<void> _finish() async {
@@ -1040,11 +1110,12 @@ class _MockInterviewSessionScreenState
                             ),
                           ),
                         ),
-                        const SizedBox(height: 50),
+                        const SizedBox(height: 30),
 
                         Center(
                           child: GestureDetector(
-                            onTap: _toggleRecording,
+                            onTap:
+                                (_isUploadingAnswer) ? null : _toggleRecording,
                             child: Container(
                               width: 84,
                               height: 84,
@@ -1078,9 +1149,11 @@ class _MockInterviewSessionScreenState
                         Text(
                           _isRecording
                               ? 'Recording… ${_fmt(_recordDuration)}'
-                              : (_answerUrls[_index].isNotEmpty
-                                  ? 'Answer recorded ✅'
-                                  : 'Tap the mic to record'),
+                              : _isUploadingAnswer
+                                  ? 'Uploading… ${(_uploadProgress * 100).toStringAsFixed(0)}%'
+                                  : (_answerUrls[_index].isNotEmpty
+                                      ? 'Answer uploaded'
+                                      : 'Tap the mic to record'),
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             color: isDark
@@ -1088,6 +1161,73 @@ class _MockInterviewSessionScreenState
                                 : Colors.black87,
                           ),
                         ),
+
+                        if (!_isRecording &&
+                            !_isUploadingAnswer &&
+                            _answerUrls[_index].isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              FilledButton.tonalIcon(
+                                onPressed: _togglePlayback,
+                                icon: Icon(_isPlaying
+                                    ? Icons.pause
+                                    : Icons.play_arrow),
+                                label: Text(_isPlaying ? 'Pause' : 'Listen'),
+                              ),
+                              const SizedBox(width: 10),
+                              OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(
+                                    width: 2,
+                                    color: Color(0xFF4A5FBC),
+                                  ),
+                                ),
+                                onPressed: () async {
+                                  final ok = await showDialog<bool>(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder: (_) => const JadeerDialog<bool>(
+                                      title: 'Replace recording?',
+                                      content: Text(
+                                          'This will overwrite your current answer. Continue?'),
+                                      primaryLabel: 'Replace',
+                                      primaryResult: true,
+                                      secondaryLabel: 'Cancel',
+                                      secondaryResult: false,
+                                    ),
+                                  );
+
+                                  if (ok != true) return;
+
+                                  await _player.stop();
+                                  if (!mounted) return;
+                                  setState(() {
+                                    _isPlaying = false;
+                                    _currentPlaybackUrl = null;
+                                    _answerUrls[_index] = '';
+                                  });
+
+                                  await Future.delayed(
+                                      const Duration(milliseconds: 200));
+                                  if (!mounted) return;
+                                  await _toggleRecording();
+                                },
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Re-record'),
+                              ),
+                            ],
+                          ),
+                        ],
+                        if (_isUploadingAnswer) ...[
+                          const SizedBox(height: 8),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child:
+                                LinearProgressIndicator(value: _uploadProgress),
+                          ),
+                        ],
 
                         const Spacer(),
 
@@ -1099,7 +1239,7 @@ class _MockInterviewSessionScreenState
                             width: double.infinity,
                             height: 54,
                             child: FilledButton(
-                              onPressed: _next,
+                              onPressed: _canGoNext ? _next : null,
                               style: FilledButton.styleFrom(
                                 backgroundColor: const Color(0xFF4A5FBC),
                                 foregroundColor: Colors.white,
