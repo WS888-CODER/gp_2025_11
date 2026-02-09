@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../config/theme.dart';
-import 'package:gp_2025_11/screens/jobseeker_home.dart';
 
 class MockInterviewReportScreen extends StatelessWidget {
   final String mockInterviewID;
@@ -15,159 +14,160 @@ class MockInterviewReportScreen extends StatelessWidget {
 
   @override
   @override
-Widget build(BuildContext context) {
-  return ThemedScaffold(
-    appBar: const CustomHeader(
-      title: 'Interview Report',
-      showBack: true,
-    ),
-    body: StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('MockInterviews')
-          .doc(mockInterviewID)
-          .snapshots(),
-      builder: (context, snapshot) {
-        // Loading state
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(
-              color: AppTheme.primaryPurple,
-            ),
-          );
-        }
-
-        // Error state
-        if (snapshot.hasError) {
-          return const EmptyState(
-            icon: Icons.error_outline,
-            title: 'Error loading report',
-            subtitle: 'Please try again later',
-          );
-        }
-
-        // No data
-        if (!snapshot.hasData || !snapshot.data!.exists) {
-          return const EmptyState(
-            icon: Icons.description_outlined,
-            title: 'Interview not found',
-            subtitle: 'This interview may have been deleted',
-          );
-        }
-
-        final data = snapshot.data!.data() as Map<String, dynamic>;
-        final report = data['Report'] as Map<String, dynamic>?;
-        final specialty = data['Specialty'] as String? ?? 'Unknown';
-        final date = data['Date'] as Timestamp?;
-
-        // Report not generated yet
-        if (report == null) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const CircularProgressIndicator(
-                    color: AppTheme.primaryPurple,
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Generating your report...',
-                    style: Theme.of(context).textTheme.headlineMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'AI is analyzing your interview answers\nThis may take up to 30 seconds',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Colors.grey[600],
-                        ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+  Widget build(BuildContext context) {
+    return ThemedScaffold(
+      appBar: const CustomHeader(
+        title: 'Interview Report',
+        showBack: true,
+      ),
+      body: StreamBuilder<DocumentSnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('MockInterviews')
+            .doc(mockInterviewID)
+            .snapshots(),
+        builder: (context, snapshot) {
+          // Loading state
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(
+                color: AppTheme.primaryPurple,
               ),
+            );
+          }
+
+          // Error state
+          if (snapshot.hasError) {
+            return const EmptyState(
+              icon: Icons.error_outline,
+              title: 'Error loading report',
+              subtitle: 'Please try again later',
+            );
+          }
+
+          // No data
+          if (!snapshot.hasData || !snapshot.data!.exists) {
+            return const EmptyState(
+              icon: Icons.description_outlined,
+              title: 'Interview not found',
+              subtitle: 'This interview may have been deleted',
+            );
+          }
+
+          final data = snapshot.data!.data() as Map<String, dynamic>;
+          final report = data['Report'] as Map<String, dynamic>?;
+          final specialty = data['Specialty'] as String? ?? 'Unknown';
+          final date = data['Date'] as Timestamp?;
+
+          // Report not generated yet
+          if (report == null) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const CircularProgressIndicator(
+                      color: AppTheme.primaryPurple,
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Generating your report...',
+                      style: Theme.of(context).textTheme.headlineMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'AI is analyzing your interview answers\nThis may take up to 30 seconds',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: Colors.grey[600],
+                          ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          // Extract report data
+          final strengths = (report['strengths'] as List<dynamic>?)
+                  ?.map((e) => e.toString())
+                  .toList() ??
+              [];
+          final weaknesses = (report['weaknesses'] as List<dynamic>?)
+                  ?.map((e) => e.toString())
+                  .toList() ??
+              [];
+          final advice = (report['advice'] as List<dynamic>?)
+                  ?.map((e) => e.toString())
+                  .toList() ??
+              [];
+          final voiceAnalysis =
+              report['voiceToneAnalysis'] as Map<String, dynamic>?;
+
+          // Display report
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header Card
+                _buildHeaderCard(context, specialty, date),
+                const SizedBox(height: 20),
+
+                // Strengths Section
+                if (strengths.isNotEmpty) ...[
+                  _buildSectionCard(
+                    context,
+                    title: 'Strengths',
+                    icon: Icons.star_rounded,
+                    iconColor: Colors.green,
+                    items: strengths,
+                    itemColor: Colors.green[700]!,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // Weaknesses Section
+                if (weaknesses.isNotEmpty) ...[
+                  _buildSectionCard(
+                    context,
+                    title: 'Areas for Improvement',
+                    icon: Icons.trending_up_rounded,
+                    iconColor: Colors.orange,
+                    items: weaknesses,
+                    itemColor: Colors.orange[700]!,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // Advice Section
+                if (advice.isNotEmpty) ...[
+                  _buildSectionCard(
+                    context,
+                    title: 'Recommendations',
+                    icon: Icons.lightbulb_rounded,
+                    iconColor: AppTheme.primaryPurple,
+                    items: advice,
+                    itemColor: AppTheme.primaryPurple,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // Voice Analysis Section
+                _buildVoiceAnalysisCard(context, voiceAnalysis),
+
+                const SizedBox(height: 24),
+              ],
             ),
           );
-        }
+        },
+      ),
+    );
+  }
 
-        // Extract report data
-        final strengths = (report['strengths'] as List<dynamic>?)
-                ?.map((e) => e.toString())
-                .toList() ??
-            [];
-        final weaknesses = (report['weaknesses'] as List<dynamic>?)
-                ?.map((e) => e.toString())
-                .toList() ??
-            [];
-        final advice = (report['advice'] as List<dynamic>?)
-                ?.map((e) => e.toString())
-                .toList() ??
-            [];
-        final voiceAnalysis =
-            report['voiceToneAnalysis'] as Map<String, dynamic>?;
-
-        // Display report
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header Card
-              _buildHeaderCard(context, specialty, date),
-              const SizedBox(height: 20),
-
-              // Strengths Section
-              if (strengths.isNotEmpty) ...[
-                _buildSectionCard(
-                  context,
-                  title: 'Strengths',
-                  icon: Icons.star_rounded,
-                  iconColor: Colors.green,
-                  items: strengths,
-                  itemColor: Colors.green[700]!,
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // Weaknesses Section
-              if (weaknesses.isNotEmpty) ...[
-                _buildSectionCard(
-                  context,
-                  title: 'Areas for Improvement',
-                  icon: Icons.trending_up_rounded,
-                  iconColor: Colors.orange,
-                  items: weaknesses,
-                  itemColor: Colors.orange[700]!,
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // Advice Section
-              if (advice.isNotEmpty) ...[
-                _buildSectionCard(
-                  context,
-                  title: 'Recommendations',
-                  icon: Icons.lightbulb_rounded,
-                  iconColor: AppTheme.primaryPurple,
-                  items: advice,
-                  itemColor: AppTheme.primaryPurple,
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // Voice Analysis Section
-              _buildVoiceAnalysisCard(context, voiceAnalysis),
-
-              const SizedBox(height: 24),
-            ],
-          ),
-        );
-      },
-    ),
-  );
-}
-
-  Widget _buildHeaderCard(BuildContext context, String specialty, Timestamp? date) {
+  Widget _buildHeaderCard(
+      BuildContext context, String specialty, Timestamp? date) {
     final dateStr = date != null
         ? '${date.toDate().day}/${date.toDate().month}/${date.toDate().year}'
         : 'Unknown date';
@@ -224,7 +224,8 @@ Widget build(BuildContext context) {
             const SizedBox(height: 8),
             Row(
               children: [
-                const Icon(Icons.calendar_today, color: Colors.white70, size: 16),
+                const Icon(Icons.calendar_today,
+                    color: Colors.white70, size: 16),
                 const SizedBox(width: 6),
                 Text(
                   dateStr,
@@ -318,7 +319,8 @@ Widget build(BuildContext context) {
     );
   }
 
-  Widget _buildVoiceAnalysisCard(BuildContext context, Map<String, dynamic>? voiceAnalysis) {
+  Widget _buildVoiceAnalysisCard(
+      BuildContext context, Map<String, dynamic>? voiceAnalysis) {
     final isAvailable = voiceAnalysis?['available'] == true;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -335,11 +337,14 @@ Widget build(BuildContext context) {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: (isAvailable ? Colors.purple : Colors.grey).withOpacity(0.1),
+                    color: (isAvailable ? Colors.purple : Colors.grey)
+                        .withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
-                    isAvailable ? Icons.mic_rounded : Icons.info_outline_rounded,
+                    isAvailable
+                        ? Icons.mic_rounded
+                        : Icons.info_outline_rounded,
                     color: isAvailable ? Colors.purple : Colors.grey,
                     size: 24,
                   ),
@@ -393,7 +398,8 @@ Widget build(BuildContext context) {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.schedule_rounded, color: Colors.orange[700], size: 20),
+                    Icon(Icons.schedule_rounded,
+                        color: Colors.orange[700], size: 20),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -415,7 +421,8 @@ Widget build(BuildContext context) {
     );
   }
 
-  Widget _buildVoiceMetric(BuildContext context, String label, int value, Color color) {
+  Widget _buildVoiceMetric(
+      BuildContext context, String label, int value, Color color) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
