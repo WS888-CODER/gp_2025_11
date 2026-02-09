@@ -5,9 +5,11 @@ import 'package:camera/camera.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:gp_2025_11/config/theme.dart';
+import 'package:gp_2025_11/screens/mock_interview_report.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -572,6 +574,7 @@ class _MockInterviewSessionScreenState
   bool _isUploadingAnswer = false;
   double _uploadProgress = 0.0;
   StreamSubscription<TaskSnapshot>? _uploadSub;
+  bool _isFinishing = false;
 
   String? _currentPlaybackUrl;
   bool _isPlaying = false;
@@ -862,8 +865,7 @@ class _MockInterviewSessionScreenState
           if (!mounted) return;
           setState(() => _isUploadingAnswer = false);
 
-          SnackHelper.success(
-              context, 'Uploaded ✅ You can press Next.'); //chnage massage
+          SnackHelper.success(context, 'Uploaded ✅ You can press Next.');
         } catch (e) {
           if (!mounted) return;
           setState(() => _isUploadingAnswer = false);
@@ -934,32 +936,46 @@ class _MockInterviewSessionScreenState
   }
 
   Future<void> _finish() async {
-    final reportText =
-        'Mock interview completed. Answers recorded: ${_answerUrls.where((e) => e.trim().isNotEmpty).length}/${widget.questions.length}.';
+  // 🔒 PREVENT MULTIPLE CALLS
+  if (_isFinishing) return;
+  _isFinishing = true;
 
+  final reportText =
+      'Mock interview completed. Answers recorded: ${_answerUrls.where((e) => e.trim().isNotEmpty).length}/${widget.questions.length}.';
+
+  try {
+    await FirebaseFirestore.instance
+        .collection('MockInterviews')
+        .doc(widget.mockInterviewId)
+        .set({'Report': reportText}, SetOptions(merge: true));
+
+    // 🔥 AUTO-GENERATE AI REPORT
     try {
-      await FirebaseFirestore.instance
-          .collection('MockInterviews')
-          .doc(widget.mockInterviewId)
-          .set({'Report': reportText}, SetOptions(merge: true));
-    } catch (_) {}
+      final functions = FirebaseFunctions.instance;
+      await functions.httpsCallable('generateMockInterviewReport').call({
+        'mockInterviewID': widget.mockInterviewId,
+      });
+      print('✅ AI report generation triggered');
+    } catch (e) {
+      print('⚠️ Report generation error: $e');
+    }
+    // 🔥 END
 
-    if (!mounted) return;
+  } catch (_) {}
 
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => JadeerDialog<void>(
-        title: 'Finished',
-        content: Text(reportText),
-        primaryLabel: 'Done',
-        primaryResult: null,
+  if (!mounted) return;
+
+  // ✅ NAVIGATE TO REPORT - JUST REPLACE CURRENT SCREEN
+  Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(
+      builder: (_) => MockInterviewReportScreen(
+        mockInterviewID: widget.mockInterviewId,
+        fromHistory: false,
       ),
-    );
-
-    if (!mounted) return;
-    Navigator.pop(context);
-  }
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -1022,236 +1038,259 @@ class _MockInterviewSessionScreenState
                         ],
                       ),
                     )
-                  : Column(
-                      children: [
-                        // Camera preview
-                        Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(22),
-                            child: SizedBox(
-                              height: 320,
-                              width: double.infinity,
-                              child: CameraPreview(_camera!),
-                            ),
-                          ),
+                  : SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: MediaQuery.of(context).size.height - 100,
                         ),
-
-                        // Question card
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: isDark ? scheme.surface : Colors.white,
-                              borderRadius: BorderRadius.circular(18),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black
-                                      .withOpacity(isDark ? 0.6 : 0.08),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Question ${_index + 1}/${widget.questions.length}',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: isDark
-                                        ? scheme.onSurface.withOpacity(0.7)
-                                        : Colors.black54,
-                                    fontWeight: FontWeight.w600,
+                        child: IntrinsicHeight(
+                          child: Column(
+                            children: [
+                              // Camera preview
+                              Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(22),
+                                  child: SizedBox(
+                                    height: 320,
+                                    width: double.infinity,
+                                    child: CameraPreview(_camera!),
                                   ),
                                 ),
-                                const SizedBox(height: 10),
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        _currentQuestion,
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w800,
-                                          height: 1.3,
+                              ),
+
+                              // Question card
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 16),
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? scheme.surface
+                                        : Colors.white,
+                                    borderRadius: BorderRadius.circular(18),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(
+                                            isDark ? 0.6 : 0.08),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Question ${_index + 1}/${widget.questions.length}',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: isDark
+                                              ? scheme.onSurface
+                                                  .withOpacity(0.7)
+                                              : Colors.black54,
+                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
-                                    ),
-                                    IconButton(
-                                      onPressed: _toggleSpeak,
-                                      icon: Icon(
-                                        size: 30,
-                                        _isSpeaking
-                                            ? Icons.stop_circle
-                                            : Icons.volume_up_rounded,
-                                        color: _isSpeaking
-                                            ? const Color(0xFFFC686A)
-                                            : const Color(0xFF4A5FBC),
+                                      const SizedBox(height: 10),
+                                      Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              _currentQuestion,
+                                              style: const TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w800,
+                                                height: 1.3,
+                                              ),
+                                            ),
+                                          ),
+                                          IconButton(
+                                            onPressed: _toggleSpeak,
+                                            icon: Icon(
+                                              size: 30,
+                                              _isSpeaking
+                                                  ? Icons.stop_circle
+                                                  : Icons.volume_up_rounded,
+                                              color: _isSpeaking
+                                                  ? const Color(0xFFFC686A)
+                                                  : const Color(0xFF4A5FBC),
+                                            ),
+                                            tooltip: _isSpeaking
+                                                ? 'Stop'
+                                                : 'Listen',
+                                          ),
+                                        ],
                                       ),
-                                      tooltip: _isSpeaking ? 'Stop' : 'Listen',
+                                      Text(
+                                        'Answer by voice, then press Next.',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: isDark
+                                              ? scheme.onSurface
+                                                  .withOpacity(0.7)
+                                              : Colors.black54,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 30),
+
+                              Center(
+                                child: GestureDetector(
+                                  onTap: (_isUploadingAnswer)
+                                      ? null
+                                      : _toggleRecording,
+                                  child: Container(
+                                    width: 84,
+                                    height: 84,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: _isRecording
+                                          ? const Color(0xFFFC686A)
+                                          : const Color(0xFF4A5FBC),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(
+                                              isDark ? 0.6 : 0.12),
+                                          blurRadius: 14,
+                                          offset: const Offset(0, 6),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Icon(
+                                      _isRecording
+                                          ? Icons.stop_rounded
+                                          : Icons.mic_rounded,
+                                      size: 40,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 10),
+
+                              Text(
+                                _isRecording
+                                    ? 'Recording… ${_fmt(_recordDuration)}'
+                                    : _isUploadingAnswer
+                                        ? 'Uploading… ${(_uploadProgress * 100).toStringAsFixed(0)}%'
+                                        : (_answerUrls[_index].isNotEmpty
+                                            ? 'Answer uploaded'
+                                            : 'Tap the mic to record'),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark
+                                      ? scheme.onSurface.withOpacity(0.8)
+                                      : Colors.black87,
+                                ),
+                              ),
+
+                              if (!_isRecording &&
+                                  !_isUploadingAnswer &&
+                                  _answerUrls[_index].isNotEmpty) ...[
+                                const SizedBox(height: 10),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    FilledButton.tonalIcon(
+                                      onPressed: _togglePlayback,
+                                      icon: Icon(_isPlaying
+                                          ? Icons.pause
+                                          : Icons.play_arrow),
+                                      label: Text(
+                                          _isPlaying ? 'Pause' : 'Listen'),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    OutlinedButton.icon(
+                                      style: OutlinedButton.styleFrom(
+                                        side: const BorderSide(
+                                          width: 2,
+                                          color: Color(0xFF4A5FBC),
+                                        ),
+                                      ),
+                                      onPressed: () async {
+                                        final ok = await showDialog<bool>(
+                                          context: context,
+                                          barrierDismissible: false,
+                                          builder: (_) =>
+                                              const JadeerDialog<bool>(
+                                            title: 'Replace recording?',
+                                            content: Text(
+                                                'This will overwrite your current answer. Continue?'),
+                                            primaryLabel: 'Replace',
+                                            primaryResult: true,
+                                            secondaryLabel: 'Cancel',
+                                            secondaryResult: false,
+                                          ),
+                                        );
+
+                                        if (ok != true) return;
+
+                                        await _player.stop();
+                                        if (!mounted) return;
+                                        setState(() {
+                                          _isPlaying = false;
+                                          _currentPlaybackUrl = null;
+                                          _answerUrls[_index] = '';
+                                        });
+
+                                        await Future.delayed(const Duration(
+                                            milliseconds: 200));
+                                        if (!mounted) return;
+                                        await _toggleRecording();
+                                      },
+                                      icon: const Icon(Icons.refresh),
+                                      label: const Text('Re-record'),
                                     ),
                                   ],
                                 ),
-                                Text(
-                                  'Answer by voice, then press Next.',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: isDark
-                                        ? scheme.onSurface.withOpacity(0.7)
-                                        : Colors.black54,
-                                  ),
+                              ],
+                              if (_isUploadingAnswer) ...[
+                                const SizedBox(height: 8),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 24),
+                                  child: LinearProgressIndicator(
+                                      value: _uploadProgress),
                                 ),
                               ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 30),
 
-                        Center(
-                          child: GestureDetector(
-                            onTap:
-                                (_isUploadingAnswer) ? null : _toggleRecording,
-                            child: Container(
-                              width: 84,
-                              height: 84,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: _isRecording
-                                    ? const Color(0xFFFC686A)
-                                    : const Color(0xFF4A5FBC),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black
-                                        .withOpacity(isDark ? 0.6 : 0.12),
-                                    blurRadius: 14,
-                                    offset: const Offset(0, 6),
-                                  ),
-                                ],
-                              ),
-                              child: Icon(
-                                _isRecording
-                                    ? Icons.stop_rounded
-                                    : Icons.mic_rounded,
-                                size: 40,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
+                              const Spacer(),
 
-                        const SizedBox(height: 10),
-
-                        Text(
-                          _isRecording
-                              ? 'Recording… ${_fmt(_recordDuration)}'
-                              : _isUploadingAnswer
-                                  ? 'Uploading… ${(_uploadProgress * 100).toStringAsFixed(0)}%'
-                                  : (_answerUrls[_index].isNotEmpty
-                                      ? 'Answer uploaded'
-                                      : 'Tap the mic to record'),
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: isDark
-                                ? scheme.onSurface.withOpacity(0.8)
-                                : Colors.black87,
-                          ),
-                        ),
-
-                        if (!_isRecording &&
-                            !_isUploadingAnswer &&
-                            _answerUrls[_index].isNotEmpty) ...[
-                          const SizedBox(height: 10),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              FilledButton.tonalIcon(
-                                onPressed: _togglePlayback,
-                                icon: Icon(_isPlaying
-                                    ? Icons.pause
-                                    : Icons.play_arrow),
-                                label: Text(_isPlaying ? 'Pause' : 'Listen'),
-                              ),
-                              const SizedBox(width: 10),
-                              OutlinedButton.icon(
-                                style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(
-                                    width: 2,
-                                    color: Color(0xFF4A5FBC),
+                              // Next / Finish
+                              SafeArea(
+                                minimum: const EdgeInsets.symmetric(
+                                        horizontal: 16)
+                                    .copyWith(bottom: 16),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  height: 54,
+                                  child: FilledButton(
+                                    onPressed: _canGoNext ? _next : null,
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: const Color(0xFF4A5FBC),
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(28),
+                                      ),
+                                    ),
+                                    child: Text(_isLast ? 'Finish' : 'Next'),
                                   ),
                                 ),
-                                onPressed: () async {
-                                  final ok = await showDialog<bool>(
-                                    context: context,
-                                    barrierDismissible: false,
-                                    builder: (_) => const JadeerDialog<bool>(
-                                      title: 'Replace recording?',
-                                      content: Text(
-                                          'This will overwrite your current answer. Continue?'),
-                                      primaryLabel: 'Replace',
-                                      primaryResult: true,
-                                      secondaryLabel: 'Cancel',
-                                      secondaryResult: false,
-                                    ),
-                                  );
-
-                                  if (ok != true) return;
-
-                                  await _player.stop();
-                                  if (!mounted) return;
-                                  setState(() {
-                                    _isPlaying = false;
-                                    _currentPlaybackUrl = null;
-                                    _answerUrls[_index] = '';
-                                  });
-
-                                  await Future.delayed(
-                                      const Duration(milliseconds: 200));
-                                  if (!mounted) return;
-                                  await _toggleRecording();
-                                },
-                                icon: const Icon(Icons.refresh),
-                                label: const Text('Re-record'),
                               ),
                             ],
                           ),
-                        ],
-                        if (_isUploadingAnswer) ...[
-                          const SizedBox(height: 8),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                            child:
-                                LinearProgressIndicator(value: _uploadProgress),
-                          ),
-                        ],
-
-                        const Spacer(),
-
-                        // Next / Finish
-                        SafeArea(
-                          minimum: const EdgeInsets.symmetric(horizontal: 16)
-                              .copyWith(bottom: 16),
-                          child: SizedBox(
-                            width: double.infinity,
-                            height: 54,
-                            child: FilledButton(
-                              onPressed: _canGoNext ? _next : null,
-                              style: FilledButton.styleFrom(
-                                backgroundColor: const Color(0xFF4A5FBC),
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(28),
-                                ),
-                              ),
-                              child: Text(_isLast ? 'Finish' : 'Next'),
-                            ),
-                          ),
                         ),
-                      ],
+                      ),
                     ),
         ),
       ),

@@ -3,7 +3,8 @@ import OpenAI from "openai";
 import * as functions from "firebase-functions";
 import * as v2 from "firebase-functions/v2";
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import admin from "firebase-admin";
+import { initializeApp, getApps } from "firebase-admin/app";
+import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import nodemailer from "nodemailer";
 import mammoth from "mammoth";
 import path from "path";
@@ -12,18 +13,17 @@ import fs from "fs";
 import PDFDocument from "pdfkit";
 import { generateInterviewQuestions } from "./interview/generateQuestions.js";
 
-
 // ============================================
 // 🔧 Initialize Services
 // ============================================
 const app = express();
 app.use(express.json());
 
-// Initialize Firebase Admin (only once)
-if (!admin.apps.length) {
-  admin.initializeApp();
+// Initialize Firebase Admin (NEW WAY)
+if (getApps().length === 0) {
+  initializeApp();
 }
-const db = admin.firestore();
+const db = getFirestore();
 
 async function deleteByQuery(query) {
   const snap = await query.get();
@@ -854,7 +854,7 @@ Do not include explanations or commentary outside this JSON.`;
       console.log(`💡 Suggestions count: ${suggestions.length}`);
 
       // Update Firestore with native objects/arrays
-      await admin.firestore().collection("CVHistory").doc(cvHistoryId).update({
+      await db.collection("CVHistory").doc(cvHistoryId).update({
         NewCVText: enhanced_cv,
         Suggestions: suggestions,
       });
@@ -894,7 +894,7 @@ Do not include explanations or commentary outside this JSON.`;
           .doc(cvHistoryId)
           .update({
             NewCVURL: pdfUrl,
-            PDFGeneratedAt: admin.firestore.FieldValue.serverTimestamp(),
+            PDFGeneratedAt: FieldValue.serverTimestamp(),
           });
         console.log(`✅ Firestore updated with PDF URL`);
 
@@ -1254,7 +1254,7 @@ export const resetUserPassword = functions.https.onCall(
         password: newPassword,
       });
 
-      await admin.firestore().collection("Users").doc(userRecord.uid).update({
+      await db.collection("Users").doc(userRecord.uid).update({
         failedLoginAttempts: 0,
         lastFailedLoginDate: null,
         accountLocked: false,
@@ -1661,9 +1661,9 @@ export const generateCVPDF = functions.https.onCall(async (data, context) => {
 
     const downloadURL = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
 
-    await admin.firestore().collection("CVHistory").doc(cvHistoryId).update({
+    await db.collection("CVHistory").doc(cvHistoryId).update({
       NewCVURL: downloadURL,
-      PDFGeneratedAt: admin.firestore.FieldValue.serverTimestamp(),
+      PDFGeneratedAt: FieldValue.serverTimestamp(),
     });
 
     console.log(`✅ PDF generated and saved: ${downloadURL}`);
@@ -3069,7 +3069,7 @@ export const autoCloseExpiredJobs = v2.scheduler.onSchedule(
   },
   async (event) => {
     try {
-      const now = admin.firestore.Timestamp.now();
+      const now = Timestamp.now();
 
       // Query all jobs that are Open but have EndDate in the past
       const expiredJobsQuery = await db
@@ -3105,6 +3105,7 @@ export const autoCloseExpiredJobs = v2.scheduler.onSchedule(
 
 export { generateInterviewQuestions };
 export { generateMockInterviewQuestions } from "./mockinterview/mock_interview_questions.js";
+export { generateMockInterviewReport } from "./mockinterview/generateReport.js";
 
 export const deleteOldCVHistory = onSchedule(
   {
@@ -3116,11 +3117,11 @@ export const deleteOldCVHistory = onSchedule(
     console.log("Starting deleteOldCVHistory function");
 
     try {
-      const db = admin.firestore();
+      //const db = admin.firestore();
       
       const oneMonthAgo = new Date();
       oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
-      const oneMonthAgoTimestamp = admin.firestore.Timestamp.fromDate(oneMonthAgo);
+      const oneMonthAgoTimestamp = Timestamp.fromDate(oneMonthAgo);
 
       console.log("Querying CVHistory older than:", oneMonthAgo.toISOString());
 
@@ -3184,7 +3185,7 @@ export const deleteOldMockInterviews = onSchedule(
     oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
 
     try {
-      const db = admin.firestore();
+      //const db = admin.firestore();
       
       // Query for Mock Interviews older than 30 days
       const oldMockInterviewsSnapshot = await db

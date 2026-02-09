@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/screens/cv_ready.dart';
+import 'package:gp_2025_11/screens/mock_interview_report.dart';  // ⬅️ NEW IMPORT
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -423,7 +424,17 @@ class _HistoryPageState extends State<HistoryPage>
               expiryColor: expiryColor,
               leadingIcon: Icons.mic,
               leadingBgColor: AppTheme.accentCoral,
-              onTap: () {},
+              onTap: () {  // ⬅️ UPDATED: NOW OPENS REPORT SCREEN!
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => MockInterviewReportScreen(
+                      mockInterviewID: mockInterviewId,
+                      fromHistory: true,
+                    ),
+                  ),
+                );
+              },
               onDelete: () async {
                 // ✅ Show confirmation dialog with app theme
                 final confirm = await showDialog<bool>(
@@ -544,12 +555,12 @@ class _HistoryPageState extends State<HistoryPage>
     BuildContext context, {
     required String title,
     required String subtitle,
-    String? expiryText,  // ✅ ADDED THIS
+    String? expiryText,
     Color? expiryColor,
     required IconData leadingIcon,
     required Color leadingBgColor,
     VoidCallback? onTap,
-    VoidCallback? onDelete,  // ✅ ADDED THIS
+    VoidCallback? onDelete,
   }) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
@@ -588,7 +599,6 @@ class _HistoryPageState extends State<HistoryPage>
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-                    // ✅ UPDATED SUBTITLE WITH BADGE
                     Row(
                       children: [
                         Expanded(
@@ -624,7 +634,6 @@ class _HistoryPageState extends State<HistoryPage>
                   ],
                 ),
               ),
-              // ✅ DELETE BUTTON
               if (onDelete != null)
                 IconButton(
                   icon: const Icon(Icons.delete_outline),
