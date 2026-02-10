@@ -86,11 +86,29 @@ Mock Interview Context:
 - Specialty: ${specialty || "N/A"}
 
 Blueprint:
+Strict rules:
+- Output must be a single JSON object only.
+- "questions" must contain exactly 10 items.
+- Domain = 5, Psychometric = 5 exactly.
+- Difficulty must match exactly:
+  - 3 easy
+  - 5 medium
+  - 2 hard
+- Do not repeat ideas.
+- No generic questions like "Tell me about yourself".
+
 - Total questions: exactly ${total} (no more, no fewer).
   - ${domainCount} domain questions (broad, specialty-focused, NOT job-specific).
   - ${psyCount} psychometric/work-style questions.
-- Difficulty distribution overall:
-  - easy ${Math.round(easy * 100)}%, medium ${Math.round(med * 100)}%, hard ${Math.round(hard * 100)}%.
+- Total questions: exactly 10 (no more, no fewer).
+  - 5 domain questions.
+  - 5 psychometric questions.
+
+- Difficulty counts (must match exactly):
+  - easy: 3
+  - medium: 5
+  - hard: 2
+
 - Domain categories to rotate through: ${techCategories.join(", ")}
 - Work-style themes to rotate through: ${behThemes.join(", ")}
 
@@ -105,7 +123,8 @@ Psychometric model:
 Guidelines:
 - Questions must be practical and answerable by speaking.
 - Avoid generic filler like "Tell me about yourself".
-- Domain questions should focus on fundamentals and reasoning, not specific tools unless universally common.
+- Each domain question must include a short scenario and ask for reasoning or decision-making.
+- Avoid pure definition questions.
 - Psychometric questions must target ONE main Big Five trait and set "trait" accordingly.
 
 Output:
@@ -257,9 +276,10 @@ export const generateMockInterviewQuestions = v2.https.onRequest(
         return res.status(400).send("Missing field: specialty.");
       }
 
-      const total = typeof count === "number" ? count : 8;
-      const domainTarget = Math.floor(total / 2);
-      const psyTarget = total - domainTarget;
+      const total = 10;
+      const domainTarget = 5;
+      const psyTarget = 5;
+
 
       const easy =
         difficulty && typeof difficulty.easy === "number" ? difficulty.easy : 0.35;
