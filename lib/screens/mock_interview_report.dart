@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../config/theme.dart';
+import 'package:gp_2025_11/screens/jobseeker_home.dart';
 
 class MockInterviewReportScreen extends StatelessWidget {
   final String mockInterviewID;
@@ -13,12 +14,11 @@ class MockInterviewReportScreen extends StatelessWidget {
   }) : super(key: key);
 
   @override
-  @override
   Widget build(BuildContext context) {
     return ThemedScaffold(
-      appBar: const CustomHeader(
+      appBar: CustomHeader(
         title: 'Interview Report',
-        showBack: true,
+        showBack: fromHistory,  // ← Show back arrow ONLY from history
       ),
       body: StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance
@@ -106,68 +106,107 @@ class MockInterviewReportScreen extends StatelessWidget {
               report['voiceToneAnalysis'] as Map<String, dynamic>?;
 
           // Display report
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header Card
-                _buildHeaderCard(context, specialty, date),
-                const SizedBox(height: 20),
+          return Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header Card
+                      _buildHeaderCard(context, specialty, date),
+                      const SizedBox(height: 20),
 
-                // Strengths Section
-                if (strengths.isNotEmpty) ...[
-                  _buildSectionCard(
-                    context,
-                    title: 'Strengths',
-                    icon: Icons.star_rounded,
-                    iconColor: Colors.green,
-                    items: strengths,
-                    itemColor: Colors.green[700]!,
+                      // Strengths Section
+                      if (strengths.isNotEmpty) ...[
+                        _buildSectionCard(
+                          context,
+                          title: 'Strengths',
+                          icon: Icons.star_rounded,
+                          iconColor: Colors.green,
+                          items: strengths,
+                          itemColor: Colors.green[700]!,
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
+                      // Weaknesses Section
+                      if (weaknesses.isNotEmpty) ...[
+                        _buildSectionCard(
+                          context,
+                          title: 'Areas for Improvement',
+                          icon: Icons.trending_up_rounded,
+                          iconColor: const Color(0xFFFD6C67),  // ← YOUR COLOR
+                          items: weaknesses,
+                          itemColor: const Color(0xFFFD6C67),  // ← YOUR COLOR
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
+                      // Advice Section
+                      if (advice.isNotEmpty) ...[
+                        _buildSectionCard(
+                          context,
+                          title: 'Recommendations',
+                          icon: Icons.lightbulb_rounded,
+                          iconColor: AppTheme.primaryPurple,
+                          items: advice,
+                          itemColor: AppTheme.primaryPurple,
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
+                      // Voice Analysis Section
+                      _buildVoiceAnalysisCard(context, voiceAnalysis),
+
+                      const SizedBox(height: 24),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                ],
-
-                // Weaknesses Section
-                if (weaknesses.isNotEmpty) ...[
-                  _buildSectionCard(
-                    context,
-                    title: 'Areas for Improvement',
-                    icon: Icons.trending_up_rounded,
-                    iconColor: Colors.orange,
-                    items: weaknesses,
-                    itemColor: Colors.orange[700]!,
+                ),
+              ),
+              
+              // ✅ SHOW "DONE" BUTTON ONLY IF NOT FROM HISTORY
+              if (!fromHistory)
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(
+                            builder: (_) => const JobSeekerHome(),
+                          ),
+                          (route) => false,
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryPurple,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28),
+                        ),
+                      ),
+                      child: const Text(
+                        'Done',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                ],
-
-                // Advice Section
-                if (advice.isNotEmpty) ...[
-                  _buildSectionCard(
-                    context,
-                    title: 'Recommendations',
-                    icon: Icons.lightbulb_rounded,
-                    iconColor: AppTheme.primaryPurple,
-                    items: advice,
-                    itemColor: AppTheme.primaryPurple,
-                  ),
-                  const SizedBox(height: 16),
-                ],
-
-                // Voice Analysis Section
-                _buildVoiceAnalysisCard(context, voiceAnalysis),
-
-                const SizedBox(height: 24),
-              ],
-            ),
+                ),
+            ],
           );
         },
       ),
     );
   }
 
-  Widget _buildHeaderCard(
-      BuildContext context, String specialty, Timestamp? date) {
+  Widget _buildHeaderCard(BuildContext context, String specialty, Timestamp? date) {
     final dateStr = date != null
         ? '${date.toDate().day}/${date.toDate().month}/${date.toDate().year}'
         : 'Unknown date';
@@ -224,8 +263,7 @@ class MockInterviewReportScreen extends StatelessWidget {
             const SizedBox(height: 8),
             Row(
               children: [
-                const Icon(Icons.calendar_today,
-                    color: Colors.white70, size: 16),
+                const Icon(Icons.calendar_today, color: Colors.white70, size: 16),
                 const SizedBox(width: 6),
                 Text(
                   dateStr,
@@ -319,8 +357,7 @@ class MockInterviewReportScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildVoiceAnalysisCard(
-      BuildContext context, Map<String, dynamic>? voiceAnalysis) {
+  Widget _buildVoiceAnalysisCard(BuildContext context, Map<String, dynamic>? voiceAnalysis) {
     final isAvailable = voiceAnalysis?['available'] == true;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -337,14 +374,11 @@ class MockInterviewReportScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: (isAvailable ? Colors.purple : Colors.grey)
-                        .withOpacity(0.1),
+                    color: (isAvailable ? Colors.purple : Colors.grey).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
-                    isAvailable
-                        ? Icons.mic_rounded
-                        : Icons.info_outline_rounded,
+                    isAvailable ? Icons.mic_rounded : Icons.info_outline_rounded,
                     color: isAvailable ? Colors.purple : Colors.grey,
                     size: 24,
                   ),
@@ -392,14 +426,19 @@ class MockInterviewReportScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.orange[50],
+                  color: const Color(0xFFFD6C67).withOpacity(0.1),  // ← YOUR ORANGE COLOR
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.orange[200]!),
+                  border: Border.all(
+                    color: const Color(0xFFFD6C67).withOpacity(0.5),  // ← YOUR ORANGE COLOR
+                  ),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.schedule_rounded,
-                        color: Colors.orange[700], size: 20),
+                    const Icon(
+                      Icons.schedule_rounded,
+                      color: Color(0xFFFD6C67),  // ← YOUR ORANGE COLOR
+                      size: 20,
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -407,7 +446,7 @@ class MockInterviewReportScreen extends StatelessWidget {
                             'Voice analysis will be available soon',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.grey[700],
+                          color: isDark ? Colors.white70 : Colors.grey[700],
                         ),
                       ),
                     ),
@@ -421,8 +460,7 @@ class MockInterviewReportScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildVoiceMetric(
-      BuildContext context, String label, int value, Color color) {
+  Widget _buildVoiceMetric(BuildContext context, String label, int value, Color color) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
