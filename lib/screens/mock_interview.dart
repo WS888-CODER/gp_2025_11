@@ -14,6 +14,43 @@ import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
+Future<List<String>> _fetchMockQuestionsFromFunction(String specialty) async {
+  final map = {
+    'Computer & Information Technology': 'computer & information technology',
+    'Cybersecurity': 'cybersecurity',
+    'Data & Artificial Intelligence': 'data & artificial intelligence',
+    'Engineering': 'engineering',
+    'Business Administration': 'business administration',
+    'Marketing': 'marketing',
+    'Finance & Accounting': 'finance & accounting',
+    'Human Resources': 'human resources',
+    'Healthcare & Medical': 'healthcare & medical',
+    'Law': 'law',
+    'Education': 'education',
+    'Media & Communication': 'media & communication',
+  };
+
+  final raw = map[specialty]!;
+
+  final resp = await http.post(
+    Uri.parse(
+      'https://us-central1-jadeer-b4953.cloudfunctions.net/generateMockInterviewQuestions',
+    ),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'specialty': raw,
+      'count': 10,
+    }),
+  );
+
+  final data = jsonDecode(resp.body);
+  final list = data['questions'] as List;
+
+  return list.map((q) => q['text'].toString()).toList();
+}
 
 class MockInterviewSpecialtyScreen extends StatefulWidget {
   const MockInterviewSpecialtyScreen({super.key});
@@ -491,7 +528,7 @@ class _MockInterviewSpecialtyScreenState
         'Date': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-      final questions = _generateQuestionsForSpecialty(specialty);
+      final questions = await _fetchMockQuestionsFromFunction(specialty);
 
       await docRef.set({'Questions': questions}, SetOptions(merge: true));
 
@@ -510,46 +547,6 @@ class _MockInterviewSpecialtyScreenState
       await refundMockInterviewCredit();
       if (!mounted) return;
       SnackHelper.error(context, 'Failed to start mock interview: $e');
-    }
-  }
-
-  List<String> _generateQuestionsForSpecialty(String specialty) {
-    final base = <String>[
-      'Tell me about yourself.',
-      'Why are you interested in this field?',
-      'Describe a challenge you faced and how you handled it.',
-      'What are your strengths and weaknesses?',
-      'Where do you see yourself in 2 years?',
-    ];
-
-    switch (specialty) {
-      case 'Cybersecurity':
-        return [
-          ...base,
-          'How do you handle suspicious emails or phishing attempts?',
-        ];
-      case 'Finance & Accounting':
-        return [
-          ...base,
-          'How do you ensure accuracy when working with numbers?',
-        ];
-      case 'Marketing':
-        return [
-          ...base,
-          'How would you measure the success of a marketing campaign?',
-        ];
-      case 'Healthcare & Medical':
-        return [
-          ...base,
-          'How do you handle pressure in a fast-paced environment?',
-        ];
-      case 'Engineering':
-        return [
-          ...base,
-          'Tell me about a project you worked on and your role in it.',
-        ];
-      default:
-        return base;
     }
   }
 }
@@ -1121,7 +1118,7 @@ class _MockInterviewSessionScreenState
                           child: ConstrainedBox(
                             constraints: BoxConstraints(
                               minHeight:
-                                  MediaQuery.of(context).size.height - 100,
+                                  MediaQuery.of(context).size.height - 200,
                             ),
                             child: IntrinsicHeight(
                               child: Column(
