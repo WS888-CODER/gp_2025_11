@@ -1,251 +1,261 @@
-import * as v2 from "firebase-functions/v2";
-import { getFirestore } from "firebase-admin/firestore";
-import { FieldValue } from "firebase-admin/firestore";
+import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import FormData from "form-data";
 import fetch from "node-fetch";
 
-/* ===================== CONFIGURATION ===================== */
-
-function getOpenAIKey() {
-  return process.env.OPENAI_API_KEY || "";
-}
-
-/* ===================== MAIN FUNCTION ===================== */
-
-export const generateMockInterviewReport = v2.https.onCall(
-  { 
-    region: "us-central1", 
-    memory: "1GiB", 
+export const generateMockInterviewReport = onCall(
+  {
+    secrets: ["OPENAI_API_KEY"],
     timeoutSeconds: 540,
-    secrets: ["OPENAI_API_KEY"]  // ← ADD THIS LINE!
+    memory: "512MiB",
   },
   async (request) => {
     try {
       const { mockInterviewID } = request.data;
 
       if (!mockInterviewID) {
-        throw new Error("Missing mockInterviewID");
+        throw new HttpsError("invalid-argument", "mockInterviewID is required");
       }
 
-      console.log(`✅ Generating report for interview: ${mockInterviewID}`);
+      console.log(`[generateReport] Starting for interview: ${mockInterviewID}`);
 
-      // Step 1: Get interview data from Firestore
       const db = getFirestore();
-      const interviewDoc = await db
-        .collection("MockInterviews")
-        .doc(mockInterviewID)
-        .get();
+      const interviewRef = db.collection("MockInterviews").doc(mockInterviewID);
+      const interviewSnap = await interviewRef.get();
 
-      if (!interviewDoc.exists) {
-        throw new Error("Interview not found");
+      if (!interviewSnap.exists) {
+        throw new HttpsError("not-found", "Mock interview not found");
       }
 
-      const interviewData = interviewDoc.data();
+      const interviewData = interviewSnap.data();
+      const audioUrls = interviewData.AnswersRecordsURL || [];
       const questions = interviewData.Questions || [];
-      const answerURLs = interviewData.AnswersRecordsURL || [];  // ⬅️ FIXED: Correct field name
-      const specialty = interviewData.Specialty || "";
+      const specialty = interviewData.Specialty || "Unknown";
 
-      console.log(`📊 Found ${questions.length} questions and ${answerURLs.length} answers`);
+      console.log(`[generateReport] Found ${audioUrls.length} audio files`);
 
-      // Step 2: Transcribe audio answers using Whisper API
-      console.log("🎤 Transcribing audio...");
-      const transcripts = await transcribeAnswers(answerURLs);
+      if (audioUrls.length === 0) {
+        throw new HttpsError(
+          "failed-precondition",
+          "No audio recordings found for this interview"
+        );
+      }
 
-      // Step 3: Analyze answers using GPT-4
-      console.log("🤖 Analyzing with GPT-4...");
-      const analysis = await analyzeWithGPT(transcripts, questions, specialty);
+      // Step 1: Transcribe all audio files
+      const transcripts = [];
+      const OPENAI_KEY = process.env.OPENAI_API_KEY;
 
-      // Step 4: Voice tone analysis placeholder (SER model - to be added later)
-      const voiceAnalysis = {
-        available: false,
-        message: "Voice tone analysis will be available soon",
-      };
+      for (let i = 0; i < audioUrls.length; i++) {
+        const audioUrl = audioUrls[i];
+        if (!audioUrl || audioUrl.trim() === "") {
+          console.log(`[generateReport] Skipping empty URL at index ${i}`);
+          continue;
+        }
 
-      // Step 5: Build final report
-      const report = {
-        strengths: analysis.strengths || [],
-        weaknesses: analysis.weaknesses || [],
-        advice: analysis.advice || [],
-        voiceToneAnalysis: voiceAnalysis,
-        generatedAt: FieldValue.serverTimestamp(),
-      };
+        try {
+          console.log(`[generateReport] Transcribing audio ${i + 1}/${audioUrls.length}`);
+          console.log(`[generateReport] Audio URL: ${audioUrl.substring(0, 100)}...`);
 
-      // Step 6: Save report to Firestore
-      await db.collection("MockInterviews").doc(mockInterviewID).update({
-        Report: report,  // ⬅️ Capital R to match your schema
+          // Download audio file
+          const audioResponse = await fetch(audioUrl);
+          if (!audioResponse.ok) {
+            throw new Error(`Failed to download audio: ${audioResponse.statusText}`);
+          }
+
+          const audioBuffer = await audioResponse.buffer();
+          console.log(`[generateReport] Downloaded ${audioBuffer.length} bytes`);
+
+          if (audioBuffer.length < 100) {
+            throw new Error('Audio file too small (likely corrupted)');
+          }
+
+          // Call Whisper API using FormData
+          const formData = new FormData();
+          formData.append("file", audioBuffer, {
+            filename: `audio_${i}.m4a`,
+            contentType: "audio/m4a",
+          });
+          formData.append("model", "whisper-1");
+
+          const transcriptionResponse = await fetch(
+            "https://api.openai.com/v1/audio/transcriptions",
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${OPENAI_KEY}`,
+                ...formData.getHeaders(),
+              },
+              body: formData,
+            }
+          );
+
+          if (!transcriptionResponse.ok) {
+            const errorText = await transcriptionResponse.text();
+            console.error(`[generateReport] Whisper error: ${errorText}`);
+            throw new Error(`Whisper API error: ${transcriptionResponse.statusText}`);
+          }
+
+          const result = await transcriptionResponse.json();
+          const questionText = questions[i] || `Question ${i + 1}`;
+
+          transcripts.push({
+            question: questionText,
+            answer: result.text || "[No transcription]",
+          });
+
+          console.log(`[generateReport] ✅ Transcribed Q${i + 1}: ${result.text.substring(0, 50)}...`);
+        } catch (error) {
+          console.error(`[generateReport] ❌ Transcription failed for audio ${i}:`, error);
+          transcripts.push({
+            question: questions[i] || `Question ${i + 1}`,
+            answer: "[Transcription failed]",
+          });
+        }
+      }
+
+      if (transcripts.length === 0) {
+        throw new HttpsError(
+          "internal",
+          "Failed to transcribe any audio files"
+        );
+      }
+
+      console.log(`[generateReport] Successfully transcribed ${transcripts.length} answers`);
+
+      // Step 2: Filter out failed transcriptions
+      const validTranscripts = transcripts.filter(t => t.answer !== "[Transcription failed]");
+
+      if (validTranscripts.length === 0) {
+        throw new HttpsError(
+          "failed-precondition",
+          "All audio transcriptions failed. Please check your microphone and try again."
+        );
+      }
+
+      const transcriptText = validTranscripts
+        .map((t, i) => `Q${i + 1}: ${t.question}\nA${i + 1}: ${t.answer}`)
+        .join("\n\n");
+
+      const failedCount = transcripts.length - validTranscripts.length;
+      const transcriptionNote = failedCount > 0 
+        ? `Note: ${failedCount} answer(s) could not be transcribed and were excluded from analysis.\n\n`
+        : '';
+
+      // Step 3: Analyze with GPT-4
+      const gptPrompt = `You are an expert interview coach giving personal feedback to someone who just completed a mock interview for a ${specialty} position.
+
+IMPORTANT TONE: Address the user directly using "you" and "your" — NOT "the candidate". This is personal coaching feedback meant to help them improve.
+
+${transcriptionNote}Based on the following interview transcripts, provide a comprehensive analysis in VALID JSON format with NO markdown code blocks.
+
+Interview Transcripts:
+${transcriptText}
+
+Respond with a JSON object containing:
+{
+  "overallScore": <number between 1-10>,
+  "overallSummary": "<2-3 sentences summarizing your overall performance, highlighting key strengths and main areas for improvement. Address the user as 'you'.>",
+  "strengths": [
+    "<specific strength 1 with example from the interview, using 'you' language>",
+    "<specific strength 2 with example from the interview, using 'you' language>",
+    "<specific strength 3 with example from the interview, using 'you' language>"
+  ],
+  "weaknesses": [
+    "<specific area for improvement 1 with example, using 'you' language>",
+    "<specific area for improvement 2 with example, using 'you' language>",
+    "<specific area for improvement 3 with example, using 'you' language>"
+  ],
+  "advice": [
+    "<actionable recommendation 1, using 'you' language>",
+    "<actionable recommendation 2, using 'you' language>",
+    "<actionable recommendation 3, using 'you' language>"
+  ],
+  "voiceToneAnalysis": {
+    "available": false,
+    "message": "Voice tone analysis will be available in future updates"
+  }
+}
+
+IMPORTANT SCORING GUIDELINES:
+- Score 8-10: Excellent responses, clear communication, strong examples, confident delivery
+- Score 6-7: Good responses with room for improvement, adequate examples
+- Score 1-5: Needs significant improvement, unclear answers, lack of examples
+
+CRITICAL LANGUAGE RULE: NEVER say "the candidate", "the interviewee", or "the applicant". Always say "you" and "your". For example:
+- BAD: "The candidate demonstrated strong communication skills"
+- GOOD: "You demonstrated strong communication skills"
+- BAD: "The candidate should practice more"
+- GOOD: "You should practice more"
+
+Make the overallSummary at least 2-3 full sentences that give a balanced, encouraging view of the performance. Be specific and reference actual content from the interview.`;
+
+      console.log("[generateReport] Sending to GPT-4 for analysis...");
+
+      const gptResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${OPENAI_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gpt-4",
+          messages: [
+            {
+              role: "system",
+              content: "You are a friendly interview coach giving direct personal feedback. Always respond with valid JSON only, no markdown. CRITICAL: Always address the user as 'you' — NEVER say 'the candidate', 'the interviewee', or 'the applicant'. Write as if you're speaking directly to the person.",
+            },
+            {
+              role: "user",
+              content: gptPrompt,
+            },
+          ],
+          temperature: 0.7,
+          max_tokens: 2000,
+        }),
       });
 
-      console.log("✅ Report generated successfully");
+      if (!gptResponse.ok) {
+        const errorText = await gptResponse.text();
+        throw new Error(`GPT-4 API error: ${gptResponse.statusText} - ${errorText}`);
+      }
 
-      return { success: true, report };
+      const gptResult = await gptResponse.json();
+      const rawResponse = gptResult.choices[0].message.content.trim();
+
+      console.log("[generateReport] GPT-4 raw response:", rawResponse.substring(0, 200));
+
+      // Remove markdown code blocks if present
+      let cleanedResponse = rawResponse;
+      if (rawResponse.startsWith("```json")) {
+        cleanedResponse = rawResponse.replace(/```json\n?/g, "").replace(/```\n?/g, "");
+      } else if (rawResponse.startsWith("```")) {
+        cleanedResponse = rawResponse.replace(/```\n?/g, "");
+      }
+
+      const reportData = JSON.parse(cleanedResponse);
+      console.log("[generateReport] ✅ Successfully parsed GPT-4 response");
+
+      // Step 4: Save report to Firestore
+      await interviewRef.update({
+        Report: reportData,
+        ReportGeneratedAt: FieldValue.serverTimestamp(),
+      });
+
+      console.log(`[generateReport] ✅ Report saved successfully for ${mockInterviewID}`);
+
+      return {
+        success: true,
+        message: "Report generated successfully",
+        report: reportData,
+      };
     } catch (error) {
-      console.error("❌ Error generating report:", error);
-      throw new v2.https.HttpsError("internal", `Report generation failed: ${error.message}`);
+      console.error("[generateReport] ❌ Error:", error);
+
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+
+      throw new HttpsError("internal", `Failed to generate report: ${error.message}`);
     }
   }
 );
-
-/* ===================== HELPER FUNCTIONS ===================== */
-
-async function transcribeAnswers(answerURLs) {
-  const OPENAI_KEY = getOpenAIKey();
-  console.log("🔑 API Key exists:", !!OPENAI_KEY);
-  console.log("🔑 API Key length:", OPENAI_KEY?.length);
-  console.log("🔑 API Key starts with:", OPENAI_KEY?.substring(0, 7));
-  if (!OPENAI_KEY) {
-    throw new Error("OpenAI API key not configured");
-  }
-
-  const transcripts = [];
-
-  for (let i = 0; i < answerURLs.length; i++) {
-    const audioURL = answerURLs[i];
-    
-    if (!audioURL || audioURL.trim() === "") {
-      console.log(`⏭️ Skipping empty answer ${i}`);
-      transcripts.push({
-        questionIndex: i,
-        transcript: "[No answer recorded]",
-      });
-      continue;
-    }
-
-    try {
-      console.log(`📥 Downloading audio ${i + 1}/${answerURLs.length}...`);
-      
-      // Download audio file from URL
-      const audioResponse = await fetch(audioURL);
-      if (!audioResponse.ok) {
-        throw new Error(`Failed to download audio: ${audioResponse.statusText}`);
-      }
-      
-      const audioBuffer = await audioResponse.buffer();
-      console.log(`✅ Downloaded ${audioBuffer.length} bytes`);
-
-      // Call Whisper API for transcription
-      const formData = new FormData();
-      formData.append("file", audioBuffer, {
-        filename: `audio_${i}.m4a`,
-        contentType: "audio/m4a",
-      });
-      formData.append("model", "whisper-1");
-
-      console.log(`🎤 Calling Whisper API for question ${i + 1}...`);
-      
-      const response = await fetch(
-        "https://api.openai.com/v1/audio/transcriptions",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${OPENAI_KEY}`,
-            ...formData.getHeaders(),
-          },
-          body: formData,
-        }
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`❌ Whisper API error for question ${i}: ${errorText}`);
-        transcripts.push({
-          questionIndex: i,
-          transcript: "[Transcription failed]",
-        });
-        continue;
-      }
-
-      const result = await response.json();
-      console.log(`✅ Transcribed question ${i + 1}: ${result.text.substring(0, 50)}...`);
-
-      transcripts.push({
-        questionIndex: i,
-        transcript: result.text || "[No transcription]",
-      });
-    } catch (error) {
-      console.error(`❌ Error transcribing answer ${i}:`, error);
-      transcripts.push({
-        questionIndex: i,
-        transcript: "[Transcription error]",
-      });
-    }
-  }
-
-  return transcripts;
-}
-
-async function analyzeWithGPT(transcripts, questions, specialty) {
-  const OPENAI_KEY = getOpenAIKey();
-
-  // Build the prompt
-  const questionsAndAnswers = transcripts
-    .map((t) => {
-      const question = questions[t.questionIndex];
-      return `
-Question ${t.questionIndex + 1} (${question.type || 'general'}):
-${question.text}
-
-Answer:
-${t.transcript}
-`;
-    })
-    .join("\n---\n");
-
-  const prompt = `
-You are an expert interview coach. Analyze this mock interview for a ${specialty} role.
-
-${questionsAndAnswers}
-
-Provide constructive feedback in JSON format with:
-{
-  "strengths": ["strength 1", "strength 2", "strength 3"],
-  "weaknesses": ["weakness 1", "weakness 2"],
-  "advice": ["actionable advice 1", "actionable advice 2", "actionable advice 3"]
-}
-
-Focus on:
-- Content quality and relevance
-- Communication clarity
-- Technical knowledge (for domain questions)
-- Behavioral examples (for psychometric questions)
-- Areas for improvement
-
-Be specific, constructive, and encouraging.
-`;
-
-  console.log(`🤖 Calling GPT-4 for analysis...`);
-
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${OPENAI_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      temperature: 0.7,
-      messages: [
-        {
-          role: "system",
-          content: "You are an interview coach. Return only valid JSON.",
-        },
-        { role: "user", content: prompt },
-      ],
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`GPT-4 API error: ${response.statusText} - ${errorText}`);
-  }
-
-  const result = await response.json();
-  const content = result.choices[0].message.content;
-
-  console.log(`✅ Got GPT-4 response`);
-
-  // Parse JSON response
-  const cleanContent = content.replace(/```json|```/g, "").trim();
-  const analysis = JSON.parse(cleanContent);
-
-  return analysis;
-}

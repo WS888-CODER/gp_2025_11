@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
@@ -9,12 +10,13 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:gp_2025_11/config/theme.dart';
+import 'package:gp_2025_11/screens/jobseeker_home.dart';
 import 'package:gp_2025_11/screens/mock_interview_report.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
-import 'dart:convert';
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:http/http.dart' as http;
 
 Future<List<String>> _fetchMockQuestionsFromFunction(String specialty) async {
@@ -463,28 +465,30 @@ class _MockInterviewSpecialtyScreenState
   }
 
   Future<void> _confirmPermissionsThenStart(String specialty) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return const JadeerDialog<bool>(
-          title: 'Before we start',
-          content: Text(
-            'Mock Interview needs access to your camera and microphone to record your answers.\n\n'
-            'Please make sure you allow permissions when prompted.',
-          ),
-          primaryLabel: 'Continue',
-          primaryResult: true,
-          secondaryLabel: 'Cancel',
-          secondaryResult: false,
-        );
-      },
-    );
+  final ok = await showDialog<bool>(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) {
+      return const JadeerDialog<bool>(
+        title: 'Camera & Microphone Access',
+        content: Text(
+          'To record your interview answers, Jadeer needs permission to:\n\n'
+          '📷 Use your camera\n'
+          '🎤 Use your microphone\n\n'
+          'Your privacy is important to us. Recordings are only used to generate your interview report.',
+        ),
+        primaryLabel: 'Allow Access',
+        primaryResult: true,
+        secondaryLabel: 'Cancel',
+        secondaryResult: false,
+      );
+    },
+  );
 
-    if (ok != true) return;
+  if (ok != true) return;
 
-    await _startMockInterviewFlow(specialty);
-  }
+  await _startMockInterviewFlow(specialty);
+}
 
   Future<void> _startMockInterviewFlow(String specialty) async {
     final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
@@ -549,6 +553,7 @@ class _MockInterviewSpecialtyScreenState
       SnackHelper.error(context, 'Failed to start mock interview: $e');
     }
   }
+
 }
 
 class MockInterviewSessionScreen extends StatefulWidget {
@@ -603,11 +608,27 @@ class _MockInterviewSessionScreenState
   bool _ttsReady = false;
   bool _isSpeaking = false;
 
+  // ✅ FACE DETECTION
+  late final FaceDetector _faceDetector;
+  bool _faceDetected = false;
+  bool _processingFrame = false;
+
   @override
   void initState() {
     super.initState();
     _answerUrls = List<String>.filled(widget.questions.length, '');
     _tts = FlutterTts();
+
+    // Initialize face detector
+    _faceDetector = FaceDetector(
+      options: FaceDetectorOptions(
+        enableContours: false,
+        enableClassification: true,
+        enableTracking: false,
+        minFaceSize: 0.05,
+        performanceMode: FaceDetectorMode.fast,
+      ),
+    );
 
     _initTts().then((_) {
       if (!mounted) return;
@@ -624,7 +645,6 @@ class _MockInterviewSessionScreenState
 
   Future<void> _cancelInterviewAndCleanup() async {
     try {
-      // أوقفي أي شيء شغال
       _recordTimer?.cancel();
       if (_isRecording) {
         await _recorder.stop();
@@ -756,6 +776,13 @@ class _MockInterviewSessionScreenState
         _camera = controller;
         _initializing = false;
       });
+
+      // ✅ START FACE DETECTION
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (!mounted) return;
+      _processCameraImage();
+
+      await _speakCurrentQuestion();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -763,11 +790,97 @@ class _MockInterviewSessionScreenState
         _initializing = false;
       });
     }
-
-    await Future.delayed(const Duration(milliseconds: 300));
-    if (!mounted) return;
-    await _speakCurrentQuestion();
   }
+
+  // ✅ FACE DETECTION PROCESSING
+  Future<void> _processCameraImage() async {
+  if (_processingFrame || _camera == null || !_camera!.value.isInitialized) {
+    return;
+  }
+
+  _processingFrame = true;
+
+  try {
+    final image = await _camera!.takePicture();
+    final inputImage = InputImage.fromFilePath(image.path);
+    final faces = await _faceDetector.processImage(inputImage);
+
+    if (!mounted) return;
+
+    // ✅ STRICT FACE DETECTION
+    bool hasValidFace = false;
+    
+    if (faces.isNotEmpty) {
+      final face = faces.first;
+      final boundingBox = face.boundingBox;
+      
+      // Face must be reasonably visible (not too tiny)
+      final faceWidth = boundingBox.width;
+      final faceHeight = boundingBox.height;
+      
+      // Minimum size check - relaxed for normal arm's length
+      final isLargeEnough = faceWidth > 50 && faceHeight > 60;
+      
+      if (isLargeEnough) {
+        // Check head angles - must face forward
+        final headAngleY = face.headEulerAngleY ?? 0;
+        final headAngleZ = face.headEulerAngleZ ?? 0;
+        
+        // Allow 30 degrees rotation (more forgiving)
+        final isFacingForward = headAngleY.abs() < 30 && headAngleZ.abs() < 30;
+        
+        if (isFacingForward) {
+          // ✅ EYE CHECK - both eyes must be visible and open
+          // Covers: eyes covered, half face covered
+          final leftEye = face.leftEyeOpenProbability ?? -1;
+          final rightEye = face.rightEyeOpenProbability ?? -1;
+          final bothEyesVisible = leftEye > 0.15 && rightEye > 0.15;
+          
+          // ✅ ASPECT RATIO - face must have normal proportions
+          // Covers: mouth/nose covered (bounding box gets shorter)
+          final aspectRatio = faceHeight / faceWidth;
+          final hasNormalProportions = aspectRatio >= 1.0;
+          
+          // Must pass BOTH checks
+          if (bothEyesVisible && hasNormalProportions) {
+            hasValidFace = true;
+          }
+        }
+      }
+    }
+
+    setState(() {
+  _faceDetected = hasValidFace;
+});
+
+// 🔍 DEBUG: Print face detection info
+if (faces.isNotEmpty) {
+  final face = faces.first;
+  final box = face.boundingBox;
+  final ratio = box.height / box.width;
+  print('📏 Face size: ${box.width.toInt()}x${box.height.toInt()}');
+  print('📐 Aspect ratio: ${ratio.toStringAsFixed(2)}');
+  print('📍 Head Y: ${face.headEulerAngleY?.toStringAsFixed(1)}° Z: ${face.headEulerAngleZ?.toStringAsFixed(1)}°');
+  print('👁️ Left eye: ${face.leftEyeOpenProbability?.toStringAsFixed(2) ?? "null"} Right: ${face.rightEyeOpenProbability?.toStringAsFixed(2) ?? "null"}');
+  print('✅ Valid: $hasValidFace');
+  print('---');
+}
+  } catch (e) {
+    if (mounted) {
+      setState(() {
+        _faceDetected = false;
+      });
+    }
+  } finally {
+    _processingFrame = false;
+
+    if (mounted) {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) _processCameraImage();
+      });
+    }
+  }
+}
 
   @override
   void dispose() {
@@ -777,6 +890,7 @@ class _MockInterviewSessionScreenState
     _camera?.dispose();
     _uploadSub?.cancel();
     _player.dispose();
+    _faceDetector.close();
     super.dispose();
   }
 
@@ -808,31 +922,37 @@ class _MockInterviewSessionScreenState
   }
 
   Future<void> _next() async {
-    if (_isRecording) {
-      SnackHelper.error(context, 'Stop recording first.');
-      return;
-    }
-
-    final hasAnswer = _answerUrls[_index].trim().isNotEmpty;
-    if (!hasAnswer) {
-      SnackHelper.error(context, 'Please record your answer first.');
-      return;
-    }
-
-    if (_isLast) {
-      await _finish();
-      return;
-    }
-
-    setState(() {
-      _index++;
-      _recordDuration = Duration.zero;
-    });
-
-    await Future.delayed(const Duration(milliseconds: 150));
-    if (!mounted) return;
-    await _speakCurrentQuestion();
+  if (_isRecording) {
+    SnackHelper.error(context, 'Stop recording first.');
+    return;
   }
+
+  // ✅ CHECK FACE BEFORE ALLOWING NEXT
+  if (!_faceDetected) {
+    SnackHelper.error(context, 'Please show your face to continue.');
+    return;
+  }
+
+  final hasAnswer = _answerUrls[_index].trim().isNotEmpty;
+  if (!hasAnswer) {
+    SnackHelper.error(context, 'Please record your answer first.');
+    return;
+  }
+
+  if (_isLast) {
+    await _finish();
+    return;
+  }
+
+  setState(() {
+    _index++;
+    _recordDuration = Duration.zero;
+  });
+
+  await Future.delayed(const Duration(milliseconds: 150));
+  if (!mounted) return;
+  await _speakCurrentQuestion();
+}
 
   void _startTimer() {
     _recordTimer?.cancel();
@@ -871,6 +991,13 @@ class _MockInterviewSessionScreenState
   }
 
   Future<void> _toggleRecording() async {
+    // ✅ CHECK FOR FACE FIRST
+    if (!_faceDetected && !_isRecording) {
+      SnackHelper.error(
+          context, 'Please position your face in front of the camera.');
+      return;
+    }
+
     try {
       if (_isRecording) {
         final path = await _recorder.stop();
@@ -884,7 +1011,6 @@ class _MockInterviewSessionScreenState
           return;
         }
 
-        // ✅ Show uploading state
         setState(() {
           _isUploadingAnswer = true;
           _uploadProgress = 0.0;
@@ -935,7 +1061,6 @@ class _MockInterviewSessionScreenState
       }
       await Permission.microphone.request();
 
-      // Start
       final hasMic = await _recorder.hasPermission();
 
       if (!hasMic) {
@@ -951,13 +1076,14 @@ class _MockInterviewSessionScreenState
       await _tts.stop();
 
       await _recorder.start(
-        const RecordConfig(
-          encoder: AudioEncoder.aacLc,
-          bitRate: 128000,
-          sampleRate: 44100,
-        ),
-        path: path,
-      );
+  const RecordConfig(
+    encoder: AudioEncoder.aacLc,
+    bitRate: 128000,
+    sampleRate: 44100,
+    numChannels: 1, // ✅ Mono (Whisper works better with mono)
+  ),
+  path: path,
+);
 
       _startTimer();
 
@@ -988,7 +1114,7 @@ class _MockInterviewSessionScreenState
         'FinishedAt': FieldValue.serverTimestamp(),
         'AnsweredCount': _answerUrls.where((e) => e.trim().isNotEmpty).length,
         'TotalQuestions': widget.questions.length,
-        'Report': null, // ✅ مهم عشان صفحة التقرير تعتبره "لسه يتولد"
+        'Report': null,
       }, SetOptions(merge: true));
 
       final functions = FirebaseFunctions.instance;
@@ -1059,11 +1185,11 @@ class _MockInterviewSessionScreenState
           context: context,
           barrierDismissible: false,
           builder: (_) => const JadeerDialog<bool>(
-            title: 'Exit Interview?',
-            content: Text(
-              'Exiting now will count this attempt, and you won’t be able to continue the interview.\n\n'
-              'Are you sure you want to exit?',
-            ),
+  title: 'Exit Interview?',
+  content: Text(
+    'Exiting now will count this attempt, and you will not be able to continue the interview.\n\n'
+    'Are you sure you want to exit?',
+  ),
             primaryLabel: 'Exit',
             primaryResult: true,
             secondaryLabel: 'Continue',
@@ -1072,13 +1198,14 @@ class _MockInterviewSessionScreenState
         );
 
         if (shouldExit == true && context.mounted) {
-          await _cancelInterviewAndCleanup();
+  await _cancelInterviewAndCleanup();
 
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-                builder: (_) => const MockInterviewSpecialtyScreen()),
-          );
-        }
+  // ✅ FIX: Navigate to home, not specialty screen
+  Navigator.of(context).pushAndRemoveUntil(
+    MaterialPageRoute(builder: (_) => const JobSeekerHome()),
+    (route) => false,
+  );
+}
       },
       child: ThemedScaffold(
         appBar: CustomHeader(
@@ -1118,21 +1245,68 @@ class _MockInterviewSessionScreenState
                           child: ConstrainedBox(
                             constraints: BoxConstraints(
                               minHeight:
-                                  MediaQuery.of(context).size.height - 200,
+                                  MediaQuery.of(context).size.height - 100,
                             ),
                             child: IntrinsicHeight(
                               child: Column(
                                 children: [
-                                  // Camera preview
+                                  // Camera preview with face detection overlay
                                   Padding(
                                     padding: const EdgeInsets.all(16),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(22),
-                                      child: SizedBox(
-                                        height: 320,
-                                        width: double.infinity,
-                                        child: CameraPreview(_camera!),
-                                      ),
+                                    child: Stack(
+                                      children: [
+                                        ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(22),
+                                          child: SizedBox(
+                                            height: 320,
+                                            width: double.infinity,
+                                            child: CameraPreview(_camera!),
+                                          ),
+                                        ),
+                                        // ✅ FACE DETECTION INDICATOR
+                                        Positioned(
+                                          top: 16,
+                                          right: 16,
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: 8,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: _faceDetected
+                                                  ? Colors.green
+                                                      .withOpacity(0.9)
+                                                  : Colors.red.withOpacity(0.9),
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(
+                                                  _faceDetected
+                                                      ? Icons.check_circle
+                                                      : Icons.warning,
+                                                  color: Colors.white,
+                                                  size: 16,
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Text(
+                                                  _faceDetected
+                                                      ? 'Face detected'
+                                                      : 'No face detected',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
 
@@ -1354,7 +1528,6 @@ class _MockInterviewSessionScreenState
                         ),
         ),
 
-        // Next / Finish
         bottomNavigationBar: _isGeneratingReport
             ? const SizedBox.shrink()
             : SafeArea(
