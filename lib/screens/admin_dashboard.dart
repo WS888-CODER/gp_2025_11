@@ -18,10 +18,54 @@ class _AdminDashboardState extends State<AdminDashboard> {
   bool isLoading = false;
   List<QueryDocumentSnapshot>? companies;
 
+  GlobalKey<AdminDashboardAppBarState> adminAppBarKey =
+      GlobalKey<AdminDashboardAppBarState>();
+
   @override
   void initState() {
     super.initState();
     loadCompanies();
+    deleteExpiredCompanies(); // ← هنا
+  }
+
+  Future<void> deleteExpiredCompanies() async {
+    final now = DateTime.now();
+
+    final snapshot = await FirebaseFirestore.instance
+        .collection('Users')
+        .where('UserType', isEqualTo: 'Company')
+        .where('AccountStatus', whereIn: ['Rejected', 'Pending'])
+        .get();
+
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+
+      if (!data.containsKey('UpdatedAt')) continue;
+
+      final updatedAt = DateTime.tryParse(data['UpdatedAt']);
+      if (updatedAt == null) continue;
+
+      final diff = now.difference(updatedAt);
+
+      final status = data['AccountStatus'];
+
+      bool shouldDelete = false;
+
+      if (status == 'Rejected' && diff.inHours >= 24) {
+        shouldDelete = true;
+      }
+
+      if (status == 'Pending' && diff.inDays >= 7) {
+        shouldDelete = true;
+      }
+
+      if (shouldDelete) {
+        await FirebaseFirestore.instance
+            .collection('Users')
+            .doc(doc.id)
+            .delete();
+      }
+    }
   }
 
   // == Firestore logic ==
@@ -40,10 +84,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Future<void> updateCompanyStatus(String id, String newStatus) async {
-    await FirebaseFirestore.instance
-        .collection('Users')
-        .doc(id)
-        .update({'AccountStatus': newStatus});
+    await FirebaseFirestore.instance.collection('Users').doc(id).update({
+      'AccountStatus': newStatus,
+      'UpdatedAt': DateTime.now().toIso8601String(),
+    });
   }
 
   Future<void> loadCompanies() async {
@@ -62,10 +106,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final isDark = theme.brightness == Brightness.dark;
 
     final Color selectedBg = theme.colorScheme.secondary;
-    final Color borderColor =
-        isSelected ? selectedBg : theme.colorScheme.primary;
-    final Color unselectedText =
-        isDark ? Colors.white70 : theme.colorScheme.primary;
+    final Color borderColor = isSelected
+        ? selectedBg
+        : theme.colorScheme.primary;
+    final Color unselectedText = isDark
+        ? Colors.white70
+        : theme.colorScheme.primary;
 
     return ChoiceChip(
       label: Text(
@@ -77,10 +123,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
       selected: isSelected,
       selectedColor: selectedBg,
-      side: BorderSide(
-        color: borderColor,
-        width: 2,
-      ),
+      side: BorderSide(color: borderColor, width: 2),
       showCheckmark: false,
       onSelected: (sel) async {
         selectedStatus = value;
@@ -91,83 +134,90 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    return ThemedScaffold(
-      appBar: const _AdminDashboardAppBar(),
-      body: Column(
-        children: [
-          const SizedBox(height: 20),
-          // ======== Filter chips row (All / Pending / ...) ========
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(8.0),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              physics: const ClampingScrollPhysics(),
-              child: Wrap(
-                spacing: 8,
-                children: [
-                  _buildStatusChip('All'),
-                  _buildStatusChip('Pending'),
-                  _buildStatusChip('Verified'),
-                  _buildStatusChip('Rejected'),
-                ],
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: adminAppBarKey.currentState?.resetSessionTimer,
+      onPanDown: (_) => adminAppBarKey.currentState?.resetSessionTimer(),
+      child: ThemedScaffold(
+        appBar: AdminDashboardAppBar(key: adminAppBarKey),
+        body: Column(
+          children: [
+            const SizedBox(height: 20),
+            // ======== Filter chips row (All / Pending / ...) ========
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(8.0),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const ClampingScrollPhysics(),
+                child: Wrap(
+                  spacing: 8,
+                  children: [
+                    _buildStatusChip('All'),
+                    _buildStatusChip('Pending'),
+                    _buildStatusChip('Verified'),
+                    _buildStatusChip('Rejected'),
+                  ],
+                ),
               ),
             ),
-          ),
 
-          // ======== Companies list ========
-          Expanded(
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : (companies == null || companies!.isEmpty)
-                    ? const EmptyState(
-                        icon: Iconsax.briefcase,
-                        title: 'No companies found',
-                        subtitle: 'New company registrations will appear here.',
-                      )
-                    : RefreshIndicator(
-                        onRefresh: loadCompanies,
-                        child: ListView.builder(
-                          itemCount: companies!.length,
-                          itemBuilder: (context, index) {
-                            final doc = companies![index];
-                            final data = doc.data() as Map<String, dynamic>;
+            // ======== Companies list ========
+            Expanded(
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : (companies == null || companies!.isEmpty)
+                  ? const EmptyState(
+                      icon: Iconsax.briefcase,
+                      title: 'No companies found',
+                      subtitle: 'New company registrations will appear here.',
+                    )
+                  : RefreshIndicator(
+                      onRefresh: loadCompanies,
+                      child: ListView.builder(
+                        itemCount: companies!.length,
+                        itemBuilder: (context, index) {
+                          final doc = companies![index];
+                          final data = doc.data() as Map<String, dynamic>;
 
-                            return _CompanyCard(
-                              data: data,
-                              onSelected: (newStatus) async {
-                                await updateCompanyStatus(doc.id, newStatus);
+                          return _CompanyCard(
+                            data: data,
+                            onSelected: (newStatus) async {
+                              await updateCompanyStatus(doc.id, newStatus);
 
-                                if (!context.mounted) return;
-                                SnackHelper.success(
-                                    context, 'Status updated to "$newStatus"');
+                              if (!context.mounted) return;
+                              SnackHelper.success(
+                                context,
+                                'Status updated to "$newStatus"',
+                              );
 
-                                await loadCompanies();
-                              },
-                            );
-                          },
-                        ),
+                              await loadCompanies();
+                            },
+                          );
+                        },
                       ),
-          ),
-        ],
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
 // ================== APP BAR ==================
-class _AdminDashboardAppBar extends StatefulWidget
+class AdminDashboardAppBar extends StatefulWidget
     implements PreferredSizeWidget {
-  const _AdminDashboardAppBar();
+  const AdminDashboardAppBar({super.key});
 
   @override
-  State<_AdminDashboardAppBar> createState() => _AdminDashboardAppBarState();
+  State<AdminDashboardAppBar> createState() => AdminDashboardAppBarState();
 
   @override
   Size get preferredSize => const Size.fromHeight(180);
 }
 
-class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
+class AdminDashboardAppBarState extends State<AdminDashboardAppBar> {
   Timer? _sessionTimer;
   int _remainingSeconds = 3600; // 1h
 
@@ -181,6 +231,15 @@ class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
   void dispose() {
     _sessionTimer?.cancel();
     super.dispose();
+  }
+
+  void resetSessionTimer() {
+    // فقط إذا بقي 15 دقيقة أو أقل
+    if (_remainingSeconds <= 900) {
+      _sessionTimer?.cancel();
+      _remainingSeconds = 3600; // إعادة ضبط 60 دقيقة
+      _startSessionTimer();
+    }
   }
 
   void _startSessionTimer() {
@@ -209,10 +268,7 @@ class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
           content: Text(
             'You have been automatically logged out after 1 hour.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 15,
-            ),
+            style: TextStyle(color: Colors.white, fontSize: 15),
           ),
           primaryLabel: 'OK',
           primaryResult: true,
@@ -242,8 +298,9 @@ class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
 
     final bool isLowTime = _remainingSeconds < 300;
 
-    final pillColor =
-        isLowTime ? Colors.red[100] : Colors.white.withOpacity(0.2);
+    final pillColor = isLowTime
+        ? Colors.red[100]
+        : Colors.white.withOpacity(0.2);
     final timerColor = isLowTime ? Colors.red[700] : Colors.white;
 
     final bubbleColor = Colors.white.withOpacity(isDark ? 0.04 : 0.06);
@@ -318,11 +375,7 @@ class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              Icons.timer,
-                              color: timerColor,
-                              size: 16,
-                            ),
+                            Icon(Icons.timer, color: timerColor, size: 16),
                             const SizedBox(width: 5),
                             Text(
                               _formatTime(_remainingSeconds),
@@ -378,7 +431,7 @@ class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
                 ],
               ),
             ),
-          )
+          ),
         ],
       ),
     );
@@ -387,10 +440,7 @@ class _AdminDashboardAppBarState extends State<_AdminDashboardAppBar> {
 
 // ================== COMPANY CARD ==================
 class _CompanyCard extends StatelessWidget {
-  const _CompanyCard({
-    required this.data,
-    required this.onSelected,
-  });
+  const _CompanyCard({required this.data, required this.onSelected});
 
   final Map<String, dynamic> data;
   final void Function(String) onSelected;
@@ -508,25 +558,15 @@ class _CompanyCard extends StatelessWidget {
               padding: EdgeInsets.zero,
               icon: TextButton.icon(
                 onPressed: null,
-                icon: Icon(
-                  Iconsax.edit,
-                  color: primaryColor,
-                  size: 18,
-                ),
+                icon: Icon(Iconsax.edit, color: primaryColor, size: 18),
                 label: Text(
                   'Change Status',
-                  style: TextStyle(
-                    color: primaryColor,
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: primaryColor, fontSize: 14),
                 ),
               ),
               onSelected: onSelected,
               itemBuilder: (context) => const [
-                PopupMenuItem(
-                  value: 'Pending',
-                  child: Text('Set as Pending'),
-                ),
+                PopupMenuItem(value: 'Pending', child: Text('Set as Pending')),
                 PopupMenuItem(
                   value: 'Verified',
                   child: Text('Set as Verified'),
@@ -546,11 +586,7 @@ class _CompanyCard extends StatelessWidget {
 
 // row for email/date
 class _InfoRow extends StatelessWidget {
-  const _InfoRow({
-    required this.icon,
-    required this.label,
-    this.labelColor,
-  });
+  const _InfoRow({required this.icon, required this.label, this.labelColor});
 
   final IconData icon;
   final String label;
@@ -562,11 +598,7 @@ class _InfoRow extends StatelessWidget {
 
     return Row(
       children: [
-        Icon(
-          icon,
-          size: 18,
-          color: theme.colorScheme.secondary,
-        ),
+        Icon(icon, size: 18, color: theme.colorScheme.secondary),
         const SizedBox(width: 5),
         Expanded(
           child: Text(
@@ -574,7 +606,8 @@ class _InfoRow extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: labelColor ??
+              color:
+                  labelColor ??
                   theme.textTheme.bodyLarge?.color ??
                   Colors.black87,
               fontSize: 14,
