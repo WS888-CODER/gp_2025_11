@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/screens/favorites.dart';
+import 'package:gp_2025_11/screens/job_interview_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 String effectiveStatusFromDates(DateTime? start, DateTime? end) {
@@ -224,6 +225,8 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
   bool _companyExpanded = false;
   bool _saved = false;
 
+  bool _isApplying = false; // ✅ add
+
   String _fmtDate(DateTime d) =>
       '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
 
@@ -231,6 +234,34 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
   void initState() {
     super.initState();
     _saved = widget.isSaved;
+  }
+
+  Future<void> _apply() async {
+    final rootCtx = Navigator.of(context, rootNavigator: true).context;
+    final job = widget.job;
+    final status = effectiveStatusFromDates(job.startDate, job.endDate);
+
+    if (status == 'Closed') {
+      SnackHelper.error(context, 'This job is closed.');
+      return;
+    }
+    if (status == 'Soon') {
+      SnackHelper.error(context, 'Applications are not open yet.');
+      return;
+    }
+    if (_isApplying) return;
+    setState(() => _isApplying = true);
+
+    try {
+      await JobInterviewService.start(
+        rootCtx,
+        jobDocId: job.id,
+        jobId: job.jobId,
+        specialty: job.specialty,
+      );
+    } finally {
+      if (mounted) setState(() => _isApplying = false);
+    }
   }
 
   Future<void> _openWebsite(String raw) async {
@@ -319,19 +350,7 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: FilledButton(
-          onPressed: () {
-            if (isClosed) {
-              SnackHelper.error(context, 'This job is closed.');
-              return;
-            }
-
-            if (isSoon) {
-              SnackHelper.error(context, 'Applications are not open yet.');
-              return;
-            }
-
-            SnackHelper.error(context, 'Application functionality coming soon');
-          },
+          onPressed: disabled || _isApplying ? null : _apply,
           style: FilledButton.styleFrom(
             backgroundColor:
                 disabled ? onSurface.withOpacity(0.6) : scheme.primary,
@@ -346,7 +365,7 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          child: const Text('Apply'),
+          child: Text(_isApplying ? 'Starting…' : 'Apply'),
         ),
       ),
       body: ListView(
@@ -796,6 +815,36 @@ class JobCard extends StatefulWidget {
 
 class _JobCardState extends State<JobCard> {
   bool _saved = false;
+  bool _isApplying = false;
+
+  Future<void> _apply() async {
+    final rootCtx = Navigator.of(context, rootNavigator: true).context;
+    final job = widget.job;
+    final status = effectiveStatusFromDates(job.startDate, job.endDate);
+
+    if (status == 'Closed') {
+      SnackHelper.error(context, 'This job is closed.');
+      return;
+    }
+    if (status == 'Soon') {
+      SnackHelper.error(context, 'Applications are not open yet.');
+      return;
+    }
+
+    if (_isApplying) return;
+    setState(() => _isApplying = true);
+
+    try {
+      await JobInterviewService.start(
+        rootCtx,
+        jobDocId: job.id,
+        jobId: job.jobId,
+        specialty: job.specialty,
+      );
+    } finally {
+      if (mounted) setState(() => _isApplying = false);
+    }
+  }
 
   String _fmtDate(DateTime d) =>
       '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
@@ -980,40 +1029,27 @@ class _JobCardState extends State<JobCard> {
                       ),
                     ),
                   const Spacer(),
-                  FilledButton(
-                    onPressed: () {
-                      if (isClosed) {
-                        SnackHelper.error(context, 'This job is closed.');
-                        return;
-                      }
-
-                      if (isSoon) {
-                        SnackHelper.error(
-                            context, 'Applications are not open yet.');
-                        return;
-                      }
-
-                      SnackHelper.error(context, 'Coming soon');
-                    },
-                    style: FilledButton.styleFrom(
-                      backgroundColor: disabled
-                          ? onSurface.withOpacity(0.6)
-                          : scheme.primary,
-                      disabledBackgroundColor: onSurface.withOpacity(0.6),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {},
+                    child: FilledButton(
+                      onPressed: disabled || _isApplying ? null : _apply,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: disabled
+                            ? onSurface.withOpacity(0.6)
+                            : scheme.primary,
+                        disabledBackgroundColor: onSurface.withOpacity(0.6),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 10),
                       ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
-                    ),
-                    child: const Text(
-                      'Apply',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
+                      child: Text(
+                        _isApplying ? 'Starting…' : 'Apply',
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w700),
                       ),
                     ),
                   ),

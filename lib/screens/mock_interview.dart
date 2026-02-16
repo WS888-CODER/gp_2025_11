@@ -465,30 +465,30 @@ class _MockInterviewSpecialtyScreenState
   }
 
   Future<void> _confirmPermissionsThenStart(String specialty) async {
-  final ok = await showDialog<bool>(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) {
-      return const JadeerDialog<bool>(
-        title: 'Camera & Microphone Access',
-        content: Text(
-          'To record your interview answers, Jadeer needs permission to:\n\n'
-          '📷 Use your camera\n'
-          '🎤 Use your microphone\n\n'
-          'Your privacy is important to us. Recordings are only used to generate your interview report.',
-        ),
-        primaryLabel: 'Allow Access',
-        primaryResult: true,
-        secondaryLabel: 'Cancel',
-        secondaryResult: false,
-      );
-    },
-  );
+    final ok = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return const JadeerDialog<bool>(
+          title: 'Camera & Microphone Access',
+          content: Text(
+            'To record your interview answers, Jadeer needs permission to:\n\n'
+            '📷 Use your camera\n'
+            '🎤 Use your microphone\n\n'
+            'Your privacy is important to us. Recordings are only used to generate your interview report.',
+          ),
+          primaryLabel: 'Allow Access',
+          primaryResult: true,
+          secondaryLabel: 'Cancel',
+          secondaryResult: false,
+        );
+      },
+    );
 
-  if (ok != true) return;
+    if (ok != true) return;
 
-  await _startMockInterviewFlow(specialty);
-}
+    await _startMockInterviewFlow(specialty);
+  }
 
   Future<void> _startMockInterviewFlow(String specialty) async {
     final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
@@ -553,7 +553,6 @@ class _MockInterviewSpecialtyScreenState
       SnackHelper.error(context, 'Failed to start mock interview: $e');
     }
   }
-
 }
 
 class MockInterviewSessionScreen extends StatefulWidget {
@@ -794,93 +793,83 @@ class _MockInterviewSessionScreenState
 
   // ✅ FACE DETECTION PROCESSING
   Future<void> _processCameraImage() async {
-  if (_processingFrame || _camera == null || !_camera!.value.isInitialized) {
-    return;
-  }
+    if (_processingFrame || _camera == null || !_camera!.value.isInitialized) {
+      return;
+    }
 
-  _processingFrame = true;
+    _processingFrame = true;
 
-  try {
-    final image = await _camera!.takePicture();
-    final inputImage = InputImage.fromFilePath(image.path);
-    final faces = await _faceDetector.processImage(inputImage);
+    try {
+      final image = await _camera!.takePicture();
+      final inputImage = InputImage.fromFilePath(image.path);
+      final faces = await _faceDetector.processImage(inputImage);
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    // ✅ STRICT FACE DETECTION
-    bool hasValidFace = false;
-    
-    if (faces.isNotEmpty) {
-      final face = faces.first;
-      final boundingBox = face.boundingBox;
-      
-      // Face must be reasonably visible (not too tiny)
-      final faceWidth = boundingBox.width;
-      final faceHeight = boundingBox.height;
-      
-      // Minimum size check - relaxed for normal arm's length
-      final isLargeEnough = faceWidth > 50 && faceHeight > 60;
-      
-      if (isLargeEnough) {
-        // Check head angles - must face forward
-        final headAngleY = face.headEulerAngleY ?? 0;
-        final headAngleZ = face.headEulerAngleZ ?? 0;
-        
-        // Allow 30 degrees rotation (more forgiving)
-        final isFacingForward = headAngleY.abs() < 30 && headAngleZ.abs() < 30;
-        
-        if (isFacingForward) {
-          // ✅ EYE CHECK - both eyes must be visible and open
-          // Covers: eyes covered, half face covered
-          final leftEye = face.leftEyeOpenProbability ?? -1;
-          final rightEye = face.rightEyeOpenProbability ?? -1;
-          final bothEyesVisible = leftEye > 0.15 && rightEye > 0.15;
-          
-          // ✅ ASPECT RATIO - face must have normal proportions
-          // Covers: mouth/nose covered (bounding box gets shorter)
-          final aspectRatio = faceHeight / faceWidth;
-          final hasNormalProportions = aspectRatio >= 1.0;
-          
-          // Must pass BOTH checks
-          if (bothEyesVisible && hasNormalProportions) {
-            hasValidFace = true;
+      // ✅ STRICT FACE DETECTION
+      bool hasValidFace = false;
+
+      if (faces.isNotEmpty) {
+        final face = faces.first;
+        final boundingBox = face.boundingBox;
+
+        // Face must be reasonably visible (not too tiny)
+        final faceWidth = boundingBox.width;
+        final faceHeight = boundingBox.height;
+
+        // Minimum size check - relaxed for normal arm's length
+        final isLargeEnough = faceWidth > 50 && faceHeight > 60;
+
+        if (isLargeEnough) {
+          // Check head angles - must face forward
+          final headAngleY = face.headEulerAngleY ?? 0;
+          final headAngleZ = face.headEulerAngleZ ?? 0;
+
+          // Allow 30 degrees rotation (more forgiving)
+          final isFacingForward =
+              headAngleY.abs() < 30 && headAngleZ.abs() < 30;
+
+          if (isFacingForward) {
+            // ✅ EYE CHECK - both eyes must be visible and open
+            // Covers: eyes covered, half face covered
+            final leftEye = face.leftEyeOpenProbability ?? -1;
+            final rightEye = face.rightEyeOpenProbability ?? -1;
+            final bothEyesVisible = leftEye > 0.15 && rightEye > 0.15;
+
+            // ✅ ASPECT RATIO - face must have normal proportions
+            // Covers: mouth/nose covered (bounding box gets shorter)
+            final aspectRatio = faceHeight / faceWidth;
+            final hasNormalProportions = aspectRatio >= 1.0;
+
+            // Must pass BOTH checks
+            if (bothEyesVisible && hasNormalProportions) {
+              hasValidFace = true;
+            }
           }
         }
       }
-    }
 
-    setState(() {
-  _faceDetected = hasValidFace;
-});
-
-// 🔍 DEBUG: Print face detection info
-if (faces.isNotEmpty) {
-  final face = faces.first;
-  final box = face.boundingBox;
-  final ratio = box.height / box.width;
-  print('📏 Face size: ${box.width.toInt()}x${box.height.toInt()}');
-  print('📐 Aspect ratio: ${ratio.toStringAsFixed(2)}');
-  print('📍 Head Y: ${face.headEulerAngleY?.toStringAsFixed(1)}° Z: ${face.headEulerAngleZ?.toStringAsFixed(1)}°');
-  print('👁️ Left eye: ${face.leftEyeOpenProbability?.toStringAsFixed(2) ?? "null"} Right: ${face.rightEyeOpenProbability?.toStringAsFixed(2) ?? "null"}');
-  print('✅ Valid: $hasValidFace');
-  print('---');
-}
-  } catch (e) {
-    if (mounted) {
       setState(() {
-        _faceDetected = false;
+        _faceDetected = hasValidFace;
       });
-    }
-  } finally {
-    _processingFrame = false;
 
-    if (mounted) {
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) _processCameraImage();
-      });
+      if (faces.isNotEmpty) {}
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _faceDetected = false;
+        });
+      }
+    } finally {
+      _processingFrame = false;
+
+      if (mounted) {
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) _processCameraImage();
+        });
+      }
     }
   }
-}
 
   @override
   void dispose() {
@@ -922,37 +911,37 @@ if (faces.isNotEmpty) {
   }
 
   Future<void> _next() async {
-  if (_isRecording) {
-    SnackHelper.error(context, 'Stop recording first.');
-    return;
+    if (_isRecording) {
+      SnackHelper.error(context, 'Stop recording first.');
+      return;
+    }
+
+    // ✅ CHECK FACE BEFORE ALLOWING NEXT
+    if (!_faceDetected) {
+      SnackHelper.error(context, 'Please show your face to continue.');
+      return;
+    }
+
+    final hasAnswer = _answerUrls[_index].trim().isNotEmpty;
+    if (!hasAnswer) {
+      SnackHelper.error(context, 'Please record your answer first.');
+      return;
+    }
+
+    if (_isLast) {
+      await _finish();
+      return;
+    }
+
+    setState(() {
+      _index++;
+      _recordDuration = Duration.zero;
+    });
+
+    await Future.delayed(const Duration(milliseconds: 150));
+    if (!mounted) return;
+    await _speakCurrentQuestion();
   }
-
-  // ✅ CHECK FACE BEFORE ALLOWING NEXT
-  if (!_faceDetected) {
-    SnackHelper.error(context, 'Please show your face to continue.');
-    return;
-  }
-
-  final hasAnswer = _answerUrls[_index].trim().isNotEmpty;
-  if (!hasAnswer) {
-    SnackHelper.error(context, 'Please record your answer first.');
-    return;
-  }
-
-  if (_isLast) {
-    await _finish();
-    return;
-  }
-
-  setState(() {
-    _index++;
-    _recordDuration = Duration.zero;
-  });
-
-  await Future.delayed(const Duration(milliseconds: 150));
-  if (!mounted) return;
-  await _speakCurrentQuestion();
-}
 
   void _startTimer() {
     _recordTimer?.cancel();
@@ -1076,14 +1065,14 @@ if (faces.isNotEmpty) {
       await _tts.stop();
 
       await _recorder.start(
-  const RecordConfig(
-    encoder: AudioEncoder.aacLc,
-    bitRate: 128000,
-    sampleRate: 44100,
-    numChannels: 1, // ✅ Mono (Whisper works better with mono)
-  ),
-  path: path,
-);
+        const RecordConfig(
+          encoder: AudioEncoder.aacLc,
+          bitRate: 128000,
+          sampleRate: 44100,
+          numChannels: 1, // ✅ Mono (Whisper works better with mono)
+        ),
+        path: path,
+      );
 
       _startTimer();
 
@@ -1185,11 +1174,11 @@ if (faces.isNotEmpty) {
           context: context,
           barrierDismissible: false,
           builder: (_) => const JadeerDialog<bool>(
-  title: 'Exit Interview?',
-  content: Text(
-    'Exiting now will count this attempt, and you will not be able to continue the interview.\n\n'
-    'Are you sure you want to exit?',
-  ),
+            title: 'Exit Interview?',
+            content: Text(
+              'Exiting now will count this attempt, and you will not be able to continue the interview.\n\n'
+              'Are you sure you want to exit?',
+            ),
             primaryLabel: 'Exit',
             primaryResult: true,
             secondaryLabel: 'Continue',
@@ -1198,14 +1187,13 @@ if (faces.isNotEmpty) {
         );
 
         if (shouldExit == true && context.mounted) {
-  await _cancelInterviewAndCleanup();
+          await _cancelInterviewAndCleanup();
 
-  // ✅ FIX: Navigate to home, not specialty screen
-  Navigator.of(context).pushAndRemoveUntil(
-    MaterialPageRoute(builder: (_) => const JobSeekerHome()),
-    (route) => false,
-  );
-}
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const JobSeekerHome()),
+            (route) => false,
+          );
+        }
       },
       child: ThemedScaffold(
         appBar: CustomHeader(
@@ -1527,7 +1515,6 @@ if (faces.isNotEmpty) {
                           ),
                         ),
         ),
-
         bottomNavigationBar: _isGeneratingReport
             ? const SizedBox.shrink()
             : SafeArea(

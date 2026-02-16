@@ -983,7 +983,7 @@ class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: JobCard(
-                    key: ValueKey('job-${job.jobId}-${isSaved ? '1' : '0'}'),
+                    key: ValueKey('job-${job.jobId}'),
                     job: job,
                     company: company,
                     isSaved: isSaved,
