@@ -601,7 +601,7 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
 
       if (!mounted) return;
 
-      bool hasValidFace = true;
+      bool hasValidFace = false;
 
       if (faces.isNotEmpty) {
         final face = faces.first;
