@@ -132,7 +132,6 @@ class JobInterviewService {
 
     // ✅ 3) Show permissions dialog (like Mock Interview)
     final permOk = await _confirmPermissionsDialog(context);
-    SnackHelper.success(context, 'permOk = $permOk');
 
     if (!context.mounted) return;
     if (!permOk) return;
@@ -602,7 +601,7 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
 
       if (!mounted) return;
 
-      bool hasValidFace = false;
+      bool hasValidFace = true;
 
       if (faces.isNotEmpty) {
         final face = faces.first;

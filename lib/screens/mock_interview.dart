@@ -19,38 +19,89 @@ import 'package:record/record.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:http/http.dart' as http;
 
-Future<List<String>> _fetchMockQuestionsFromFunction(String specialty) async {
-  final map = {
-    'Computer & Information Technology': 'computer & information technology',
-    'Cybersecurity': 'cybersecurity',
-    'Data & Artificial Intelligence': 'data & artificial intelligence',
-    'Engineering': 'engineering',
-    'Business Administration': 'business administration',
-    'Marketing': 'marketing',
-    'Finance & Accounting': 'finance & accounting',
-    'Human Resources': 'human resources',
-    'Healthcare & Medical': 'healthcare & medical',
-    'Law': 'law',
-    'Education': 'education',
-    'Media & Communication': 'media & communication',
-  };
+String _normalizeSpecialtyForFunction(String specialty) {
+  final s = specialty.toLowerCase();
 
-  final raw = map[specialty]!;
+  // --- Cybersecurity ---
+  if (s.contains('cybersecurity')) return 'cybersecurity';
+
+  // --- Data / AI ---
+  if (s.contains('data') ||
+      s.contains('ai') ||
+      s.contains('machine learning')) {
+    return 'data & artificial intelligence';
+  }
+
+  // --- Engineering ---
+  if (s.contains('engineering') ||
+      s.contains('civil') ||
+      s.contains('mechanical') ||
+      s.contains('electrical') ||
+      s.contains('chemical') ||
+      s.contains('industrial') ||
+      s.contains('petroleum')) {
+    return 'engineering';
+  }
+
+  // --- Marketing / Media ---
+  if (s.contains('marketing') ||
+      s.contains('content') ||
+      s.contains('copywriting') ||
+      s.contains('branding') ||
+      s.contains('advertising') ||
+      s.contains('public relations') ||
+      s.contains('media') ||
+      s.contains('journalism') ||
+      s.contains('photography') ||
+      s.contains('videography') ||
+      s.contains('motion') ||
+      s.contains('graphic')) {
+    return 'media & communication';
+  }
+
+  // --- Finance & Accounting ---
+  if (s.contains('accounting') ||
+      s.contains('auditing') ||
+      s.contains('finance') ||
+      s.contains('investment') ||
+      s.contains('risk')) {
+    return 'finance & accounting';
+  }
+
+  // --- HR ---
+  if (s.contains('human resources') || s == 'hr') return 'human resources';
+
+  // --- Law ---
+  if (s.contains('legal') || s.contains('compliance')) return 'law';
+
+  // --- Education ---
+  if (s.contains('teaching') || s.contains('training')) return 'education';
+
+  // --- Default (Tech/IT + Business/Operations + others)
+  if (s.contains('business') ||
+      s.contains('operations') ||
+      s.contains('project') ||
+      s.contains('supply chain') ||
+      s.contains('procurement') ||
+      s.contains('strategy')) {
+    return 'business administration';
+  }
+
+  return 'computer & information technology';
+}
+
+Future<List<String>> _fetchMockQuestionsFromFunction(String specialty) async {
+  final raw = _normalizeSpecialtyForFunction(specialty);
 
   final resp = await http.post(
     Uri.parse(
-      'https://us-central1-jadeer-b4953.cloudfunctions.net/generateMockInterviewQuestions',
-    ),
+        'https://us-central1-jadeer-b4953.cloudfunctions.net/generateMockInterviewQuestions'),
     headers: {'Content-Type': 'application/json'},
-    body: jsonEncode({
-      'specialty': raw,
-      'count': 10,
-    }),
+    body: jsonEncode({'specialty': raw, 'count': 10}),
   );
 
   final data = jsonDecode(resp.body);
-  final list = data['questions'] as List;
-
+  final list = (data['questions'] as List?) ?? [];
   return list.map((q) => q['text'].toString()).toList();
 }
 
@@ -64,42 +115,119 @@ class MockInterviewSpecialtyScreen extends StatefulWidget {
 
 class _MockInterviewSpecialtyScreenState
     extends State<MockInterviewSpecialtyScreen> {
+  String _activeSection = 'All';
+  final Set<String> _expandedSections = {};
+
   final TextEditingController _search = TextEditingController();
   String _query = '';
   String? _selected;
 
-  final Map<String, String> _specialties = const {
-    // Technical
-    'Computer & Information Technology':
-        'General tech roles, software, IT, and digital systems.',
-    'Cybersecurity':
-        'Security, threats, incident response, and risk awareness.',
-    'Data & Artificial Intelligence':
-        'Data analysis, AI concepts, and problem solving with data.',
+  // ✅ Sections: general category -> sub-specialties
+  static const Map<String, List<String>> _specialtySections = {
+    // --- Technology & IT ---
+    "Technology & IT": [
+      "Frontend Development",
+      "Backend Development",
+      "Full-Stack Development",
+      "Mobile Development",
+      "Software Engineering",
+      "Cybersecurity",
+      "Data Science",
+      "Data Engineering",
+      "Data Analysis",
+      "AI / Machine Learning",
+      "Cloud / DevOps",
+      "IT Support / System Administration",
+      "Product Management",
+      "UI/UX Design",
+      "QA / Software Testing",
+    ],
 
-    // Engineering
-    'Engineering':
-        'Engineering fundamentals, projects, and technical teamwork.',
+    // --- Engineering ---
+    "Engineering": [
+      "Mechanical Engineering",
+      "Electrical Engineering",
+      "Industrial Engineering",
+      "Chemical Engineering",
+      "Civil Engineering",
+      "Petroleum Engineer",
+    ],
 
-    // Business
-    'Business Administration':
-        'Operations, management, teamwork, and decision making.',
-    'Marketing': 'Campaigns, content, customer focus, and basic analytics.',
-    'Finance & Accounting':
-        'Numbers, budgeting, reporting, and financial reasoning.',
-    'Human Resources':
-        'People operations, communication, and workplace scenarios.',
+    // --- Business & Operations ---
+    "Business & Operations": [
+      "Business Administration",
+      "Operations Management",
+      "Project Management",
+      "Supply Chain & Logistics",
+      "Procurement",
+      "Quality Management",
+      "Strategy & Consulting",
+    ],
 
-    // Health
-    'Healthcare & Medical':
-        'Healthcare roles, patient care basics, and professionalism.',
+    // --- Sales & Marketing ---
+    "Sales & Marketing": [
+      "Sales",
+      "Business Development",
+      "Digital Marketing",
+      "Content Creation",
+      "Copywriting",
+      "Branding",
+      "Creative Direction",
+      "Advertising & Public Relations",
+    ],
 
-    'Law': 'Legal roles, regulations, ethics, and professional responsibility.',
+    // --- Finance & Legal ---
+    "Finance & Legal": [
+      "Accounting",
+      "Auditing",
+      "Finance & Investment",
+      "Legal & Compliance",
+      "Risk Management",
+    ],
 
-    'Education': 'Teaching mindset, communication, and planning lessons.',
-    'Media & Communication':
-        'Communication skills, storytelling, and public-facing roles.',
+    // --- HR ---
+    "HR": [
+      "Human Resources",
+    ],
+
+    // --- Environment & Safety ---
+    "Environment & Safety": [
+      "Health, Safety & Environment (HSE)",
+      "Environmental Management",
+    ],
+
+    // --- Manufacturing & Production ---
+    "Manufacturing & Production": [
+      "Manufacturing & Production",
+      "Quality Assurance (Industrial)",
+      "Research & Development (R&D)",
+    ],
+
+    // --- Media & Creative ---
+    "Media & Creative": [
+      "Media & Journalism",
+      "Graphic Design",
+      "Motion Design",
+      "Photography & Videography",
+    ],
+
+    // --- Customer Service & Admin ---
+    "Customer Service & Admin": [
+      "Customer Support",
+      "Office Administration",
+    ],
+
+    // --- Hospitality ---
+    "Hospitality": [
+      "Hospitality & Tourism",
+    ],
+
+    // --- Education ---
+    "Education": [
+      "Teaching & Training",
+    ],
   };
+
   Future<bool> consumeMockInterviewCredit() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return false;
@@ -239,12 +367,34 @@ class _MockInterviewSpecialtyScreenState
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    final entries = _specialties.entries.toList();
+    final q = _query.toLowerCase().trim();
 
-    final filtered = entries.where((e) {
-      final q = _query.toLowerCase().trim();
-      return e.key.toLowerCase().contains(q);
-    }).toList();
+    final allSections = _specialtySections.keys.toList();
+    final sectionOptions = ['All', ...allSections];
+
+    Map<String, List<String>> filteredMap = {};
+
+    for (final entry in _specialtySections.entries) {
+      final sectionTitle = entry.key;
+      final items = entry.value.where((item) {
+        if (q.isEmpty) return true;
+        return item.toLowerCase().contains(q) ||
+            sectionTitle.toLowerCase().contains(q);
+      }).toList();
+
+      if (items.isNotEmpty) filteredMap[sectionTitle] = items;
+    }
+
+// apply active section filter
+    if (_activeSection != 'All') {
+      filteredMap = filteredMap.containsKey(_activeSection)
+          ? {_activeSection: filteredMap[_activeSection]!}
+          : {};
+    }
+
+    final totalResults =
+        filteredMap.values.fold<int>(0, (sum, list) => sum + list.length);
+
     final shadowColor =
         isDark ? Colors.black.withOpacity(0.6) : Colors.black.withOpacity(0.07);
     final canContinue =
@@ -323,106 +473,271 @@ class _MockInterviewSpecialtyScreenState
               ),
 
               const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 40,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: sectionOptions.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (_, i) {
+                          final s = sectionOptions[i];
+                          final selected = _activeSection == s;
 
+                          return ChoiceChip(
+                            label: Text(
+                              s,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: selected
+                                    ? Colors.white
+                                    : (isDark
+                                        ? scheme.onSurface
+                                        : Colors.black87),
+                              ),
+                            ),
+                            selected: selected,
+                            onSelected: (_) => setState(() {
+                              _activeSection = s;
+                              if (s != 'All') _expandedSections.add(s);
+                            }),
+                            selectedColor: const Color(0xFF4A5FBC),
+                            backgroundColor:
+                                isDark ? scheme.surface : Colors.white,
+                            shape: StadiumBorder(
+                              side: BorderSide(
+                                width: 2.0,
+                                color: selected
+                                    ? const Color(0xFF4A5FBC)
+                                    : (isDark
+                                        ? scheme.onSurface.withOpacity(0.15)
+                                        : const Color(0xFF4A5FBC)),
+                              ),
+                            ),
+                            showCheckmark: false,
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
               // List
               Expanded(
-                child: filtered.isEmpty
+                child: filteredMap.isEmpty
                     ? const EmptyState(
                         icon: Icons.manage_search,
                         title: 'No specialties found',
                         subtitle: 'Try a different keyword.',
                       )
-                    : ListView.builder(
-                        itemCount: filtered.length,
-                        itemBuilder: (context, i) {
-                          final title = filtered[i].key;
-                          final subtitle = filtered[i].value;
-                          final selected = _selected == title;
+                    : ListView(
+                        children: filteredMap.entries.map((section) {
+                          final sectionTitle = section.key;
+                          final items = section.value;
 
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: Material(
-                              color: isDark ? scheme.surface : Colors.white,
+                          final expanded =
+                              _expandedSections.contains(sectionTitle);
+
+                          return AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            curve: Curves.easeOut,
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              color: scheme.surface,
                               borderRadius: BorderRadius.circular(16),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(16),
-                                onTap: () => setState(() => _selected = title),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 14, vertical: 14),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: selected
-                                          ? scheme.primary
-                                          : Colors.transparent,
-                                      width: 1.2,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(
+                                    Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? 0.12
+                                        : 0.05,
+                                  ),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                // ✅ Section header (tap to expand)
+                                InkWell(
+                                  borderRadius: BorderRadius.circular(18),
+                                  onTap: () {
+                                    setState(() {
+                                      if (expanded) {
+                                        _expandedSections.remove(sectionTitle);
+                                      } else {
+                                        _expandedSections.add(sectionTitle);
+                                      }
+                                    });
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 14, vertical: 14),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 40,
+                                          height: 40,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: const Color(0xFF4A5FBC)
+                                                .withOpacity(
+                                                    isDark ? 0.22 : 0.12),
+                                          ),
+                                          child: const Icon(
+                                              Icons.grid_view_rounded,
+                                              color: Color(0xFF4A5FBC)),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Text(
+                                            sectionTitle,
+                                            style: TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w900,
+                                              color: isDark
+                                                  ? scheme.onSurface
+                                                  : Colors.black87,
+                                            ),
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 10, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: expanded
+                                                ? const Color(0xFF4A5FBC)
+                                                    .withOpacity(0.12)
+                                                : (isDark
+                                                    ? scheme.onSurface
+                                                        .withOpacity(0.06)
+                                                    : Colors.black
+                                                        .withOpacity(0.05)),
+                                            borderRadius:
+                                                BorderRadius.circular(999),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                expanded
+                                                    ? Icons.keyboard_arrow_up
+                                                    : Icons.keyboard_arrow_down,
+                                                color: const Color(0xFF4A5FBC),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Container(
-                                        width: 38,
-                                        height: 38,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: selected
-                                              ? scheme.primary
-                                              : scheme.primary.withOpacity(
-                                                  isDark ? 0.25 : 0.12,
-                                                ),
-                                        ),
-                                        child: Icon(
-                                          Icons.school_outlined,
-                                          color: selected
-                                              ? Colors.white
-                                              : scheme.primary,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              title,
-                                              style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w700,
-                                                color: isDark
-                                                    ? scheme.onSurface
-                                                    : Colors.black87,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              subtitle,
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                height: 1.25,
-                                                color: isDark
-                                                    ? scheme.onSurface
-                                                        .withOpacity(0.7)
-                                                    : Colors.black54,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      if (selected)
-                                        Icon(Icons.check_circle,
-                                            color: scheme.primary),
-                                    ],
-                                  ),
                                 ),
-                              ),
+
+                                // ✅ Expand content
+                                AnimatedCrossFade(
+                                  duration: const Duration(milliseconds: 180),
+                                  crossFadeState: expanded
+                                      ? CrossFadeState.showFirst
+                                      : CrossFadeState.showSecond,
+                                  firstChild: Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                        10, 0, 10, 12),
+                                    child: Column(
+                                      children: items.map((title) {
+                                        final selected = _selected == title;
+
+                                        return InkWell(
+                                          borderRadius:
+                                              BorderRadius.circular(14),
+                                          onTap: () =>
+                                              setState(() => _selected = title),
+                                          child: AnimatedContainer(
+                                            duration: const Duration(
+                                                milliseconds: 150),
+                                            curve: Curves.easeOut,
+                                            margin:
+                                                const EdgeInsets.only(top: 8),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 12),
+                                            decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.circular(14),
+                                              color: selected
+                                                  ? const Color(0xFF4A5FBC)
+                                                      .withOpacity(
+                                                          isDark ? 0.22 : 0.10)
+                                                  : (isDark
+                                                      ? scheme.surface
+                                                      : const Color(
+                                                          0xFFF9F9F9)),
+                                              border: Border.all(
+                                                color: selected
+                                                    ? const Color(0xFF4A5FBC)
+                                                    : (isDark
+                                                        ? scheme.onSurface
+                                                            .withOpacity(0.10)
+                                                        : Colors.black
+                                                            .withOpacity(0.06)),
+                                              ),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                Container(
+                                                  width: 36,
+                                                  height: 36,
+                                                  decoration: BoxDecoration(
+                                                    shape: BoxShape.circle,
+                                                    color: selected
+                                                        ? const Color(
+                                                            0xFF4A5FBC)
+                                                        : const Color(
+                                                                0xFF4A5FBC)
+                                                            .withOpacity(0.12),
+                                                  ),
+                                                  child: Icon(
+                                                    Icons
+                                                        .business_center_outlined,
+                                                    color: selected
+                                                        ? Colors.white
+                                                        : const Color(
+                                                            0xFF4A5FBC),
+                                                    size: 20,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 12),
+                                                Expanded(
+                                                  child: Text(
+                                                    title,
+                                                    style: TextStyle(
+                                                      fontSize: 14.5,
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                      color: isDark
+                                                          ? scheme.onSurface
+                                                          : Colors.black87,
+                                                    ),
+                                                  ),
+                                                ),
+                                                if (selected)
+                                                  const Icon(Icons.check_circle,
+                                                      color: Color(0xFF4A5FBC)),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ),
+                                  secondChild: const SizedBox.shrink(),
+                                ),
+                              ],
                             ),
                           );
-                        },
+                        }).toList(),
                       ),
               ),
             ],

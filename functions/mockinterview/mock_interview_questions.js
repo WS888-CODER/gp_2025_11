@@ -7,11 +7,101 @@ function getOpenAIKey() {
 }
 
 /**
+ * Convert ANY selected specialty (including sub-specialties)
+ * into one of the supported buckets in your table.
+ */
+function normalizeSpecialtyToBucket(specialtyRaw = "") {
+  const s = (specialtyRaw || "").toLowerCase().trim();
+
+  // Cybersecurity
+  if (s.includes("cybersecurity")) return "cybersecurity";
+
+  // Data / AI
+  if (s.includes("data") || s.includes("ai") || s.includes("machine learning")) {
+    return "data & artificial intelligence";
+  }
+
+  // Engineering (any branch)
+  if (
+    s.includes("engineering") ||
+    s.includes("civil") ||
+    s.includes("mechanical") ||
+    s.includes("electrical") ||
+    s.includes("chemical") ||
+    s.includes("industrial") ||
+    s.includes("petroleum")
+  ) {
+    return "engineering";
+  }
+
+  // Marketing / Media / Creative
+  if (
+    s.includes("marketing") ||
+    s.includes("content") ||
+    s.includes("copywriting") ||
+    s.includes("branding") ||
+    s.includes("creative") ||
+    s.includes("advertising") ||
+    s.includes("public relations") ||
+    s.includes("media") ||
+    s.includes("journalism") ||
+    s.includes("photography") ||
+    s.includes("videography") ||
+    s.includes("motion") ||
+    s.includes("graphic")
+  ) {
+    return "media & communication";
+  }
+
+  // Finance & Accounting
+  if (
+    s.includes("accounting") ||
+    s.includes("auditing") ||
+    s.includes("finance") ||
+    s.includes("investment") ||
+    s.includes("risk")
+  ) {
+    return "finance & accounting";
+  }
+
+  // HR
+  if (s.includes("human resources") || s === "hr") return "human resources";
+
+  // Law
+  if (s.includes("legal") || s.includes("compliance")) return "law";
+
+  // Education
+  if (s.includes("teaching") || s.includes("training")) return "education";
+
+  // Healthcare
+  if (s.includes("health") || s.includes("medical")) return "healthcare & medical";
+
+  // Business & Ops
+  if (
+    s.includes("business") ||
+    s.includes("operations") ||
+    s.includes("project") ||
+    s.includes("supply chain") ||
+    s.includes("procurement") ||
+    s.includes("strategy") ||
+    s.includes("consulting") ||
+    s.includes("quality management")
+  ) {
+    return "business administration";
+  }
+
+  // Default (Tech/IT)
+  return "computer & information technology";
+}
+
+/**
  * Mock specialties profile (ONLY your mock list).
  * No "other" and no additional fields.
+ *
+ * IMPORTANT: This expects a BUCKET specialty (normalized).
  */
-function mapMockSpecialtyProfile(specialtyRaw = "") {
-  const s = (specialtyRaw || "").toLowerCase().trim();
+function mapMockSpecialtyProfile(bucketSpecialty = "") {
+  const s = (bucketSpecialty || "").toLowerCase().trim();
 
   const table = {
     "computer & information technology": {
@@ -64,15 +154,21 @@ function mapMockSpecialtyProfile(specialtyRaw = "") {
     },
   };
 
-  // No "other": if not matched, throw to force correct specialty usage.
-  if (!table[s]) {
-    throw new Error(`Unsupported specialty: ${specialtyRaw}`);
-  }
-  return table[s];
+  // Fallback (shouldn't happen due to normalizer)
+  return table[s] || table["computer & information technology"];
 }
 
-function buildMockPrompt({ specialty, total, domainCount, psyCount, easy, med, hard }) {
-  const profile = mapMockSpecialtyProfile(specialty);
+function buildMockPrompt({
+  selectedSpecialty,
+  bucketSpecialty,
+  total,
+  domainCount,
+  psyCount,
+  easy,
+  med,
+  hard,
+}) {
+  const profile = mapMockSpecialtyProfile(bucketSpecialty);
   const techCategories = profile.tech;
   const behThemes = profile.beh;
 
@@ -83,7 +179,8 @@ This is NOT tied to a specific company or job posting.
 
 USER:
 Mock Interview Context:
-- Specialty: ${specialty || "N/A"}
+- Specialty (selected): ${selectedSpecialty || "N/A"}
+- Specialty bucket: ${bucketSpecialty || "N/A"}
 
 Blueprint:
 Strict rules:
@@ -98,7 +195,7 @@ Strict rules:
 - No generic questions like "Tell me about yourself".
 
 - Total questions: exactly ${total} (no more, no fewer).
-  - ${domainCount} domain questions (broad, specialty-focused, NOT job-specific).
+  - ${domainCount} domain questions (broad, bucket-focused, NOT job-specific).
   - ${psyCount} psychometric/work-style questions.
 - Total questions: exactly 10 (no more, no fewer).
   - 5 domain questions.
@@ -205,8 +302,8 @@ function sanitize(items) {
   return out;
 }
 
-function topUpToExactCount({ questions, specialty, total, domainTarget, psyTarget }) {
-  const profile = mapMockSpecialtyProfile(specialty);
+function topUpToExactCount({ questions, bucketSpecialty, total, domainTarget, psyTarget }) {
+  const profile = mapMockSpecialtyProfile(bucketSpecialty);
   const techCats = profile.tech || ["Core Skills"];
   const behCats = profile.beh || ["Work Style"];
 
@@ -232,7 +329,7 @@ function topUpToExactCount({ questions, specialty, total, domainTarget, psyTarge
     if (type === "domain") {
       const cat = techCats[idx % techCats.length];
       questions.push({
-        text: `Explain a key idea in ${cat} and how you would apply it in a real situation.`,
+        text: `Describe a realistic scenario involving ${cat}. What steps would you take and why?`,
         type: "domain",
         category: cat,
         difficulty,
@@ -243,7 +340,7 @@ function topUpToExactCount({ questions, specialty, total, domainTarget, psyTarge
       const cat = behCats[psyCount % behCats.length];
       const trait = traitCycle[psyCount % traitCycle.length];
       questions.push({
-        text: `Describe a situation that demonstrates your ${trait.toLowerCase()}. What did you do and what was the outcome?`,
+        text: `Tell me about a time your ${trait.toLowerCase()} helped you succeed under pressure. What happened?`,
         type: "psychometric",
         category: cat,
         difficulty,
@@ -271,15 +368,17 @@ export const generateMockInterviewQuestions = v2.https.onRequest(
         return res.status(500).send("Missing OpenAI key.");
       }
 
-      const { specialty, count, difficulty } = req.body || {};
+      const { specialty, difficulty } = req.body || {};
       if (!specialty) {
         return res.status(400).send("Missing field: specialty.");
       }
 
+      const selectedSpecialty = String(specialty || "").trim();
+      const bucketSpecialty = normalizeSpecialtyToBucket(selectedSpecialty);
+
       const total = 10;
       const domainTarget = 5;
       const psyTarget = 5;
-
 
       const easy =
         difficulty && typeof difficulty.easy === "number" ? difficulty.easy : 0.35;
@@ -289,7 +388,8 @@ export const generateMockInterviewQuestions = v2.https.onRequest(
         difficulty && typeof difficulty.hard === "number" ? difficulty.hard : 0.2;
 
       const prompt = buildMockPrompt({
-        specialty,
+        selectedSpecialty,
+        bucketSpecialty,
         total,
         domainCount: domainTarget,
         psyCount: psyTarget,
@@ -326,17 +426,23 @@ export const generateMockInterviewQuestions = v2.https.onRequest(
       let cleaned = sanitize(parsed);
 
       if (cleaned.length > total) cleaned = cleaned.slice(0, total);
+
       if (cleaned.length < total) {
         cleaned = topUpToExactCount({
           questions: cleaned,
-          specialty,
+          bucketSpecialty,
           total,
           domainTarget,
           psyTarget,
         });
       }
 
-      return res.status(200).json({ questions: cleaned });
+      // ✅ Keep response compatible with Flutter: still has "questions"
+      return res.status(200).json({
+        specialty: selectedSpecialty,
+        bucket: bucketSpecialty,
+        questions: cleaned,
+      });
     } catch (e) {
       console.error(e);
       return res.status(500).send((e && e.message) || "Internal error");
