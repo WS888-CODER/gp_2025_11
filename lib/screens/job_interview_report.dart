@@ -132,7 +132,6 @@ class _JobInterviewReportScreenState extends State<JobInterviewReportScreen>
           final companyName = (data['CompanyName'] ?? '').toString();
           final status = (data['ApplicationStatus'] ?? '').toString();
           final date = data['Date'] as Timestamp?;
-          final score = data['Score'];
 
           // ── Report not yet generated ──
           if (report == null) {
@@ -203,25 +202,6 @@ class _JobInterviewReportScreenState extends State<JobInterviewReportScreen>
           final voiceAnalysis =
               report['voiceToneAnalysis'] as Map<String, dynamic>?;
 
-          // Score: Applications use 0-100, report field may also have
-          // overallScore on a 0-10 scale — handle both
-          final reportScore = report['overallScore'];
-          double displayScore;
-          double maxScore;
-
-          if (score != null && score is num && score > 0) {
-            // Use Application-level Score (0-100)
-            displayScore = score.toDouble();
-            maxScore = 100;
-          } else if (reportScore != null && reportScore is num) {
-            // Fallback to report-level overallScore (0-10)
-            displayScore = reportScore.toDouble();
-            maxScore = 10;
-          } else {
-            displayScore = 0;
-            maxScore = 100;
-          }
-
           final overallSummary = (report['overallSummary'] ??
                   'Your interview has been submitted for review.')
               as String;
@@ -245,11 +225,9 @@ class _JobInterviewReportScreenState extends State<JobInterviewReportScreen>
                       ),
                       const SizedBox(height: 20),
 
-                      // ── Overview Section ──
+                      // ── Overview Section (summary only, no score) ──
                       _buildOverviewSection(
                         context,
-                        score: displayScore,
-                        maxScore: maxScore,
                         summary: overallSummary,
                       ),
                       const SizedBox(height: 20),
@@ -447,131 +425,77 @@ class _JobInterviewReportScreenState extends State<JobInterviewReportScreen>
   }
 
   // ════════════════════════════════════════════════════════
-  // OVERVIEW SECTION (score circle + summary)
+  // OVERVIEW SECTION (summary only — score removed)
   // ════════════════════════════════════════════════════════
   Widget _buildOverviewSection(
     BuildContext context, {
-    required double score,
-    required double maxScore,
     required String summary,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final pct = maxScore > 0 ? score / maxScore : 0.0;
-
-    Color scoreColor;
-    String scoreLabel;
-    if (pct >= 0.8) {
-      scoreColor = Colors.green;
-      scoreLabel = 'Excellent';
-    } else if (pct >= 0.6) {
-      scoreColor = const Color(0xFFFD6C67);
-      scoreLabel = 'Good';
-    } else {
-      scoreColor = Colors.red;
-      scoreLabel = 'Needs Improvement';
-    }
-
-    return Card(
-      elevation: isDark ? 4 : 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Overview',
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.12 : 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.insights_rounded,
+                color: AppTheme.primaryPurple,
+                size: 22,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Overview',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.grey[800]!.withOpacity(0.5)
+                  : Colors.grey[100]!.withOpacity(0.8),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Text(
+              summary,
+              textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+                height: 1.7,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.grey[200] : Colors.grey[800],
               ),
             ),
-            const SizedBox(height: 16),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Score circle
-                Column(
-                  children: [
-                    Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        SizedBox(
-                          width: 80,
-                          height: 80,
-                          child: CircularProgressIndicator(
-                            value: pct,
-                            strokeWidth: 8,
-                            backgroundColor: Colors.grey[300],
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(scoreColor),
-                          ),
-                        ),
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              maxScore == 100
-                                  ? score.toInt().toString()
-                                  : score.toStringAsFixed(1),
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: scoreColor,
-                              ),
-                            ),
-                            Text(
-                              '/ ${maxScore.toInt()}',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: scoreColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        scoreLabel,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: scoreColor,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(width: 20),
-                // Summary text
-                Expanded(
-                  child: Text(
-                    summary,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          height: 1.5,
-                          fontSize: 14,
-                        ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   // ════════════════════════════════════════════════════════
-  // TABS SECTION (Strengths / Weaknesses / Tips / Voice)
+  // TABS SECTION (matching mock interview colors & style)
   // ════════════════════════════════════════════════════════
   Widget _buildTabsSection(
     BuildContext context,
@@ -583,6 +507,7 @@ class _JobInterviewReportScreenState extends State<JobInterviewReportScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
@@ -594,61 +519,58 @@ class _JobInterviewReportScreenState extends State<JobInterviewReportScreen>
           ),
         ],
       ),
-      child: ListenableBuilder(
-        listenable: _tabController,
+      child: AnimatedBuilder(
+        animation: _tabController,
         builder: (context, _) {
           return Column(
             children: [
-              // Pill-style tab bar
+              // ✨ CUSTOM TAB BAR (matching mock interview style)
               Container(
-                margin: const EdgeInsets.all(16),
+                margin: const EdgeInsets.fromLTRB(12, 16, 12, 8),
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   color: isDark ? Colors.grey[850] : Colors.grey[200],
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: Row(
                   children: [
-                    _buildPillTab(context,
-                        index: 0,
-                        label: 'Strengths',
-                        icon: Icons.star_rounded),
-                    _buildPillTab(context,
-                        index: 1,
-                        label: 'Improve',
-                        icon: Icons.trending_up_rounded),
-                    _buildPillTab(context,
-                        index: 2,
-                        label: 'Tips',
-                        icon: Icons.lightbulb_rounded),
-                    _buildPillTab(context,
-                        index: 3,
-                        label: 'Voice Tone',
-                        icon: Icons.mic_rounded),
+                    _buildPillTab(
+                      context,
+                      index: 0,
+                      label: 'Strengths',
+                      color: Colors.green[700]!,
+                    ),
+                    _buildPillTab(
+                      context,
+                      index: 1,
+                      label: 'Improve',
+                      color: const Color(0xFFFD6C67),
+                    ),
+                    _buildPillTab(
+                      context,
+                      index: 2,
+                      label: 'Tips',
+                      color: AppTheme.primaryPurple,
+                    ),
+                    _buildPillTab(
+                      context,
+                      index: 3,
+                      label: 'Voice',
+                      color: const Color(0xFF2196F3),
+                    ),
                   ],
                 ),
               ),
 
-              // Tab content
-              SizedBox(
-                height: 500,
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildListTab(context,
-                        items: strengths,
-                        itemColor: Colors.green[700]!,
-                        emptyMessage: 'No strengths identified yet.'),
-                    _buildListTab(context,
-                        items: weaknesses,
-                        itemColor: const Color(0xFFFD6C67),
-                        emptyMessage: 'No areas for improvement identified.'),
-                    _buildListTab(context,
-                        items: advice,
-                        itemColor: AppTheme.primaryPurple,
-                        emptyMessage: 'No recommendations yet.'),
-                    _buildVoiceTab(context, voiceAnalysis),
-                  ],
+              // Tab content (dynamic height — wraps to fit content)
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: _buildSelectedTabContent(
+                  context,
+                  strengths: strengths,
+                  weaknesses: weaknesses,
+                  advice: advice,
+                  voiceAnalysis: voiceAnalysis,
                 ),
               ),
             ],
@@ -658,12 +580,12 @@ class _JobInterviewReportScreenState extends State<JobInterviewReportScreen>
     );
   }
 
-  // ── Pill tab builder ──
+  // ── Pill tab builder (matching mock interview — text only, individual colors) ──
   Widget _buildPillTab(
     BuildContext context, {
     required int index,
     required String label,
-    required IconData icon,
+    required Color color,
   }) {
     final isSelected = _tabController.index == index;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -675,154 +597,164 @@ class _JobInterviewReportScreenState extends State<JobInterviewReportScreen>
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? AppTheme.primaryPurple : Colors.transparent,
+            color: isSelected ? color : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: AppTheme.primaryPurple.withOpacity(0.3),
+                      color: color.withOpacity(0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
                   ]
                 : [],
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 20,
-                color: isSelected
-                    ? Colors.white
-                    : (isDark ? Colors.grey[400] : Colors.grey[600]),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight:
-                      isSelected ? FontWeight.bold : FontWeight.w500,
-                  color: isSelected
-                      ? Colors.white
-                      : (isDark ? Colors.grey[400] : Colors.grey[700]),
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              color: isSelected
+                  ? Colors.white
+                  : (isDark ? Colors.grey[400] : Colors.grey[700]),
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
           ),
         ),
       ),
     );
   }
 
-  // ── List tab ──
-  Widget _buildListTab(
+  // ── Builds the content for the currently selected tab ──
+  Widget _buildSelectedTabContent(
+    BuildContext context, {
+    required List<String> strengths,
+    required List<String> weaknesses,
+    required List<String> advice,
+    required Map<String, dynamic>? voiceAnalysis,
+  }) {
+    switch (_tabController.index) {
+      case 0:
+        return _buildListContent(context,
+            items: strengths,
+            itemColor: Colors.green[700]!,
+            emptyMessage: 'No strengths identified yet.');
+      case 1:
+        return _buildListContent(context,
+            items: weaknesses,
+            itemColor: const Color(0xFFFD6C67),
+            emptyMessage: 'No areas for improvement identified.');
+      case 2:
+        return _buildListContent(context,
+            items: advice,
+            itemColor: AppTheme.primaryPurple,
+            emptyMessage: 'No recommendations yet.');
+      case 3:
+        return _buildVoiceContent(context, voiceAnalysis);
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  // ── List content (Column-based, dynamic height) ──
+  Widget _buildListContent(
     BuildContext context, {
     required List<String> items,
     required Color itemColor,
     required String emptyMessage,
   }) {
     if (items.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            emptyMessage,
-            style: const TextStyle(fontSize: 15, color: Colors.grey),
-            textAlign: TextAlign.center,
-          ),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Text(
+          emptyMessage,
+          style: const TextStyle(fontSize: 15, color: Colors.grey),
+          textAlign: TextAlign.center,
         ),
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(20),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: items.asMap().entries.map((entry) {
+        final index = entry.key;
+        final item = entry.value;
         return Padding(
-          padding:
-              EdgeInsets.only(bottom: index < items.length - 1 ? 16 : 0),
+          padding: EdgeInsets.only(bottom: index < items.length - 1 ? 16 : 0),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                margin: const EdgeInsets.only(top: 6),
-                width: 8,
-                height: 8,
+                margin: const EdgeInsets.only(top: 8),
+                width: 10,
+                height: 10,
                 decoration: BoxDecoration(
                   color: itemColor,
                   shape: BoxShape.circle,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               Expanded(
                 child: Text(
-                  items[index],
+                  item,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        height: 1.6,
+                        height: 1.7,
                         fontSize: 15,
+                        fontWeight: FontWeight.w500,
                       ),
                 ),
               ),
             ],
           ),
         );
-      },
+      }).toList(),
     );
   }
 
-  // ── Voice analysis tab (per story #33: voice feedback if available) ──
-  Widget _buildVoiceTab(
+  // ── Voice analysis content (Column-based, dynamic height) ──
+  Widget _buildVoiceContent(
       BuildContext context, Map<String, dynamic>? voiceAnalysis) {
     final isAvailable = voiceAnalysis?['available'] == true;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (!isAvailable) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFD6C67).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: const Color(0xFFFD6C67).withOpacity(0.5),
-              ),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.schedule_rounded,
-                  color: Color(0xFFFD6C67),
-                  size: 48,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  voiceAnalysis?['message'] ??
-                      'Voice analysis will be available soon',
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: isDark ? Colors.white70 : Colors.grey[700],
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFD6C67).withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: const Color(0xFFFD6C67).withOpacity(0.5),
           ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.schedule_rounded,
+              color: Color(0xFFFD6C67),
+              size: 48,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              voiceAnalysis?['message'] ??
+                  'Voice analysis will be available soon',
+              style: TextStyle(
+                fontSize: 15,
+                color: isDark ? Colors.white70 : Colors.grey[700],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       );
     }
 
-    return ListView(
-      padding: const EdgeInsets.all(20),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildVoiceMetric(
           context,
@@ -895,43 +827,3 @@ class _JobInterviewReportScreenState extends State<JobInterviewReportScreen>
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

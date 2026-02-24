@@ -31,12 +31,10 @@ class _HistoryPageState extends State<HistoryPage>
   }
 
   // ── Status helpers ──────────────────────────────────────
-  // Report doc defines three states: Pending, Shortlisted, Rejected.
-  // InInterview and InterviewCancelled are internal states.
   String _formatStatus(String raw) {
     switch (raw) {
       case 'Pending':
-      case 'Submitted':    // legacy — treat as Pending
+      case 'Submitted':
         return 'Pending';
       case 'Shortlisted':
         return 'Shortlisted';
@@ -54,7 +52,7 @@ class _HistoryPageState extends State<HistoryPage>
   Color _statusColor(String raw) {
     switch (raw) {
       case 'Pending':
-      case 'Submitted':    // legacy — same color as Pending
+      case 'Submitted':
         return Colors.grey;
       case 'Shortlisted':
         return Colors.orange;
@@ -144,6 +142,7 @@ class _HistoryPageState extends State<HistoryPage>
                       dividerColor: Colors.transparent,
                       labelColor: Colors.white,
                       unselectedLabelColor: Colors.white70,
+                      labelPadding: const EdgeInsets.symmetric(horizontal: 8),
                       tabs: const [
                         Tab(
                           child: Text(
@@ -151,7 +150,7 @@ class _HistoryPageState extends State<HistoryPage>
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
-                              fontSize: 15,
+                              fontSize: 13,
                             ),
                           ),
                         ),
@@ -161,7 +160,7 @@ class _HistoryPageState extends State<HistoryPage>
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
-                              fontSize: 15,
+                              fontSize: 13,
                             ),
                           ),
                         ),
@@ -171,7 +170,7 @@ class _HistoryPageState extends State<HistoryPage>
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
-                              fontSize: 15,
+                              fontSize: 13,
                             ),
                           ),
                         ),
@@ -518,16 +517,6 @@ class _HistoryPageState extends State<HistoryPage>
   }
 
   // ════════════════════ JOB APPLICATIONS HISTORY ════════════════════
-  //
-  // Per report Story #38:
-  //   • Show list of applications
-  //   • Each shows: job title, company name, status
-  //     (Pending / Shortlisted / Rejected), date
-  //   • Empty state: "No job applications found"
-  //
-  // Per report Story #33:
-  //   • Tapping opens feedback/report for that application
-  //
   Widget _buildJobApplicationsHistory(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -559,8 +548,6 @@ class _HistoryPageState extends State<HistoryPage>
 
         final docs = snapshot.data!.docs;
 
-        // Filter out cancelled and incomplete interviews —
-        // per story #33: if not completed, application cannot continue
         final validApps = docs.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
           final status = (data['ApplicationStatus'] ?? '').toString();
@@ -588,7 +575,7 @@ class _HistoryPageState extends State<HistoryPage>
             final status = (data['ApplicationStatus'] ?? '').toString();
             final applicationId = validApps[index].id;
 
-            // ── Expiry badge (uses RecordExpiresAt, fallback 120 days) ──
+            // ── Expiry badge ──
             int? daysLeft;
             String? expiryText;
             Color? expiryColor;
@@ -622,7 +609,7 @@ class _HistoryPageState extends State<HistoryPage>
               }
             }
 
-            // ── Subtitle: Company • Date  (per story #38) ──
+            // ── Subtitle ──
             final subtitleParts = <String>[];
             if (companyName.isNotEmpty) subtitleParts.add(companyName);
             if (date != null) {
@@ -636,14 +623,12 @@ class _HistoryPageState extends State<HistoryPage>
               subtitle: subtitleText,
               expiryText: expiryText,
               expiryColor: expiryColor,
-              // Status badge (Pending / Shortlisted / Rejected per report)
               statusText:
                   status.isNotEmpty ? _formatStatus(status) : null,
               statusColor:
                   status.isNotEmpty ? _statusColor(status) : null,
               leadingIcon: Icons.work,
               leadingBgColor: AppTheme.accentCoral,
-              // ── onTap: Opens the report screen (per story #33) ──
               onTap: () {
                 Navigator.push(
                   context,
@@ -655,7 +640,6 @@ class _HistoryPageState extends State<HistoryPage>
                   ),
                 );
               },
-              // Delete with confirmation
               onDelete: () async {
                 final confirm = await showDialog<bool>(
                   context: context,
