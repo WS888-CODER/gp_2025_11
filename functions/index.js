@@ -5,8 +5,6 @@ import * as v2 from "firebase-functions/v2";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { initializeApp, getApps } from "firebase-admin/app";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
-import { getStorage } from "firebase-admin/storage";
-import { getAuth } from "firebase-admin/auth";
 import nodemailer from "nodemailer";
 import mammoth from "mammoth";
 import path from "path";
@@ -26,8 +24,6 @@ if (getApps().length === 0) {
   initializeApp();
 }
 const db = getFirestore();
-const auth = getAuth();
-const storage = getStorage();
 
 async function deleteByQuery(query) {
   const snap = await query.get();
@@ -78,7 +74,8 @@ export const sendAdminOtp = functions.https.onCall(async (data, context) => {
   }
 
   try {
-    const userSnapshot = await db
+    const userSnapshot = await admin
+      .firestore()
       .collection("Users")
       .where("Email", "==", email)
       .where("UserType", "==", "Admin")
@@ -548,7 +545,8 @@ export const enhanceCV = v2.https.onCall(
 
     try {
       // Get CV data from Firestore
-      const cvDoc = await db
+      const cvDoc = await admin
+        .firestore()
         .collection("CVHistory")
         .doc(cvHistoryId)
         .get();
@@ -872,7 +870,7 @@ Do not include explanations or commentary outside this JSON.`;
         console.log(`✅ PDF buffer created, size: ${pdfBuffer.length} bytes`);
 
         // Upload to Storage
-        const bucket = storage.bucket();
+        const bucket = admin.storage().bucket();
         const fileName = `${userId}_${cvHistoryId}.pdf`;
         const filePath = `NewCV/${fileName}`;
         const file = bucket.file(filePath);
@@ -890,7 +888,8 @@ Do not include explanations or commentary outside this JSON.`;
         console.log(`✅ PDF URL: ${pdfUrl}`);
 
         // Update Firestore
-        await db
+        await admin
+          .firestore()
           .collection("CVHistory")
           .doc(cvHistoryId)
           .update({
@@ -948,7 +947,8 @@ export const detectMissingSections = v2.https.onCall(
 
     try {
       // Get CV data from Firestore
-      const cvDoc = await db
+      const cvDoc = await admin
+        .firestore()
         .collection("CVHistory")
         .doc(cvHistoryId)
         .get();
@@ -1165,7 +1165,8 @@ export const sendPasswordResetOtp = functions.https.onCall(
     }
 
     try {
-      const usersSnapshot = await db
+      const usersSnapshot = await admin
+        .firestore()
         .collection("Users")
         .where("Email", "==", email.toLowerCase())
         .limit(1)
@@ -1247,9 +1248,9 @@ export const resetUserPassword = functions.https.onCall(
     }
 
     try {
-      const userRecord = await auth.getUserByEmail(email.toLowerCase());
+      const userRecord = await admin.auth().getUserByEmail(email.toLowerCase());
 
-      await auth.updateUser(userRecord.uid, {
+      await admin.auth().updateUser(userRecord.uid, {
         password: newPassword,
       });
 
@@ -1393,7 +1394,7 @@ export const deleteUserAccount = functions.https.onCall(
         console.warn("User document delete warning:", err);
       });
 
-      const bucket = storage.bucket();
+      const bucket = admin.storage().bucket();
 
       if (photoPath) {
         try {
@@ -1433,12 +1434,14 @@ export const deleteUserAccount = functions.https.onCall(
         console.warn("NewCV files delete warning:", err);
       }
 
-      await auth
+      await admin
+        .auth()
         .deleteUser(userId)
         .catch((err) => {
           console.warn("Auth delete warning:", err);
         });
-      await auth
+      await admin
+        .auth()
         .deleteUser(userId)
         .catch((err) => {
           console.warn("Auth delete warning:", err);
@@ -1494,7 +1497,7 @@ export const extractCVTextEnhancement = v2.storage.onObjectFinalized(
       console.log(`📝 CVHistoryID: ${cvHistoryId}`);
       console.log(`👤 UserID: ${userId}`);
 
-      const bucket = storage.bucket();
+      const bucket = admin.storage().bucket();
       const file = bucket.file(filePath);
       const tempFilePath = path.join(os.tmpdir(), path.basename(filePath));
 
@@ -1541,7 +1544,8 @@ export const extractCVTextEnhancement = v2.storage.onObjectFinalized(
 
       // Update Firestore
       if (extractedText.trim()) {
-        await db
+        await admin
+          .firestore()
           .collection("CVHistory")
           .doc(cvHistoryId)
           .update({
@@ -1551,7 +1555,8 @@ export const extractCVTextEnhancement = v2.storage.onObjectFinalized(
         console.log(`📊 Extracted ${extractedText.length} characters`);
       } else {
         console.warn("⚠️ No text extracted from file");
-        await db
+        await admin
+          .firestore()
           .collection("CVHistory")
           .doc(cvHistoryId)
           .update({
@@ -1571,7 +1576,8 @@ export const extractCVTextEnhancement = v2.storage.onObjectFinalized(
         const metadata = event.data.metadata || {};
         const cvHistoryId = metadata.cvHistoryId;
         if (cvHistoryId) {
-          await db
+          await admin
+            .firestore()
             .collection("CVHistory")
             .doc(cvHistoryId)
             .update({
@@ -1607,7 +1613,8 @@ export const generateCVPDF = functions.https.onCall(async (data, context) => {
   }
 
   try {
-    const cvDoc = await db
+    const cvDoc = await admin
+      .firestore()
       .collection("CVHistory")
       .doc(cvHistoryId)
       .get();
@@ -1634,7 +1641,7 @@ export const generateCVPDF = functions.https.onCall(async (data, context) => {
 
     const pdfBuffer = await createProfessionalCV(newCVText);
 
-    const bucket = storage.bucket();
+    const bucket = admin.storage().bucket();
     const fileName = `${userId}_${cvHistoryId}.pdf`;
     const filePath = `NewCV/${fileName}`;
     const file = bucket.file(filePath);
@@ -3099,6 +3106,7 @@ export const autoCloseExpiredJobs = v2.scheduler.onSchedule(
 export { generateInterviewQuestions };
 export { generateMockInterviewQuestions } from "./mockinterview/mock_interview_questions.js";
 export { generateMockInterviewReport } from "./mockinterview/generateReport.js";
+export { generateJobInterviewReport } from "./interview/generateJobInterviewReport.js";
 
 export const deleteOldCVHistory = onSchedule(
   {

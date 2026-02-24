@@ -258,6 +258,8 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
         jobDocId: job.id,
         jobId: job.jobId,
         specialty: job.specialty,
+        jobTitle: job.title,
+        companyName: widget.company?.name ?? '',
       );
     } finally {
       if (mounted) setState(() => _isApplying = false);
@@ -840,6 +842,8 @@ class _JobCardState extends State<JobCard> {
         jobDocId: job.id,
         jobId: job.jobId,
         specialty: job.specialty,
+        jobTitle: job.title,
+        companyName: widget.company.name,
       );
     } finally {
       if (mounted) setState(() => _isApplying = false);

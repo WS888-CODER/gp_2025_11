@@ -106,6 +106,8 @@ class JobInterviewService {
     required String jobDocId,
     required String jobId,
     required String specialty,
+    String jobTitle = '',
+    String companyName = '',
   }) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -150,6 +152,8 @@ class JobInterviewService {
       cvUrl: cvUrl,
       questionsCount: questions.length,
       questions: questions,
+      jobTitle: jobTitle,
+      companyName: companyName,
     );
   }
 
@@ -270,6 +274,8 @@ class JobInterviewService {
     required String cvUrl,
     required int questionsCount,
     required List<String> questions,
+    String jobTitle = '',
+    String companyName = '',
   }) async {
     try {
       // ✅ IMPORTANT: Collection name is Applications (like your DB)
@@ -294,6 +300,10 @@ class JobInterviewService {
         'RecordExpiresAt': Timestamp.fromDate(
           DateTime.now().add(const Duration(days: 120)),
         ),
+
+        // ✅ NEW: Save job info so history can display it (per story #38)
+        'JobTitle': jobTitle,
+        'CompanyName': companyName,
       }, SetOptions(merge: true));
 
       if (!context.mounted) return;
@@ -880,7 +890,7 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
           .collection('Applications')
           .doc(widget.applicationId)
           .set({
-        'ApplicationStatus': 'Submitted',
+        'ApplicationStatus': 'Pending',
         'SubmittedAt': FieldValue.serverTimestamp(),
         'ReportURL': '',
       }, SetOptions(merge: true));

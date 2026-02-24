@@ -4,7 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/screens/cv_ready.dart';
-import 'package:gp_2025_11/screens/mock_interview_report.dart';  // ⬅️ NEW IMPORT
+import 'package:gp_2025_11/screens/mock_interview_report.dart';
+import 'package:gp_2025_11/screens/job_interview_report.dart'; // ← NEW
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -27,6 +28,45 @@ class _HistoryPageState extends State<HistoryPage>
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  // ── Status helpers ──────────────────────────────────────
+  // Report doc defines three states: Pending, Shortlisted, Rejected.
+  // InInterview and InterviewCancelled are internal states.
+  String _formatStatus(String raw) {
+    switch (raw) {
+      case 'Pending':
+      case 'Submitted':    // legacy — treat as Pending
+        return 'Pending';
+      case 'Shortlisted':
+        return 'Shortlisted';
+      case 'Rejected':
+        return 'Rejected';
+      case 'InInterview':
+        return 'In Progress';
+      case 'InterviewCancelled':
+        return 'Cancelled';
+      default:
+        return raw.isNotEmpty ? raw : 'Unknown';
+    }
+  }
+
+  Color _statusColor(String raw) {
+    switch (raw) {
+      case 'Pending':
+      case 'Submitted':    // legacy — same color as Pending
+        return Colors.grey;
+      case 'Shortlisted':
+        return Colors.orange;
+      case 'Rejected':
+        return Colors.red;
+      case 'InInterview':
+        return Colors.blue;
+      case 'InterviewCancelled':
+        return Colors.grey;
+      default:
+        return Colors.grey;
+    }
   }
 
   @override
@@ -158,7 +198,7 @@ class _HistoryPageState extends State<HistoryPage>
     );
   }
 
-  // ---------------- CV HISTORY ----------------
+  // ════════════════════ CV HISTORY ════════════════════
   Widget _buildCVHistory(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -189,21 +229,16 @@ class _HistoryPageState extends State<HistoryPage>
         }
 
         final docs = snapshot.data!.docs;
-        
-        // ✅ FILTER: Only show CVs that have been enhanced (NewCVText is not null/empty)
+
         final enhancedCVs = docs.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
           final newCVText = data['NewCVText'];
-          
-          // Only include if NewCVText exists and is not empty
           if (newCVText == null) return false;
           if (newCVText is String && newCVText.isEmpty) return false;
           if (newCVText is List && newCVText.isEmpty) return false;
-          
           return true;
         }).toList();
-        
-        // ✅ Show empty state if no enhanced CVs exist
+
         if (enhancedCVs.isEmpty) {
           return const EmptyState(
             icon: Icons.description_outlined,
@@ -211,7 +246,7 @@ class _HistoryPageState extends State<HistoryPage>
             subtitle: 'Your CV enhancement history will appear here',
           );
         }
-        
+
         return ListView.separated(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           itemCount: enhancedCVs.length,
@@ -223,7 +258,6 @@ class _HistoryPageState extends State<HistoryPage>
             final cvHistoryId =
                 (data['CVHistoryID'] ?? enhancedCVs[index].id).toString();
 
-            // ✅ CALCULATE DAYS LEFT
             int? daysLeft;
             String? expiryText;
             Color? expiryColor;
@@ -232,7 +266,7 @@ class _HistoryPageState extends State<HistoryPage>
               final now = DateTime.now();
               final age = now.difference(date).inDays;
               daysLeft = 30 - age;
-              
+
               if (daysLeft <= 0) {
                 expiryText = 'Expires today';
                 expiryColor = Colors.red;
@@ -248,10 +282,8 @@ class _HistoryPageState extends State<HistoryPage>
               }
             }
 
-            // ✅ BUILD SUBTITLE - ONLY DATE (badge shows expiry)
-            final subtitleText = date != null 
-                ? DateFormat('MMM dd, yyyy').format(date)
-                : '';
+            final subtitleText =
+                date != null ? DateFormat('MMM dd, yyyy').format(date) : '';
 
             return _historyTile(
               context,
@@ -273,7 +305,6 @@ class _HistoryPageState extends State<HistoryPage>
                 );
               },
               onDelete: () async {
-                // ✅ Show confirmation dialog with app theme
                 final confirm = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => const JadeerDialog<bool>(
@@ -295,7 +326,6 @@ class _HistoryPageState extends State<HistoryPage>
 
                 if (confirm == true) {
                   try {
-                    // Delete from Firestore
                     await FirebaseFirestore.instance
                         .collection('CVHistory')
                         .doc(cvHistoryId)
@@ -328,7 +358,7 @@ class _HistoryPageState extends State<HistoryPage>
     );
   }
 
-  // ---------------- MOCK INTERVIEW HISTORY ----------------
+  // ════════════════════ MOCK INTERVIEW HISTORY ════════════════════
   Widget _buildMockInterviewHistory(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -359,14 +389,12 @@ class _HistoryPageState extends State<HistoryPage>
         }
 
         final docs = snapshot.data!.docs;
-        
-        // ✅ FILTER: Only show completed mock interviews
+
         final completedInterviews = docs.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
-          // Add any filtering logic if needed
           return true;
         }).toList();
-        
+
         if (completedInterviews.isEmpty) {
           return const EmptyState(
             icon: Icons.mic_none,
@@ -374,19 +402,19 @@ class _HistoryPageState extends State<HistoryPage>
             subtitle: 'Your mock interview history will appear here',
           );
         }
-        
+
         return ListView.separated(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           itemCount: completedInterviews.length,
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
-            final data = completedInterviews[index].data() as Map<String, dynamic>;
+            final data =
+                completedInterviews[index].data() as Map<String, dynamic>;
             final date = (data['Date'] as Timestamp?)?.toDate();
             final specialty =
                 (data['Specialty'] ?? 'Mock Interview').toString();
             final mockInterviewId = completedInterviews[index].id;
 
-            // ✅ CALCULATE DAYS LEFT
             int? daysLeft;
             String? expiryText;
             Color? expiryColor;
@@ -395,7 +423,7 @@ class _HistoryPageState extends State<HistoryPage>
               final now = DateTime.now();
               final age = now.difference(date).inDays;
               daysLeft = 30 - age;
-              
+
               if (daysLeft <= 0) {
                 expiryText = 'Expires today';
                 expiryColor = Colors.red;
@@ -411,10 +439,8 @@ class _HistoryPageState extends State<HistoryPage>
               }
             }
 
-            // ✅ BUILD SUBTITLE - ONLY DATE (badge shows expiry)
-            final subtitleText = date != null 
-                ? DateFormat('MMM dd, yyyy').format(date)
-                : '';
+            final subtitleText =
+                date != null ? DateFormat('MMM dd, yyyy').format(date) : '';
 
             return _historyTile(
               context,
@@ -424,7 +450,7 @@ class _HistoryPageState extends State<HistoryPage>
               expiryColor: expiryColor,
               leadingIcon: Icons.mic,
               leadingBgColor: AppTheme.accentCoral,
-              onTap: () {  // ⬅️ UPDATED: NOW OPENS REPORT SCREEN!
+              onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -436,7 +462,6 @@ class _HistoryPageState extends State<HistoryPage>
                 );
               },
               onDelete: () async {
-                // ✅ Show confirmation dialog with app theme
                 final confirm = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => const JadeerDialog<bool>(
@@ -458,7 +483,6 @@ class _HistoryPageState extends State<HistoryPage>
 
                 if (confirm == true) {
                   try {
-                    // Delete from Firestore
                     await FirebaseFirestore.instance
                         .collection('MockInterviews')
                         .doc(mockInterviewId)
@@ -467,7 +491,8 @@ class _HistoryPageState extends State<HistoryPage>
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Mock interview deleted successfully'),
+                          content:
+                              Text('Mock interview deleted successfully'),
                           backgroundColor: Colors.green,
                         ),
                       );
@@ -476,7 +501,8 @@ class _HistoryPageState extends State<HistoryPage>
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Error deleting mock interview: $e'),
+                          content:
+                              Text('Error deleting mock interview: $e'),
                           backgroundColor: Colors.red,
                         ),
                       );
@@ -491,7 +517,17 @@ class _HistoryPageState extends State<HistoryPage>
     );
   }
 
-  // ---------------- JOB APPLICATIONS HISTORY ----------------
+  // ════════════════════ JOB APPLICATIONS HISTORY ════════════════════
+  //
+  // Per report Story #38:
+  //   • Show list of applications
+  //   • Each shows: job title, company name, status
+  //     (Pending / Shortlisted / Rejected), date
+  //   • Empty state: "No job applications found"
+  //
+  // Per report Story #33:
+  //   • Tapping opens feedback/report for that application
+  //
   Widget _buildJobApplicationsHistory(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -522,27 +558,153 @@ class _HistoryPageState extends State<HistoryPage>
         }
 
         final docs = snapshot.data!.docs;
+
+        // Filter out cancelled and incomplete interviews —
+        // per story #33: if not completed, application cannot continue
+        final validApps = docs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final status = (data['ApplicationStatus'] ?? '').toString();
+          return status != 'InterviewCancelled' && status != 'InInterview';
+        }).toList();
+
+        if (validApps.isEmpty) {
+          return const EmptyState(
+            icon: Icons.work_outline,
+            title: 'No Job Applications Yet',
+            subtitle: 'Your job application history will appear here',
+          );
+        }
+
         return ListView.separated(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          itemCount: docs.length,
+          itemCount: validApps.length,
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
-            final data = docs[index].data() as Map<String, dynamic>;
+            final data = validApps[index].data() as Map<String, dynamic>;
             final date = (data['Date'] as Timestamp?)?.toDate();
-            final jobTitle = (data['JobTitle'] ?? 'Job Application').toString();
+            final jobTitle =
+                (data['JobTitle'] ?? 'Job Application').toString();
+            final companyName = (data['CompanyName'] ?? '').toString();
             final status = (data['ApplicationStatus'] ?? '').toString();
+            final applicationId = validApps[index].id;
+
+            // ── Expiry badge (uses RecordExpiresAt, fallback 120 days) ──
+            int? daysLeft;
+            String? expiryText;
+            Color? expiryColor;
+
+            final expiresAt = data['RecordExpiresAt'] as Timestamp?;
+            final DateTime? expiryDate;
+
+            if (expiresAt != null) {
+              expiryDate = expiresAt.toDate();
+            } else if (date != null) {
+              expiryDate = date.add(const Duration(days: 120));
+            } else {
+              expiryDate = null;
+            }
+
+            if (expiryDate != null) {
+              daysLeft = expiryDate.difference(DateTime.now()).inDays;
+
+              if (daysLeft <= 0) {
+                expiryText = 'Expired';
+                expiryColor = Colors.red;
+              } else if (daysLeft <= 14) {
+                expiryText = '$daysLeft days left';
+                expiryColor = Colors.red;
+              } else if (daysLeft <= 30) {
+                expiryText = '$daysLeft days left';
+                expiryColor = Colors.orange;
+              } else {
+                expiryText = '$daysLeft days left';
+                expiryColor = Colors.green;
+              }
+            }
+
+            // ── Subtitle: Company • Date  (per story #38) ──
+            final subtitleParts = <String>[];
+            if (companyName.isNotEmpty) subtitleParts.add(companyName);
+            if (date != null) {
+              subtitleParts.add(DateFormat('MMM dd, yyyy').format(date));
+            }
+            final subtitleText = subtitleParts.join('  •  ');
 
             return _historyTile(
               context,
               title: jobTitle.isEmpty ? 'Job Application' : jobTitle,
-              subtitle: [
-                if (date != null)
-                  DateFormat('MMM dd, yyyy - hh:mm a').format(date),
-                if (status.isNotEmpty) status,
-              ].join('  •  '),
+              subtitle: subtitleText,
+              expiryText: expiryText,
+              expiryColor: expiryColor,
+              // Status badge (Pending / Shortlisted / Rejected per report)
+              statusText:
+                  status.isNotEmpty ? _formatStatus(status) : null,
+              statusColor:
+                  status.isNotEmpty ? _statusColor(status) : null,
               leadingIcon: Icons.work,
               leadingBgColor: AppTheme.accentCoral,
-              onTap: () {},
+              // ── onTap: Opens the report screen (per story #33) ──
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => JobInterviewReportScreen(
+                      applicationId: applicationId,
+                      fromHistory: true,
+                    ),
+                  ),
+                );
+              },
+              // Delete with confirmation
+              onDelete: () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => const JadeerDialog<bool>(
+                    title: 'Delete Application',
+                    content: Text(
+                      'Are you sure you want to delete this job application? This action cannot be undone.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 15,
+                      ),
+                    ),
+                    secondaryLabel: 'Cancel',
+                    secondaryResult: false,
+                    primaryLabel: 'Delete',
+                    primaryResult: true,
+                  ),
+                );
+
+                if (confirm == true) {
+                  try {
+                    await FirebaseFirestore.instance
+                        .collection('Applications')
+                        .doc(applicationId)
+                        .delete();
+
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content:
+                              Text('Application deleted successfully'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content:
+                              Text('Error deleting application: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                }
+              },
             );
           },
         );
@@ -550,13 +712,15 @@ class _HistoryPageState extends State<HistoryPage>
     );
   }
 
-  // ---------------- SHARED WIDGETS ----------------
+  // ════════════════════ SHARED TILE WIDGET ════════════════════
   Widget _historyTile(
     BuildContext context, {
     required String title,
     required String subtitle,
     String? expiryText,
     Color? expiryColor,
+    String? statusText,
+    Color? statusColor,
     required IconData leadingIcon,
     required Color leadingBgColor,
     VoidCallback? onTap,
@@ -588,6 +752,7 @@ class _HistoryPageState extends State<HistoryPage>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Title
                     Text(
                       title,
                       style: TextStyle(
@@ -598,9 +763,12 @@ class _HistoryPageState extends State<HistoryPage>
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
+
+                    // Date (left) + Status & Expiry (right)
                     Row(
                       children: [
+                        // Date on the left
                         Expanded(
                           child: Text(
                             subtitle,
@@ -612,23 +780,53 @@ class _HistoryPageState extends State<HistoryPage>
                             ),
                           ),
                         ),
-                        if (expiryColor != null && expiryText != null)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: expiryColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: expiryColor, width: 1),
-                            ),
-                            child: Text(
-                              expiryText,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: expiryColor,
+
+                        // Status + Expiry stacked on the right
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            if (statusText != null && statusColor != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: statusColor.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border:
+                                      Border.all(color: statusColor, width: 1),
+                                ),
+                                child: Text(
+                                  statusText,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: statusColor,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
+                            if (expiryColor != null && expiryText != null) ...[
+                              if (statusText != null) const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: expiryColor.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border:
+                                      Border.all(color: expiryColor, width: 1),
+                                ),
+                                child: Text(
+                                  expiryText,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: expiryColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ],
                     ),
                   ],
