@@ -5,6 +5,8 @@ import * as v2 from "firebase-functions/v2";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { initializeApp, getApps } from "firebase-admin/app";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
+import { getAuth } from "firebase-admin/auth";
 import nodemailer from "nodemailer";
 import mammoth from "mammoth";
 import path from "path";
@@ -24,6 +26,8 @@ if (getApps().length === 0) {
   initializeApp();
 }
 const db = getFirestore();
+const auth = getAuth();
+const storage = getStorage();
 
 async function deleteByQuery(query) {
   const snap = await query.get();
@@ -74,8 +78,7 @@ export const sendAdminOtp = functions.https.onCall(async (data, context) => {
   }
 
   try {
-    const userSnapshot = await admin
-      .firestore()
+    const userSnapshot = await db
       .collection("Users")
       .where("Email", "==", email)
       .where("UserType", "==", "Admin")
@@ -545,8 +548,7 @@ export const enhanceCV = v2.https.onCall(
 
     try {
       // Get CV data from Firestore
-      const cvDoc = await admin
-        .firestore()
+      const cvDoc = await db
         .collection("CVHistory")
         .doc(cvHistoryId)
         .get();
@@ -870,7 +872,7 @@ Do not include explanations or commentary outside this JSON.`;
         console.log(`✅ PDF buffer created, size: ${pdfBuffer.length} bytes`);
 
         // Upload to Storage
-        const bucket = admin.storage().bucket();
+        const bucket = storage.bucket();
         const fileName = `${userId}_${cvHistoryId}.pdf`;
         const filePath = `NewCV/${fileName}`;
         const file = bucket.file(filePath);
@@ -888,8 +890,7 @@ Do not include explanations or commentary outside this JSON.`;
         console.log(`✅ PDF URL: ${pdfUrl}`);
 
         // Update Firestore
-        await admin
-          .firestore()
+        await db
           .collection("CVHistory")
           .doc(cvHistoryId)
           .update({
@@ -947,8 +948,7 @@ export const detectMissingSections = v2.https.onCall(
 
     try {
       // Get CV data from Firestore
-      const cvDoc = await admin
-        .firestore()
+      const cvDoc = await db
         .collection("CVHistory")
         .doc(cvHistoryId)
         .get();
@@ -1165,8 +1165,7 @@ export const sendPasswordResetOtp = functions.https.onCall(
     }
 
     try {
-      const usersSnapshot = await admin
-        .firestore()
+      const usersSnapshot = await db
         .collection("Users")
         .where("Email", "==", email.toLowerCase())
         .limit(1)
@@ -1248,9 +1247,9 @@ export const resetUserPassword = functions.https.onCall(
     }
 
     try {
-      const userRecord = await admin.auth().getUserByEmail(email.toLowerCase());
+      const userRecord = await auth.getUserByEmail(email.toLowerCase());
 
-      await admin.auth().updateUser(userRecord.uid, {
+      await auth.updateUser(userRecord.uid, {
         password: newPassword,
       });
 
@@ -1394,7 +1393,7 @@ export const deleteUserAccount = functions.https.onCall(
         console.warn("User document delete warning:", err);
       });
 
-      const bucket = admin.storage().bucket();
+      const bucket = storage.bucket();
 
       if (photoPath) {
         try {
@@ -1434,14 +1433,12 @@ export const deleteUserAccount = functions.https.onCall(
         console.warn("NewCV files delete warning:", err);
       }
 
-      await admin
-        .auth()
+      await auth
         .deleteUser(userId)
         .catch((err) => {
           console.warn("Auth delete warning:", err);
         });
-      await admin
-        .auth()
+      await auth
         .deleteUser(userId)
         .catch((err) => {
           console.warn("Auth delete warning:", err);
@@ -1497,7 +1494,7 @@ export const extractCVTextEnhancement = v2.storage.onObjectFinalized(
       console.log(`📝 CVHistoryID: ${cvHistoryId}`);
       console.log(`👤 UserID: ${userId}`);
 
-      const bucket = admin.storage().bucket();
+      const bucket = storage.bucket();
       const file = bucket.file(filePath);
       const tempFilePath = path.join(os.tmpdir(), path.basename(filePath));
 
@@ -1544,8 +1541,7 @@ export const extractCVTextEnhancement = v2.storage.onObjectFinalized(
 
       // Update Firestore
       if (extractedText.trim()) {
-        await admin
-          .firestore()
+        await db
           .collection("CVHistory")
           .doc(cvHistoryId)
           .update({
@@ -1555,8 +1551,7 @@ export const extractCVTextEnhancement = v2.storage.onObjectFinalized(
         console.log(`📊 Extracted ${extractedText.length} characters`);
       } else {
         console.warn("⚠️ No text extracted from file");
-        await admin
-          .firestore()
+        await db
           .collection("CVHistory")
           .doc(cvHistoryId)
           .update({
@@ -1576,8 +1571,7 @@ export const extractCVTextEnhancement = v2.storage.onObjectFinalized(
         const metadata = event.data.metadata || {};
         const cvHistoryId = metadata.cvHistoryId;
         if (cvHistoryId) {
-          await admin
-            .firestore()
+          await db
             .collection("CVHistory")
             .doc(cvHistoryId)
             .update({
@@ -1613,8 +1607,7 @@ export const generateCVPDF = functions.https.onCall(async (data, context) => {
   }
 
   try {
-    const cvDoc = await admin
-      .firestore()
+    const cvDoc = await db
       .collection("CVHistory")
       .doc(cvHistoryId)
       .get();
@@ -1641,7 +1634,7 @@ export const generateCVPDF = functions.https.onCall(async (data, context) => {
 
     const pdfBuffer = await createProfessionalCV(newCVText);
 
-    const bucket = admin.storage().bucket();
+    const bucket = storage.bucket();
     const fileName = `${userId}_${cvHistoryId}.pdf`;
     const filePath = `NewCV/${fileName}`;
     const file = bucket.file(filePath);
