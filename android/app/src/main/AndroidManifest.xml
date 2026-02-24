@@ -6,11 +6,15 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
-
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
         android:label="Jadeer"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <meta-data
+              android:name="com.google.firebase.messaging.default_notification_channel_id"
+              android:value="high_importance_channel" 
+              />
         <activity
             android:name=".MainActivity"
             android:exported="true"

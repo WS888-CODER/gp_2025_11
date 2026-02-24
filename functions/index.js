@@ -3100,6 +3100,7 @@ export { generateInterviewQuestions };
 export { generateMockInterviewQuestions } from "./mockinterview/mock_interview_questions.js";
 export { generateMockInterviewReport } from "./mockinterview/generateReport.js";
 export { generateJobInterviewReport } from "./interview/generateJobInterviewReport.js";
+export { notifyOnJobStatusChange } from "./notification/notifyJobStatus.js";
 
 export const deleteOldCVHistory = onSchedule(
   {

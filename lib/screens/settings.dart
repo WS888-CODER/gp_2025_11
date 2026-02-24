@@ -1,4 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gp_2025_11/config/theme.dart';
@@ -182,8 +184,95 @@ class _SettingsScreenState extends State<SettingsScreen> {
     settings.toggleTheme(newMode);
   }
 
-  void _toggleNotifications(bool value) {
-    setState(() => _isNotificationsEnabled = value);
+  Future<void> _toggleNotifications(bool value) async {
+    if (_isDeletingAccount) return;
+
+    if (value) {
+      final settings = await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
+      final granted =
+          settings.authorizationStatus == AuthorizationStatus.authorized ||
+              settings.authorizationStatus == AuthorizationStatus.provisional;
+
+      if (!granted) {
+        if (!mounted) return;
+        setState(() => _isNotificationsEnabled = false);
+
+        SnackHelper.error(
+          context,
+          'Notifications permission was not granted.',
+        );
+        return;
+      }
+
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token == null) {
+        if (!mounted) return;
+        setState(() => _isNotificationsEnabled = false);
+
+        SnackHelper.error(
+          context,
+          'Failed to get notification token.',
+        );
+        return;
+      }
+
+      await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(widget.userId)
+          .set({
+        'notificationsEnabled': true,
+        'fcmTokens': FieldValue.arrayUnion([token]),
+      }, SetOptions(merge: true));
+
+      FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
+        await FirebaseFirestore.instance
+            .collection('Users')
+            .doc(widget.userId)
+            .set({
+          'fcmTokens': FieldValue.arrayUnion([newToken]),
+        }, SetOptions(merge: true));
+      });
+
+      if (!mounted) return;
+      setState(() => _isNotificationsEnabled = true);
+
+      SnackHelper.success(context, 'Notifications enabled.');
+    } else {
+      await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(widget.userId)
+          .set({'notificationsEnabled': false}, SetOptions(merge: true));
+
+      if (!mounted) return;
+      setState(() => _isNotificationsEnabled = false);
+
+      SnackHelper.success(context, 'Notifications disabled.');
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotificationSetting();
+  }
+
+  Future<void> _loadNotificationSetting() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(widget.userId)
+          .get();
+
+      final enabled = (doc.data()?['notificationsEnabled'] ?? false) == true;
+
+      if (!mounted) return;
+      setState(() => _isNotificationsEnabled = enabled);
+    } catch (_) {}
   }
 
   @override
@@ -220,7 +309,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   icon: Icons.notifications_none,
                   iconColor: Colors.purple,
                   value: _isNotificationsEnabled,
-                  onChanged: _toggleNotifications,
+                  onChanged: (v) => _toggleNotifications(v),
                   switchColor: const Color(0xFFFD6C67),
                   subtitle: const Text('Manage alerts and reminders'),
                   isTitleBold: true,
