@@ -1,6 +1,7 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:gp_2025_11/screens/notifications.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:gp_2025_11/screens/account_details.dart';
@@ -116,6 +117,11 @@ class Jadeer extends StatelessWidget {
           );
         },
         '/about': (context) => const AboutPage(),
+        '/notifications': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments
+              as Map<String, dynamic>;
+          return NotificationsPage(userId: args['userId']);
+        },
       },
     );
   }

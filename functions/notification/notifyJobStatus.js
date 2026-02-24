@@ -1,9 +1,9 @@
 import { onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { initializeApp, getApps } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 
-// ✅ Ensure Firebase Admin initialized (safe even if called multiple times)
+// ✅ Ensure Firebase Admin initialized
 if (getApps().length === 0) {
   initializeApp();
 }
@@ -38,7 +38,7 @@ export const notifyOnJobStatusChange = onDocumentUpdated(
 
     const jobTitle = String(after.JobTitle || "A job");
 
-    // Applicants
+    // 1) Applicants
     const appsSnap = await db
       .collection("Applications")
       .where("JobID", "==", jobId)
@@ -50,7 +50,7 @@ export const notifyOnJobStatusChange = onDocumentUpdated(
       if (d.UserID) applicantUserIds.add(String(d.UserID));
     });
 
-    // Favorites
+    // 2) Favorites
     const favSnap = await db
       .collection("Users")
       .where("favorite", "array-contains", jobId)
@@ -62,7 +62,43 @@ export const notifyOnJobStatusChange = onDocumentUpdated(
     const targetUserIds = new Set([...applicantUserIds, ...favUserIds]);
     if (targetUserIds.size === 0) return;
 
-    // Tokens
+    // 3) Build notification message
+    const title = "Job Update";
+    const body = buildBody(jobTitle, afterStatus);
+
+    // ✅ 4) Save in-app notifications (Firestore)
+    const now = FieldValue.serverTimestamp();
+
+    const commits = [];
+    let writeBatch = db.batch();
+    let ops = 0;
+
+    for (const uid of targetUserIds) {
+      const notifRef = db.collection("Notification").doc();
+      writeBatch.set(notifRef, {
+        UserID: uid,
+        JobID: jobId,
+        JobTitle: jobTitle,
+        Status: afterStatus,
+        Message: body,
+        Date: now,
+        Read: false,
+      });
+
+      ops += 1;
+
+      // Firestore batch limit = 500 (خلّيناها 450 احتياط)
+      if (ops === 450) {
+        commits.push(writeBatch.commit());
+        writeBatch = db.batch();
+        ops = 0;
+      }
+    }
+
+    if (ops > 0) commits.push(writeBatch.commit());
+    await Promise.all(commits);
+
+    // 5) Tokens (only enabled users)
     const tokens = [];
     const userDocs = await Promise.all(
       [...targetUserIds].map((uid) => db.collection("Users").doc(uid).get())
@@ -81,12 +117,10 @@ export const notifyOnJobStatusChange = onDocumentUpdated(
     const uniqueTokens = [...new Set(tokens)];
     if (uniqueTokens.length === 0) return;
 
-    const title = "Job Update";
-    const body = buildBody(jobTitle, afterStatus);
-
-    for (const batch of chunkArray(uniqueTokens, 500)) {
+    // 6) Send FCM (500 tokens per multicast)
+    for (const batchTokens of chunkArray(uniqueTokens, 500)) {
       await messaging.sendEachForMulticast({
-        tokens: batch,
+        tokens: batchTokens,
         notification: { title, body },
         data: { jobId, status: afterStatus },
       });
