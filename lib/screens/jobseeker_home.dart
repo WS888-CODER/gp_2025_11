@@ -306,8 +306,14 @@ class _JobSeekerHomeState extends State<JobSeekerHome> {
                         const Spacer(),
                         GestureDetector(
                           onTap: () {
-                            SnackHelper.error(
-                                context, 'Notifications coming soon');
+                            final uid =
+                                FirebaseAuth.instance.currentUser?.uid ?? '';
+                            if (uid.isEmpty) return;
+                            Navigator.pushNamed(
+                              context,
+                              '/notifications',
+                              arguments: {'userId': uid},
+                            );
                           },
                           child: Container(
                             width: 50,
