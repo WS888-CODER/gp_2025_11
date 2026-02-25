@@ -3100,7 +3100,6 @@ export { generateInterviewQuestions };
 export { generateMockInterviewQuestions } from "./mockinterview/mock_interview_questions.js";
 export { generateMockInterviewReport } from "./mockinterview/generateReport.js";
 export { generateJobInterviewReport } from "./interview/generateJobInterviewReport.js";
-export { notifyOnJobStatusChange } from "./notification/notifyJobStatus.js";
 
 export const deleteOldCVHistory = onSchedule(
   {
@@ -3209,6 +3208,67 @@ export const deleteOldMockInterviews = onSchedule(
     } catch (error) {
       console.error("Error deleting old mock interviews:", error);
       return { success: false, error: error.message };
+    }
+  }
+);
+
+// Auto-delete Rejected Applications older than 6 months (runs daily at midnight)
+export const deleteOldRejectedApplications = onSchedule(
+  {
+    schedule: "0 0 * * *",
+    timeZone: "UTC",
+    region: "us-central1",
+  },
+  async (event) => {
+    console.log("Starting deleteOldRejectedApplications function");
+
+    try {
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setDate(sixMonthsAgo.getDate() - 180);
+      const sixMonthsAgoTimestamp = Timestamp.fromDate(sixMonthsAgo);
+
+      console.log("Querying rejected applications older than:", sixMonthsAgo.toISOString());
+
+      const oldRejectedAppsSnapshot = await db
+        .collection("Applications")
+        .where("ApplicationStatus", "==", "Rejected")
+        .where("Date", "<", sixMonthsAgoTimestamp)
+        .get();
+
+      if (oldRejectedAppsSnapshot.empty) {
+        console.log("No old rejected applications found to delete");
+        return;
+      }
+
+      console.log(`Found ${oldRejectedAppsSnapshot.size} rejected applications to delete`);
+
+      const batchSize = 500;
+      let deletedCount = 0;
+      let batch = db.batch();
+      let batchCount = 0;
+
+      for (const doc of oldRejectedAppsSnapshot.docs) {
+        batch.delete(doc.ref);
+        batchCount++;
+
+        if (batchCount >= batchSize) {
+          await batch.commit();
+          deletedCount += batchCount;
+          console.log(`Deleted ${deletedCount} records so far...`);
+          batch = db.batch();
+          batchCount = 0;
+        }
+      }
+
+      if (batchCount > 0) {
+        await batch.commit();
+        deletedCount += batchCount;
+      }
+
+      console.log(`Successfully deleted ${deletedCount} old rejected applications`);
+    } catch (error) {
+      console.error("Error in deleteOldRejectedApplications:", error);
+      throw error;
     }
   }
 );

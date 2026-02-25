@@ -575,37 +575,36 @@ class _HistoryPageState extends State<HistoryPage>
             final status = (data['ApplicationStatus'] ?? '').toString();
             final applicationId = validApps[index].id;
 
-            // ── Expiry badge ──
+            // ── Expiry badge (only for Rejected applications) ──
             int? daysLeft;
             String? expiryText;
             Color? expiryColor;
 
-            final expiresAt = data['RecordExpiresAt'] as Timestamp?;
-            final DateTime? expiryDate;
+            if (status == 'Rejected') {
+              final DateTime? expiryDate;
 
-            if (expiresAt != null) {
-              expiryDate = expiresAt.toDate();
-            } else if (date != null) {
-              expiryDate = date.add(const Duration(days: 120));
-            } else {
-              expiryDate = null;
-            }
-
-            if (expiryDate != null) {
-              daysLeft = expiryDate.difference(DateTime.now()).inDays;
-
-              if (daysLeft <= 0) {
-                expiryText = 'Expired';
-                expiryColor = Colors.red;
-              } else if (daysLeft <= 14) {
-                expiryText = '$daysLeft days left';
-                expiryColor = Colors.red;
-              } else if (daysLeft <= 30) {
-                expiryText = '$daysLeft days left';
-                expiryColor = Colors.orange;
+              if (date != null) {
+                expiryDate = date.add(const Duration(days: 180));
               } else {
-                expiryText = '$daysLeft days left';
-                expiryColor = Colors.green;
+                expiryDate = null;
+              }
+
+              if (expiryDate != null) {
+                daysLeft = expiryDate.difference(DateTime.now()).inDays;
+
+                if (daysLeft <= 0) {
+                  expiryText = 'Expired';
+                  expiryColor = Colors.red;
+                } else if (daysLeft <= 14) {
+                  expiryText = '$daysLeft days left';
+                  expiryColor = Colors.red;
+                } else if (daysLeft <= 30) {
+                  expiryText = '$daysLeft days left';
+                  expiryColor = Colors.orange;
+                } else {
+                  expiryText = '$daysLeft days left';
+                  expiryColor = Colors.green;
+                }
               }
             }
 
