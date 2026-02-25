@@ -14,6 +14,14 @@ String effectiveStatusFromDates(DateTime? start, DateTime? end) {
   return 'Open';
 }
 
+/// Checks the Firestore JobStatus field first (e.g. manually closed by company),
+/// then falls back to date-based logic.
+String effectiveJobStatus(Job job) {
+  final raw = job.status.trim().toLowerCase();
+  if (raw == 'closed') return 'Closed';
+  return effectiveStatusFromDates(job.startDate, job.endDate);
+}
+
 const kJobsCollection = 'Jobs';
 const kUsersCollection = 'Users';
 List<String> kSpecialtyOptions = [
@@ -289,7 +297,7 @@ class _JobsPageState extends State<JobsPage> {
 
     if (!_showAllJobs) {
       res = res.where((j) {
-        final s = effectiveStatusFromDates(j.startDate, j.endDate);
+        final s = effectiveJobStatus(j);
         return s == 'Open';
       });
     }

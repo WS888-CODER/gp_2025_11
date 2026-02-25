@@ -12,6 +12,14 @@ String effectiveStatusFromDates(DateTime? start, DateTime? end) {
   return 'Open';
 }
 
+/// Checks the Firestore JobStatus field first (e.g. manually closed by company),
+/// then falls back to date-based logic.
+String effectiveJobStatus(Job job) {
+  final raw = job.status.trim().toLowerCase();
+  if (raw == 'closed') return 'Closed';
+  return effectiveStatusFromDates(job.startDate, job.endDate);
+}
+
 class JobFields {
   static const jobId = 'JobID';
   static const title = 'JobTitle';
@@ -239,7 +247,7 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
   Future<void> _apply() async {
     final rootCtx = Navigator.of(context, rootNavigator: true).context;
     final job = widget.job;
-    final status = effectiveStatusFromDates(job.startDate, job.endDate);
+    final status = effectiveJobStatus(job);
 
     if (status == 'Closed') {
       SnackHelper.error(context, 'This job is closed.');
@@ -317,7 +325,7 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
 
     final job = widget.job;
     final company = widget.company;
-    final status = effectiveStatusFromDates(job.startDate, job.endDate);
+    final status = effectiveJobStatus(job);
     final isClosed = status == 'Closed';
     final isSoon = status == 'Soon';
     final disabled = isClosed || isSoon;
@@ -822,7 +830,7 @@ class _JobCardState extends State<JobCard> {
   Future<void> _apply() async {
     final rootCtx = Navigator.of(context, rootNavigator: true).context;
     final job = widget.job;
-    final status = effectiveStatusFromDates(job.startDate, job.endDate);
+    final status = effectiveJobStatus(job);
 
     if (status == 'Closed') {
       SnackHelper.error(context, 'This job is closed.');
@@ -881,7 +889,7 @@ class _JobCardState extends State<JobCard> {
 
     final job = widget.job;
     final company = widget.company;
-    final status = effectiveStatusFromDates(job.startDate, job.endDate);
+    final status = effectiveJobStatus(job);
     final isClosed = status == 'Closed';
     final isSoon = status == 'Soon';
     final disabled = isClosed || isSoon;
