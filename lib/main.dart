@@ -118,9 +118,7 @@ class Jadeer extends StatelessWidget {
         },
         '/about': (context) => const AboutPage(),
         '/notifications': (context) {
-          final args = ModalRoute.of(context)!.settings.arguments
-              as Map<String, dynamic>;
-          return NotificationsPage(userId: args['userId']);
+          return NotificationsPage();
         },
       },
     );
