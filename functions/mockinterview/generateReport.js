@@ -5,7 +5,7 @@ import fetch from "node-fetch";
 
 export const generateMockInterviewReport = onCall(
   {
-    secrets: ["OPENAI_API_KEY"],
+    secrets: ["OPENAI_API_KEY", "HF_TOKEN"],
     timeoutSeconds: 540,
     memory: "512MiB",
   },
@@ -240,6 +240,63 @@ Make the overallSummary at least 2-3 full sentences that give a balanced, encour
         Report: reportData,
         ReportGeneratedAt: FieldValue.serverTimestamp(),
       });
+
+      // Step 5: Voice Tone Analysis (SER Model)
+      console.log("[generateReport] Starting voice tone analysis...");
+      const voiceResults = [];
+      const HF_TOKEN = process.env.HF_TOKEN;
+
+      for (let i = 0; i < audioUrls.length; i++) {
+        const audioUrl = audioUrls[i];
+        if (!audioUrl || audioUrl.trim() === "") continue;
+
+        try {
+          console.log(`[generateReport] Analyzing voice ${i + 1}/${audioUrls.length}`);
+
+          const audioResponse = await fetch(audioUrl);
+          const audioBuffer = await audioResponse.buffer();
+
+          const hfResponse = await fetch(
+            "https://wsaifaleslam-jadeer-smart-assessment.hf.space/run/predict_confidence",
+            {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${HF_TOKEN}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                data: [{ name: `audio_${i}.m4a`, data: `data:audio/m4a;base64,${audioBuffer.toString("base64")}` }]
+              }),
+            }
+          );
+
+          if (!hfResponse.ok) {
+            throw new Error(`HF API error: ${hfResponse.statusText}`);
+          }
+
+          const hfResult = await hfResponse.json();
+          const resultText = hfResult.data?.[0] || "Analysis unavailable";
+
+          voiceResults.push({
+            questionIndex: i,
+            result: resultText,
+          });
+
+          console.log(`[generateReport] ✅ Voice analysis Q${i + 1}: ${resultText}`);
+        } catch (err) {
+          console.error(`[generateReport] ❌ Voice analysis failed for Q${i + 1}:`, err);
+          voiceResults.push({
+            questionIndex: i,
+            result: "Analysis unavailable",
+          });
+        }
+      }
+
+      await interviewRef.update({
+        VoiceToneAnalysis: voiceResults,
+      });
+
+      console.log("[generateReport] ✅ Voice tone analysis saved");
 
       console.log(`[generateReport] ✅ Report saved successfully for ${mockInterviewID}`);
 
