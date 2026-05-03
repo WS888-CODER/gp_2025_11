@@ -1,9 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:gp_2025_11/config/theme.dart';
 
-class Notification {
+class NotificationService {
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
@@ -50,11 +51,18 @@ class Notification {
 }
 
 class NotificationsPage extends StatelessWidget {
-  const NotificationsPage({super.key, required this.userId});
-  final String userId;
+  const NotificationsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      return const ThemedScaffold(
+        appBar: CustomHeader(title: 'Notifications'),
+        body: Center(child: Text('Not logged in')),
+      );
+    }
+
     final scheme = Theme.of(context).colorScheme;
 
     return ThemedScaffold(
@@ -62,10 +70,13 @@ class NotificationsPage extends StatelessWidget {
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: FirebaseFirestore.instance
             .collection('Notification')
-            .where('UserID', isEqualTo: userId)
+            .where('UserID', isEqualTo: uid)
             .orderBy('Date', descending: true)
             .snapshots(),
         builder: (context, snap) {
+          if (snap.hasError) {
+            return Center(child: Text('Error: ${snap.error}'));
+          }
           if (snap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
