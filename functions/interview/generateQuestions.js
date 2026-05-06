@@ -257,58 +257,131 @@ function buildPrompt({
 
   return `
 SYSTEM:
-You are an expert interviewer. Generate high-quality interview questions in English tailored to the job,
+You are an expert interviewer. Generate realistic, high-quality interview questions in English tailored to the job,
 split into technical and psychometric parts.
 
 USER:
 Job Context:
-- Title: ${title}
-- Position/Seniority: ${position || "N/A"}
-- Specialty: ${specialty || "N/A"}
-- Must-have requirements: ${(requirements || []).join(", ") || "N/A"}
-- Job Description (excerpt): ${desc || "N/A"}
+
+* Title: ${title}
+* Position/Seniority: ${position || "N/A"}
+* Specialty: ${specialty || "N/A"}
+* Must-have requirements: ${(requirements || []).join(", ") || "N/A"}
+* Job Description (excerpt): ${desc || "N/A"}
 
 Blueprint:
-- Total questions: exactly ${TARGET_COUNT} (no more, no fewer).
-  - 5 technical questions.
-  - 5 psychometric (personality/work-style) questions.
-- Difficulty distribution (overall): easy ${Math.round(easy * 100)}%, medium ${Math.round(
-    med * 100
+
+* Total questions: exactly ${TARGET_COUNT} (no more, no fewer).
+
+  * 5 technical questions.
+  * 5 psychometric (personality/work-style) questions.
+* Difficulty distribution (overall): easy ${Math.round(easy * 100)}%, medium ${Math.round(
+  med * 100
   )}%, hard ${Math.round(hard * 100)}%.
-- Technical categories to cover: ${techCategories.join(", ")}
-- Psychometric dimensions / work-style themes to cover: ${psychometricDimensions.join(", ")}
+* Technical categories to cover: ${techCategories.join(", ")}
+* Psychometric dimensions / work-style themes to cover: ${psychometricDimensions.join(", ")}
 
 Psychometric model:
-- Use the Big Five personality model for psychometric questions:
-  - Openness
-  - Conscientiousness
-  - Extraversion
-  - Agreeableness
-  - Emotional Stability (opposite of Neuroticism)
+
+* Use the Big Five personality model for psychometric questions:
+
+  * Openness
+  * Conscientiousness
+  * Extraversion
+  * Agreeableness
+  * Emotional Stability (opposite of Neuroticism)
+
+Interview style:
+
+* Questions should sound like realistic questions asked by experienced hiring managers.
+* Avoid generic AI-style interview questions.
+* Avoid overly formal HR phrasing.
+* Prefer natural and conversational wording.
+* Questions should feel practical, modern, and role-specific.
+* Include a few common real-world interview openers such as:
+
+  * "Tell me about yourself."
+  * "Walk me through a project you've worked on."
+  * "Why are you interested in this role?"
+
+Question style distribution:
+
+* Include a balanced mix of:
+
+  * introductory/warm-up questions,
+  * concise direct questions,
+  * situational questions,
+  * and STAR-style behavioral questions.
+* Do NOT make every question deeply scenario-based.
+* Most questions should feel easy to ask in a real interview conversation.
 
 Guidelines:
-- Technical questions:
-  - Ground them in the job description, requirements, and mentioned technologies/tools.
-  - Prefer technologies, tools, and frameworks that appear in the job description or requirements.
-  - Keep each question concise and focused on a single idea.
-- Psychometric questions:
-  - Focus on personality traits and work style using the Big Five model.
-  - Each psychometric question should target ONE main trait and set the "trait" field accordingly.
-  - Use scenario-based questions (STAR-style) asking about specific past experiences.
-  - Avoid generic questions like "Tell me about yourself" or "What are your strengths/weaknesses?".
+
+* Technical questions:
+
+  * Ground them in the job description, requirements, and mentioned technologies/tools.
+  * Prefer technologies, tools, and frameworks that appear in the job description or requirements.
+  * Keep each question focused on one main idea.
+  * Include a mix of practical, conceptual, and experience-based questions.
+  * Technical questions should prioritize:
+
+    * practical experience,
+    * real projects,
+    * debugging,
+    * implementation thinking,
+    * tradeoffs,
+    * and decision making,
+      instead of textbook definitions.
+  * Some technical questions may use STAR-style scenarios when appropriate, but not all of them.
+
+* Psychometric questions:
+
+  * Focus on personality traits and work style using the Big Five model.
+  * Each psychometric question should implicitly assess ONE main trait and set the "trait" field accordingly.
+  * Include a mix of:
+
+    * personality/work-style questions,
+    * reflection questions,
+    * light situational questions,
+    * and STAR-style behavioral questions.
+  * Include 1-2 natural introductory questions commonly used in real interviews,
+    such as background, motivation, achievements, or project-related discussions.
+  * Avoid repetitive question patterns.
+  * Avoid sounding like an academic personality assessment.
+
+Avoid questions that sound vague, templated, or overly generic, such as:
+
+* "Tell me about a time you worked successfully in a team."
+* "How do you handle challenges?"
+* "What are your strengths and weaknesses?"
+
+Instead:
+
+* Make questions more specific to the role, projects, technologies, or realistic work situations.
+* Prefer follow-up style questions that sound natural in interviews.
+
+General quality rules:
+
+* Questions should sound realistic and human.
+* Avoid overly long setups and excessive context.
+* Avoid making all questions multi-part.
+* Questions should encourage meaningful answers without overwhelming the candidate.
+* Questions should resemble modern real-world interview practices.
 
 Output:
 Return ONLY a JSON object with an array named "questions".
+
 Each item must be:
 {
-  "text": "...",
-  "type": "technical|psychometric",
-  "category": "e.g., React, Data Modeling, Stakeholder Management, Resilience, Empathy",
-  "difficulty": "easy|medium|hard",
-  "trait": "Openness|Conscientiousness|Extraversion|Agreeableness|Emotional Stability|null"
+"text": "...",
+"type": "technical|psychometric",
+"category": "e.g., React, Data Modeling, Stakeholder Management, Resilience, Empathy",
+"difficulty": "easy|medium|hard",
+"trait": "Openness|Conscientiousness|Extraversion|Agreeableness|Emotional Stability|null"
 }
-- For technical questions, set "trait" to null.
-- For psychometric questions, set "trait" to exactly one of the Big Five traits.
+
+* For technical questions, set "trait" to null.
+* For psychometric questions, set "trait" to exactly one of the Big Five traits.
 `.trim();
 }
 
@@ -379,7 +452,11 @@ function sanitize(items) {
 /* ===================== Cloud Function ===================== */
 
 export const generateInterviewQuestions = v2.https.onRequest(
-  { region: "us-central1", cors: true },
+  {
+    region: "us-central1",
+    cors: true,
+    secrets: ["OPENAI_API_KEY"],
+  },
   async (req, res) => {
     try {
       if (req.method !== "POST") {

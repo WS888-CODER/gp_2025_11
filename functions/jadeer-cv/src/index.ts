@@ -98,6 +98,7 @@ export const extractCVKeywords = onObjectFinalized(
     region: "us-central1",
     memory: "1GiB",
     timeoutSeconds: 120,
+    secrets: ["OPENAI_API_KEY"],
   },
   async (event) => {
     const file = event.data;

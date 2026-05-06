@@ -34,8 +34,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final snapshot = await FirebaseFirestore.instance
         .collection('Users')
         .where('UserType', isEqualTo: 'Company')
-        .where('AccountStatus', whereIn: ['Rejected', 'Pending'])
-        .get();
+        .where('AccountStatus', whereIn: ['Rejected', 'Pending']).get();
 
     for (final doc in snapshot.docs) {
       final data = doc.data();
@@ -106,12 +105,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final isDark = theme.brightness == Brightness.dark;
 
     final Color selectedBg = theme.colorScheme.secondary;
-    final Color borderColor = isSelected
-        ? selectedBg
-        : theme.colorScheme.primary;
-    final Color unselectedText = isDark
-        ? Colors.white70
-        : theme.colorScheme.primary;
+    final Color borderColor =
+        isSelected ? selectedBg : theme.colorScheme.primary;
+    final Color unselectedText =
+        isDark ? Colors.white70 : theme.colorScheme.primary;
 
     return ChoiceChip(
       label: Text(
@@ -167,36 +164,37 @@ class _AdminDashboardState extends State<AdminDashboard> {
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : (companies == null || companies!.isEmpty)
-                  ? const EmptyState(
-                      icon: Iconsax.briefcase,
-                      title: 'No companies found',
-                      subtitle: 'New company registrations will appear here.',
-                    )
-                  : RefreshIndicator(
-                      onRefresh: loadCompanies,
-                      child: ListView.builder(
-                        itemCount: companies!.length,
-                        itemBuilder: (context, index) {
-                          final doc = companies![index];
-                          final data = doc.data() as Map<String, dynamic>;
+                      ? const EmptyState(
+                          icon: Iconsax.briefcase,
+                          title: 'No companies found',
+                          subtitle:
+                              'New company registrations will appear here.',
+                        )
+                      : RefreshIndicator(
+                          onRefresh: loadCompanies,
+                          child: ListView.builder(
+                            itemCount: companies!.length,
+                            itemBuilder: (context, index) {
+                              final doc = companies![index];
+                              final data = doc.data() as Map<String, dynamic>;
 
-                          return _CompanyCard(
-                            data: data,
-                            onSelected: (newStatus) async {
-                              await updateCompanyStatus(doc.id, newStatus);
+                              return _CompanyCard(
+                                data: data,
+                                onSelected: (newStatus) async {
+                                  await updateCompanyStatus(doc.id, newStatus);
 
-                              if (!context.mounted) return;
-                              SnackHelper.success(
-                                context,
-                                'Status updated to "$newStatus"',
+                                  if (!context.mounted) return;
+                                  SnackHelper.success(
+                                    context,
+                                    'Status updated to "$newStatus"',
+                                  );
+
+                                  await loadCompanies();
+                                },
                               );
-
-                              await loadCompanies();
                             },
-                          );
-                        },
-                      ),
-                    ),
+                          ),
+                        ),
             ),
           ],
         ),
@@ -298,9 +296,8 @@ class AdminDashboardAppBarState extends State<AdminDashboardAppBar> {
 
     final bool isLowTime = _remainingSeconds < 300;
 
-    final pillColor = isLowTime
-        ? Colors.red[100]
-        : Colors.white.withOpacity(0.2);
+    final pillColor =
+        isLowTime ? Colors.red[100] : Colors.white.withOpacity(0.2);
     final timerColor = isLowTime ? Colors.red[700] : Colors.white;
 
     final bubbleColor = Colors.white.withOpacity(isDark ? 0.04 : 0.06);
@@ -388,31 +385,38 @@ class AdminDashboardAppBarState extends State<AdminDashboardAppBar> {
                           ],
                         ),
                       ),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.pushNamed(
-                            context,
-                            '/settings',
-                            arguments: {
-                              'userId':
-                                  FirebaseAuth.instance.currentUser?.uid ?? '',
-                              'userType': 'Admin',
+                      Row(
+                        children: [
+                          _AdminNotificationIcon(),
+                          const SizedBox(width: 10),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.pushNamed(
+                                context,
+                                '/settings',
+                                arguments: {
+                                  'userId':
+                                      FirebaseAuth.instance.currentUser?.uid ??
+                                          '',
+                                  'userType': 'Admin',
+                                },
+                              );
                             },
-                          );
-                        },
-                        child: Container(
-                          width: 46,
-                          height: 46,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.15),
-                            shape: BoxShape.circle,
+                            child: Container(
+                              width: 46,
+                              height: 46,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.settings_outlined,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                            ),
                           ),
-                          child: const Icon(
-                            Icons.settings_outlined,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                        ),
+                        ],
                       ),
                     ],
                   ),
@@ -606,8 +610,7 @@ class _InfoRow extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color:
-                  labelColor ??
+              color: labelColor ??
                   theme.textTheme.bodyLarge?.color ??
                   Colors.black87,
               fontSize: 14,
@@ -615,6 +618,77 @@ class _InfoRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _AdminNotificationIcon extends StatelessWidget {
+  const _AdminNotificationIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(context, '/notifications');
+      },
+      child: Container(
+        width: 46,
+        height: 46,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          shape: BoxShape.circle,
+        ),
+        child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: FirebaseFirestore.instance
+              .collection('Notification')
+              .where('UserID', isEqualTo: uid)
+              .where('Read', isEqualTo: false)
+              .snapshots(),
+          builder: (context, snapshot) {
+            final unreadCount = snapshot.data?.docs.length ?? 0;
+
+            return Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Center(
+                  child: Icon(
+                    Icons.notifications_outlined,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                if (unreadCount > 0)
+                  Positioned(
+                    right: 6,
+                    top: 6,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(
+                        minWidth: 18,
+                        minHeight: 18,
+                      ),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        unreadCount > 99 ? '99+' : unreadCount.toString(),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ),
     );
   }
 }
