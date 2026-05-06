@@ -115,6 +115,32 @@ class MockInterviewSpecialtyScreen extends StatefulWidget {
 
 class _MockInterviewSpecialtyScreenState
     extends State<MockInterviewSpecialtyScreen> {
+  Widget _buildStartingInterviewLoading() {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      color: scheme.background,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 20),
+            Text(
+              'Preparing your interview...\nThis may take a moment.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  bool _isStartingInterview = false;
   String _activeSection = 'All';
   final Set<String> _expandedSections = {};
 
@@ -397,386 +423,462 @@ class _MockInterviewSpecialtyScreenState
 
     final shadowColor =
         isDark ? Colors.black.withOpacity(0.6) : Colors.black.withOpacity(0.07);
-    final canContinue =
-        _selected != null && !_loadingCredits && _mockInterviewCredits > 0;
+    final canContinue = _selected != null &&
+        !_loadingCredits &&
+        _mockInterviewCredits > 0 &&
+        !_isStartingInterview;
 
-    return ThemedScaffold(
-      appBar: const CustomHeader(
-        title: 'Choose your specialty',
-        showBack: true,
-      ),
+    return PopScope(
+        canPop: !_isStartingInterview,
+        child: ThemedScaffold(
+          appBar: CustomHeader(
+            title: 'Choose your specialty',
+            showBack: !_isStartingInterview,
+          ),
 
-      body: Container(
-        color: isDark ? scheme.background : const Color(0xFFF5F5F5),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              _buildMockCreditsInfo(),
-              const SizedBox(height: 12),
-              // Search
-              Container(
-                decoration: BoxDecoration(
-                  color: isDark ? scheme.surface : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: shadowColor,
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.search,
-                      color: isDark ? Colors.grey[400] : Colors.grey[600],
-                      size: 24,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: _search,
-                        onChanged: (v) => setState(() => _query = v),
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: isDark ? scheme.onSurface : Colors.black87,
-                        ),
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          isDense: true,
-                          hintText: 'Search specialty, e.g. Marketing…',
-                          hintStyle: TextStyle(
-                            fontSize: 15,
-                            color: isDark ? Colors.grey[400] : Colors.grey[500],
+          body: _isStartingInterview
+              ? _buildStartingInterviewLoading()
+              : Container(
+                  color: isDark ? scheme.background : const Color(0xFFF5F5F5),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        _buildMockCreditsInfo(),
+                        const SizedBox(height: 12),
+                        // Search
+                        Container(
+                          decoration: BoxDecoration(
+                            color: isDark ? scheme.surface : Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: shadowColor,
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.search,
+                                color: isDark
+                                    ? Colors.grey[400]
+                                    : Colors.grey[600],
+                                size: 24,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: TextField(
+                                  controller: _search,
+                                  onChanged: (v) => setState(() => _query = v),
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: isDark
+                                        ? scheme.onSurface
+                                        : Colors.black87,
+                                  ),
+                                  decoration: InputDecoration(
+                                    border: InputBorder.none,
+                                    isDense: true,
+                                    hintText:
+                                        'Search specialty, e.g. Marketing…',
+                                    hintStyle: TextStyle(
+                                      fontSize: 15,
+                                      color: isDark
+                                          ? Colors.grey[400]
+                                          : Colors.grey[500],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              if (_query.trim().isNotEmpty)
+                                GestureDetector(
+                                  onTap: () {
+                                    _search.clear();
+                                    setState(() => _query = '');
+                                  },
+                                  child: Icon(
+                                    Icons.close,
+                                    size: 20,
+                                    color: isDark
+                                        ? Colors.grey[400]
+                                        : Colors.grey[600],
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
-                      ),
-                    ),
-                    if (_query.trim().isNotEmpty)
-                      GestureDetector(
-                        onTap: () {
-                          _search.clear();
-                          setState(() => _query = '');
-                        },
-                        child: Icon(
-                          Icons.close,
-                          size: 20,
-                          color: isDark ? Colors.grey[400] : Colors.grey[600],
-                        ),
-                      ),
-                  ],
-                ),
-              ),
 
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 40,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: sectionOptions.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 8),
-                        itemBuilder: (_, i) {
-                          final s = sectionOptions[i];
-                          final selected = _activeSection == s;
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SizedBox(
+                                height: 40,
+                                child: ListView.separated(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: sectionOptions.length,
+                                  separatorBuilder: (_, __) =>
+                                      const SizedBox(width: 8),
+                                  itemBuilder: (_, i) {
+                                    final s = sectionOptions[i];
+                                    final selected = _activeSection == s;
 
-                          return ChoiceChip(
-                            label: Text(
-                              s,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: selected
-                                    ? Colors.white
-                                    : (isDark
-                                        ? scheme.onSurface
-                                        : Colors.black87),
-                              ),
-                            ),
-                            selected: selected,
-                            onSelected: (_) => setState(() {
-                              _activeSection = s;
-                              if (s != 'All') _expandedSections.add(s);
-                            }),
-                            selectedColor: const Color(0xFF4A5FBC),
-                            backgroundColor:
-                                isDark ? scheme.surface : Colors.white,
-                            shape: StadiumBorder(
-                              side: BorderSide(
-                                width: 2.0,
-                                color: selected
-                                    ? const Color(0xFF4A5FBC)
-                                    : (isDark
-                                        ? scheme.onSurface.withOpacity(0.15)
-                                        : const Color(0xFF4A5FBC)),
-                              ),
-                            ),
-                            showCheckmark: false,
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              // List
-              Expanded(
-                child: filteredMap.isEmpty
-                    ? const EmptyState(
-                        icon: Icons.manage_search,
-                        title: 'No specialties found',
-                        subtitle: 'Try a different keyword.',
-                      )
-                    : ListView(
-                        children: filteredMap.entries.map((section) {
-                          final sectionTitle = section.key;
-                          final items = section.value;
-
-                          final expanded =
-                              _expandedSections.contains(sectionTitle);
-
-                          return AnimatedContainer(
-                            duration: const Duration(milliseconds: 180),
-                            curve: Curves.easeOut,
-                            margin: const EdgeInsets.only(bottom: 12),
-                            decoration: BoxDecoration(
-                              color: scheme.surface,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(
-                                    Theme.of(context).brightness ==
-                                            Brightness.dark
-                                        ? 0.12
-                                        : 0.05,
-                                  ),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              children: [
-                                // ✅ Section header (tap to expand)
-                                InkWell(
-                                  borderRadius: BorderRadius.circular(18),
-                                  onTap: () {
-                                    setState(() {
-                                      if (expanded) {
-                                        _expandedSections.remove(sectionTitle);
-                                      } else {
-                                        _expandedSections.add(sectionTitle);
-                                      }
-                                    });
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 14, vertical: 14),
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          width: 40,
-                                          height: 40,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            color: const Color(0xFF4A5FBC)
-                                                .withOpacity(
-                                                    isDark ? 0.22 : 0.12),
-                                          ),
-                                          child: const Icon(
-                                              Icons.grid_view_rounded,
-                                              color: Color(0xFF4A5FBC)),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Text(
-                                            sectionTitle,
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w900,
-                                              color: isDark
+                                    return ChoiceChip(
+                                      label: Text(
+                                        s,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          color: selected
+                                              ? Colors.white
+                                              : (isDark
                                                   ? scheme.onSurface
-                                                  : Colors.black87,
-                                            ),
-                                          ),
+                                                  : Colors.black87),
                                         ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 10, vertical: 6),
-                                          decoration: BoxDecoration(
-                                            color: expanded
-                                                ? const Color(0xFF4A5FBC)
-                                                    .withOpacity(0.12)
-                                                : (isDark
-                                                    ? scheme.onSurface
-                                                        .withOpacity(0.06)
-                                                    : Colors.black
-                                                        .withOpacity(0.05)),
-                                            borderRadius:
-                                                BorderRadius.circular(999),
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              Icon(
-                                                expanded
-                                                    ? Icons.keyboard_arrow_up
-                                                    : Icons.keyboard_arrow_down,
-                                                color: const Color(0xFF4A5FBC),
-                                              ),
-                                            ],
-                                          ),
+                                      ),
+                                      selected: selected,
+                                      onSelected: (_) => setState(() {
+                                        _activeSection = s;
+                                        if (s != 'All')
+                                          _expandedSections.add(s);
+                                      }),
+                                      selectedColor: const Color(0xFF4A5FBC),
+                                      backgroundColor: isDark
+                                          ? scheme.surface
+                                          : Colors.white,
+                                      shape: StadiumBorder(
+                                        side: BorderSide(
+                                          width: 2.0,
+                                          color: selected
+                                              ? const Color(0xFF4A5FBC)
+                                              : (isDark
+                                                  ? scheme.onSurface
+                                                      .withOpacity(0.15)
+                                                  : const Color(0xFF4A5FBC)),
                                         ),
-                                      ],
-                                    ),
-                                  ),
+                                      ),
+                                      showCheckmark: false,
+                                    );
+                                  },
                                 ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        // List
+                        Expanded(
+                          child: filteredMap.isEmpty
+                              ? const EmptyState(
+                                  icon: Icons.manage_search,
+                                  title: 'No specialties found',
+                                  subtitle: 'Try a different keyword.',
+                                )
+                              : ListView(
+                                  children: filteredMap.entries.map((section) {
+                                    final sectionTitle = section.key;
+                                    final items = section.value;
 
-                                // ✅ Expand content
-                                AnimatedCrossFade(
-                                  duration: const Duration(milliseconds: 180),
-                                  crossFadeState: expanded
-                                      ? CrossFadeState.showFirst
-                                      : CrossFadeState.showSecond,
-                                  firstChild: Padding(
-                                    padding: const EdgeInsets.fromLTRB(
-                                        10, 0, 10, 12),
-                                    child: Column(
-                                      children: items.map((title) {
-                                        final selected = _selected == title;
+                                    final expanded = _expandedSections
+                                        .contains(sectionTitle);
 
-                                        return InkWell(
-                                          borderRadius:
-                                              BorderRadius.circular(14),
-                                          onTap: () =>
-                                              setState(() => _selected = title),
-                                          child: AnimatedContainer(
-                                            duration: const Duration(
-                                                milliseconds: 150),
-                                            curve: Curves.easeOut,
-                                            margin:
-                                                const EdgeInsets.only(top: 8),
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 12, vertical: 12),
-                                            decoration: BoxDecoration(
-                                              borderRadius:
-                                                  BorderRadius.circular(14),
-                                              color: selected
-                                                  ? const Color(0xFF4A5FBC)
-                                                      .withOpacity(
-                                                          isDark ? 0.22 : 0.10)
-                                                  : (isDark
-                                                      ? scheme.surface
-                                                      : const Color(
-                                                          0xFFF9F9F9)),
-                                              border: Border.all(
-                                                color: selected
-                                                    ? const Color(0xFF4A5FBC)
-                                                    : (isDark
-                                                        ? scheme.onSurface
-                                                            .withOpacity(0.10)
-                                                        : Colors.black
-                                                            .withOpacity(0.06)),
-                                              ),
+                                    return AnimatedContainer(
+                                      duration:
+                                          const Duration(milliseconds: 180),
+                                      curve: Curves.easeOut,
+                                      margin: const EdgeInsets.only(bottom: 12),
+                                      decoration: BoxDecoration(
+                                        color: scheme.surface,
+                                        borderRadius: BorderRadius.circular(16),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(
+                                              Theme.of(context).brightness ==
+                                                      Brightness.dark
+                                                  ? 0.12
+                                                  : 0.05,
                                             ),
-                                            child: Row(
-                                              children: [
-                                                Container(
-                                                  width: 36,
-                                                  height: 36,
-                                                  decoration: BoxDecoration(
-                                                    shape: BoxShape.circle,
-                                                    color: selected
-                                                        ? const Color(
-                                                            0xFF4A5FBC)
-                                                        : const Color(
-                                                                0xFF4A5FBC)
-                                                            .withOpacity(0.12),
+                                            blurRadius: 12,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          // ✅ Section header (tap to expand)
+                                          InkWell(
+                                            borderRadius:
+                                                BorderRadius.circular(18),
+                                            onTap: () {
+                                              setState(() {
+                                                if (expanded) {
+                                                  _expandedSections
+                                                      .remove(sectionTitle);
+                                                } else {
+                                                  _expandedSections
+                                                      .add(sectionTitle);
+                                                }
+                                              });
+                                            },
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 14,
+                                                      vertical: 14),
+                                              child: Row(
+                                                children: [
+                                                  Container(
+                                                    width: 40,
+                                                    height: 40,
+                                                    decoration: BoxDecoration(
+                                                      shape: BoxShape.circle,
+                                                      color: const Color(
+                                                              0xFF4A5FBC)
+                                                          .withOpacity(isDark
+                                                              ? 0.22
+                                                              : 0.12),
+                                                    ),
+                                                    child: const Icon(
+                                                        Icons.grid_view_rounded,
+                                                        color:
+                                                            Color(0xFF4A5FBC)),
                                                   ),
-                                                  child: Icon(
-                                                    Icons
-                                                        .business_center_outlined,
-                                                    color: selected
-                                                        ? Colors.white
-                                                        : const Color(
-                                                            0xFF4A5FBC),
-                                                    size: 20,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 12),
-                                                Expanded(
-                                                  child: Text(
-                                                    title,
-                                                    style: TextStyle(
-                                                      fontSize: 14.5,
-                                                      fontWeight:
-                                                          FontWeight.w800,
-                                                      color: isDark
-                                                          ? scheme.onSurface
-                                                          : Colors.black87,
+                                                  const SizedBox(width: 12),
+                                                  Expanded(
+                                                    child: Text(
+                                                      sectionTitle,
+                                                      style: TextStyle(
+                                                        fontSize: 15,
+                                                        fontWeight:
+                                                            FontWeight.w900,
+                                                        color: isDark
+                                                            ? scheme.onSurface
+                                                            : Colors.black87,
+                                                      ),
                                                     ),
                                                   ),
-                                                ),
-                                                if (selected)
-                                                  const Icon(Icons.check_circle,
-                                                      color: Color(0xFF4A5FBC)),
-                                              ],
+                                                  Container(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 6),
+                                                    decoration: BoxDecoration(
+                                                      color: expanded
+                                                          ? const Color(
+                                                                  0xFF4A5FBC)
+                                                              .withOpacity(0.12)
+                                                          : (isDark
+                                                              ? scheme.onSurface
+                                                                  .withOpacity(
+                                                                      0.06)
+                                                              : Colors.black
+                                                                  .withOpacity(
+                                                                      0.05)),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              999),
+                                                    ),
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(
+                                                          expanded
+                                                              ? Icons
+                                                                  .keyboard_arrow_up
+                                                              : Icons
+                                                                  .keyboard_arrow_down,
+                                                          color: const Color(
+                                                              0xFF4A5FBC),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
                                             ),
                                           ),
-                                        );
-                                      }).toList(),
-                                    ),
-                                  ),
-                                  secondChild: const SizedBox.shrink(),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      // Continue button
 
-      bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.symmetric(horizontal: 16).copyWith(
-          bottom: 16,
-        ),
-        child: SizedBox(
-          width: double.infinity,
-          height: 54,
-          child: FilledButton(
-            onPressed: canContinue
-                ? () => _confirmPermissionsThenStart(_selected!)
-                : null,
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF4A5FBC),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(28),
-              ),
-              textStyle: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            child: const Text(
-              'Continue',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ),
-      ),
-    );
+                                          // ✅ Expand content
+                                          AnimatedCrossFade(
+                                            duration: const Duration(
+                                                milliseconds: 180),
+                                            crossFadeState: expanded
+                                                ? CrossFadeState.showFirst
+                                                : CrossFadeState.showSecond,
+                                            firstChild: Padding(
+                                              padding:
+                                                  const EdgeInsets.fromLTRB(
+                                                      10, 0, 10, 12),
+                                              child: Column(
+                                                children: items.map((title) {
+                                                  final selected =
+                                                      _selected == title;
+
+                                                  return InkWell(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            14),
+                                                    onTap: () => setState(() =>
+                                                        _selected = title),
+                                                    child: AnimatedContainer(
+                                                      duration: const Duration(
+                                                          milliseconds: 150),
+                                                      curve: Curves.easeOut,
+                                                      margin:
+                                                          const EdgeInsets.only(
+                                                              top: 8),
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
+                                                          horizontal: 12,
+                                                          vertical: 12),
+                                                      decoration: BoxDecoration(
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(14),
+                                                        color: selected
+                                                            ? const Color(
+                                                                    0xFF4A5FBC)
+                                                                .withOpacity(
+                                                                    isDark
+                                                                        ? 0.22
+                                                                        : 0.10)
+                                                            : (isDark
+                                                                ? scheme.surface
+                                                                : const Color(
+                                                                    0xFFF9F9F9)),
+                                                        border: Border.all(
+                                                          color: selected
+                                                              ? const Color(
+                                                                  0xFF4A5FBC)
+                                                              : (isDark
+                                                                  ? scheme
+                                                                      .onSurface
+                                                                      .withOpacity(
+                                                                          0.10)
+                                                                  : Colors.black
+                                                                      .withOpacity(
+                                                                          0.06)),
+                                                        ),
+                                                      ),
+                                                      child: Row(
+                                                        children: [
+                                                          Container(
+                                                            width: 36,
+                                                            height: 36,
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              shape: BoxShape
+                                                                  .circle,
+                                                              color: selected
+                                                                  ? const Color(
+                                                                      0xFF4A5FBC)
+                                                                  : const Color(
+                                                                          0xFF4A5FBC)
+                                                                      .withOpacity(
+                                                                          0.12),
+                                                            ),
+                                                            child: Icon(
+                                                              Icons
+                                                                  .business_center_outlined,
+                                                              color: selected
+                                                                  ? Colors.white
+                                                                  : const Color(
+                                                                      0xFF4A5FBC),
+                                                              size: 20,
+                                                            ),
+                                                          ),
+                                                          const SizedBox(
+                                                              width: 12),
+                                                          Expanded(
+                                                            child: Text(
+                                                              title,
+                                                              style: TextStyle(
+                                                                fontSize: 14.5,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w800,
+                                                                color: isDark
+                                                                    ? scheme
+                                                                        .onSurface
+                                                                    : Colors
+                                                                        .black87,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          if (selected)
+                                                            const Icon(
+                                                                Icons
+                                                                    .check_circle,
+                                                                color: Color(
+                                                                    0xFF4A5FBC)),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  );
+                                                }).toList(),
+                                              ),
+                                            ),
+                                            secondChild:
+                                                const SizedBox.shrink(),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+          // Continue button
+
+          bottomNavigationBar: _isStartingInterview
+              ? const SizedBox.shrink()
+              : SafeArea(
+                  minimum: const EdgeInsets.symmetric(horizontal: 16).copyWith(
+                    bottom: 16,
+                  ),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 54,
+                    child: FilledButton(
+                      onPressed: canContinue
+                          ? () => _confirmPermissionsThenStart(_selected!)
+                          : null,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF4A5FBC),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28),
+                        ),
+                        textStyle: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      child: _isStartingInterview
+                          ? const SizedBox(
+                              height: 22,
+                              width: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text(
+                              'Continue',
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.w700),
+                            ),
+                    ),
+                  ),
+                ),
+        ));
   }
 
   Future<void> _confirmPermissionsThenStart(String specialty) async {
@@ -788,8 +890,8 @@ class _MockInterviewSpecialtyScreenState
           title: 'Camera & Microphone Access',
           content: Text(
             'To record your interview answers, Jadeer needs permission to:\n\n'
-            '📷 Use your camera\n'
-            '🎤 Use your microphone\n\n'
+            'Use your camera\n'
+            'Use your microphone\n\n'
             'Your privacy is important to us. Recordings are only used to generate your interview report.',
           ),
           primaryLabel: 'Allow Access',
@@ -806,13 +908,18 @@ class _MockInterviewSpecialtyScreenState
   }
 
   Future<void> _startMockInterviewFlow(String specialty) async {
+    if (_isStartingInterview) return;
+
+    if (!mounted) return;
+    setState(() => _isStartingInterview = true);
+
     final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
     if (uid.isEmpty) {
       if (!mounted) return;
+      setState(() => _isStartingInterview = false);
       SnackHelper.error(context, 'Please login again.');
       return;
     }
-
     try {
       // 1) reset if needed
       final usage = await fetchAndResetAiUsageIfNeeded();
@@ -825,6 +932,7 @@ class _MockInterviewSpecialtyScreenState
       final ok = await consumeMockInterviewCredit();
       if (!ok) {
         if (!mounted) return;
+        setState(() => _isStartingInterview = false);
         SnackHelper.error(
           context,
           'You have no Mock Interview credits remaining today. Credits reset at midnight.',
@@ -865,6 +973,7 @@ class _MockInterviewSpecialtyScreenState
     } catch (e) {
       await refundMockInterviewCredit();
       if (!mounted) return;
+      setState(() => _isStartingInterview = false);
       SnackHelper.error(context, 'Failed to start mock interview: $e');
     }
   }

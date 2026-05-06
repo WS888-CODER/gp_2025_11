@@ -52,38 +52,23 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
   }
 
   @override
-void dispose() async {
-  if (!_navigatedSuccessfully && _cvHistoryId != null) {
-    try {
-      final cvDoc = await FirebaseFirestore.instance
+  void dispose() {
+    if (!_navigatedSuccessfully && _cvHistoryId != null) {
+      FirebaseFirestore.instance
           .collection('CVHistory')
           .doc(_cvHistoryId)
-          .get();
-      
-      if (cvDoc.exists) {
-        final data = cvDoc.data();
-        final newCVURL = data?['NewCVURL']?.toString() ?? '';
-        final newCVText = data?['NewCVText']?.toString() ?? '';
-        
-        if (newCVURL.isEmpty && newCVText.isEmpty) {
-          await FirebaseFirestore.instance
-              .collection('CVHistory')
-              .doc(_cvHistoryId)
-              .delete();
-          print('Deleted incomplete CV history: $_cvHistoryId');
-        }
-      }
-    } catch (e) {
-      print('Error checking CV history: $e');
+          .delete()
+          .catchError((e) {
+        print('Error deleting incomplete CV history: $e');
+      });
     }
+
+    _jobTitleController.dispose();
+    _jobDescriptionController.dispose();
+    _searchController.dispose();
+    _extractionListener?.cancel();
+    super.dispose();
   }
-  
-  _jobTitleController.dispose();
-  _jobDescriptionController.dispose();
-  _searchController.dispose();
-  _extractionListener?.cancel();
-  super.dispose();
-}
 
   Future<void> _fetchCredits() async {
     try {
@@ -412,40 +397,38 @@ void dispose() async {
     });
 
     try {
-      String? savedJobTitle;
-      String? savedJobDescription;
+      String savedJobTitle = '';
+      String savedJobDescription = '';
 
       if (_jobSelectionType == 'jadeer' && _selectedJobId != null) {
         final selectedJob = (_showAllJobs ? _allJobs : _wishlistJobs)
             .firstWhere((job) => job['id'] == _selectedJobId);
-        savedJobTitle = selectedJob['title'];
-        savedJobDescription = selectedJob['description'];
 
-        await FirebaseFirestore.instance
-            .collection('CVHistory')
-            .doc(_cvHistoryId)
-            .update({
-          'JobTitle': savedJobTitle,
-          'Description': savedJobDescription,
-        });
+        savedJobTitle = selectedJob['title'] ?? '';
+        savedJobDescription = selectedJob['description'] ?? '';
       } else if (_jobSelectionType == 'other') {
         savedJobTitle = _jobTitleController.text.trim();
         savedJobDescription = _jobDescriptionController.text.trim();
-
-        await FirebaseFirestore.instance
-            .collection('CVHistory')
-            .doc(_cvHistoryId)
-            .update({
-          'JobTitle': savedJobTitle,
-          'Description': savedJobDescription,
-        });
+      } else {
+        savedJobTitle = '';
+        savedJobDescription = '';
       }
+
+      await FirebaseFirestore.instance
+          .collection('CVHistory')
+          .doc(_cvHistoryId)
+          .update({
+        'JobTitle': savedJobTitle,
+        'Description': savedJobDescription,
+      });
+
       if (!mounted) return;
+
+      _navigatedSuccessfully = true;
 
       setState(() {
         _isSaving = false;
       });
-      _navigatedSuccessfully = true;
 
       Navigator.pushReplacementNamed(
         context,
@@ -457,6 +440,8 @@ void dispose() async {
         },
       );
     } catch (e) {
+      if (!mounted) return;
+
       setState(() {
         _isSaving = false;
       });

@@ -37,8 +37,14 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchCredits();
-    _detectMissingSections();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await _fetchCredits();
+
+      if (!mounted) return;
+      _detectMissingSections();
+    });
   }
 
   @override
@@ -98,6 +104,19 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
   }
 
   Future<void> _detectMissingSections() async {
+    if (!widget.hasJobSelection) {
+      setState(() {
+        _isDetecting = false;
+      });
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _enhanceCV();
+      });
+
+      return;
+    }
+
     setState(() {
       _isDetecting = true;
     });
