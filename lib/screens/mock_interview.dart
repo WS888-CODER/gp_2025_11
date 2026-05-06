@@ -418,9 +418,6 @@ class _MockInterviewSpecialtyScreenState
           : {};
     }
 
-    final totalResults =
-        filteredMap.values.fold<int>(0, (sum, list) => sum + list.length);
-
     final shadowColor =
         isDark ? Colors.black.withOpacity(0.6) : Colors.black.withOpacity(0.07);
     final canContinue = _selected != null &&

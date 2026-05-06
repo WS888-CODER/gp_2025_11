@@ -86,103 +86,156 @@ class NotificationsPage extends StatelessWidget {
             return const Center(child: Text('No notifications yet.'));
           }
 
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: docs.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
-            itemBuilder: (context, i) {
-              final doc = docs[i];
-              final data = doc.data();
-
-              final title = (data['JobTitle'] ?? 'Job Update').toString();
-              final msg = (data['Message'] ?? '').toString();
-              final status = (data['Status'] ?? '').toString();
-              final read = (data['Read'] ?? false) == true;
-
-              return InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () async {
-                  // mark as read
-                  await doc.reference.update({'Read': true});
-
-                  final jobId = (data['JobID'] ?? '').toString();
-                  if (jobId.isNotEmpty && context.mounted) {
-                    Navigator.pushNamed(
-                      context,
-                      '/job-details-view',
-                      arguments: {'jobId': jobId},
-                    );
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: read
-                        ? scheme.surface
-                        : scheme.primary.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: scheme.primary.withOpacity(0.15),
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.notifications_outlined,
-                        color: read
-                            ? scheme.onSurface.withOpacity(0.6)
-                            : scheme.primary,
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: Row(
+                  children: [
+                    Text(
+                      '${docs.length} Notifications',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
+                    ),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: () async {
+                        final snap = await FirebaseFirestore.instance
+                            .collection('Notification')
+                            .where('UserID', isEqualTo: uid)
+                            .get();
+
+                        final batch = FirebaseFirestore.instance.batch();
+
+                        for (final d in snap.docs) {
+                          batch.delete(d.reference);
+                        }
+
+                        await batch.commit();
+
+                        if (context.mounted) {
+                          SnackHelper.success(
+                            context,
+                            'Notifications cleared.',
+                          );
+                        }
+                      },
+                      icon: const Icon(
+                        Icons.delete_sweep_outlined,
+                        size: 18,
+                      ),
+                      label: const Text('Clear all'),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: docs.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (context, i) {
+                    final doc = docs[i];
+                    final data = doc.data();
+
+                    final title = (data['JobTitle'] ?? 'Job Update').toString();
+
+                    final msg = (data['Message'] ?? '').toString();
+
+                    final status = (data['Status'] ?? '').toString();
+
+                    final read = (data['Read'] ?? false) == true;
+
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () async {
+                        await doc.reference.update({'Read': true});
+
+                        final jobId = (data['JobID'] ?? '').toString();
+
+                        if (jobId.isNotEmpty && context.mounted) {
+                          Navigator.pushNamed(
+                            context,
+                            '/job-details-view',
+                            arguments: {'jobId': jobId},
+                          );
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: read
+                              ? scheme.surface
+                              : scheme.primary.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: scheme.primary.withOpacity(0.15),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              title,
-                              style: TextStyle(
-                                fontWeight:
-                                    read ? FontWeight.w600 : FontWeight.bold,
-                                fontSize: 15,
+                            Icon(
+                              Icons.notifications_outlined,
+                              color: read
+                                  ? scheme.onSurface.withOpacity(0.6)
+                                  : scheme.primary,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    title,
+                                    style: TextStyle(
+                                      fontWeight: read
+                                          ? FontWeight.w600
+                                          : FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    msg,
+                                    style: TextStyle(
+                                      color: scheme.onSurface.withOpacity(0.75),
+                                    ),
+                                  ),
+                                  if (status.isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      status,
+                                      style: TextStyle(
+                                        color: scheme.primary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              msg,
-                              style: TextStyle(
-                                color: scheme.onSurface.withOpacity(0.75),
-                              ),
-                            ),
-                            if (status.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                status,
-                                style: TextStyle(
+                            if (!read)
+                              Container(
+                                width: 10,
+                                height: 10,
+                                margin: const EdgeInsets.only(top: 4),
+                                decoration: BoxDecoration(
                                   color: scheme.primary,
-                                  fontWeight: FontWeight.w600,
+                                  shape: BoxShape.circle,
                                 ),
                               ),
-                            ],
                           ],
                         ),
                       ),
-                      if (!read)
-                        Container(
-                          width: 10,
-                          height: 10,
-                          margin: const EdgeInsets.only(top: 4),
-                          decoration: BoxDecoration(
-                            color: scheme.primary,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
-              );
-            },
+              ),
+            ],
           );
         },
       ),

@@ -127,3 +127,35 @@ export const notifyOnJobStatusChange = onDocumentUpdated(
     }
   }
 );
+
+export const deleteOldNotifications = onSchedule(
+  {
+    schedule: "every 24 hours",
+    region: "us-central1",
+  },
+  async () => {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const oldNotificationsSnap = await db
+      .collection("Notification")
+      .where("Date", "<", Timestamp.fromDate(thirtyDaysAgo))
+      .limit(450)
+      .get();
+
+    if (oldNotificationsSnap.empty) {
+      console.log("No old notifications to delete.");
+      return;
+    }
+
+    const batch = db.batch();
+
+    oldNotificationsSnap.docs.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+
+    await batch.commit();
+
+    console.log(`Deleted ${oldNotificationsSnap.size} old notifications.`);
+  }
+);
