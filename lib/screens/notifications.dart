@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:gp_2025_11/config/theme.dart';
+import 'package:intl/intl.dart';
 
 class NotificationService {
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
@@ -64,180 +65,256 @@ class NotificationsPage extends StatelessWidget {
     }
 
     final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return ThemedScaffold(
-      appBar: const CustomHeader(title: 'Notifications'),
-      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: FirebaseFirestore.instance
-            .collection('Notification')
-            .where('UserID', isEqualTo: uid)
-            .orderBy('Date', descending: true)
-            .snapshots(),
-        builder: (context, snap) {
-          if (snap.hasError) {
-            return Center(child: Text('Error: ${snap.error}'));
-          }
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final docs = snap.data?.docs ?? [];
+    return Container(
+      color: isDark ? scheme.background : const Color(0xFFF5F5F5),
+      child: ThemedScaffold(
+        appBar: const CustomHeader(title: 'Notifications'),
+        body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: FirebaseFirestore.instance
+              .collection('Notification')
+              .where('UserID', isEqualTo: uid)
+              .orderBy('Date', descending: true)
+              .snapshots(),
+          builder: (context, snap) {
+            if (snap.hasError) {
+              return Center(child: Text('Error: ${snap.error}'));
+            }
+            if (snap.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final docs = snap.data?.docs ?? [];
 
-          if (docs.isEmpty) {
-            return const Center(child: Text('No notifications yet.'));
-          }
-
-          return Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: Row(
+            if (docs.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      '${docs.length} Notifications',
-                      style: const TextStyle(
-                        fontSize: 16,
+                    Icon(
+                      Icons.notifications_none_outlined,
+                      size: 70,
+                      color: scheme.primary.withOpacity(0.45),
+                    ),
+                    const SizedBox(height: 14),
+                    const Text(
+                      'No notifications yet',
+                      style: TextStyle(
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const Spacer(),
-                    TextButton.icon(
-                      onPressed: () async {
-                        final snap = await FirebaseFirestore.instance
-                            .collection('Notification')
-                            .where('UserID', isEqualTo: uid)
-                            .get();
-
-                        final batch = FirebaseFirestore.instance.batch();
-
-                        for (final d in snap.docs) {
-                          batch.delete(d.reference);
-                        }
-
-                        await batch.commit();
-
-                        if (context.mounted) {
-                          SnackHelper.success(
-                            context,
-                            'Notifications cleared.',
-                          );
-                        }
-                      },
-                      icon: const Icon(
-                        Icons.delete_sweep_outlined,
-                        size: 18,
+                    const SizedBox(height: 6),
+                    Text(
+                      'Your updates will appear here.',
+                      style: TextStyle(
+                        color: scheme.onSurface.withOpacity(0.55),
+                        fontSize: 14,
                       ),
-                      label: const Text('Clear all'),
                     ),
                   ],
                 ),
-              ),
-              Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: docs.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (context, i) {
-                    final doc = docs[i];
-                    final data = doc.data();
+              );
+            }
 
-                    final title = (data['JobTitle'] ?? 'Job Update').toString();
-
-                    final msg = (data['Message'] ?? '').toString();
-
-                    final status = (data['Status'] ?? '').toString();
-
-                    final read = (data['Read'] ?? false) == true;
-
-                    return InkWell(
-                      borderRadius: BorderRadius.circular(16),
-                      onTap: () async {
-                        await doc.reference.update({'Read': true});
-
-                        final jobId = (data['JobID'] ?? '').toString();
-
-                        if (jobId.isNotEmpty && context.mounted) {
-                          Navigator.pushNamed(
-                            context,
-                            '/job-details-view',
-                            arguments: {'jobId': jobId},
-                          );
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: read
-                              ? scheme.surface
-                              : scheme.primary.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: scheme.primary.withOpacity(0.15),
-                            width: 1,
-                          ),
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: Row(
+                    children: [
+                      Text(
+                        '${docs.length} Notifications',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
                         ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(
-                              Icons.notifications_outlined,
-                              color: read
-                                  ? scheme.onSurface.withOpacity(0.6)
-                                  : scheme.primary,
+                      ),
+                      const Spacer(),
+                      TextButton.icon(
+                        onPressed: () async {
+                          final snap = await FirebaseFirestore.instance
+                              .collection('Notification')
+                              .where('UserID', isEqualTo: uid)
+                              .get();
+
+                          final batch = FirebaseFirestore.instance.batch();
+
+                          for (final d in snap.docs) {
+                            batch.delete(d.reference);
+                          }
+
+                          await batch.commit();
+
+                          if (context.mounted) {
+                            SnackHelper.success(
+                              context,
+                              'Notifications cleared.',
+                            );
+                          }
+                        },
+                        icon: const Icon(
+                          Icons.delete_sweep_outlined,
+                          size: 18,
+                        ),
+                        label: const Text('Clear all'),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: docs.length,
+                    itemBuilder: (context, i) {
+                      final doc = docs[i];
+                      final data = doc.data();
+
+                      final title =
+                          (data['JobTitle'] ?? 'Job Update').toString();
+                      final msg = (data['Message'] ?? '').toString();
+                      final status = (data['Status'] ?? '').toString();
+                      final read = (data['Read'] ?? false) == true;
+                      final dateValue = data['Date'];
+                      String dateText = '';
+
+                      if (dateValue is Timestamp) {
+                        dateText = DateFormat('MMM d • h:mm a')
+                            .format(dateValue.toDate());
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Dismissible(
+                          key: Key(doc.id),
+                          direction: DismissDirection.endToStart,
+                          background: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              alignment: Alignment.centerRight,
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 20),
+                              color: Colors.redAccent,
+                              child: const Icon(
+                                Icons.delete,
+                                color: Colors.white,
+                              ),
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                          ),
+                          onDismissed: (_) async {
+                            await doc.reference.delete();
+
+                            if (context.mounted) {
+                              SnackHelper.success(
+                                context,
+                                'Notification deleted.',
+                              );
+                            }
+                          },
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(20),
+                            onTap: () async {
+                              await doc.reference.update({'Read': true});
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                              decoration: BoxDecoration(
+                                color: scheme.surface,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color:
+                                      const Color(0xFF4A5FBC).withOpacity(0.08),
+                                  width: 1,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.04),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  Text(
-                                    title,
-                                    style: TextStyle(
-                                      fontWeight: read
-                                          ? FontWeight.w600
-                                          : FontWeight.bold,
-                                      fontSize: 15,
+                                  Icon(
+                                    Icons.notifications_none,
+                                    color: scheme.primary,
+                                    size: 24,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          title,
+                                          style: TextStyle(
+                                            fontWeight: read
+                                                ? FontWeight.w600
+                                                : FontWeight.bold,
+                                            fontSize: 15,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          msg,
+                                          style: TextStyle(
+                                            color: scheme.onSurface
+                                                .withOpacity(0.75),
+                                          ),
+                                        ),
+                                        if (dateText.isNotEmpty) ...[
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            dateText,
+                                            style: TextStyle(
+                                              color: scheme.onSurface
+                                                  .withOpacity(0.45),
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                        if (status.isNotEmpty) ...[
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            status,
+                                            style: TextStyle(
+                                              color: scheme.primary,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
                                     ),
                                   ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    msg,
-                                    style: TextStyle(
-                                      color: scheme.onSurface.withOpacity(0.75),
-                                    ),
-                                  ),
-                                  if (status.isNotEmpty) ...[
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      status,
-                                      style: TextStyle(
+                                  if (!read)
+                                    Container(
+                                      width: 10,
+                                      height: 10,
+                                      margin: const EdgeInsets.only(top: 4),
+                                      decoration: BoxDecoration(
                                         color: scheme.primary,
-                                        fontWeight: FontWeight.w600,
+                                        shape: BoxShape.circle,
                                       ),
                                     ),
-                                  ],
                                 ],
                               ),
                             ),
-                            if (!read)
-                              Container(
-                                width: 10,
-                                height: 10,
-                                margin: const EdgeInsets.only(top: 4),
-                                decoration: BoxDecoration(
-                                  color: scheme.primary,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                          ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }

@@ -3274,7 +3274,6 @@ export const deleteOldRejectedApplications = onSchedule(
 );
 export {
   notifyOnJobStatusChange,
-  notifyAdminOnNewCompanyRegistration,
 } from "./notification/notifyJobStatus.js";
 
 export const deleteOldNotifications = onSchedule(

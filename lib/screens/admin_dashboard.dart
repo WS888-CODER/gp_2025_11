@@ -143,7 +143,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
             // ======== Filter chips row (All / Pending / ...) ========
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(8.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8),
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 physics: const ClampingScrollPhysics(),
@@ -385,38 +386,31 @@ class AdminDashboardAppBarState extends State<AdminDashboardAppBar> {
                           ],
                         ),
                       ),
-                      Row(
-                        children: [
-                          _AdminNotificationIcon(),
-                          const SizedBox(width: 10),
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.pushNamed(
-                                context,
-                                '/settings',
-                                arguments: {
-                                  'userId':
-                                      FirebaseAuth.instance.currentUser?.uid ??
-                                          '',
-                                  'userType': 'Admin',
-                                },
-                              );
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.pushNamed(
+                            context,
+                            '/settings',
+                            arguments: {
+                              'userId':
+                                  FirebaseAuth.instance.currentUser?.uid ?? '',
+                              'userType': 'Admin',
                             },
-                            child: Container(
-                              width: 46,
-                              height: 46,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.15),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.settings_outlined,
-                                color: Colors.white,
-                                size: 24,
-                              ),
-                            ),
+                          );
+                        },
+                        child: Container(
+                          width: 46,
+                          height: 46,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            shape: BoxShape.circle,
                           ),
-                        ],
+                          child: const Icon(
+                            Icons.settings_outlined,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -618,77 +612,6 @@ class _InfoRow extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _AdminNotificationIcon extends StatelessWidget {
-  const _AdminNotificationIcon();
-
-  @override
-  Widget build(BuildContext context) {
-    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
-
-    return GestureDetector(
-      onTap: () {
-        Navigator.pushNamed(context, '/notifications');
-      },
-      child: Container(
-        width: 46,
-        height: 46,
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
-          shape: BoxShape.circle,
-        ),
-        child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: FirebaseFirestore.instance
-              .collection('Notification')
-              .where('UserID', isEqualTo: uid)
-              .where('Read', isEqualTo: false)
-              .snapshots(),
-          builder: (context, snapshot) {
-            final unreadCount = snapshot.data?.docs.length ?? 0;
-
-            return Stack(
-              clipBehavior: Clip.none,
-              children: [
-                const Center(
-                  child: Icon(
-                    Icons.notifications_outlined,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-                if (unreadCount > 0)
-                  Positioned(
-                    right: 6,
-                    top: 6,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      constraints: const BoxConstraints(
-                        minWidth: 18,
-                        minHeight: 18,
-                      ),
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        unreadCount > 99 ? '99+' : unreadCount.toString(),
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            );
-          },
-        ),
-      ),
     );
   }
 }

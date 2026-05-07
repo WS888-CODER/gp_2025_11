@@ -279,125 +279,131 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final settings = Provider.of<AppSettingsNotifier>(context);
     final isAdmin = widget.userType == 'Admin';
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return ThemedScaffold(
-      appBar: const CustomHeader(title: 'Settings'),
-      body: Padding(
-        padding: const EdgeInsets.fromLTRB(20.0, 30.0, 20.0, 0),
-        child: ListView(
-          children: [
-            SettingsSectionCard(
-              child: _SettingsSwitchItem(
-                title: 'Appearance',
-                icon: Icons.light_mode,
-                iconColor: Colors.orange,
-                value: settings.themeMode == ThemeMode.dark,
-                onChanged: (value) => _toggleTheme(settings, value),
-                switchColor: const Color(0xFFFD6C67),
-                isTitleBold: true,
-                subtitle: Text(
-                  settings.themeMode == ThemeMode.dark
-                      ? 'Dark Mode'
-                      : 'Light Mode',
-                ),
-              ),
-            ),
-            if (!isAdmin) ...[
+    return Container(
+      color: isDark ? scheme.background : const Color(0xFFF5F5F5),
+      child: ThemedScaffold(
+        appBar: const CustomHeader(title: 'Settings'),
+        body: Padding(
+          padding: const EdgeInsets.fromLTRB(20.0, 30.0, 20.0, 0),
+          child: ListView(
+            children: [
               SettingsSectionCard(
                 child: _SettingsSwitchItem(
-                  title: 'Notifications',
-                  icon: Icons.notifications_none,
-                  iconColor: Colors.purple,
-                  value: _isNotificationsEnabled,
-                  onChanged: (v) => _toggleNotifications(v),
+                  title: 'Appearance',
+                  icon: Icons.light_mode,
+                  iconColor: Colors.orange,
+                  value: settings.themeMode == ThemeMode.dark,
+                  onChanged: (value) => _toggleTheme(settings, value),
                   switchColor: const Color(0xFFFD6C67),
-                  subtitle: const Text('Manage alerts and reminders'),
                   isTitleBold: true,
-                ),
-              ),
-              SettingsSectionCard(
-                child: _SettingsItem(
-                  title: 'Change Password',
-                  icon: Icons.lock_outline,
-                  iconColor: _brandColor,
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.pushNamed(context, '/change-password'),
-                  subtitle: const Text('Reset your password securely'),
-                  isTitleBold: true,
-                ),
-              ),
-              SettingsSectionCard(
-                child: _SettingsItem(
-                  title: 'My Account Details',
-                  icon: Icons.account_circle,
-                  iconColor: Colors.teal,
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.pushNamed(
-                      context,
-                      '/account-details',
-                      arguments: {
-                        'userId': FirebaseAuth.instance.currentUser!.uid,
-                        'userType': widget.userType,
-                      },
-                    );
-                  },
-                  subtitle: const Text('Account information overview'),
-                  isTitleBold: true,
-                ),
-              ),
-            ],
-            SettingsSectionCard(
-              child: _SettingsItem(
-                title: 'About',
-                icon: Icons.info_outline,
-                iconColor: Colors.lightGreen,
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.pushNamed(context, '/about'),
-                subtitle: const Text('App version and information'),
-                isTitleBold: true,
-              ),
-            ),
-            SettingsSectionCard(
-              child: _SettingsItem(
-                title: 'Log Out',
-                icon: Icons.logout,
-                iconColor: Colors.red,
-                onTap: () => _handleLogout(context),
-                isTitleBold: true,
-              ),
-            ),
-            if (!isAdmin)
-              SettingsSectionCard(
-                child: _SettingsItem(
-                  title: widget.userType == 'JobSeeker'
-                      ? 'Delete Account'
-                      : 'Delete Company Account',
-                  icon: Icons.delete_forever_outlined,
-                  iconColor: Colors.red,
-                  trailing: _isDeletingAccount
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.red,
-                          ),
-                        )
-                      : const Icon(Icons.chevron_right),
-                  onTap: () {
-                    if (_isDeletingAccount) return;
-                    _handleDeleteAccount(context);
-                  },
                   subtitle: Text(
-                    widget.userType == 'JobSeeker'
-                        ? 'Permanently delete your account and all related data'
-                        : 'Permanently delete your company account and all related data',
+                    settings.themeMode == ThemeMode.dark
+                        ? 'Dark Mode'
+                        : 'Light Mode',
                   ),
+                ),
+              ),
+              if (!isAdmin) ...[
+                SettingsSectionCard(
+                  child: _SettingsSwitchItem(
+                    title: 'Notifications',
+                    icon: Icons.notifications_none,
+                    iconColor: Colors.purple,
+                    value: _isNotificationsEnabled,
+                    onChanged: (v) => _toggleNotifications(v),
+                    switchColor: const Color(0xFFFD6C67),
+                    subtitle: const Text('Manage alerts and reminders'),
+                    isTitleBold: true,
+                  ),
+                ),
+                SettingsSectionCard(
+                  child: _SettingsItem(
+                    title: 'Change Password',
+                    icon: Icons.lock_outline,
+                    iconColor: _brandColor,
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () =>
+                        Navigator.pushNamed(context, '/change-password'),
+                    subtitle: const Text('Reset your password securely'),
+                    isTitleBold: true,
+                  ),
+                ),
+                SettingsSectionCard(
+                  child: _SettingsItem(
+                    title: 'My Account Details',
+                    icon: Icons.account_circle,
+                    iconColor: Colors.teal,
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.pushNamed(
+                        context,
+                        '/account-details',
+                        arguments: {
+                          'userId': FirebaseAuth.instance.currentUser!.uid,
+                          'userType': widget.userType,
+                        },
+                      );
+                    },
+                    subtitle: const Text('Account information overview'),
+                    isTitleBold: true,
+                  ),
+                ),
+              ],
+              SettingsSectionCard(
+                child: _SettingsItem(
+                  title: 'About',
+                  icon: Icons.info_outline,
+                  iconColor: Colors.lightGreen,
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.pushNamed(context, '/about'),
+                  subtitle: const Text('App version and information'),
                   isTitleBold: true,
                 ),
               ),
-          ],
+              SettingsSectionCard(
+                child: _SettingsItem(
+                  title: 'Log Out',
+                  icon: Icons.logout,
+                  iconColor: Colors.red,
+                  onTap: () => _handleLogout(context),
+                  isTitleBold: true,
+                ),
+              ),
+              if (!isAdmin)
+                SettingsSectionCard(
+                  child: _SettingsItem(
+                    title: widget.userType == 'JobSeeker'
+                        ? 'Delete Account'
+                        : 'Delete Company Account',
+                    icon: Icons.delete_forever_outlined,
+                    iconColor: Colors.red,
+                    trailing: _isDeletingAccount
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.red,
+                            ),
+                          )
+                        : const Icon(Icons.chevron_right),
+                    onTap: () {
+                      if (_isDeletingAccount) return;
+                      _handleDeleteAccount(context);
+                    },
+                    subtitle: Text(
+                      widget.userType == 'JobSeeker'
+                          ? 'Permanently delete your account and all related data'
+                          : 'Permanently delete your company account and all related data',
+                    ),
+                    isTitleBold: true,
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
