@@ -315,13 +315,16 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
   final bool showBack;
   final List<Widget>? actions;
   final Widget? leading;
-
+  final bool transparent;
+  final bool rounded;
   const CustomHeader({
     super.key,
     required this.title,
     this.showBack = true,
     this.actions,
     this.leading,
+    this.transparent = false,
+    this.rounded = true,
   });
 
   @override
@@ -345,50 +348,59 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
       height: preferredSize.height,
       width: double.infinity,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [primaryTop, primaryBottom],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(40),
-          bottomRight: Radius.circular(40),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: shadowColor,
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        color: transparent ? Colors.transparent : null,
+        gradient: transparent
+            ? null
+            : LinearGradient(
+                colors: [primaryTop, primaryBottom],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+        borderRadius: rounded
+            ? const BorderRadius.only(
+                bottomLeft: Radius.circular(40),
+                bottomRight: Radius.circular(40),
+              )
+            : null,
+        boxShadow: transparent
+            ? []
+            : [
+                BoxShadow(
+                  color: shadowColor,
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
       ),
       child: Stack(
         children: [
           // decorations
-          Positioned(
-            top: -60,
-            right: -40,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: bubbleColor,
+          if (!transparent)
+            Positioned(
+              top: -60,
+              right: -40,
+              child: Container(
+                width: 200,
+                height: 200,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: bubbleColor,
+                ),
               ),
             ),
-          ),
-          Positioned(
-            bottom: -20,
-            left: -30,
-            child: Container(
-              width: 140,
-              height: 140,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: bubbleColor,
+          if (!transparent)
+            Positioned(
+              bottom: -20,
+              left: -30,
+              child: Container(
+                width: 140,
+                height: 140,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: bubbleColor,
+                ),
               ),
             ),
-          ),
 
           SafeArea(
             child: Stack(
@@ -455,7 +467,7 @@ class ThemedScaffold extends StatelessWidget {
   final Widget? endDrawer;
   final bool? resizeToAvoidBottomInset;
   final Color? overridePageBgColor;
-
+  final bool extendBodyBehindAppBar;
   const ThemedScaffold({
     super.key,
     this.appBar,
@@ -466,6 +478,7 @@ class ThemedScaffold extends StatelessWidget {
     this.endDrawer,
     this.resizeToAvoidBottomInset,
     this.overridePageBgColor,
+    this.extendBodyBehindAppBar = false,
   });
 
   @override
@@ -484,6 +497,7 @@ class ThemedScaffold extends StatelessWidget {
       drawer: drawer,
       endDrawer: endDrawer,
       resizeToAvoidBottomInset: resizeToAvoidBottomInset,
+      extendBodyBehindAppBar: extendBodyBehindAppBar,
     );
   }
 }

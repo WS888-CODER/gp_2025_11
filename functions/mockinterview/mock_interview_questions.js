@@ -412,7 +412,10 @@ function topUpToExactCount({ questions, bucketSpecialty, total, domainTarget, ps
 /* ===================== Cloud Function ===================== */
 
 export const generateMockInterviewQuestions = v2.https.onRequest(
-  { region: "us-central1", cors: true },
+  { 
+    region: "us-central1",
+    cors: true,
+    secrets: ["OPENAI_API_KEY"],  },
   async (req, res) => {
     try {
       if (req.method !== "POST") {

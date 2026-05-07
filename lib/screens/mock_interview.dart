@@ -1624,323 +1624,235 @@ class _MockInterviewSessionScreenState
             icon: const Icon(Icons.arrow_back, color: Color(0xFFFFFFFF)),
             onPressed: () => Navigator.of(context).maybePop(),
           ),
+          transparent: false,
+          rounded: false,
         ),
-        body: Container(
-          color: isDark ? scheme.background : const Color(0xFFF5F5F5),
-          child: _isGeneratingReport
-              ? _buildGeneratingReportUI(context)
-              : _initializing
-                  ? const Center(child: CircularProgressIndicator())
-                  : (_error != null)
-                      ? Padding(
+
+        // extendBodyBehindAppBar: true,
+        body: _isGeneratingReport
+            ? _buildGeneratingReportUI(context)
+            : _initializing
+                ? const Center(child: CircularProgressIndicator())
+                : (_error != null)
+                    ? Center(
+                        child: Padding(
                           padding: const EdgeInsets.all(20),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                _error!,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(color: scheme.error),
-                              ),
-                              const SizedBox(height: 12),
-                              FilledButton(
-                                onPressed: _initPermissionsAndCamera,
-                                child: const Text('Try again'),
-                              ),
-                            ],
+                          child: Text(
+                            _error!,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: scheme.error),
                           ),
-                        )
-                      : SingleChildScrollView(
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              minHeight:
-                                  MediaQuery.of(context).size.height - 100,
+                        ),
+                      )
+                    : Stack(
+                        children: [
+                          Positioned.fill(
+                            child: CameraPreview(_camera!),
+                          ),
+                          Positioned.fill(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.black.withOpacity(0.25),
+                                    Colors.transparent,
+                                    Colors.black.withOpacity(0.75),
+                                  ],
+                                ),
+                              ),
                             ),
-                            child: IntrinsicHeight(
+                          ),
+                          Positioned(
+                            top: 20,
+                            left: 0,
+                            right: 250,
+                            child: Center(
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _faceDetected
+                                      ? Colors.green.withOpacity(0.85)
+                                      : Colors.red.withOpacity(0.85),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      _faceDetected
+                                          ? Icons.check_circle
+                                          : Icons.warning_rounded,
+                                      color: Colors.white,
+                                      size: 14,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      _faceDetected
+                                          ? 'Face detected'
+                                          : 'No face detected',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            left: 16,
+                            right: 16,
+                            bottom: 150,
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.55),
+                                borderRadius: BorderRadius.circular(22),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.18),
+                                ),
+                              ),
                               child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // Camera preview with face detection overlay
-                                  Padding(
-                                    padding: const EdgeInsets.all(16),
-                                    child: Stack(
-                                      children: [
-                                        ClipRRect(
-                                          borderRadius:
-                                              BorderRadius.circular(22),
-                                          child: SizedBox(
-                                            height: 320,
-                                            width: double.infinity,
-                                            child: CameraPreview(_camera!),
-                                          ),
-                                        ),
-                                        // ✅ FACE DETECTION INDICATOR
-                                        Positioned(
-                                          top: 16,
-                                          right: 16,
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 12,
-                                              vertical: 8,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: _faceDetected
-                                                  ? Colors.green
-                                                      .withOpacity(0.9)
-                                                  : Colors.red.withOpacity(0.9),
-                                              borderRadius:
-                                                  BorderRadius.circular(20),
-                                            ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Icon(
-                                                  _faceDetected
-                                                      ? Icons.check_circle
-                                                      : Icons.warning,
-                                                  color: Colors.white,
-                                                  size: 16,
-                                                ),
-                                                const SizedBox(width: 6),
-                                                Text(
-                                                  _faceDetected
-                                                      ? 'Face detected'
-                                                      : 'No face detected',
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-
-                                  // Question card
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 16),
-                                    child: Container(
-                                      width: double.infinity,
-                                      padding: const EdgeInsets.all(16),
-                                      decoration: BoxDecoration(
-                                        color: isDark
-                                            ? scheme.surface
-                                            : Colors.white,
-                                        borderRadius: BorderRadius.circular(18),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withOpacity(
-                                                isDark ? 0.6 : 0.08),
-                                            blurRadius: 10,
-                                            offset: const Offset(0, 4),
-                                          ),
-                                        ],
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Question ${_index + 1}/${widget.questions.length}',
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: isDark
-                                                  ? scheme.onSurface
-                                                      .withOpacity(0.7)
-                                                  : Colors.black54,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 10),
-                                          Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  _currentQuestion,
-                                                  style: const TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w800,
-                                                    height: 1.3,
-                                                  ),
-                                                ),
-                                              ),
-                                              IconButton(
-                                                onPressed: _toggleSpeak,
-                                                icon: Icon(
-                                                  size: 30,
-                                                  _isSpeaking
-                                                      ? Icons.stop_circle
-                                                      : Icons.volume_up_rounded,
-                                                  color: _isSpeaking
-                                                      ? const Color(0xFFFD6C67)
-                                                      : const Color(0xFF4A5FBC),
-                                                ),
-                                                tooltip: _isSpeaking
-                                                    ? 'Stop'
-                                                    : 'Listen',
-                                              ),
-                                            ],
-                                          ),
-                                          Text(
-                                            'Answer by voice, then press Next.',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: isDark
-                                                  ? scheme.onSurface
-                                                      .withOpacity(0.7)
-                                                  : Colors.black54,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 20),
-
-                                  Center(
-                                    child: GestureDetector(
-                                      onTap: (_isUploadingAnswer)
-                                          ? null
-                                          : _toggleRecording,
-                                      child: Container(
-                                        width: 84,
-                                        height: 84,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: _isRecording
-                                              ? const Color(0xFFFD6C67)
-                                              : const Color(0xFF4A5FBC),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withOpacity(
-                                                  isDark ? 0.6 : 0.12),
-                                              blurRadius: 14,
-                                              offset: const Offset(0, 6),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Icon(
-                                          _isRecording
-                                              ? Icons.stop_rounded
-                                              : Icons.mic_rounded,
-                                          size: 40,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-
-                                  const SizedBox(height: 10),
-
                                   Text(
-                                    _isRecording
-                                        ? 'Recording… ${_fmt(_recordDuration)}'
-                                        : _isUploadingAnswer
-                                            ? 'Uploading… ${(_uploadProgress * 100).toStringAsFixed(0)}%'
-                                            : (_answerUrls[_index].isNotEmpty
-                                                ? 'Answer uploaded'
-                                                : 'Tap the mic to record'),
-                                    style: TextStyle(
+                                    'Question ${_index + 1}/${widget.questions.length}',
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 13,
                                       fontWeight: FontWeight.w600,
-                                      color: isDark
-                                          ? scheme.onSurface.withOpacity(0.8)
-                                          : Colors.black87,
                                     ),
                                   ),
-
-                                  if (!_isRecording &&
-                                      !_isUploadingAnswer &&
-                                      _answerUrls[_index].isNotEmpty) ...[
-                                    const SizedBox(height: 10),
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        FilledButton.tonalIcon(
-                                          onPressed: _togglePlayback,
-                                          icon: Icon(
-                                            _isPlaying
-                                                ? Icons.pause
-                                                : Icons.play_arrow,
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          _currentQuestion,
+                                          style: const TextStyle(
                                             color: Colors.white,
-                                          ),
-                                          label: Text(
-                                            _isPlaying ? 'Pause' : 'Listen',
-                                            style: const TextStyle(
-                                                color: Colors.white),
+                                            fontSize: 17,
+                                            fontWeight: FontWeight.w800,
+                                            height: 1.35,
                                           ),
                                         ),
-                                        const SizedBox(width: 10),
-                                        OutlinedButton.icon(
-                                          style: OutlinedButton.styleFrom(
-                                            side: const BorderSide(
-                                              width: 2,
-                                              color: Color(0xFF4A5FBC),
-                                            ),
-                                          ),
-                                          onPressed: () async {
-                                            final ok = await showDialog<bool>(
-                                              context: context,
-                                              barrierDismissible: false,
-                                              builder: (_) =>
-                                                  const JadeerDialog<bool>(
-                                                title: 'Replace recording?',
-                                                content: Text(
-                                                    'This will overwrite your current answer. Continue?'),
-                                                primaryLabel: 'Replace',
-                                                primaryResult: true,
-                                                secondaryLabel: 'Cancel',
-                                                secondaryResult: false,
-                                              ),
-                                            );
-
-                                            if (ok != true) return;
-
-                                            await _player.stop();
-                                            if (!mounted) return;
-                                            setState(() {
-                                              _isPlaying = false;
-                                              _currentPlaybackUrl = null;
-                                              _answerUrls[_index] = '';
-                                            });
-
-                                            await Future.delayed(const Duration(
-                                                milliseconds: 200));
-                                            if (!mounted) return;
-                                            await _toggleRecording();
-                                          },
-                                          icon: const Icon(Icons.refresh),
-                                          label: const Text('Re-record'),
+                                      ),
+                                      IconButton(
+                                        onPressed: _toggleSpeak,
+                                        icon: Icon(
+                                          _isSpeaking
+                                              ? Icons.stop_circle
+                                              : Icons.volume_up_rounded,
+                                          color: _isSpeaking
+                                              ? const Color(0xFFFD6C67)
+                                              : Colors.white,
+                                          size: 30,
                                         ),
-                                      ],
-                                    ),
-                                  ],
-                                  if (_isUploadingAnswer) ...[
-                                    const SizedBox(height: 8),
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 24),
-                                      child: LinearProgressIndicator(
-                                          value: _uploadProgress),
-                                    ),
-                                  ],
+                                      ),
+                                    ],
+                                  ),
                                 ],
                               ),
                             ),
                           ),
-                        ),
-        ),
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 72,
+                            child: Column(
+                              children: [
+                                GestureDetector(
+                                  onTap: _isUploadingAnswer
+                                      ? null
+                                      : _toggleRecording,
+                                  child: Container(
+                                    width: 86,
+                                    height: 86,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: _isRecording
+                                          ? const Color(0xFFFD6C67)
+                                          : const Color(0xFF4A5FBC),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.35),
+                                          blurRadius: 18,
+                                          offset: const Offset(0, 8),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Icon(
+                                      _isRecording
+                                          ? Icons.stop_rounded
+                                          : Icons.mic_rounded,
+                                      size: 42,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  _isRecording
+                                      ? 'Recording… ${_fmt(_recordDuration)}'
+                                      : _isUploadingAnswer
+                                          ? 'Uploading… ${(_uploadProgress * 100).toStringAsFixed(0)}%'
+                                          : (_answerUrls[_index].isNotEmpty
+                                              ? 'Answer uploaded'
+                                              : 'Tap the mic to record'),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                if (_isUploadingAnswer) ...[
+                                  const SizedBox(height: 8),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 32),
+                                    child: LinearProgressIndicator(
+                                      value: _uploadProgress,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          Positioned(
+                            left: 16,
+                            right: 16,
+                            bottom: 12 + MediaQuery.of(context).padding.bottom,
+                            child: SizedBox(
+                              height: 52,
+                              child: FilledButton(
+                                onPressed: _canGoNext ? _next : null,
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: const Color(0xFF4A5FBC),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(28),
+                                  ),
+                                ),
+                                child: Text(_isLast ? 'Finish' : 'Next'),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
         bottomNavigationBar: _isGeneratingReport
             ? const SizedBox.shrink()
             : SafeArea(
                 minimum: const EdgeInsets.symmetric(horizontal: 16)
-                    .copyWith(bottom: 16, top: 4),
+                    .copyWith(bottom: 30, top: 10),
                 child: SizedBox(
                   width: double.infinity,
                   height: 54,
