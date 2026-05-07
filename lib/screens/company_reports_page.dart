@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:gp_2025_11/config/theme.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class CompanyReportsPage extends StatelessWidget {
@@ -203,12 +204,11 @@ class _CompanyJobApplicationsPageState
           if (apps.isEmpty) {
             return const Center(
               child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Text(
-                  'There are no applications for this job yet.',
-                  textAlign: TextAlign.center,
-                ),
-              ),
+                  padding: EdgeInsets.all(24),
+                  child: EmptyState(
+                      icon: Icons.work_outline_outlined,
+                      title: 'No applications yet',
+                      subtitle: 'There are no applications for this job yet')),
             );
           }
 
@@ -220,37 +220,41 @@ class _CompanyJobApplicationsPageState
 
           return Column(
             children: [
-              Container(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '${apps.length} applicant(s)',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                        ),
-                      ),
+              _ApplicationsSummary(apps: apps),
+              if (_selectedApplicationIds.isNotEmpty)
+                Container(
+                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: scheme.primary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: scheme.primary.withOpacity(0.15),
                     ),
-                    if (_selectedApplicationIds.isNotEmpty) ...[
+                  ),
+                  child: Row(
+                    children: [
                       Text(
                         '${_selectedApplicationIds.length} selected',
                         style: TextStyle(
                           color: scheme.primary,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const Spacer(),
                       PopupMenuButton<String>(
-                        enabled: !_bulkLoading,
-                        onSelected: (value) async {
-                          await _bulkUpdateStatus(
-                            context,
-                            apps,
-                            value,
-                          );
-                        },
+                        onSelected: _bulkLoading
+                            ? null
+                            : (value) async {
+                                await _bulkUpdateStatus(
+                                  context,
+                                  apps,
+                                  value,
+                                );
+                              },
                         itemBuilder: (_) => const [
                           PopupMenuItem(
                             value: 'Shortlisted',
@@ -263,35 +267,37 @@ class _CompanyJobApplicationsPageState
                         ],
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 10,
+                            horizontal: 8,
+                            vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: scheme.primary,
-                            borderRadius: BorderRadius.circular(12),
+                            //  color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                          child: _bulkLoading
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Text(
-                                  'Bulk Action',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.edit_outlined,
+                                color: scheme.primary,
+                                size: 25,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
+                      IconButton(
+                        tooltip: 'Clear selection',
+                        onPressed: () {
+                          setState(() {
+                            _selectedApplicationIds.clear();
+                          });
+                        },
+                        icon: const Icon(Icons.close),
+                      ),
                     ],
-                  ],
+                  ),
                 ),
-              ),
               Expanded(
                 child: ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
@@ -399,12 +405,8 @@ class _CompanyJobApplicationsPageState
                                     ),
                                     const SizedBox(width: 10),
                                     Expanded(
-                                      child: _InfoBox(
-                                        label: 'Report',
-                                        value: reportUrl.isNotEmpty
-                                            ? 'Available'
-                                            : 'Not available',
-                                      ),
+                                      child: _ReportStatusBox(
+                                          isAvailable: reportUrl.isNotEmpty),
                                     ),
                                   ],
                                 ),
@@ -424,11 +426,16 @@ class _CompanyJobApplicationsPageState
                                           ),
                                         ),
                                         onPressed: () {
-                                          _showApplicationDetails(
+                                          Navigator.push(
                                             context,
-                                            applicationId: app.id,
-                                            applicationData: data,
-                                            userData: user,
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  CandidateDetailsPage(
+                                                applicationId: app.id,
+                                                applicationData: data,
+                                                userData: user,
+                                              ),
+                                            ),
                                           );
                                         },
                                         child: const Text('View Details'),
@@ -625,261 +632,6 @@ class _CompanyJobApplicationsPageState
             'Some updates failed (${failed.length}). You can retry those only.',
           ),
         ),
-      );
-    }
-  }
-
-  Future<void> _showApplicationDetails(
-    BuildContext context, {
-    required String applicationId,
-    required Map<String, dynamic> applicationData,
-    required Map<String, dynamic> userData,
-  }) async {
-    final reportUrl = (applicationData['ReportURL'] ?? '').toString();
-    final cvUrl = ((applicationData['ApplicationCVURL'] ??
-                userData['CVURL'] ??
-                userData['CvURL']) ??
-            '')
-        .toString();
-
-    final fullName =
-        (userData['FullName'] ?? userData['Name'] ?? 'Unknown').toString();
-    final nationality = (userData['Nationality'] ?? '').toString();
-    final phone = (userData['Phone'] ?? '').toString();
-    final email =
-        (userData['ContactEmail'] ?? userData['Email'] ?? '').toString();
-    final photo = (userData['PhotoURL'] ?? '').toString();
-    final dob = _formatDate(_asDate(userData['DoB']));
-
-    final breakdown = _scoreBreakdown(applicationData);
-
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) {
-        return Padding(
-          padding: const EdgeInsets.all(18),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 46,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade400,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 34,
-                      backgroundImage:
-                          photo.isNotEmpty ? NetworkImage(photo) : null,
-                      child: photo.isEmpty
-                          ? const Icon(Icons.person, size: 30)
-                          : null,
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Text(
-                        fullName,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                const Text(
-                  'Profile Information',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
-                ),
-                const SizedBox(height: 10),
-                _detailRow('Full Name', fullName),
-                _detailRow(
-                    'Nationality', nationality.isEmpty ? '-' : nationality),
-                _detailRow('Date of Birth', dob),
-                _detailRow('Phone', phone.isEmpty ? '-' : phone),
-                _detailRow('Email', email.isEmpty ? '-' : email),
-                const SizedBox(height: 18),
-                const Text(
-                  'Score Breakdown',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
-                ),
-                const SizedBox(height: 10),
-                ...breakdown.map(
-                  (item) => _detailRow(
-                    '${item.label} (${item.weightText})',
-                    '${item.score.toStringAsFixed(0)} → ${item.contribution.toStringAsFixed(1)} pts',
-                  ),
-                ),
-                _detailRow(
-                  'Final Score',
-                  '${_finalScore(applicationData)} / 100',
-                ),
-                const SizedBox(height: 18),
-                const Text(
-                  'Documents',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(
-                            color: Color(0xFF4A5FBC),
-                            width: 1.5,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                        ),
-                        onPressed: cvUrl.isEmpty
-                            ? null
-                            : () => _openUrl(context, cvUrl),
-                        icon: const Icon(Icons.visibility_outlined),
-                        label: const Text('View CV'),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor:
-                              Theme.of(context).colorScheme.primary,
-                          side: const BorderSide(
-                            color: Color(0xFF4A5FBC),
-                            width: 1.5,
-                          ),
-                          backgroundColor: Theme.of(context)
-                              .colorScheme
-                              .primary
-                              .withOpacity(0.05),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                        ),
-                        onPressed: cvUrl.isEmpty
-                            ? null
-                            : () => _downloadFile(
-                                  context,
-                                  url: cvUrl,
-                                  fileName: 'cv_$applicationId.pdf',
-                                ),
-                        icon: const Icon(Icons.download_outlined),
-                        label: const Text('Download CV'),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Tooltip(
-                  message: reportUrl.isEmpty ? 'Report not available yet' : '',
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: reportUrl.isEmpty
-                              ? null
-                              : () => _openUrl(context, reportUrl),
-                          icon: const Icon(Icons.description_outlined),
-                          label: const Text('View Report'),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: reportUrl.isEmpty
-                              ? null
-                              : () => _downloadFile(
-                                    context,
-                                    url: reportUrl,
-                                    fileName: 'report_$applicationId.pdf',
-                                  ),
-                          icon: const Icon(Icons.download_rounded),
-                          label: const Text('Download Report'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _downloadFile(
-    BuildContext context, {
-    required String url,
-    required String fileName,
-  }) async {
-    try {
-      final dir = await getApplicationDocumentsDirectory();
-      final savePath = '${dir.path}/$fileName';
-
-      await Dio().download(url, savePath);
-
-      if (!context.mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Downloaded successfully: $fileName'),
-          action: SnackBarAction(
-            label: 'Open',
-            onPressed: () {
-              OpenFilex.open(savePath);
-            },
-          ),
-        ),
-      );
-    } catch (e) {
-      if (!context.mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Download failed: $e'),
-          action: SnackBarAction(
-            label: 'Retry',
-            onPressed: () {
-              _downloadFile(
-                context,
-                url: url,
-                fileName: fileName,
-              );
-            },
-          ),
-        ),
-      );
-    }
-  }
-
-  Future<void> _openUrl(BuildContext context, String url) async {
-    try {
-      final uri = Uri.parse(url);
-      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-
-      if (!ok && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open file')),
-        );
-      }
-    } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Open failed: $e')),
       );
     }
   }
@@ -1119,4 +871,542 @@ Widget _detailRow(String label, String value) {
       ],
     ),
   );
+}
+
+class _ApplicationsSummary extends StatelessWidget {
+  const _ApplicationsSummary({required this.apps});
+
+  final List<QueryDocumentSnapshot<Map<String, dynamic>>> apps;
+
+  @override
+  Widget build(BuildContext context) {
+    int countStatus(String status) {
+      return apps.where((app) {
+        final s = (app.data()['ApplicationStatus'] ?? 'Pending')
+            .toString()
+            .toLowerCase();
+        return s == status.toLowerCase();
+      }).length;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+      child: Row(
+        children: [
+          Expanded(child: _SummaryBox(label: 'Total', value: apps.length)),
+          const SizedBox(width: 8),
+          Expanded(
+              child:
+                  _SummaryBox(label: 'Pending', value: countStatus('Pending'))),
+          const SizedBox(width: 8),
+          Expanded(
+              child: _SummaryBox(
+                  label: 'Shortlisted', value: countStatus('Shortlisted'))),
+          const SizedBox(width: 8),
+          Expanded(
+              child: _SummaryBox(
+                  label: 'Rejected', value: countStatus('Rejected'))),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryBox extends StatelessWidget {
+  const _SummaryBox({required this.label, required this.value});
+
+  final String label;
+  final int value;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 14,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Text(
+            '$value',
+            style: TextStyle(
+              color: scheme.primary,
+              fontWeight: FontWeight.w900,
+              fontSize: 18,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReportStatusBox extends StatelessWidget {
+  const _ReportStatusBox({required this.isAvailable});
+
+  final bool isAvailable;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isAvailable ? Colors.green : Colors.grey;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            isAvailable
+                ? Icons.check_circle_rounded
+                : Icons.hourglass_empty_rounded,
+            color: color,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            isAvailable ? 'Report ready' : 'No report yet',
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w800,
+              fontSize: 13,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ScoreProgressItem extends StatelessWidget {
+  const _ScoreProgressItem({required this.item});
+
+  final _ScoreItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final progress = (item.score / 100).clamp(0.0, 1.0);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${item.label} (${item.weightText})',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+              Text(
+                '${item.contribution.toStringAsFixed(1)} pts',
+                style: TextStyle(
+                  color: scheme.primary,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          LinearProgressIndicator(
+            value: progress,
+            minHeight: 8,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${item.score.toStringAsFixed(0)} / 100',
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class CandidateDetailsPage extends StatelessWidget {
+  const CandidateDetailsPage({
+    super.key,
+    required this.applicationId,
+    required this.applicationData,
+    required this.userData,
+  });
+
+  final String applicationId;
+  final Map<String, dynamic> applicationData;
+  final Map<String, dynamic> userData;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    final reportUrl = (applicationData['ReportURL'] ?? '').toString();
+    final cvUrl = ((applicationData['ApplicationCVURL'] ??
+                userData['CVURL'] ??
+                userData['CvURL']) ??
+            '')
+        .toString();
+
+    final fullName =
+        (userData['FullName'] ?? userData['Name'] ?? 'Unknown').toString();
+    final nationality = (userData['Nationality'] ?? '').toString();
+    final phone = (userData['Phone'] ?? '').toString();
+    final email =
+        (userData['ContactEmail'] ?? userData['Email'] ?? '').toString();
+    final photo = (userData['PhotoURL'] ?? '').toString();
+    final dob = _formatDate(_asDate(userData['DoB']));
+    final status =
+        (applicationData['ApplicationStatus'] ?? 'Pending').toString();
+
+    final breakdown = _scoreBreakdown(applicationData);
+    final finalScore = _finalScore(applicationData);
+
+    return Scaffold(
+      appBar: const CustomHeader(title: 'Candidate Details'),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 18,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                CircleAvatar(
+                  radius: 42,
+                  backgroundImage:
+                      photo.isNotEmpty ? NetworkImage(photo) : null,
+                  child:
+                      photo.isEmpty ? const Icon(Icons.person, size: 38) : null,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  fullName,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                _StatusChip(status: status),
+                const SizedBox(height: 18),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: scheme.primary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        '$finalScore / 100',
+                        style: TextStyle(
+                          color: scheme.primary,
+                          fontSize: 28,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Final Score',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          _SectionCard(
+            title: 'Profile Information',
+            children: [
+              _detailRow('Full Name', fullName),
+              _detailRow(
+                  'Nationality', nationality.isEmpty ? '-' : nationality),
+              _detailRow('Date of Birth', dob),
+              _detailRow('Phone', phone.isEmpty ? '-' : phone),
+              _detailRow('Email', email.isEmpty ? '-' : email),
+            ],
+          ),
+          const SizedBox(height: 18),
+          _SectionCard(
+            title: 'Score Breakdown',
+            children: [
+              ...breakdown.map((item) => _ScoreProgressItem(item: item)),
+            ],
+          ),
+          const SizedBox(height: 18),
+          _SectionCard(
+            title: 'Documents',
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: _DocumentButton(
+                      title: 'View CV',
+                      icon: Icons.visibility_outlined,
+                      enabled: cvUrl.isNotEmpty,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => InAppPdfViewerPage(
+                              title: 'CV',
+                              pdfUrl: cvUrl,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _DocumentButton(
+                      title: 'Download CV',
+                      icon: Icons.download_outlined,
+                      enabled: cvUrl.isNotEmpty,
+                      onTap: () => _downloadFileFromPage(
+                        context,
+                        url: cvUrl,
+                        fileName: 'cv_$applicationId.pdf',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: _DocumentButton(
+                      title: 'View Report',
+                      icon: Icons.description_outlined,
+                      enabled: reportUrl.isNotEmpty,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => InAppPdfViewerPage(
+                              title: 'Report',
+                              pdfUrl: reportUrl,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _DocumentButton(
+                      title: 'Download Report',
+                      icon: Icons.download_rounded,
+                      enabled: reportUrl.isNotEmpty,
+                      onTap: () => _downloadFileFromPage(
+                        context,
+                        url: reportUrl,
+                        fileName: 'report_$applicationId.pdf',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({
+    required this.title,
+    required this.children,
+  });
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.07),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 17,
+            ),
+          ),
+          const SizedBox(height: 14),
+          ...children,
+        ],
+      ),
+    );
+  }
+}
+
+Future<void> _openUrlFromPage(BuildContext context, String url) async {
+  try {
+    final uri = Uri.parse(url);
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open file')),
+      );
+    }
+  } catch (e) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Open failed: $e')),
+    );
+  }
+}
+
+Future<void> _downloadFileFromPage(
+  BuildContext context, {
+  required String url,
+  required String fileName,
+}) async {
+  try {
+    final dir = await getApplicationDocumentsDirectory();
+    final savePath = '${dir.path}/$fileName';
+
+    await Dio().download(url, savePath);
+
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Downloaded successfully: $fileName'),
+        action: SnackBarAction(
+          label: 'Open',
+          onPressed: () {
+            OpenFilex.open(savePath);
+          },
+        ),
+      ),
+    );
+  } catch (e) {
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Download failed: $e')),
+    );
+  }
+}
+
+class _DocumentButton extends StatelessWidget {
+  const _DocumentButton({
+    required this.title,
+    required this.icon,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final String title;
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return OutlinedButton.icon(
+      onPressed: enabled ? onTap : null,
+      icon: Icon(icon),
+      label: Text(title),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: scheme.primary,
+        side: BorderSide(
+          color: enabled ? scheme.primary : Colors.grey.withOpacity(0.4),
+          width: 1.5,
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        textStyle: const TextStyle(
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class InAppPdfViewerPage extends StatelessWidget {
+  const InAppPdfViewerPage({
+    super.key,
+    required this.title,
+    required this.pdfUrl,
+  });
+
+  final String title;
+  final String pdfUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: CustomHeader(title: title),
+      body: SfPdfViewer.network(
+        pdfUrl,
+        canShowScrollHead: true,
+        canShowScrollStatus: true,
+        enableDoubleTapZooming: true,
+      ),
+    );
+  }
 }

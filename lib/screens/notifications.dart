@@ -87,34 +87,10 @@ class NotificationsPage extends StatelessWidget {
             final docs = snap.data?.docs ?? [];
 
             if (docs.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.notifications_none_outlined,
-                      size: 70,
-                      color: scheme.primary.withOpacity(0.45),
-                    ),
-                    const SizedBox(height: 14),
-                    const Text(
-                      'No notifications yet',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Your updates will appear here.',
-                      style: TextStyle(
-                        color: scheme.onSurface.withOpacity(0.55),
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              );
+              return const EmptyState(
+                  icon: Icons.notifications_none_outlined,
+                  title: 'No notifications yet',
+                  subtitle: 'Your updates will appear here');
             }
 
             return Column(
