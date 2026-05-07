@@ -174,8 +174,8 @@ function buildMockPrompt({
 
   return `
 SYSTEM:
-You are an expert interview coach. Create mock interview questions in English for training.
-This is NOT tied to a specific company or job posting.
+You are an expert interview coach. Create realistic mock interview questions in English for training.
+This is a general mock interview based on the candidate's specialty, NOT a real job interview for a specific company or posting.
 
 USER:
 Mock Interview Context:
@@ -183,25 +183,11 @@ Mock Interview Context:
 - Specialty bucket: ${bucketSpecialty || "N/A"}
 
 Blueprint:
-Strict rules:
 - Output must be a single JSON object only.
-- "questions" must contain exactly 10 items.
-- Domain = 5, Psychometric = 5 exactly.
+- "questions" must contain exactly ${total} items.
+- ${domainCount} domain questions.
+- ${psyCount} psychometric/work-style questions.
 - Difficulty must match exactly:
-  - 3 easy
-  - 5 medium
-  - 2 hard
-- Do not repeat ideas.
-- No generic questions like "Tell me about yourself".
-
-- Total questions: exactly ${total} (no more, no fewer).
-  - ${domainCount} domain questions (broad, bucket-focused, NOT job-specific).
-  - ${psyCount} psychometric/work-style questions.
-- Total questions: exactly 10 (no more, no fewer).
-  - 5 domain questions.
-  - 5 psychometric questions.
-
-- Difficulty counts (must match exactly):
   - easy: 3
   - medium: 5
   - hard: 2
@@ -209,23 +195,75 @@ Strict rules:
 - Domain categories to rotate through: ${techCategories.join(", ")}
 - Work-style themes to rotate through: ${behThemes.join(", ")}
 
-Psychometric model:
+Purpose:
+- These questions are for mock interview practice.
+- They should help the candidate practice speaking, explaining experience, and thinking through realistic situations.
+- Do NOT make the questions too similar to a specific job interview or hiring assessment.
+- Keep the questions broad enough for training, but still relevant to the selected specialty.
+
+Interview style:
+- Questions should sound natural, practical, and human.
+- Use wording that an interviewer would realistically say.
+- Include basic interview openers such as:
+  - "Tell me about yourself."
+  - "Why did you choose this specialty?"
+  - "Walk me through a project or experience related to this field."
+- Avoid overly formal HR language.
+- Avoid generic AI-style questions that sound fake or repetitive.
+
+Question mix:
+- Include a balanced mix of:
+  - introductory questions,
+  - experience-based questions,
+  - practical domain questions,
+  - light situational questions,
+  - and STAR-style behavioral questions.
+- Use STAR-style where appropriate, but do NOT make every question a long scenario.
+- Some questions should be simple and common because this is a mock interview.
+- Avoid making all questions multi-part.
+
+Domain question rules:
+- Domain questions should be broad and specialty-focused, not tied to a specific company or job posting.
+- Avoid textbook definition questions.
+- Prefer questions about:
+  - previous projects,
+  - decision making,
+  - problem solving,
+  - tools or methods,
+  - common challenges in the field,
+  - and how the candidate would explain their thinking.
+- Not every domain question needs a scenario.
+
+Psychometric question rules:
 - Use the Big Five personality traits:
   - Openness
   - Conscientiousness
   - Extraversion
   - Agreeableness
   - Emotional Stability
+- Each psychometric question should implicitly assess ONE main trait and set "trait" accordingly.
+- Psychometric questions should feel like real interview questions, not personality test questions.
+- Include some STAR-style behavioral questions, but keep them natural.
 
-Guidelines:
-- Questions must be practical and answerable by speaking.
-- Avoid generic filler like "Tell me about yourself".
-- Each domain question must include a short scenario and ask for reasoning or decision-making.
-- Avoid pure definition questions.
-- Psychometric questions must target ONE main Big Five trait and set "trait" accordingly.
+Avoid:
+- Do not ask questions that are too specific to a real job posting.
+- Do not ask overly long scenario questions.
+- Do not repeat the same idea in different wording.
+- Avoid weak questions like:
+  - "How do you handle challenges?"
+  - "What are your strengths and weaknesses?"
+  - "Tell me about a time you worked successfully in a team."
+
+Better examples:
+- "Tell me about yourself and what got you interested in this field."
+- "Walk me through a project or task you worked on related to this specialty."
+- "What part of this field do you feel most confident in?"
+- "Tell me about a time you had to learn something quickly for a project or task."
+- "If you faced a problem you did not know how to solve, how would you approach it?"
 
 Output:
 Return ONLY a JSON object with an array named "questions".
+
 Each item must be:
 {
   "text": "...",
@@ -234,6 +272,7 @@ Each item must be:
   "difficulty": "easy|medium|hard",
   "trait": "Openness|Conscientiousness|Extraversion|Agreeableness|Emotional Stability|null"
 }
+
 - For domain questions, set "trait" to null.
 - For psychometric questions, set "trait" to exactly one of the Big Five traits.
 `.trim();
@@ -307,17 +346,33 @@ function topUpToExactCount({ questions, bucketSpecialty, total, domainTarget, ps
   const techCats = profile.tech || ["Core Skills"];
   const behCats = profile.beh || ["Work Style"];
 
-  const diffCycle = ["easy", "medium", "hard"];
+  const diffCycle = ["easy", "medium", "medium", "hard"];
   const traitCycle = [
     "Conscientiousness",
-    "Extraversion",
-    "Agreeableness",
     "Openness",
+    "Agreeableness",
     "Emotional Stability",
+    "Extraversion",
   ];
 
   let domainCount = questions.filter((q) => q.type === "domain").length;
   let psyCount = questions.filter((q) => q.type === "psychometric").length;
+
+  const domainFallbacks = [
+    "Tell me about yourself and what got you interested in this field.",
+    "Walk me through a project or task you worked on related to this specialty.",
+    "What part of this field do you feel most confident in?",
+    "What is a common problem in this field, and how would you approach solving it?",
+    "Tell me about a tool, method, or concept in this field that you have used or learned.",
+  ];
+
+  const psyFallbacks = [
+    "Tell me about a time you had to learn something quickly for a project or task.",
+    "How do you usually stay organized when working on multiple tasks?",
+    "Tell me about a time you received feedback and how you responded to it.",
+    "If you faced a problem you did not know how to solve, how would you approach it?",
+    "Tell me about a time you had to stay calm under pressure.",
+  ];
 
   while (questions.length < total) {
     const idx = questions.length;
@@ -327,9 +382,9 @@ function topUpToExactCount({ questions, bucketSpecialty, total, domainTarget, ps
     const type = needDomain ? "domain" : "psychometric";
 
     if (type === "domain") {
-      const cat = techCats[idx % techCats.length];
+      const cat = techCats[domainCount % techCats.length];
       questions.push({
-        text: `Describe a realistic scenario involving ${cat}. What steps would you take and why?`,
+        text: domainFallbacks[domainCount % domainFallbacks.length],
         type: "domain",
         category: cat,
         difficulty,
@@ -339,8 +394,9 @@ function topUpToExactCount({ questions, bucketSpecialty, total, domainTarget, ps
     } else {
       const cat = behCats[psyCount % behCats.length];
       const trait = traitCycle[psyCount % traitCycle.length];
+
       questions.push({
-        text: `Tell me about a time your ${trait.toLowerCase()} helped you succeed under pressure. What happened?`,
+        text: psyFallbacks[psyCount % psyFallbacks.length],
         type: "psychometric",
         category: cat,
         difficulty,
