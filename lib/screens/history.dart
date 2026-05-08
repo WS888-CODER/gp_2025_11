@@ -1,3 +1,4 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -325,27 +326,20 @@ class _HistoryPageState extends State<HistoryPage>
 
                 if (confirm == true) {
                   try {
-                    await FirebaseFirestore.instance
-                        .collection('CVHistory')
-                        .doc(cvHistoryId)
-                        .delete();
+                    await FirebaseFunctions.instance
+                        .httpsCallable('deleteCVHistory')
+                        .call({
+                      'cvHistoryId': cvHistoryId,
+                    });
 
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('CV enhancement deleted successfully'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
+                      SnackHelper.success(
+                          context, 'CV enhancement deleted successfully');
                     }
                   } catch (e) {
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Error deleting CV: $e'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
+                      SnackHelper.error(
+                          context, 'Failed to delete CV enhancement');
                     }
                   }
                 }
@@ -482,29 +476,20 @@ class _HistoryPageState extends State<HistoryPage>
 
                 if (confirm == true) {
                   try {
-                    await FirebaseFirestore.instance
-                        .collection('MockInterviews')
-                        .doc(mockInterviewId)
-                        .delete();
+                    await FirebaseFunctions.instance
+                        .httpsCallable('deleteMockInterview')
+                        .call({
+                      'mockInterviewId': mockInterviewId,
+                    });
 
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content:
-                              Text('Mock interview deleted successfully'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
+                      SnackHelper.success(
+                          context, 'Mock interview deleted successfully');
                     }
                   } catch (e) {
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content:
-                              Text('Error deleting mock interview: $e'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
+                      SnackHelper.error(
+                          context, 'Failed to delete mock interview');
                     }
                   }
                 }
@@ -569,8 +554,7 @@ class _HistoryPageState extends State<HistoryPage>
           itemBuilder: (context, index) {
             final data = validApps[index].data() as Map<String, dynamic>;
             final date = (data['Date'] as Timestamp?)?.toDate();
-            final jobTitle =
-                (data['JobTitle'] ?? 'Job Application').toString();
+            final jobTitle = (data['JobTitle'] ?? 'Job Application').toString();
             final companyName = (data['CompanyName'] ?? '').toString();
             final status = (data['ApplicationStatus'] ?? '').toString();
             final applicationId = validApps[index].id;
@@ -622,10 +606,8 @@ class _HistoryPageState extends State<HistoryPage>
               subtitle: subtitleText,
               expiryText: expiryText,
               expiryColor: expiryColor,
-              statusText:
-                  status.isNotEmpty ? _formatStatus(status) : null,
-              statusColor:
-                  status.isNotEmpty ? _statusColor(status) : null,
+              statusText: status.isNotEmpty ? _formatStatus(status) : null,
+              statusColor: status.isNotEmpty ? _statusColor(status) : null,
               leadingIcon: Icons.work,
               leadingBgColor: AppTheme.accentCoral,
               onTap: () {
@@ -661,29 +643,20 @@ class _HistoryPageState extends State<HistoryPage>
 
                 if (confirm == true) {
                   try {
-                    await FirebaseFirestore.instance
-                        .collection('Applications')
-                        .doc(applicationId)
-                        .delete();
+                    await FirebaseFunctions.instance
+                        .httpsCallable('deleteApplication')
+                        .call({
+                      'applicationId': applicationId,
+                    });
 
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content:
-                              Text('Application deleted successfully'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
+                      SnackHelper.success(
+                          context, 'Application deleted successfully');
                     }
                   } catch (e) {
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content:
-                              Text('Error deleting application: $e'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
+                      SnackHelper.error(
+                          context, 'Failed to delete application');
                     }
                   }
                 }

@@ -155,7 +155,8 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
               ),
               if (!widget.fromHistory)
                 Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
                   child: SizedBox(
                     width: double.infinity,
                     height: 50,

@@ -837,7 +837,7 @@ class _MockInterviewSpecialtyScreenState
               ? const SizedBox.shrink()
               : SafeArea(
                   minimum: const EdgeInsets.symmetric(horizontal: 16).copyWith(
-                    bottom: 16,
+                    bottom: 30,
                   ),
                   child: SizedBox(
                     width: double.infinity,
@@ -1228,7 +1228,7 @@ class _MockInterviewSessionScreenState
       if (!mounted) return;
 
       // ✅ STRICT FACE DETECTION
-      bool hasValidFace = false;
+      bool hasValidFace = true;
 
       if (faces.isNotEmpty) {
         final face = faces.first;

@@ -673,7 +673,7 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
   Future<String> _uploadAudioAndGetUrlWithProgress(File file) async {
     final uid = FirebaseAuth.instance.currentUser?.uid ?? 'unknown';
     final storagePath =
-        'job_interviews/$uid/${widget.applicationId}/q${_index + 1}.m4a';
+        'applications/$uid/${widget.applicationId}/q${_index + 1}.m4a';
 
     final ref = FirebaseStorage.instance.ref().child(storagePath);
     final task = ref.putFile(file, SettableMetadata(contentType: 'audio/m4a'));
@@ -931,7 +931,7 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
       if (uid != null && uid.isNotEmpty) {
         final folderRef = FirebaseStorage.instance
             .ref()
-            .child('job_interviews/$uid/${widget.applicationId}');
+            .child('applications/$uid/${widget.applicationId}');
 
         final list = await folderRef.listAll();
         for (final item in list.items) {

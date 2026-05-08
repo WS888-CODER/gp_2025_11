@@ -3111,40 +3111,65 @@ export const deleteOldCVHistory = onSchedule(
     console.log("Starting deleteOldCVHistory function");
 
     try {
-      //const db = admin.firestore();
-      
       const oneMonthAgo = new Date();
       oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
       const oneMonthAgoTimestamp = Timestamp.fromDate(oneMonthAgo);
 
-      console.log("Querying CVHistory older than:", oneMonthAgo.toISOString());
-
-      const oldCVsQuery = db
+      const snapshot = await db
         .collection("CVHistory")
-        .where("Date", "<", oneMonthAgoTimestamp);
-
-      const snapshot = await oldCVsQuery.get();
+        .where("Date", "<", oneMonthAgoTimestamp)
+        .get();
 
       if (snapshot.empty) {
         console.log("No old CV history records found to delete");
-        return;
+        return null;
       }
 
-      console.log(`Found ${snapshot.size} CV history records to delete`);
+      const bucket = storage.bucket();
 
-      const batchSize = 500;
-      let deletedCount = 0;
+      let deletedFirestoreCount = 0;
+      let deletedStorageCount = 0;
+
       let batch = db.batch();
       let batchCount = 0;
 
-      for (const doc of snapshot.docs) {
-        batch.delete(doc.ref);
-        batchCount++;
+      for (const docSnap of snapshot.docs) {
+        const data = docSnap.data();
 
-        if (batchCount >= batchSize) {
+        if (data.NewCVURL) {
+          try {
+            const filePath = decodeURIComponent(
+              new URL(data.NewCVURL).pathname.split("/").slice(2).join("/")
+            );
+
+            if (filePath) {
+              await bucket.file(filePath).delete();
+              deletedStorageCount++;
+              console.log("Deleted NewCV file:", filePath);
+            }
+          } catch (err) {
+            console.warn("Could not delete NewCV file:", err.message);
+          }
+        }
+
+        const oldCVPath = data.CVPath || data.OldCVPath || data.cvPath;
+
+        if (oldCVPath) {
+          try {
+            await bucket.file(oldCVPath).delete();
+            deletedStorageCount++;
+            console.log("Deleted old CV file:", oldCVPath);
+          } catch (err) {
+            console.warn("Could not delete old CV file:", err.message);
+          }
+        }
+
+        batch.delete(docSnap.ref);
+        batchCount++;
+        deletedFirestoreCount++;
+
+        if (batchCount >= 500) {
           await batch.commit();
-          deletedCount += batchCount;
-          console.log(`Deleted ${deletedCount} records so far...`);
           batch = db.batch();
           batchCount = 0;
         }
@@ -3152,10 +3177,17 @@ export const deleteOldCVHistory = onSchedule(
 
       if (batchCount > 0) {
         await batch.commit();
-        deletedCount += batchCount;
       }
 
-      console.log(`Successfully deleted ${deletedCount} old CV history records`);
+      console.log(
+        `Deleted ${deletedFirestoreCount} CVHistory records and ${deletedStorageCount} storage file(s)`
+      );
+
+      return {
+        success: true,
+        deletedFirestoreCount,
+        deletedStorageCount,
+      };
     } catch (error) {
       console.error("Error in deleteOldCVHistory:", error);
       throw error;
@@ -3166,112 +3198,6 @@ export const deleteOldCVHistory = onSchedule(
 // ✅ Add this function to your functions/index.js file
 // This should be added AFTER the deleteOldCVHistory function
 
-// Auto-delete Mock Interviews older than 30 days (runs daily at midnight)
-export const deleteOldMockInterviews = onSchedule(
-  {
-    schedule: "0 0 * * *",
-    timeZone: "UTC",
-    region: "us-central1",
-  },
-  async (event) => {
-    const now = new Date();
-    const oneMonthAgo = new Date(now);
-    oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
-
-    try {
-      //const db = admin.firestore();
-      
-      // Query for Mock Interviews older than 30 days
-      const oldMockInterviewsSnapshot = await db
-        .collection("MockInterviews")
-        .where("Date", "<", oneMonthAgo)
-        .get();
-
-      if (oldMockInterviewsSnapshot.empty) {
-        console.log("No old mock interviews to delete");
-        return null;
-      }
-
-      // Delete in batches of 500 (Firestore limit)
-      const batch = db.batch();
-      let deleteCount = 0;
-
-      oldMockInterviewsSnapshot.forEach((doc) => {
-        batch.delete(doc.ref);
-        deleteCount++;
-      });
-
-      await batch.commit();
-      console.log(`Deleted ${deleteCount} old mock interviews`);
-
-      return { success: true, deletedCount: deleteCount };
-    } catch (error) {
-      console.error("Error deleting old mock interviews:", error);
-      return { success: false, error: error.message };
-    }
-  }
-);
-
-// Auto-delete Rejected Applications older than 6 months (runs daily at midnight)
-export const deleteOldRejectedApplications = onSchedule(
-  {
-    schedule: "0 0 * * *",
-    timeZone: "UTC",
-    region: "us-central1",
-  },
-  async (event) => {
-    console.log("Starting deleteOldRejectedApplications function");
-
-    try {
-      const sixMonthsAgo = new Date();
-      sixMonthsAgo.setDate(sixMonthsAgo.getDate() - 180);
-      const sixMonthsAgoTimestamp = Timestamp.fromDate(sixMonthsAgo);
-
-      console.log("Querying rejected applications older than:", sixMonthsAgo.toISOString());
-
-      const oldRejectedAppsSnapshot = await db
-        .collection("Applications")
-        .where("ApplicationStatus", "==", "Rejected")
-        .where("Date", "<", sixMonthsAgoTimestamp)
-        .get();
-
-      if (oldRejectedAppsSnapshot.empty) {
-        console.log("No old rejected applications found to delete");
-        return;
-      }
-
-      console.log(`Found ${oldRejectedAppsSnapshot.size} rejected applications to delete`);
-
-      const batchSize = 500;
-      let deletedCount = 0;
-      let batch = db.batch();
-      let batchCount = 0;
-
-      for (const doc of oldRejectedAppsSnapshot.docs) {
-        batch.delete(doc.ref);
-        batchCount++;
-
-        if (batchCount >= batchSize) {
-          await batch.commit();
-          deletedCount += batchCount;
-          console.log(`Deleted ${deletedCount} records so far...`);
-          batch = db.batch();
-          batchCount = 0;
-        }
-      }
-
-      if (batchCount > 0) {
-        await batch.commit();
-        deletedCount += batchCount;
-      }
-
-      console.log(`Successfully deleted ${deletedCount} old rejected applications`);
-    } catch (error) {
-      console.error("Error in deleteOldRejectedApplications:", error);
-      throw error;
-    }
-  }
-);
 export {
   notifyOnJobStatusChange,
 } from "./notification/notifyJobStatus.js";
@@ -3305,5 +3231,490 @@ export const deleteOldNotifications = onSchedule(
     await batch.commit();
 
     console.log(`Deleted ${oldNotificationsSnap.size} old notifications.`);
+  }
+);
+export const deleteCVHistory = functions.https.onCall(async (data, context) => {
+  const actualData = data.data || data;
+  const cvHistoryId = actualData.cvHistoryId || "";
+
+  if (!cvHistoryId) {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "cvHistoryId is required"
+    );
+  }
+
+  try {
+    const docRef = db.collection("CVHistory").doc(cvHistoryId);
+    const docSnap = await docRef.get();
+
+    if (!docSnap.exists) {
+      throw new functions.https.HttpsError(
+        "not-found",
+        "CVHistory document not found"
+      );
+    }
+
+    const cvData = docSnap.data() || {};
+    const bucket = storage.bucket();
+
+    // حذف ملف الـ PDF من NewCVURL
+    if (cvData.NewCVURL) {
+      try {
+        const filePath = decodeURIComponent(
+          new URL(cvData.NewCVURL).pathname.split("/").slice(2).join("/")
+        );
+
+        if (filePath) {
+          await bucket.file(filePath).delete();
+          console.log("Deleted NewCV file:", filePath);
+        }
+      } catch (err) {
+        console.warn("Could not delete NewCV file:", err.message);
+      }
+    }
+
+    // حذف الملف القديم لو عندك path محفوظ
+    const oldCVPath = cvData.CVPath || cvData.OldCVPath || cvData.cvPath;
+
+    if (oldCVPath) {
+      try {
+        await bucket.file(oldCVPath).delete();
+        console.log("Deleted old CV file:", oldCVPath);
+      } catch (err) {
+        console.warn("Could not delete old CV file:", err.message);
+      }
+    }
+
+    // حذف document من Firestore
+    await docRef.delete();
+
+    return {
+      success: true,
+      message: "CV history and related files deleted successfully",
+    };
+  } catch (error) {
+    console.error("Error deleting CVHistory:", error);
+    throw new functions.https.HttpsError(
+      "internal",
+      "Failed to delete CV history: " + error.message
+    );
+  }
+});
+
+export const deleteOldMockInterviews = onSchedule(
+  {
+    schedule: "0 0 * * *",
+    timeZone: "UTC",
+    region: "us-central1",
+  },
+  async () => {
+    const now = new Date();
+    const oneMonthAgo = new Date(now);
+    oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+
+    try {
+      const snapshot = await db
+        .collection("MockInterviews")
+        .where("Date", "<", oneMonthAgo)
+        .get();
+
+      if (snapshot.empty) {
+        console.log("No old mock interviews to delete");
+        return null;
+      }
+
+      const bucket = storage.bucket();
+      const batch = db.batch();
+
+      let deletedDocs = 0;
+      let deletedFiles = 0;
+
+      for (const docSnap of snapshot.docs) {
+        const data = docSnap.data();
+
+        const userId =
+          data.UserID ||
+          data.userID ||
+          data.userId ||
+          data.uid;
+
+        const interviewId = data.MockInterviewsID;
+
+        // ✅ حذف ملفات هذي المقابلة فقط
+        if (userId && interviewId) {
+          try {
+            const prefix = `mock_interviews/${userId}/${interviewId}/`;
+
+            const [files] = await bucket.getFiles({ prefix });
+
+            if (files.length > 0) {
+              await Promise.all(
+                files.map(async (file) => {
+                  await file.delete();
+                  deletedFiles++;
+                  console.log("Deleted file:", file.name);
+                })
+              );
+
+              console.log(
+                `Deleted ${files.length} file(s) for interview ${interviewId}`
+              );
+            }
+          } catch (err) {
+            console.warn(
+              `Could not delete files for interview ${interviewId}:`,
+              err.message
+            );
+          }
+        }
+
+        // ✅ حذف document
+        batch.delete(docSnap.ref);
+        deletedDocs++;
+      }
+
+      await batch.commit();
+
+      console.log(
+        `Deleted ${deletedDocs} mock interviews and ${deletedFiles} storage file(s)`
+      );
+
+      return {
+        success: true,
+        deletedDocs,
+        deletedFiles,
+      };
+    } catch (error) {
+      console.error("Error deleting old mock interviews:", error);
+
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+);
+export const deleteMockInterview = functions.https.onCall(
+  async (data, context) => {
+    const actualData = data.data || data;
+    const mockInterviewId = actualData.mockInterviewId || "";
+
+    if (!mockInterviewId) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "mockInterviewId is required"
+      );
+    }
+
+    try {
+      const docRef = db.collection("MockInterviews").doc(mockInterviewId);
+      const docSnap = await docRef.get();
+
+      if (!docSnap.exists) {
+        throw new functions.https.HttpsError(
+          "not-found",
+          "Mock interview not found"
+        );
+      }
+
+      const dataDoc = docSnap.data() || {};
+
+      const userId =
+        dataDoc.UserID ||
+        dataDoc.userID ||
+        dataDoc.userId ||
+        dataDoc.uid;
+
+      const interviewId =
+        dataDoc.MockInterviewsID ||
+        dataDoc.mockInterviewsID ||
+        dataDoc.mockInterviewId ||
+        mockInterviewId;
+
+      console.log("userId:", userId);
+      console.log("interviewId:", interviewId);
+
+      const bucket = storage.bucket();
+
+      if (userId && interviewId) {
+        try {
+          const prefix = `mock_interviews/${userId}/${interviewId}/`;
+
+          console.log("Storage prefix:", prefix);
+
+          const [files] = await bucket.getFiles({ prefix });
+
+          console.log("Files found:", files.length);
+
+          files.forEach((file) => {
+            console.log("File:", file.name);
+          });
+
+          if (files.length > 0) {
+            await Promise.all(
+              files.map(async (file) => {
+                await file.delete();
+                console.log("Deleted file:", file.name);
+              })
+            );
+          }
+        } catch (err) {
+          console.warn("Storage delete warning:", err.message);
+        }
+      } else {
+        console.warn("Missing userId or interviewId, storage was not deleted");
+      }
+
+      await docRef.delete();
+
+      return {
+        success: true,
+        message: "Mock interview deleted successfully",
+      };
+    } catch (error) {
+      console.error("Error deleting mock interview:", error);
+
+      throw new functions.https.HttpsError(
+        "internal",
+        error.message
+      );
+    }
+  }
+);
+export const deleteOldApplications = onSchedule(
+  {
+    schedule: "0 0 * * *",
+    timeZone: "UTC",
+    region: "us-central1",
+  },
+  async () => {
+    console.log("Starting deleteOldApplications function");
+
+    try {
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setDate(sixMonthsAgo.getDate() - 180);
+
+      const sixMonthsAgoTimestamp =
+        Timestamp.fromDate(sixMonthsAgo);
+
+      // ✅ أي application أقدم من 6 شهور
+      const snapshot = await db
+        .collection("Applications")
+        .where("Date", "<", sixMonthsAgoTimestamp)
+        .get();
+
+      if (snapshot.empty) {
+        console.log("No old applications found");
+        return null;
+      }
+
+      const bucket = storage.bucket();
+
+      let deletedDocs = 0;
+      let deletedFiles = 0;
+
+      let batch = db.batch();
+      let batchCount = 0;
+
+      for (const docSnap of snapshot.docs) {
+        const data = docSnap.data();
+
+        const userId =
+          data.UserID ||
+          data.userID ||
+          data.userId ||
+          data.uid;
+
+        const applicationId =
+          data.ApplicationsID ||
+          data.applicationId ||
+          docSnap.id;
+
+        console.log("userId:", userId);
+        console.log("applicationId:", applicationId);
+
+        // ✅ حذف ملفات Storage
+        if (userId && applicationId) {
+          try {
+            const prefix =
+              `applications/${userId}/${applicationId}/`;
+
+            console.log("Storage prefix:", prefix);
+
+            const [files] =
+              await bucket.getFiles({ prefix });
+
+            console.log(
+              "Files found:",
+              files.length
+            );
+
+            if (files.length > 0) {
+              await Promise.all(
+                files.map(async (file) => {
+                  await file.delete();
+                  deletedFiles++;
+
+                  console.log(
+                    "Deleted file:",
+                    file.name
+                  );
+                })
+              );
+            }
+          } catch (err) {
+            console.warn(
+              `Storage delete warning for ${applicationId}:`,
+              err.message
+            );
+          }
+        }
+
+        // ✅ حذف document
+        batch.delete(docSnap.ref);
+
+        batchCount++;
+        deletedDocs++;
+
+        // Firestore batch limit
+        if (batchCount >= 500) {
+          await batch.commit();
+
+          batch = db.batch();
+          batchCount = 0;
+        }
+      }
+
+      if (batchCount > 0) {
+        await batch.commit();
+      }
+
+      console.log(
+        `Deleted ${deletedDocs} applications and ${deletedFiles} storage file(s)`
+      );
+
+      return {
+        success: true,
+        deletedDocs,
+        deletedFiles,
+      };
+    } catch (error) {
+      console.error(
+        "Error deleting old applications:",
+        error
+      );
+
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+);
+export const deleteApplication = functions.https.onCall(
+  async (data, context) => {
+    const actualData = data.data || data;
+
+    const applicationId =
+      actualData.applicationId || "";
+
+    if (!applicationId) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "applicationId is required"
+      );
+    }
+
+    try {
+      const docRef = db
+        .collection("Applications")
+        .doc(applicationId);
+
+      const docSnap = await docRef.get();
+
+      if (!docSnap.exists) {
+        throw new functions.https.HttpsError(
+          "not-found",
+          "Application not found"
+        );
+      }
+
+      const dataDoc = docSnap.data() || {};
+
+      const userId =
+        dataDoc.UserID ||
+        dataDoc.userID ||
+        dataDoc.userId ||
+        dataDoc.uid;
+
+      const realApplicationId =
+        dataDoc.ApplicationID ||
+        dataDoc.applicationId ||
+        applicationId;
+
+      console.log("userId:", userId);
+      console.log(
+        "applicationId:",
+        realApplicationId
+      );
+
+      const bucket = storage.bucket();
+
+      // ✅ حذف ملفات Storage
+      if (userId && realApplicationId) {
+        try {
+          const prefix =
+            `applications/${userId}/${realApplicationId}/`;
+
+          console.log("Storage prefix:", prefix);
+
+          const [files] =
+            await bucket.getFiles({ prefix });
+
+          console.log(
+            "Files found:",
+            files.length
+          );
+
+          if (files.length > 0) {
+            await Promise.all(
+              files.map(async (file) => {
+                await file.delete();
+
+                console.log(
+                  "Deleted file:",
+                  file.name
+                );
+              })
+            );
+          }
+        } catch (err) {
+          console.warn(
+            "Storage delete warning:",
+            err.message
+          );
+        }
+      }
+
+      // ✅ حذف document
+      await docRef.delete();
+
+      return {
+        success: true,
+        message:
+          "Application deleted successfully",
+      };
+    } catch (error) {
+      console.error(
+        "Error deleting application:",
+        error
+      );
+
+      throw new functions.https.HttpsError(
+        "internal",
+        error.message
+      );
+    }
   }
 );
