@@ -1768,7 +1768,7 @@ class _MockInterviewSessionScreenState
                           Positioned(
                             left: 0,
                             right: 0,
-                            bottom: 72,
+                            bottom: 50,
                             child: Column(
                               children: [
                                 GestureDetector(
@@ -1825,25 +1825,6 @@ class _MockInterviewSessionScreenState
                                   ),
                                 ],
                               ],
-                            ),
-                          ),
-                          Positioned(
-                            left: 16,
-                            right: 16,
-                            bottom: 12 + MediaQuery.of(context).padding.bottom,
-                            child: SizedBox(
-                              height: 52,
-                              child: FilledButton(
-                                onPressed: _canGoNext ? _next : null,
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: const Color(0xFF4A5FBC),
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(28),
-                                  ),
-                                ),
-                                child: Text(_isLast ? 'Finish' : 'Next'),
-                              ),
                             ),
                           ),
                         ],
