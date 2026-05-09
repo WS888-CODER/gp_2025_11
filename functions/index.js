@@ -449,7 +449,9 @@ export const notifyCompanyStatusChange = functions.https.onCall(
 // ============================================
 // 🤖 OPENAI API (SAFE FIXED VERSION)
 // ============================================
-export const generateJobPost = functions.https.onRequest(async (req, res) => {
+export const generateJobPost = v2.https.onRequest(
+  { secrets: ["OPENAI_API_KEY"] },
+  async (req, res) => {
   try {
     const { title, position, speciality } = req.body;
 
@@ -521,7 +523,7 @@ Provide ONLY the job description text without any markdown headers, labels, bold
  * 6️⃣ Enhance CV with OpenAI GPT-4 Turbo (Gen 2) - FIXED VERSION
  */
 export const enhanceCV = v2.https.onCall(
-  { memory: "1GiB", timeoutSeconds: 540 },
+  { memory: "1GiB", timeoutSeconds: 540, secrets: ["OPENAI_API_KEY"] },
   async (request) => {
     console.log("📥 CV Enhancement request (Gen 2)");
     console.log("📋 Auth UID:", request.auth?.uid || "NOT authenticated");
@@ -932,7 +934,7 @@ Do not include explanations or commentary outside this JSON.`;
  * 7️⃣ Detect Missing Sections in CV
  */
 export const detectMissingSections = v2.https.onCall(
-  { memory: "512MiB", timeoutSeconds: 60 },
+  { memory: "512MiB", timeoutSeconds: 60, secrets: ["OPENAI_API_KEY"] },
   async (request) => {
     console.log("📥 Detect Missing Sections request");
     console.log("📋 Request data:", request.data);
