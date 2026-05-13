@@ -264,9 +264,9 @@ Make the overallSummary at least 2-3 full sentences that give a balanced, encour
                 "Authorization": `Bearer ${HF_TOKEN}`,
                 "Content-Type": "application/json",
               },
-              body: JSON.stringify({
-                data: [{ name: `audio_${i}.m4a`, data: `data:audio/m4a;base64,${audioBuffer.toString("base64")}` }]
-              }),
+body: JSON.stringify({
+  data: [`data:audio/m4a;base64,${audioBuffer.toString("base64")}`]
+}),
             }
           );
 

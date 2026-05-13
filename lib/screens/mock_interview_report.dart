@@ -75,6 +75,7 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
 
           final data = snapshot.data!.data() as Map<String, dynamic>;
           final report = data['Report'] as Map<String, dynamic>?;
+          final voiceToneAnalysis = data['VoiceToneAnalysis'] as List<dynamic>?;
           final specialty = data['Specialty'] as String? ?? 'Unknown';
           final date = data['Date'] as Timestamp?;
 
@@ -120,8 +121,7 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
                   ?.map((e) => e.toString())
                   .toList() ??
               [];
-          final voiceAnalysis =
-              report['voiceToneAnalysis'] as Map<String, dynamic>?;
+          final voiceAnalysis = voiceToneAnalysis;
 
           final overallScore = (report['overallScore'] ?? 7.0) as num;
           final score = overallScore.toDouble();
@@ -456,7 +456,7 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
     List<String> strengths,
     List<String> weaknesses,
     List<String> advice,
-    Map<String, dynamic>? voiceAnalysis,
+    List<dynamic>? voiceAnalysis,
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -662,9 +662,8 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
     );
   }
 
-  Widget _buildVoiceTab(
-      BuildContext context, Map<String, dynamic>? voiceAnalysis) {
-    final isAvailable = voiceAnalysis?['available'] == true;
+  Widget _buildVoiceTab(BuildContext context, List<dynamic>? voiceAnalysis) {
+    final isAvailable = voiceAnalysis != null && voiceAnalysis.isNotEmpty;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (!isAvailable) {
@@ -690,8 +689,7 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  voiceAnalysis?['message'] ??
-                      'Voice analysis will be available soon',
+                  'Voice analysis will be available soon',
                   style: TextStyle(
                     fontSize: 15,
                     color: isDark ? Colors.white70 : Colors.grey[700],
@@ -704,39 +702,48 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
         ),
       );
     }
-
-    return ListView(
+    return ListView.builder(
       padding: const EdgeInsets.all(20),
-      children: [
-        _buildVoiceMetric(
-          context,
-          'Confidence',
-          voiceAnalysis?['confidence'] ?? 0,
-          Colors.blue,
-        ),
-        const SizedBox(height: 20),
-        _buildVoiceMetric(
-          context,
-          'Clarity',
-          voiceAnalysis?['clarity'] ?? 0,
-          Colors.green,
-        ),
-        const SizedBox(height: 20),
-        Row(
-          children: [
-            Text(
-              'Tone: ',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+      itemCount: voiceAnalysis!.length,
+      itemBuilder: (context, index) {
+        final item = voiceAnalysis[index] as Map<String, dynamic>;
+        final questionIndex = (item['questionIndex'] as int? ?? index) + 1;
+        final result = item['result'] as String? ?? 'Analysis unavailable';
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF4A5FBC).withOpacity(0.08),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: const Color(0xFF4A5FBC).withOpacity(0.2),
             ),
-            Text(
-              voiceAnalysis?['tone'] ?? 'N/A',
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-          ],
-        ),
-      ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Question $questionIndex',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF4A5FBC),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                result,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
