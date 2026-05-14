@@ -253,22 +253,19 @@ Make the overallSummary at least 2-3 full sentences that give a balanced, encour
         try {
           console.log(`[generateReport] Analyzing voice ${i + 1}/${audioUrls.length}`);
 
-          const audioResponse = await fetch(audioUrl);
-          const audioBuffer = await audioResponse.buffer();
-
-          const hfResponse = await fetch(
-            "https://wsaifaleslam-jadeer-smart-assessment.hf.space/run/predict_confidence",
-            {
-              method: "POST",
-              headers: {
-                "Authorization": `Bearer ${HF_TOKEN}`,
-                "Content-Type": "application/json",
-              },
-body: JSON.stringify({
-  data: [`data:audio/m4a;base64,${audioBuffer.toString("base64")}`]
-}),
-            }
-          );
+const hfResponse = await fetch(
+  "https://wsaifaleslam-jadeer-smart-assessment.hf.space/run/predict_confidence",
+  {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${HF_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      data: [{ url: audioUrl }]
+    }),
+  }
+);
 
           if (!hfResponse.ok) {
             throw new Error(`HF API error: ${hfResponse.statusText}`);
