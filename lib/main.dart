@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -65,7 +67,7 @@ class Jadeer extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       debugShowCheckedModeBanner: false,
-      home: StartScreen(),
+      home: const AuthGate(),
       routes: {
         '/start': (context) => StartScreen(),
         '/login': (context) => LoginScreen(),
@@ -120,6 +122,65 @@ class Jadeer extends StatelessWidget {
         '/notifications': (context) {
           return NotificationsPage();
         },
+      },
+    );
+  }
+}
+
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        // ← المفتاح: انتظر Firebase يتحقق من الـ session
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        // المستخدم مسجل دخول
+        if (snapshot.hasData && snapshot.data != null) {
+          return _buildHomeForUser(snapshot.data!);
+        }
+
+        // غير مسجل دخول
+        return StartScreen();
+      },
+    );
+  }
+
+  Widget _buildHomeForUser(User user) {
+    // اجلب نوع المستخدم من Firestore ووجّهه للصفحة الصحيحة
+    return FutureBuilder<DocumentSnapshot>(
+      future:
+          FirebaseFirestore.instance.collection('Users').doc(user.uid).get(),
+      builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (!snap.hasData || !snap.data!.exists) {
+          return StartScreen();
+        }
+
+        final data = snap.data!.data() as Map<String, dynamic>;
+        final userType = (data['UserType'] ?? '').toString().toLowerCase();
+
+        if (userType == 'company') {
+          return CompanyHome(companyId: user.uid);
+        } else if (userType == 'jobseeker') {
+          return JobSeekerHome(userId: user.uid);
+        } else if (userType == 'admin') {
+          return AdminDashboard();
+        }
+
+        return StartScreen();
       },
     );
   }

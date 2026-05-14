@@ -1,4 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:gp_2025_11/screens/admin_dashboard.dart';
+import 'package:gp_2025_11/screens/company_home.dart';
+import 'package:gp_2025_11/screens/jobseeker_home.dart';
 import 'package:gp_2025_11/screens/welcome.dart';
 
 class StartScreen extends StatefulWidget {
@@ -31,12 +36,94 @@ class _StartScreenState extends State<StartScreen>
     await Future.delayed(const Duration(seconds: 3));
     _splitController.forward();
     await Future.delayed(const Duration(milliseconds: 1000));
-    if (mounted) {
+
+    if (!mounted) return;
+
+    // ← تحقق من حالة الـ Auth قبل التوجيه
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      // غير مسجل دخول → WelcomeScreen
       Navigator.pushReplacement(
         context,
         PageRouteBuilder(
           pageBuilder: (context, animation, secondaryAnimation) =>
               const WelcomeScreen(),
+          transitionDuration: Duration.zero,
+        ),
+      );
+      return;
+    }
+
+    // مسجل دخول → اجلب بيانات المستخدم من Firestore
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(user.uid)
+          .get();
+
+      if (!mounted) return;
+
+      if (!userDoc.exists) {
+        // بيانات غير موجودة → سجّل خروج وارجع للـ Welcome
+        await FirebaseAuth.instance.signOut();
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (_, __, ___) => const WelcomeScreen(),
+            transitionDuration: Duration.zero,
+          ),
+        );
+        return;
+      }
+
+      final data = userDoc.data() as Map<String, dynamic>;
+      final userType = (data['UserType'] ?? data['userType'] ?? '').toString();
+
+      if (!mounted) return;
+
+      // وجّه المستخدم حسب نوعه مباشرةً
+      if (userType == 'JobSeeker') {
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (_, __, ___) => JobSeekerHome(userId: user.uid),
+            transitionDuration: Duration.zero,
+          ),
+        );
+      } else if (userType == 'Company') {
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (_, __, ___) => CompanyHome(companyId: user.uid),
+            transitionDuration: Duration.zero,
+          ),
+        );
+      } else if (userType == 'Admin') {
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (_, __, ___) => AdminDashboard(),
+            transitionDuration: Duration.zero,
+          ),
+        );
+      } else {
+        // نوع غير معروف → WelcomeScreen
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (_, __, ___) => const WelcomeScreen(),
+            transitionDuration: Duration.zero,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      // خطأ في الشبكة → WelcomeScreen
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (_, __, ___) => const WelcomeScreen(),
           transitionDuration: Duration.zero,
         ),
       );

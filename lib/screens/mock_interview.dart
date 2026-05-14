@@ -8,7 +8,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_tts/flutter_tts.dart';
 import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/screens/jobseeker_home.dart';
 import 'package:gp_2025_11/screens/mock_interview_report.dart';
@@ -995,7 +994,7 @@ class _MockInterviewSessionScreenState
     extends State<MockInterviewSessionScreen> {
   final AudioPlayer _player = AudioPlayer();
   bool _isGeneratingReport = false;
-
+  late List<int> _recordAttempts;
   bool _isUploadingAnswer = false;
   double _uploadProgress = 0.0;
   StreamSubscription<TaskSnapshot>? _uploadSub;
@@ -1024,9 +1023,8 @@ class _MockInterviewSessionScreenState
   Timer? _recordTimer;
 
   late List<String> _answerUrls;
-  late final FlutterTts _tts;
-  bool _ttsReady = false;
   bool _isSpeaking = false;
+  bool _ttsLoading = false;
 
   // ✅ FACE DETECTION
   late final FaceDetector _faceDetector;
@@ -1037,7 +1035,7 @@ class _MockInterviewSessionScreenState
   void initState() {
     super.initState();
     _answerUrls = List<String>.filled(widget.questions.length, '');
-    _tts = FlutterTts();
+    _recordAttempts = List<int>.filled(widget.questions.length, 0);
 
     // Initialize face detector
     _faceDetector = FaceDetector(
@@ -1071,7 +1069,6 @@ class _MockInterviewSessionScreenState
         _isRecording = false;
       }
       await _player.stop();
-      await _tts.stop();
 
       final docRef = FirebaseFirestore.instance
           .collection('MockInterviews')
@@ -1100,45 +1097,69 @@ class _MockInterviewSessionScreenState
   }
 
   Future<void> _initTts() async {
-    try {
-      await _tts.setLanguage('en-US');
-      await _tts.setSpeechRate(0.48);
-      await _tts.setPitch(1.0);
-
-      _tts.setStartHandler(() {
-        if (!mounted) return;
-        setState(() => _isSpeaking = true);
-      });
-
-      _tts.setCompletionHandler(() {
-        if (!mounted) return;
-        setState(() => _isSpeaking = false);
-      });
-
-      _tts.setErrorHandler((_) {
-        if (!mounted) return;
-        setState(() => _isSpeaking = false);
-      });
-      if (!mounted) return;
-      setState(() => _ttsReady = true);
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _ttsReady = false);
-    }
+    // لا نحتاج initialization للـ Google TTS
   }
 
   Future<void> _speakCurrentQuestion() async {
-    if (!_ttsReady) return;
     if (_isRecording) return;
-    await _tts.stop();
-    await _tts.speak(_currentQuestion);
+    await _googleSpeak(_currentQuestion);
+  }
+
+  Future<void> _stopTts() async {
+    await _player.stop();
+    if (!mounted) return;
+    setState(() => _isSpeaking = false);
+  }
+
+  Future<void> _googleSpeak(String text) async {
+    try {
+      if (!mounted) return;
+      setState(() {
+        _isSpeaking = true;
+        _ttsLoading = true;
+      });
+
+      final response = await http.post(
+        Uri.parse(
+            'https://us-central1-jadeer-b4953.cloudfunctions.net/synthesizeSpeech'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'text': text}),
+      );
+
+      if (!mounted) return;
+      setState(() => _ttsLoading = false);
+
+      final data = jsonDecode(response.body);
+      final audioContent = data['audioContent'] as String?;
+
+      if (audioContent == null || audioContent.isEmpty) {
+        setState(() => _isSpeaking = false);
+        return;
+      }
+
+      // احفظ الـ audio مؤقتاً وشغّله
+      final dir = await getTemporaryDirectory();
+      final file =
+          File('${dir.path}/tts_${DateTime.now().millisecondsSinceEpoch}.mp3');
+      await file.writeAsBytes(base64Decode(audioContent));
+
+      await _player.setFilePath(file.path);
+      await _player.play();
+
+      if (!mounted) return;
+      setState(() => _isSpeaking = false);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isSpeaking = false;
+        _ttsLoading = false;
+      });
+    }
   }
 
   Future<void> _toggleSpeak() async {
-    if (!_ttsReady) return;
-
     if (_isSpeaking) {
-      await _tts.stop();
+      await _stopTts();
       return;
     }
     await _speakCurrentQuestion();
@@ -1228,7 +1249,7 @@ class _MockInterviewSessionScreenState
       if (!mounted) return;
 
       // ✅ STRICT FACE DETECTION
-      bool hasValidFace = true;
+      bool hasValidFace = false;
 
       if (faces.isNotEmpty) {
         final face = faces.first;
@@ -1294,12 +1315,11 @@ class _MockInterviewSessionScreenState
 
   @override
   void dispose() {
-    _tts.stop();
     _recordTimer?.cancel();
     _recorder.dispose();
     _camera?.dispose();
     _uploadSub?.cancel();
-    _player.dispose();
+    _player.dispose(); // يُستخدم للـ TTS والـ playback معاً
     _faceDetector.close();
     super.dispose();
   }
@@ -1449,13 +1469,23 @@ class _MockInterviewSessionScreenState
       }
 
       if (_answerUrls[_index].trim().isNotEmpty) {
+        if (_recordAttempts[_index] >= 3) {
+          SnackHelper.error(
+            context,
+            'You have reached the maximum of 3 recording attempts for this question.',
+          );
+          return;
+        }
+
         final overwrite = await showDialog<bool>(
           context: context,
           barrierDismissible: false,
-          builder: (_) => const JadeerDialog<bool>(
+          builder: (_) => JadeerDialog<bool>(
             title: 'Replace recording?',
             content: Text(
-                'You already recorded an answer for this question. Replace it?'),
+              'You already recorded an answer for this question.\n\n'
+              'Attempts remaining: ${3 - _recordAttempts[_index]}',
+            ),
             primaryLabel: 'Replace',
             primaryResult: true,
             secondaryLabel: 'Cancel',
@@ -1469,6 +1499,7 @@ class _MockInterviewSessionScreenState
         if (!mounted) return;
         setState(() {});
       }
+
       await Permission.microphone.request();
 
       final hasMic = await _recorder.hasPermission();
@@ -1483,19 +1514,20 @@ class _MockInterviewSessionScreenState
       final fileName =
           'mock_${widget.mockInterviewId}_q${_index + 1}_${DateTime.now().millisecondsSinceEpoch}.m4a';
       final path = '${dir.path}/$fileName';
-      await _tts.stop();
+      await _stopTts();
 
       await _recorder.start(
         const RecordConfig(
           encoder: AudioEncoder.aacLc,
           bitRate: 128000,
           sampleRate: 44100,
-          numChannels: 1, // ✅ Mono (Whisper works better with mono)
+          numChannels: 1,
         ),
         path: path,
       );
 
       _startTimer();
+      _recordAttempts[_index]++;
 
       if (!mounted) return;
       setState(() => _isRecording = true);

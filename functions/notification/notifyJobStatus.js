@@ -160,3 +160,101 @@ export const deleteOldNotifications = onSchedule(
     console.log(`Deleted ${oldNotificationsSnap.size} old notifications.`);
   }
 );
+export const closeExpiredJobsAndNotify = onSchedule(
+  {
+    schedule: "every 1 minutes",
+    region: "us-central1",
+    secrets: ["OPENAI_API_KEY"],
+  },
+  async () => {
+    const now = Timestamp.now();
+
+    const expiredJobsSnap = await db
+      .collection("Jobs")
+      .where("EndDate", "<=", now)
+      .limit(100)
+      .get();
+
+    if (expiredJobsSnap.empty) {
+      console.log("No expired jobs found.");
+      return;
+    }
+
+    for (const jobDoc of expiredJobsSnap.docs) {
+      const jobId = jobDoc.id;
+      const job = jobDoc.data() || {};
+
+      const currentStatus = String(job.JobStatus || "").trim();
+      const alreadyNotified = job.CompanyNotified === true;
+
+      if (currentStatus === "Closed" && alreadyNotified) continue;
+
+      const companyId = String(job.UserID || "").trim();
+      const jobTitle = String(job.JobTitle || "Your job posting");
+
+      if (!companyId) {
+        console.log(`Job ${jobId} has no company UserID.`);
+        continue;
+      }
+
+      await jobDoc.ref.set(
+        {
+          JobStatus: "Closed",
+          CompanyNotified: true,
+        },
+        { merge: true }
+      );
+
+      const appsSnap = await db
+        .collection("Applications")
+        .where("JobID", "==", jobId)
+        .get();
+
+      const applicantsCount = appsSnap.size;
+
+      const title = "Job Posting Ended";
+      const body = `“${jobTitle}” has ended. You can now review ${applicantsCount} applicant${applicantsCount === 1 ? "" : "s"}.`;
+
+      await db.collection("Notification").add({
+        UserID: companyId,
+        JobID: jobId,
+        JobTitle: jobTitle,
+        Status: "Closed",
+        Type: "CompanyJobExpired",
+        Message: body,
+        Date: FieldValue.serverTimestamp(),
+        Read: false,
+      });
+
+      const companySnap = await db.collection("Users").doc(companyId).get();
+      const company = companySnap.data() || {};
+
+      if (
+        company.notificationsEnabled === true &&
+        Array.isArray(company.fcmTokens)
+      ) {
+        const tokens = [
+          ...new Set(
+            company.fcmTokens
+              .map((t) => String(t || "").trim())
+              .filter(Boolean)
+          ),
+        ];
+
+        for (const batchTokens of chunkArray(tokens, 500)) {
+          await messaging.sendEachForMulticast({
+            tokens: batchTokens,
+            notification: { title, body },
+            data: {
+              jobId,
+              type: "CompanyJobExpired",
+              status: "Closed",
+            },
+          });
+        }
+      }
+
+      console.log(`Closed expired job and notified company: ${jobId}`);
+    }
+  }
+);

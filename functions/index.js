@@ -3201,40 +3201,9 @@ export const deleteOldCVHistory = onSchedule(
 // This should be added AFTER the deleteOldCVHistory function
 
 export {
-  notifyOnJobStatusChange,
+  notifyOnJobStatusChange,deleteOldNotifications,closeExpiredJobsAndNotify
 } from "./notification/notifyJobStatus.js";
 
-export const deleteOldNotifications = onSchedule(
-  {
-    schedule: "every 24 hours",
-    region: "us-central1",
-  },
-  async () => {
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    const oldNotificationsSnap = await db
-      .collection("Notification")
-      .where("Date", "<", Timestamp.fromDate(thirtyDaysAgo))
-      .limit(450)
-      .get();
-
-    if (oldNotificationsSnap.empty) {
-      console.log("No old notifications to delete.");
-      return;
-    }
-
-    const batch = db.batch();
-
-    oldNotificationsSnap.docs.forEach((doc) => {
-      batch.delete(doc.ref);
-    });
-
-    await batch.commit();
-
-    console.log(`Deleted ${oldNotificationsSnap.size} old notifications.`);
-  }
-);
 export const deleteCVHistory = functions.https.onCall(async (data, context) => {
   const actualData = data.data || data;
   const cvHistoryId = actualData.cvHistoryId || "";
@@ -3717,6 +3686,46 @@ export const deleteApplication = functions.https.onCall(
         "internal",
         error.message
       );
+    }
+  }
+);
+export const synthesizeSpeech = v2.https.onRequest(
+  { secrets: ["OPENAI_API_KEY"] },
+  async (req, res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    
+    const { text } = req.body;
+    if (!text) {
+      res.status(400).json({ error: 'text is required' });
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `https://texttospeech.googleapis.com/v1/text:synthesize?key=${process.env.GOOGLE_TTS_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            input: { text },
+            voice: {
+              languageCode: 'en-US',
+              name: 'en-US-Neural2-D', // صوت ذكر طبيعي
+              ssmlGender: 'MALE',
+            },
+            audioConfig: {
+              audioEncoding: 'MP3',
+              speakingRate: 0.9,
+              pitch: 0.0,
+            },
+          }),
+        }
+      );
+
+      const data = await response.json();
+      res.status(200).json({ audioContent: data.audioContent });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
     }
   }
 );
