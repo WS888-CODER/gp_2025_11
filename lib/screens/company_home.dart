@@ -483,9 +483,24 @@ class _CompanyHomeState extends State<CompanyHome> {
 
     if (result != null) {
       try {
+        final now = DateTime.now();
+        final newStart = result['startDate'];
+        final newEnd = result['endDate'];
+
+        String newStatus;
+        if (newEnd != null && newEnd.isBefore(now)) {
+          newStatus = 'Closed';
+        } else {
+          newStatus = 'Open';
+        }
+
         await FirebaseFirestore.instance.collection('Jobs').doc(jobId).update({
-          'StartDate': result['startDate'],
-          'EndDate': result['endDate'],
+          'StartDate': newStart,
+          'EndDate': newEnd,
+        });
+
+        await FirebaseFirestore.instance.collection('Jobs').doc(jobId).update({
+          'JobStatus': newStatus,
         });
 
         if (!mounted) return;
@@ -973,8 +988,16 @@ class _CompanyHomeState extends State<CompanyHome> {
                             const Spacer(),
                             GestureDetector(
                               onTap: () {
-                                SnackHelper.error(
-                                    context, 'Notifications coming soon');
+                                final uid =
+                                    FirebaseAuth.instance.currentUser?.uid ??
+                                        '';
+                                if (uid.isEmpty) return;
+
+                                Navigator.pushNamed(
+                                  context,
+                                  '/notifications',
+                                  arguments: {'userId': uid},
+                                );
                               },
                               child: Container(
                                 width: 50,
@@ -983,10 +1006,57 @@ class _CompanyHomeState extends State<CompanyHome> {
                                   color: Colors.white.withOpacity(0.15),
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(
-                                  Icons.notifications_outlined,
-                                  color: Colors.white,
-                                  size: 26,
+                                child: StreamBuilder<
+                                    QuerySnapshot<Map<String, dynamic>>>(
+                                  stream: FirebaseFirestore.instance
+                                      .collection('Notification')
+                                      .where('UserID', isEqualTo: companyId)
+                                      .where('Read', isEqualTo: false)
+                                      .snapshots(),
+                                  builder: (context, snapshot) {
+                                    final unreadCount =
+                                        snapshot.data?.docs.length ?? 0;
+
+                                    return Stack(
+                                      clipBehavior: Clip.none,
+                                      children: [
+                                        const Center(
+                                          child: Icon(
+                                            Icons.notifications_outlined,
+                                            color: Colors.white,
+                                            size: 26,
+                                          ),
+                                        ),
+                                        if (unreadCount > 0)
+                                          Positioned(
+                                            right: 8,
+                                            top: 8,
+                                            child: Container(
+                                              padding: const EdgeInsets.all(4),
+                                              decoration: const BoxDecoration(
+                                                color: Colors.red,
+                                                shape: BoxShape.circle,
+                                              ),
+                                              constraints: const BoxConstraints(
+                                                minWidth: 18,
+                                                minHeight: 18,
+                                              ),
+                                              child: Text(
+                                                unreadCount > 99
+                                                    ? '99+'
+                                                    : unreadCount.toString(),
+                                                textAlign: TextAlign.center,
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    );
+                                  },
                                 ),
                               ),
                             ),
