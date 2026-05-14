@@ -995,7 +995,7 @@ class _MockInterviewSessionScreenState
     extends State<MockInterviewSessionScreen> {
   final AudioPlayer _player = AudioPlayer();
   bool _isGeneratingReport = false;
-
+  late List<int> _recordAttempts;
   bool _isUploadingAnswer = false;
   double _uploadProgress = 0.0;
   StreamSubscription<TaskSnapshot>? _uploadSub;
@@ -1037,6 +1037,7 @@ class _MockInterviewSessionScreenState
   void initState() {
     super.initState();
     _answerUrls = List<String>.filled(widget.questions.length, '');
+    _recordAttempts = List<int>.filled(widget.questions.length, 0);
     _tts = FlutterTts();
 
     // Initialize face detector
@@ -1228,7 +1229,7 @@ class _MockInterviewSessionScreenState
       if (!mounted) return;
 
       // ✅ STRICT FACE DETECTION
-      bool hasValidFace = true;
+      bool hasValidFace = false;
 
       if (faces.isNotEmpty) {
         final face = faces.first;
@@ -1449,13 +1450,23 @@ class _MockInterviewSessionScreenState
       }
 
       if (_answerUrls[_index].trim().isNotEmpty) {
+        if (_recordAttempts[_index] >= 3) {
+          SnackHelper.error(
+            context,
+            'You have reached the maximum of 3 recording attempts for this question.',
+          );
+          return;
+        }
+
         final overwrite = await showDialog<bool>(
           context: context,
           barrierDismissible: false,
-          builder: (_) => const JadeerDialog<bool>(
+          builder: (_) => JadeerDialog<bool>(
             title: 'Replace recording?',
             content: Text(
-                'You already recorded an answer for this question. Replace it?'),
+              'You already recorded an answer for this question.\n\n'
+              'Attempts remaining: ${3 - _recordAttempts[_index]}',
+            ),
             primaryLabel: 'Replace',
             primaryResult: true,
             secondaryLabel: 'Cancel',
@@ -1469,6 +1480,7 @@ class _MockInterviewSessionScreenState
         if (!mounted) return;
         setState(() {});
       }
+
       await Permission.microphone.request();
 
       final hasMic = await _recorder.hasPermission();
@@ -1490,12 +1502,13 @@ class _MockInterviewSessionScreenState
           encoder: AudioEncoder.aacLc,
           bitRate: 128000,
           sampleRate: 44100,
-          numChannels: 1, // ✅ Mono (Whisper works better with mono)
+          numChannels: 1,
         ),
         path: path,
       );
 
       _startTimer();
+      _recordAttempts[_index]++;
 
       if (!mounted) return;
       setState(() => _isRecording = true);
