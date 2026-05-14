@@ -131,6 +131,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   }
 
   Widget _buildPasswordRequirement(String text, bool isMet) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -138,14 +140,16 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           Icon(
             isMet ? Icons.check_circle : Icons.circle_outlined,
             size: 16,
-            color: isMet ? const Color(0xFFFF7B7B) : Colors.grey.shade400,
+            color: isMet
+                ? const Color(0xFFFF7B7B)
+                : scheme.onSurface.withOpacity(0.45),
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               text,
               style: TextStyle(
-                color: Colors.grey.shade600,
+                color: scheme.onSurface.withOpacity(0.65),
                 fontSize: 12,
                 fontWeight: FontWeight.normal,
               ),
@@ -350,9 +354,11 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
+                        color: scheme.surface,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey.shade200),
+                        border: Border.all(
+                          color: scheme.outline.withOpacity(0.25),
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
