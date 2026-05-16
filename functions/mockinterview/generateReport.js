@@ -2,12 +2,13 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import FormData from "form-data";
 import fetch from "node-fetch";
+import { Client } from "@gradio/client"; // التعديل الأول: جعل حرف C كابيتال هنا
 
 export const generateMockInterviewReport = onCall(
   {
     secrets: ["OPENAI_API_KEY", "HF_TOKEN"],
     timeoutSeconds: 540,
-    memory: "512MiB",
+    memory: "1GiB",
   },
   async (request) => {
     try {
@@ -241,60 +242,96 @@ Make the overallSummary at least 2-3 full sentences that give a balanced, encour
         ReportGeneratedAt: FieldValue.serverTimestamp(),
       });
 
-      // Step 5: Voice Tone Analysis (SER Model)
-      console.log("[generateReport] Starting voice tone analysis...");
+// ── 5. Voice Tone Analysis (SER Model) - Verified with Python Architecture ──
+      console.log("[generateReport] Starting voice tone analysis via Public Client...");
       const voiceResults = [];
-      const HF_TOKEN = process.env.HF_TOKEN;
 
-      for (let i = 0; i < audioUrls.length; i++) {
-        const audioUrl = audioUrls[i];
-        if (!audioUrl || audioUrl.trim() === "") continue;
+      try {
+        // 🎯 الـ Loop الذكي للتأكد من حالة السبيس وصحوته قبل الاتصال في الـ Mock
+        const spaceApiUrl = "https://huggingface.co/api/spaces/wsaifaleslam/jadeer-smart-assessment";
+        let isAwake = false;
+        let attempts = 0;
 
-        try {
-          console.log(`[generateReport] Analyzing voice ${i + 1}/${audioUrls.length}`);
+        console.log("[generateReport] Checking real-time Hugging Face Space status...");
 
-const hfResponse = await fetch(
-  "https://wsaifaleslam-jadeer-smart-assessment.hf.space/run/predict_confidence",
-  {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${HF_TOKEN}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      data: [{ url: audioUrl }]
-    }),
-  }
-);
+        while (!isAwake && attempts < 10) {
+          const response = await fetch(spaceApiUrl);
+          if (response.ok) {
+            const metadata = await response.json();
+            const runtimeStatus = metadata.runtime?.stage; // 'RUNNING', 'SLEEPING', إلخ.
 
-          if (!hfResponse.ok) {
-            throw new Error(`HF API error: ${hfResponse.statusText}`);
+            console.log(`[generateReport] Space status is currently: ${runtimeStatus}`);
+
+            if (runtimeStatus === "RUNNING") {
+              isAwake = true;
+              break; // صاحي وجاهز؟ اطلع فوراً وكمل الشغل بدون ما تضيع ثانية!
+            }
           }
+          
+          attempts++;
+          // إذا نايم، نرسل طلب تنشيط وننتظر 4 ثواني قبل المحاولة القادمة
+          await fetch("https://wsaifaleslam-jadeer-smart-assessment.hf.space").catch(() => {});
+          await new Promise(resolve => setTimeout(resolve, 4000));
+        }
 
-          const hfResult = await hfResponse.json();
-          const resultText = hfResult.data?.[0] || "Analysis unavailable";
+        // 🎯 الحين يتصل بالجريديو بسلام كامل وهو ضامن قيام السيرفر بنفس المتغير القديم (app)
+        const app = await Client.connect("wsaifaleslam/jadeer-smart-assessment");
+        console.log("[generateReport] ✅ Connected to Hugging Face Space successfully.");
 
-          voiceResults.push({
-            questionIndex: i,
-            result: resultText,
-          });
+        // ── يكمل كود الـ Mock الأصلي حق الـ Loop حقكِ زي ما هو بالملي ──
+        for (let i = 0; i < audioUrls.length; i++) {
+          const audioUrl = audioUrls[i];
+          if (!audioUrl || audioUrl.trim() === "") continue;
 
-          console.log(`[generateReport] ✅ Voice analysis Q${i + 1}: ${resultText}`);
-        } catch (err) {
-          console.error(`[generateReport] ❌ Voice analysis failed for Q${i + 1}:`, err);
-          voiceResults.push({
-            questionIndex: i,
-            result: "Analysis unavailable",
-          });
+          try {
+            console.log(`[generateReport] Connecting client for audio ${i + 1}/${audioUrls.length}`);
+
+            // تحميل ملف الصوت الأصلي كـ Blob
+            const audioResponse = await fetch(audioUrl);
+            if (!audioResponse.ok) throw new Error("Audio download failed");
+            
+            const arrayBuffer = await audioResponse.arrayBuffer();
+            const audioBlob = new Blob([arrayBuffer], { type: 'audio/wav' });
+
+            // استدعاء دالة البايثون الصافية
+            const hfResult = await app.predict("predict_confidence", [
+              audioBlob 
+            ]);
+
+            // استخراج النص الصافي المرجّع من كود البايثون (الموجود في العنصر الأول للمصفوفة)
+            const resultText = hfResult.data && hfResult.data[0] 
+              ? String(hfResult.data[0]) 
+              : "Analysis unavailable";
+
+            voiceResults.push({
+              questionIndex: i,
+              result: resultText,
+            });
+
+            console.log(`[generateReport] ✅ Voice analysis Q${i + 1}: ${resultText}`);
+          } catch (err) {
+            console.error(`[generateReport] ❌ Voice analysis failed for Q${i + 1}:`, err.message || err);
+            voiceResults.push({
+              questionIndex: i,
+              result: "Analysis unavailable",
+            });
+          }
+        }
+      } catch (outerErr) {
+        console.error("[generateReport] ❌ Critical failure in SER Outer Block:", outerErr.message || outerErr);
+        // في حال فشل الـ Connect الخارجي تماماً، نملأ المصفوفة بـ Unavailable عشان ما يوقف حفظ الريبورت الكلي
+        for (let i = 0; i < audioUrls.length; i++) {
+          voiceResults.push({ questionIndex: i, result: "Analysis unavailable" });
         }
       }
 
+      // Step 6: Final save and update
       await interviewRef.update({
         VoiceToneAnalysis: voiceResults,
+        ReportGeneratedAt: FieldValue.serverTimestamp(),
       });
 
       console.log("[generateReport] ✅ Voice tone analysis saved");
-
       console.log(`[generateReport] ✅ Report saved successfully for ${mockInterviewID}`);
 
       return {
@@ -304,11 +341,9 @@ const hfResponse = await fetch(
       };
     } catch (error) {
       console.error("[generateReport] ❌ Error:", error);
-
       if (error instanceof HttpsError) {
         throw error;
       }
-
       throw new HttpsError("internal", `Failed to generate report: ${error.message}`);
     }
   }

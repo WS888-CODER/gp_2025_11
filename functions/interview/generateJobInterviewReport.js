@@ -1,3 +1,4 @@
+import { Client } from "@gradio/client";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import FormData from "form-data";
@@ -5,28 +6,12 @@ import fetch from "node-fetch";
 
 /**
  * generateJobInterviewReport
- *.
- * Called by job_interview_service.dart after the job seeker
- * finishes all interview questions.
- *
- * Pipeline:
- *   1. Read Applications doc → get audio URLs, JobID, CV URL
- *   2. Read Jobs doc        → get Questions, JobTitle, Specialty, Requirements
- *   3. Transcribe audio     → Whisper API
- *   4. Analyse with GPT-4   → strengths, weaknesses, advice, score
- *   5. Save Report + Score  → back to Applications doc
- *
- * Report schema matches MockInterviewReport so the Flutter UI can
- * reuse the same widgets (strengths[], weaknesses[], advice[],
- * overallScore, overallSummary, voiceToneAnalysis).
- *
- * Score is on a 0-100 scale (matching Applications.Score field).
  */
 export const generateJobInterviewReport = onCall(
   {
     secrets: ["OPENAI_API_KEY"],
     timeoutSeconds: 540,
-    memory: "512MiB",
+    memory: "1GiB",
   },
   async (request) => {
     try {
@@ -39,9 +24,7 @@ export const generateJobInterviewReport = onCall(
         );
       }
 
-      console.log(
-        `[jobReport] Starting for application: ${applicationsID}`
-      );
+      console.log(`[jobReport] Starting for application: ${applicationsID}`);
 
       const db = getFirestore();
 
@@ -58,9 +41,7 @@ export const generateJobInterviewReport = onCall(
       const jobID = appData.JobID || "";
       const cvUrl = appData.ApplicationCVURL || "";
 
-      console.log(
-        `[jobReport] Found ${audioUrls.length} audio files, JobID: ${jobID}`
-      );
+      console.log(`[jobReport] Found ${audioUrls.length} audio files, JobID: ${jobID}`);
 
       if (audioUrls.length === 0) {
         throw new HttpsError(
@@ -83,19 +64,16 @@ export const generateJobInterviewReport = onCall(
         if (jobSnap.exists) {
           const jobData = jobSnap.data();
 
-          // Questions may be ["text"] or [{Text:"text"}]
           const rawQ = jobData.Questions || [];
           questions = rawQ.map((q) =>
             typeof q === "string" ? q : q.Text || q.text || String(q)
           );
 
-          // Job context for GPT prompt
           jobTitle = jobTitle || jobData.JobTitle || "Unknown Position";
           specialty = jobData.Specialty || "";
           requirements = jobData.Requirements || [];
           description = jobData.Description || "";
 
-          // Get company name if not already on application
           if (!companyName && jobData.UserID) {
             try {
               const compSnap = await db
@@ -112,14 +90,11 @@ export const generateJobInterviewReport = onCall(
         }
       }
 
-      // Fallback: use stored answers count for question numbering
       if (questions.length === 0) {
         questions = audioUrls.map((_, i) => `Question ${i + 1}`);
       }
 
-      console.log(
-        `[jobReport] Job: ${jobTitle}, Specialty: ${specialty}, ${questions.length} questions`
-      );
+      console.log(`[jobReport] Job: ${jobTitle}, Specialty: ${specialty}, ${questions.length} questions`);
 
       // ── 3. Transcribe audio with Whisper ─────────────────────
       const transcripts = [];
@@ -133,28 +108,20 @@ export const generateJobInterviewReport = onCall(
         }
 
         try {
-          console.log(
-            `[jobReport] Transcribing audio ${i + 1}/${audioUrls.length}`
-          );
+          console.log(`[jobReport] Transcribing audio ${i + 1}/${audioUrls.length}`);
 
-          // Download audio file
           const audioResponse = await fetch(audioUrl);
           if (!audioResponse.ok) {
-            throw new Error(
-              `Failed to download audio: ${audioResponse.statusText}`
-            );
+            throw new Error(`Failed to download audio: ${audioResponse.statusText}`);
           }
 
           const audioBuffer = await audioResponse.buffer();
-          console.log(
-            `[jobReport] Downloaded ${audioBuffer.length} bytes`
-          );
+          console.log(`[jobReport] Downloaded ${audioBuffer.length} bytes`);
 
           if (audioBuffer.length < 100) {
             throw new Error("Audio file too small (likely corrupted)");
           }
 
-          // Call Whisper API using FormData
           const formData = new FormData();
           formData.append("file", audioBuffer, {
             filename: `audio_${i}.m4a`,
@@ -177,9 +144,7 @@ export const generateJobInterviewReport = onCall(
           if (!transcriptionResponse.ok) {
             const errorText = await transcriptionResponse.text();
             console.error(`[jobReport] Whisper error: ${errorText}`);
-            throw new Error(
-              `Whisper API error: ${transcriptionResponse.statusText}`
-            );
+            throw new Error(`Whisper API error: ${transcriptionResponse.statusText}`);
           }
 
           const result = await transcriptionResponse.json();
@@ -190,14 +155,9 @@ export const generateJobInterviewReport = onCall(
             answer: result.text || "[No transcription]",
           });
 
-          console.log(
-            `[jobReport] ✅ Transcribed Q${i + 1}: ${result.text.substring(0, 50)}...`
-          );
+          console.log(`[jobReport] ✅ Transcribed Q${i + 1}: ${result.text.substring(0, 50)}...`);
         } catch (error) {
-          console.error(
-            `[jobReport] ❌ Transcription failed for audio ${i}:`,
-            error
-          );
+          console.error(`[jobReport] ❌ Transcription failed for audio ${i}:`, error);
           transcripts.push({
             question: questions[i] || `Question ${i + 1}`,
             answer: "[Transcription failed]",
@@ -206,15 +166,10 @@ export const generateJobInterviewReport = onCall(
       }
 
       if (transcripts.length === 0) {
-        throw new HttpsError(
-          "internal",
-          "Failed to transcribe any audio files"
-        );
+        throw new HttpsError("internal", "Failed to transcribe any audio files");
       }
 
-      console.log(
-        `[jobReport] Successfully transcribed ${transcripts.length} answers`
-      );
+      console.log(`[jobReport] Successfully transcribed ${transcripts.length} answers`);
 
       // ── 4. Filter valid transcripts ──────────────────────────
       const validTranscripts = transcripts.filter(
@@ -238,7 +193,80 @@ export const generateJobInterviewReport = onCall(
           ? `Note: ${failedCount} answer(s) could not be transcribed and were excluded from analysis.\n\n`
           : "";
 
-      // ── 5. Build job context for GPT prompt ──────────────────
+      // ── 5. Voice Tone Analysis (SER Model) - Verified with Mock Architecture ──
+      console.log("[jobReport] Starting voice tone analysis via Public Client...");
+      const voiceAnalysisResults = [];
+
+      try {
+        const spaceApiUrl = "https://huggingface.co/api/spaces/wsaifaleslam/jadeer-smart-assessment";
+        let isAwake = false;
+        let attempts = 0;
+
+        console.log("[jobReport] Checking real-time Hugging Face Space status...");
+
+        while (!isAwake && attempts < 10) {
+          const response = await fetch(spaceApiUrl);
+          if (response.ok) {
+            const metadata = await response.json();
+            const runtimeStatus = metadata.runtime?.stage;
+
+            console.log(`[jobReport] Space status is currently: ${runtimeStatus}`);
+
+            if (runtimeStatus === "RUNNING") {
+              isAwake = true;
+              break;
+            }
+          }
+          
+          attempts++;
+          await fetch("https://wsaifaleslam-jadeer-smart-assessment.hf.space").catch(() => {});
+          await new Promise(resolve => setTimeout(resolve, 4000));
+        }
+
+        const app = await Client.connect("wsaifaleslam/jadeer-smart-assessment");
+        console.log("[jobReport] ✅ Connected to Hugging Face Space successfully.");
+
+        for (let i = 0; i < audioUrls.length; i++) {
+          const audioUrl = audioUrls[i];
+          if (!audioUrl || audioUrl.trim() === "") continue;
+
+          try {
+            console.log(`[jobReport] Connecting client for audio ${i + 1}/${audioUrls.length}`);
+
+            const audioResponse = await fetch(audioUrl);
+            if (!audioResponse.ok) throw new Error("Audio download failed");
+            
+            const arrayBuffer = await audioResponse.arrayBuffer();
+            const audioBlob = new Blob([arrayBuffer], { type: 'audio/wav' });
+
+            const hfResult = await app.predict("predict_confidence", [audioBlob]);
+
+            const resultText = hfResult.data && hfResult.data[0] 
+              ? String(hfResult.data[0]) 
+              : "Analysis unavailable";
+
+            voiceAnalysisResults.push({
+              questionIndex: i,
+              result: resultText,
+            });
+
+            console.log(`[jobReport] ✅ Voice analysis Q${i + 1}: ${resultText}`);
+          } catch (err) {
+            console.error(`[jobReport] ❌ Voice analysis failed for Q${i + 1}:`, err.message || err);
+            voiceAnalysisResults.push({
+              questionIndex: i,
+              result: "Analysis unavailable",
+            });
+          }
+        }
+      } catch (outerErr) {
+        console.error("[jobReport] ❌ Critical failure in SER Outer Block:", outerErr.message || outerErr);
+        for (let i = 0; i < audioUrls.length; i++) {
+          voiceAnalysisResults.push({ questionIndex: i, result: "Analysis unavailable" });
+        }
+      }
+
+      // ── 6. Build job context for GPT prompt ──────────────────
       let jobContext = `Position: ${jobTitle}`;
       if (specialty) jobContext += `\nSpecialty: ${specialty}`;
       if (companyName) jobContext += `\nCompany: ${companyName}`;
@@ -249,7 +277,7 @@ export const generateJobInterviewReport = onCall(
         jobContext += `\nJob Description: ${description.substring(0, 500)}`;
       }
 
-      // ── 6. Analyse with GPT-4 ───────────────────────────────
+      // ── 7. Analyse with GPT-4 ───────────────────────────────
       const gptPrompt = `You are an expert recruiter writing a personal feedback report directly to the job applicant. Always address them as "you" (second person), never "the candidate" or "the applicant".
 
 ${jobContext}
@@ -284,11 +312,7 @@ Respond with a JSON object containing:
       "answer": "<your transcribed answer>",
       "evaluation": "<brief evaluation of this specific answer, addressing the applicant as 'you'>"
     }
-  ],
-  "voiceToneAnalysis": {
-    "available": false,
-    "message": "Voice tone analysis will be available in future updates"
-  }
+  ]
 }
 
 IMPORTANT SCORING GUIDELINES (0-100 scale):
@@ -343,7 +367,6 @@ CRITICAL: Write ALL feedback in second person ("you demonstrated", "you should",
         rawResponse.substring(0, 200)
       );
 
-      // Remove markdown code blocks if present
       let cleanedResponse = rawResponse;
       if (rawResponse.startsWith("```json")) {
         cleanedResponse = rawResponse
@@ -356,17 +379,17 @@ CRITICAL: Write ALL feedback in second person ("you demonstrated", "you should",
       const reportData = JSON.parse(cleanedResponse);
       console.log("[jobReport] ✅ Successfully parsed GPT-4 response");
 
-      // Extract score (0-100)
       const score =
         typeof reportData.overallScore === "number"
           ? Math.min(100, Math.max(0, Math.round(reportData.overallScore)))
           : 0;
 
-      // ── 7. Save report + score to Firestore ──────────────────
+      // ── 8. Save report + score to Firestore ──────────────────
       await appRef.update({
         Report: reportData,
         Score: score,
         Answers: transcripts.map((t) => t.answer),
+        VoiceToneAnalysis: voiceAnalysisResults,
         ReportGeneratedAt: FieldValue.serverTimestamp(),
       });
 

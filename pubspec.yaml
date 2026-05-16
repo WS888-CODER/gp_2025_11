@@ -60,6 +60,7 @@ flutter:
 
 flutter_launcher_icons:
   android: true
-  ios: true
-  image_path: "assets/images/j_icon_BIG.png"
+  ios: false
+  adaptive_icon_background: "#3d3c85"
+  image_path: "assets/images/JadeerAppLogo.png"
   remove_alpha_ios: false

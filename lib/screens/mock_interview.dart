@@ -1560,7 +1560,13 @@ class _MockInterviewSessionScreenState
       }, SetOptions(merge: true));
 
       final functions = FirebaseFunctions.instance;
-      await functions.httpsCallable('generateMockInterviewReport').call({
+
+      final callable = functions.httpsCallable(
+        'generateMockInterviewReport',
+        options: HttpsCallableOptions(timeout: const Duration(minutes: 30)),
+      );
+
+      await callable.call({
         'mockInterviewID': widget.mockInterviewId,
       });
 

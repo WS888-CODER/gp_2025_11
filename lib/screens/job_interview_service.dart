@@ -898,7 +898,12 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
       // optional cloud function
       try {
         await FirebaseFunctions.instance
-            .httpsCallable('generateJobInterviewReport')
+            .httpsCallable(
+          'generateJobInterviewReport',
+          options: HttpsCallableOptions(
+            timeout: const Duration(minutes: 30),
+          ),
+        )
             .call({'applicationsID': widget.applicationId});
       } catch (_) {}
 

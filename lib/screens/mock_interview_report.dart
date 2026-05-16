@@ -702,48 +702,210 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
         ),
       );
     }
-    return ListView.builder(
-      padding: const EdgeInsets.all(20),
-      itemCount: voiceAnalysis!.length,
-      itemBuilder: (context, index) {
-        final item = voiceAnalysis[index] as Map<String, dynamic>;
-        final questionIndex = (item['questionIndex'] as int? ?? index) + 1;
-        final result = item['result'] as String? ?? 'Analysis unavailable';
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          padding: const EdgeInsets.all(16),
+    double totalScore = 0.0;
+    for (var item in voiceAnalysis) {
+      String resultText = item['result'] ?? '';
+      if (!resultText.contains('REJECTED')) {
+        final match =
+            RegExp(r'Assessment Score:\s*([\d.]+)%').firstMatch(resultText);
+        if (match != null) {
+          totalScore += double.tryParse(match.group(1) ?? '0.0') ?? 0.0;
+        }
+      }
+    }
+    double overallVoiceScore = totalScore / voiceAnalysis.length;
+
+    Color voiceScoreColor;
+    if (overallVoiceScore >= 80) {
+      voiceScoreColor = const Color(0xFF2E7D32);
+    } else if (overallVoiceScore >= 50) {
+      voiceScoreColor = const Color(0xFFE67E22);
+    } else {
+      voiceScoreColor = const Color(0xFFC0392B);
+    }
+
+    return Column(
+      children: [
+        Container(
+          margin: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: const Color(0xFF4A5FBC).withOpacity(0.08),
+            color: isDark ? Colors.grey[900] : Colors.grey[50],
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: const Color(0xFF4A5FBC).withOpacity(0.2),
-            ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(
-                'Question $questionIndex',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF4A5FBC),
-                ),
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    width: 85,
+                    height: 85,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: voiceScoreColor.withOpacity(0.2),
+                          blurRadius: 20,
+                          spreadRadius: 4,
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(
+                    width: 75,
+                    height: 75,
+                    child: CircularProgressIndicator(
+                      value: 1.0,
+                      strokeWidth: 7,
+                      strokeCap: StrokeCap.round,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        isDark ? Colors.grey[800]! : Colors.grey[200]!,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 75,
+                    height: 75,
+                    child: CircularProgressIndicator(
+                      value: overallVoiceScore / 100,
+                      strokeWidth: 7,
+                      strokeCap: StrokeCap.round,
+                      backgroundColor: Colors.transparent,
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(voiceScoreColor),
+                    ),
+                  ),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        overallVoiceScore.toStringAsFixed(1),
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: voiceScoreColor,
+                          height: 1,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '%',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark ? Colors.grey[500] : Colors.grey[400],
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                result,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  height: 1.5,
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      "Overall Vocal Confidence",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: voiceScoreColor.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: voiceScoreColor.withOpacity(0.3),
+                          width: 1.0,
+                        ),
+                      ),
+                      child: Text(
+                        overallVoiceScore >= 80
+                            ? "Excellent"
+                            : (overallVoiceScore >= 50
+                                ? "Good"
+                                : "Needs Improvement"),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: voiceScoreColor,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-        );
-      },
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.all(20),
+            itemCount: voiceAnalysis.length,
+            itemBuilder: (context, index) {
+              final item = voiceAnalysis[index] as Map<String, dynamic>;
+              final questionIndex =
+                  (item['questionIndex'] as int? ?? index) + 1;
+              final result =
+                  item['result'] as String? ?? 'Analysis unavailable';
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 20),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(top: 6, right: 12),
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF2196F3),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Question $questionIndex',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF2196F3),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            result,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              height: 1.6,
+                              color: isDark ? Colors.grey[300] : Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 

@@ -37,7 +37,6 @@ class _JobInterviewReportScreenState extends State<JobInterviewReportScreen>
     super.dispose();
   }
 
-  // ── Status helpers (matching report: Pending / Shortlisted / Rejected) ──
   String _formatStatus(String raw) {
     switch (raw) {
       case 'Pending':
@@ -133,9 +132,7 @@ class _JobInterviewReportScreenState extends State<JobInterviewReportScreen>
           final status = (data['ApplicationStatus'] ?? '').toString();
           final date = data['Date'] as Timestamp?;
 
-          // ── Report not yet generated ──
           if (report == null) {
-            // Interview still in progress — not completed
             if (status == 'InInterview') {
               return const EmptyState(
                 icon: Icons.play_circle_outline,
@@ -145,18 +142,14 @@ class _JobInterviewReportScreenState extends State<JobInterviewReportScreen>
               );
             }
 
-            // Interview was cancelled
             if (status == 'InterviewCancelled') {
               return const EmptyState(
                 icon: Icons.cancel_outlined,
                 title: 'Interview Cancelled',
-                subtitle:
-                    'This interview was not completed',
+                subtitle: 'This interview was not completed',
               );
             }
 
-            // Status is Pending — interview was completed,
-            // cloud function is generating the report right now
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(24.0),
@@ -186,7 +179,6 @@ class _JobInterviewReportScreenState extends State<JobInterviewReportScreen>
             );
           }
 
-          // ── Parse report fields ──
           final strengths = (report['strengths'] as List<dynamic>?)
                   ?.map((e) => e.toString())
                   .toList() ??
@@ -199,12 +191,11 @@ class _JobInterviewReportScreenState extends State<JobInterviewReportScreen>
                   ?.map((e) => e.toString())
                   .toList() ??
               [];
-          final voiceAnalysis =
-              report['voiceToneAnalysis'] as Map<String, dynamic>?;
+          final List<dynamic> voiceAnalysisList =
+              data['VoiceToneAnalysis'] as List<dynamic>? ?? [];
 
           final overallSummary = (report['overallSummary'] ??
-                  'Your interview has been submitted for review.')
-              as String;
+              'Your interview has been submitted for review.') as String;
 
           return Column(
             children: [
@@ -215,7 +206,6 @@ class _JobInterviewReportScreenState extends State<JobInterviewReportScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // ── Header Card ──
                       _buildHeaderCard(
                         context,
                         jobTitle: jobTitle,
@@ -224,28 +214,22 @@ class _JobInterviewReportScreenState extends State<JobInterviewReportScreen>
                         status: status,
                       ),
                       const SizedBox(height: 20),
-
-                      // ── Overview Section (summary only, no score) ──
                       _buildOverviewSection(
                         context,
                         summary: overallSummary,
                       ),
                       const SizedBox(height: 20),
-
-                      // ── Tabs Section ──
                       _buildTabsSection(
                         context,
-                        strengths,
-                        weaknesses,
-                        advice,
-                        voiceAnalysis,
+                        strengths: strengths,
+                        weaknesses: weaknesses,
+                        advice: advice,
+                        voiceAnalysisList: voiceAnalysisList,
                       ),
                     ],
                   ),
                 ),
               ),
-
-              // ── Done button (only when NOT from history) ──
               if (!widget.fromHistory)
                 Padding(
                   padding: const EdgeInsets.all(20),
@@ -285,9 +269,6 @@ class _JobInterviewReportScreenState extends State<JobInterviewReportScreen>
     );
   }
 
-  // ════════════════════════════════════════════════════════
-  // HEADER CARD
-  // ════════════════════════════════════════════════════════
   Widget _buildHeaderCard(
     BuildContext context, {
     required String jobTitle,
@@ -319,102 +300,51 @@ class _JobInterviewReportScreenState extends State<JobInterviewReportScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Title row
-            const Row(
+            Row(
               children: [
-                Icon(Icons.work_rounded, color: Colors.white, size: 28),
-                SizedBox(width: 12),
+                const Icon(Icons.work_rounded, color: Colors.white, size: 26),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Application Report',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    jobTitle.isEmpty ? 'Job Application' : jobTitle,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-
-            // Job title chip
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                jobTitle.isEmpty ? 'Job Application' : jobTitle,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-
-            // Company name
             if (companyName.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(Icons.business, color: Colors.white70, size: 16),
-                  const SizedBox(width: 6),
-                  Text(
-                    companyName,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-
-            const SizedBox(height: 8),
-
-            // Date row
-            Row(
-              children: [
-                const Icon(Icons.calendar_today,
-                    color: Colors.white70, size: 16),
-                const SizedBox(width: 6),
-                Text(
-                  dateStr,
-                  style: const TextStyle(
+              Text(
+                companyName,
+                style: const TextStyle(
                     color: Colors.white70,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 12),
-
-            // Status chip
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500),
               ),
+              const SizedBox(height: 4),
+            ],
+            Text(
+              dateStr,
+              style: const TextStyle(color: Colors.white70, fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                  color: Colors.white, borderRadius: BorderRadius.circular(20)),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(_statusIcon(status), color: stClr, size: 16),
                   const SizedBox(width: 6),
-                  Text(
-                    _formatStatus(status),
-                    style: TextStyle(
-                      color: stClr,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                  Text(_formatStatus(status),
+                      style: TextStyle(
+                          color: stClr,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700)),
                 ],
               ),
             ),
@@ -424,9 +354,6 @@ class _JobInterviewReportScreenState extends State<JobInterviewReportScreen>
     );
   }
 
-  // ════════════════════════════════════════════════════════
-  // OVERVIEW SECTION (summary only — score removed)
-  // ════════════════════════════════════════════════════════
   Widget _buildOverviewSection(
     BuildContext context, {
     required String summary,
@@ -494,17 +421,17 @@ class _JobInterviewReportScreenState extends State<JobInterviewReportScreen>
     );
   }
 
-  // ════════════════════════════════════════════════════════
-  // TABS SECTION (matching mock interview colors & style)
-  // ════════════════════════════════════════════════════════
   Widget _buildTabsSection(
-    BuildContext context,
-    List<String> strengths,
-    List<String> weaknesses,
-    List<String> advice,
-    Map<String, dynamic>? voiceAnalysis,
-  ) {
+    BuildContext context, {
+    required List<String> strengths,
+    required List<String> weaknesses,
+    required List<String> advice,
+    required List<dynamic> voiceAnalysisList,
+  }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // ── حساب السكور هنا عشان نعرف إذا الـ Voice tab محتاج height خاص ──
+    final isVoiceTab = _tabController.index == 3;
 
     return Container(
       clipBehavior: Clip.antiAlias,
@@ -522,9 +449,10 @@ class _JobInterviewReportScreenState extends State<JobInterviewReportScreen>
       child: AnimatedBuilder(
         animation: _tabController,
         builder: (context, _) {
+          final isVoice = _tabController.index == 3;
           return Column(
             children: [
-              // ✨ CUSTOM TAB BAR (matching mock interview style)
+              // ── Pill Tab Bar ──
               Container(
                 margin: const EdgeInsets.fromLTRB(12, 16, 12, 8),
                 padding: const EdgeInsets.all(4),
@@ -562,17 +490,21 @@ class _JobInterviewReportScreenState extends State<JobInterviewReportScreen>
                 ),
               ),
 
-              // Tab content (dynamic height — wraps to fit content)
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: _buildSelectedTabContent(
-                  context,
-                  strengths: strengths,
-                  weaknesses: weaknesses,
-                  advice: advice,
-                  voiceAnalysis: voiceAnalysis,
+              // ── Tab Content ──
+              if (isVoice)
+                // Voice tab: الدائرة ثابتة + الأسئلة تسكرول داخلها
+                _buildVoiceContent(context, voiceAnalysisList)
+              else
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: _buildSelectedTabContent(
+                    context,
+                    strengths: strengths,
+                    weaknesses: weaknesses,
+                    advice: advice,
+                    voiceAnalysisList: voiceAnalysisList,
+                  ),
                 ),
-              ),
             ],
           );
         },
@@ -580,7 +512,6 @@ class _JobInterviewReportScreenState extends State<JobInterviewReportScreen>
     );
   }
 
-  // ── Pill tab builder (matching mock interview — text only, individual colors) ──
   Widget _buildPillTab(
     BuildContext context, {
     required int index,
@@ -628,38 +559,40 @@ class _JobInterviewReportScreenState extends State<JobInterviewReportScreen>
     );
   }
 
-  // ── Builds the content for the currently selected tab ──
   Widget _buildSelectedTabContent(
     BuildContext context, {
     required List<String> strengths,
     required List<String> weaknesses,
     required List<String> advice,
-    required Map<String, dynamic>? voiceAnalysis,
+    required List<dynamic> voiceAnalysisList,
   }) {
     switch (_tabController.index) {
       case 0:
-        return _buildListContent(context,
-            items: strengths,
-            itemColor: Colors.green[700]!,
-            emptyMessage: 'No strengths identified yet.');
+        return _buildListContent(
+          context,
+          items: strengths,
+          itemColor: Colors.green[700]!,
+          emptyMessage: 'No strengths identified yet.',
+        );
       case 1:
-        return _buildListContent(context,
-            items: weaknesses,
-            itemColor: const Color(0xFFFD6C67),
-            emptyMessage: 'No areas for improvement identified.');
+        return _buildListContent(
+          context,
+          items: weaknesses,
+          itemColor: const Color(0xFFFD6C67),
+          emptyMessage: 'No areas for improvement identified.',
+        );
       case 2:
-        return _buildListContent(context,
-            items: advice,
-            itemColor: AppTheme.primaryPurple,
-            emptyMessage: 'No recommendations yet.');
-      case 3:
-        return _buildVoiceContent(context, voiceAnalysis);
+        return _buildListContent(
+          context,
+          items: advice,
+          itemColor: AppTheme.primaryPurple,
+          emptyMessage: 'No recommendations yet.',
+        );
       default:
         return const SizedBox.shrink();
     }
   }
 
-  // ── List content (Column-based, dynamic height) ──
   Widget _buildListContent(
     BuildContext context, {
     required List<String> items,
@@ -714,113 +647,251 @@ class _JobInterviewReportScreenState extends State<JobInterviewReportScreen>
     );
   }
 
-  // ── Voice analysis content (Column-based, dynamic height) ──
-  Widget _buildVoiceContent(
-      BuildContext context, Map<String, dynamic>? voiceAnalysis) {
-    final isAvailable = voiceAnalysis?['available'] == true;
+  // ════════════════════════════════════════════════════════
+  // VOICE TAB — دائرة ثابتة + أسئلة تسكرول لوحدها
+  // اللوجيك والربط ما تغير
+  // ════════════════════════════════════════════════════════
+  Widget _buildVoiceContent(BuildContext context, List<dynamic> voiceList) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    if (!isAvailable) {
-      return Container(
+    // ── Empty state ──
+    if (voiceList.isEmpty) {
+      return Padding(
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFD6C67).withOpacity(0.1),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: const Color(0xFFFD6C67).withOpacity(0.5),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFD6C67).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: const Color(0xFFFD6C67).withOpacity(0.5),
+            ),
           ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.schedule_rounded,
-              color: Color(0xFFFD6C67),
-              size: 48,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              voiceAnalysis?['message'] ??
-                  'Voice analysis will be available soon',
-              style: TextStyle(
-                fontSize: 15,
-                color: isDark ? Colors.white70 : Colors.grey[700],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.schedule_rounded,
+                color: Color(0xFFFD6C67),
+                size: 48,
               ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+              const SizedBox(height: 16),
+              Text(
+                'Voice analysis will be available soon',
+                style: TextStyle(
+                  fontSize: 15,
+                  color: isDark ? Colors.white70 : Colors.grey[700],
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildVoiceMetric(
-          context,
-          'Confidence',
-          voiceAnalysis?['confidence'] ?? 0,
-          Colors.blue,
-        ),
-        const SizedBox(height: 20),
-        _buildVoiceMetric(
-          context,
-          'Clarity',
-          voiceAnalysis?['clarity'] ?? 0,
-          Colors.green,
-        ),
-        const SizedBox(height: 20),
-        Row(
-          children: [
-            Text(
-              'Tone: ',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-            Text(
-              voiceAnalysis?['tone'] ?? 'N/A',
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+    // ── حساب السكور — نفس اللوجيك الأصلي ما تغير ──
+    double totalScore = 0.0;
+    for (var item in voiceList) {
+      final String resultText = (item['result'] ?? '').toString();
+      if (!resultText.contains('REJECTED')) {
+        final match =
+            RegExp(r'Assessment Score:\s*([\d.]+)%').firstMatch(resultText);
+        if (match != null) {
+          totalScore += double.tryParse(match.group(1) ?? '0.0') ?? 0.0;
+        }
+      }
+    }
 
-  // ── Voice metric bar ──
-  Widget _buildVoiceMetric(
-      BuildContext context, String label, int value, Color color) {
+    final int totalPercentage =
+        voiceList.isNotEmpty ? (totalScore / voiceList.length).round() : 0;
+
+    Color ringColor;
+    String evaluationText;
+    if (totalPercentage >= 80) {
+      ringColor = const Color(0xFF2E7D32);
+      evaluationText = 'Excellent';
+    } else if (totalPercentage >= 50) {
+      ringColor = const Color(0xFFE67E22);
+      evaluationText = 'Good';
+    } else {
+      ringColor = const Color(0xFFC0392B);
+      evaluationText = 'Needs Improvement';
+    }
+
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              label,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
+        // ── الدائرة ثابتة — ما تسكرول ──
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.grey[900] : Colors.grey[50],
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.grey.withOpacity(0.1)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Glowing circular progress — نفس التصميم الأصلي
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      width: 85,
+                      height: 85,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: ringColor.withOpacity(0.2),
+                            blurRadius: 20,
+                            spreadRadius: 4,
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(
+                      width: 75,
+                      height: 75,
+                      child: CircularProgressIndicator(
+                        value: 1.0,
+                        strokeWidth: 7,
+                        strokeCap: StrokeCap.round,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          isDark ? Colors.grey[800]! : Colors.grey[200]!,
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 75,
+                      height: 75,
+                      child: CircularProgressIndicator(
+                        value: totalPercentage / 100,
+                        strokeWidth: 7,
+                        strokeCap: StrokeCap.round,
+                        backgroundColor: Colors.transparent,
+                        valueColor: AlwaysStoppedAnimation<Color>(ringColor),
+                      ),
+                    ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '$totalPercentage%',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: ringColor,
+                            height: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 16),
+                // Label & pill — نفس التصميم الأصلي
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Overall Vocal Confidence',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: ringColor.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: ringColor.withOpacity(0.3),
+                            width: 1.0,
+                          ),
+                        ),
+                        child: Text(
+                          evaluationText,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: ringColor,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+                ),
+              ],
             ),
-            Text(
-              '$value%',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-          ],
+          ),
         ),
-        const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(6),
-          child: LinearProgressIndicator(
-            value: value / 100,
-            backgroundColor: Colors.grey[200],
-            valueColor: AlwaysStoppedAnimation<Color>(color),
-            minHeight: 10,
+
+        const SizedBox(height: 12),
+
+        // ── الأسئلة تسكرول لوحدها بـ height ثابت ──
+        SizedBox(
+          height: 320,
+          child: ListView.builder(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+            itemCount: voiceList.length,
+            itemBuilder: (context, index) {
+              final item = voiceList[index] as Map<String, dynamic>? ?? {};
+              final int qIndex = item['questionIndex'] as int? ?? index;
+              final String resultText = item['result'] as String? ?? 'N/A';
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 20),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(top: 6, right: 10),
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF2196F3),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Question ${qIndex + 1}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF2196F3),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            resultText,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              height: 1.6,
+                              color: isDark ? Colors.grey[300] : Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         ),
       ],
