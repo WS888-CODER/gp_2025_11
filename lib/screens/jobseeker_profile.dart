@@ -979,8 +979,6 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
     _form.currentState?.save();
 
     final current = widget.data;
-    final wasComplete = current[UserFields.isProfileComplete] == true;
-
     final emailValid = email.isNotEmpty && _email.hasMatch(email);
 
     final updates = <String, dynamic>{};
@@ -1117,7 +1115,7 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
       return;
     }
 
-    if (wasComplete && hasApplications) {
+    if (hasApplications) {
       if (!photoOk) {
         SnackHelper.error(
           context,
@@ -1155,8 +1153,7 @@ class _EditJobSeekerPageState extends State<EditJobSeekerPage>
       }
     }
 
-    final complete = (wasComplete && hasApplications) ||
-        (cvOk && photoOk && dobOk && natOk && hasAnyContact);
+    final complete = cvOk && photoOk && dobOk && natOk && hasAnyContact;
     updates[UserFields.isProfileComplete] = complete;
 
     setState(() => _saving = true);
