@@ -753,6 +753,8 @@ class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
   String? _cvUrl;
   Set<String> _cvKeywords = {};
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _profileSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _appliedSub;
+  Set<String> _appliedJobIds = {};
   bool get _hasCv => _cvUrl != null && _cvUrl!.isNotEmpty;
   bool get _hasKeywords => _cvKeywords.isNotEmpty;
 
@@ -762,6 +764,18 @@ class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
 
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid != null && uid.isNotEmpty) {
+      _appliedSub = FirebaseFirestore.instance
+          .collection('Applications')
+          .where('UserID', isEqualTo: uid)
+          .snapshots()
+          .listen((qs) {
+        if (!mounted) return;
+        setState(() {
+          _appliedJobIds =
+              qs.docs.map((d) => (d.data()['JobID'] ?? '').toString()).toSet();
+        });
+      });
+
       _profileSub = FirebaseFirestore.instance
           .collection('Users')
           .doc(uid)
@@ -883,6 +897,7 @@ class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
   @override
   void dispose() {
     _profileSub?.cancel();
+    _appliedSub?.cancel();
     super.dispose();
   }
 
@@ -1040,6 +1055,7 @@ class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
                     job: job,
                     company: company,
                     isSaved: isSaved,
+                    isApplied: _appliedJobIds.contains(job.jobId),
                     onSavedChanged: (v) => _toggleFavoriteForJob(job, v),
                   ),
                 );

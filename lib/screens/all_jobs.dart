@@ -172,6 +172,8 @@ class _JobsPageState extends State<JobsPage> {
 
   StreamSubscription<List<Job>>? _jobsSub;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _appliedSub;
+  Set<String> _appliedJobIds = {};
   final Map<String, CompanyInfo> _company = {};
   bool _loadingCompanies = false;
   Future<void> _handleToggleFavorite(Job job, bool newValue) async {
@@ -206,6 +208,18 @@ class _JobsPageState extends State<JobsPage> {
 
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid != null) {
+      _appliedSub = FirebaseFirestore.instance
+          .collection('Applications')
+          .where('UserID', isEqualTo: uid)
+          .snapshots()
+          .listen((qs) {
+        if (!mounted) return;
+        setState(() {
+          _appliedJobIds =
+              qs.docs.map((d) => (d.data()['JobID'] ?? '').toString()).toSet();
+        });
+      });
+
       _userSub = FirebaseFirestore.instance
           .collection(kUsersCollection)
           .doc(uid)
@@ -407,6 +421,7 @@ class _JobsPageState extends State<JobsPage> {
   void dispose() {
     _jobsSub?.cancel();
     _userSub?.cancel();
+    _appliedSub?.cancel();
     _searchController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
@@ -861,6 +876,7 @@ class _JobsPageState extends State<JobsPage> {
                       job: j,
                       company: info,
                       isSaved: favIds.contains(j.jobId),
+                      isApplied: _appliedJobIds.contains(j.jobId),
                       onSavedChanged: (bool newValue) {
                         _handleToggleFavorite(j, newValue);
                       },

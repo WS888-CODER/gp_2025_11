@@ -113,6 +113,19 @@ class JobInterviewService {
       return;
     }
 
+    // Prevent duplicate applications
+    final existing = await FirebaseFirestore.instance
+        .collection('Applications')
+        .where('UserID', isEqualTo: user.uid)
+        .where('JobID', isEqualTo: jobId)
+        .limit(1)
+        .get();
+    if (!context.mounted) return;
+    if (existing.docs.isNotEmpty) {
+      SnackHelper.error(context, 'You have already applied for this job.');
+      return;
+    }
+
     final questions = await _loadJobQuestions(jobDocId);
     if (!context.mounted) return;
 
