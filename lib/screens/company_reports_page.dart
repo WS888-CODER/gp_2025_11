@@ -1043,6 +1043,56 @@ class _ScoreProgressItem extends StatelessWidget {
   }
 }
 
+class _PsychometricBar extends StatelessWidget {
+  const _PsychometricBar({
+    required this.label,
+    required this.score,
+    required this.color,
+  });
+
+  final String label;
+  final double score;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = (score / 100).clamp(0.0, 1.0);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+              Text(
+                '${score.toStringAsFixed(0)} / 100',
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          LinearProgressIndicator(
+            value: progress,
+            minHeight: 8,
+            borderRadius: BorderRadius.circular(20),
+            color: color,
+            backgroundColor: color.withOpacity(0.12),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class CandidateDetailsPage extends StatelessWidget {
   const CandidateDetailsPage({
     super.key,
@@ -1166,6 +1216,242 @@ class CandidateDetailsPage extends StatelessWidget {
               ...breakdown.map((item) => _ScoreProgressItem(item: item)),
             ],
           ),
+          // ── Requirements Checklist (Story 34) ──
+          if (applicationData['RequirementsChecklist'] != null &&
+              (applicationData['RequirementsChecklist'] as List).isNotEmpty)
+            ...[
+              const SizedBox(height: 18),
+              _SectionCard(
+                title: 'Job Requirements Checklist',
+                children: [
+                  ...(applicationData['RequirementsChecklist'] as List)
+                      .map<Widget>((item) {
+                    final req = (item['requirement'] ?? '').toString();
+                    final met = item['met'] == true;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            margin: const EdgeInsets.only(top: 2),
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: (met ? Colors.green : Colors.red)
+                                  .withOpacity(0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              met
+                                  ? Icons.check_rounded
+                                  : Icons.close_rounded,
+                              size: 16,
+                              color: met ? Colors.green : Colors.red,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              req,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ],
+
+          // ── Psychometric Analysis (Story 34) ──
+          if (applicationData['PsychometricAnalysis'] != null &&
+              applicationData['PsychometricAnalysis'] is Map)
+            ...[
+              const SizedBox(height: 18),
+              Builder(builder: (context) {
+                final pa =
+                    applicationData['PsychometricAnalysis'] as Map<String, dynamic>;
+                final confidence = _toDouble(pa['confidence']);
+                final communication = _toDouble(pa['communication']);
+                final traits =
+                    (pa['personalityTraits'] ?? '').toString();
+                final workStyle = (pa['workStyle'] ?? '').toString();
+
+                return _SectionCard(
+                  title: 'Psychometric Analysis',
+                  children: [
+                    if (confidence > 0)
+                      _PsychometricBar(
+                        label: 'Confidence',
+                        score: confidence,
+                        color: scheme.primary,
+                      ),
+                    if (communication > 0)
+                      _PsychometricBar(
+                        label: 'Communication',
+                        score: communication,
+                        color: scheme.primary,
+                      ),
+                    if (traits.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      _detailRow('Personality Traits', traits),
+                    ],
+                    if (workStyle.isNotEmpty)
+                      _detailRow('Work Style', workStyle),
+                  ],
+                );
+              }),
+            ],
+
+          // ── Voice Tone Analysis (Story 34) ──
+          if (applicationData['VoiceToneAnalysis'] != null &&
+              (applicationData['VoiceToneAnalysis'] as List).isNotEmpty)
+            ...[
+              const SizedBox(height: 18),
+              Builder(builder: (context) {
+                final voiceList =
+                    applicationData['VoiceToneAnalysis'] as List;
+                double total = 0;
+                int count = 0;
+
+                for (final item in voiceList) {
+                  final result = (item['result'] ?? '').toString();
+                  final match =
+                      RegExp(r'Assessment Score:\s*([\d.]+)%')
+                          .firstMatch(result);
+                  if (match != null) {
+                    total +=
+                        double.tryParse(match.group(1)!) ?? 0;
+                    count++;
+                  }
+                }
+
+                final avgScore =
+                    count > 0 ? (total / count).round() : 0;
+                final avgColor = avgScore >= 70
+                    ? Colors.green
+                    : avgScore >= 40
+                        ? Colors.orange
+                        : Colors.red;
+
+                return _SectionCard(
+                  title: 'Voice Tone Analysis',
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: avgColor.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.mic_rounded,
+                              color: avgColor, size: 28),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '$avgScore / 100',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                  color: avgColor,
+                                ),
+                              ),
+                              const Text(
+                                'Average Voice Confidence',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              }),
+            ],
+
+          // ── Interview Q&A (Story 34) ──
+          if (applicationData['Report'] != null &&
+              applicationData['Report'] is Map &&
+              applicationData['Report']['questionsAndAnswers'] != null)
+            ...[
+              const SizedBox(height: 18),
+              _SectionCard(
+                title: 'Interview Questions & Answers',
+                children: [
+                  ...(applicationData['Report']['questionsAndAnswers']
+                          as List)
+                      .asMap()
+                      .entries
+                      .map<Widget>((entry) {
+                    final i = entry.key;
+                    final qa = entry.value as Map<String, dynamic>;
+                    final question = (qa['question'] ?? '').toString();
+                    final answer = (qa['answer'] ?? '').toString();
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Q${i + 1}: $question',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              color: scheme.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: scheme.primary.withOpacity(0.04),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              answer,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                          if (i <
+                              (applicationData['Report']
+                                              ['questionsAndAnswers']
+                                          as List)
+                                      .length -
+                                  1)
+                            Padding(
+                              padding:
+                                  const EdgeInsets.only(top: 12),
+                              child: Divider(
+                                color: Colors.grey.shade200,
+                                height: 1,
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ],
+
           const SizedBox(height: 18),
           _SectionCard(
             title: 'Documents',
