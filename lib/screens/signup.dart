@@ -343,6 +343,16 @@ class _SignupScreenState extends State<SignupScreen> {
           'JobPosting': 2,
         },
       });
+      try {
+        final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
+        final callable = functions.httpsCallable('notifyAdminNewCompany');
+        await callable.call({
+          'companyName': _companyNameController.text.trim(),
+          'companyEmail': _companyEmailController.text.trim(),
+        });
+      } catch (e) {
+        print('Admin notification failed: $e');
+      }
       String otp = _generateOTP();
       bool otpSent = await _sendOTPEmail(email, otp, 'Company');
       if (!otpSent) {

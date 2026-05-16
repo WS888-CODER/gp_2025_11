@@ -1,5 +1,5 @@
 import 'dart:async';
-
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -184,12 +184,31 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 onSelected: (newStatus) async {
                                   await updateCompanyStatus(doc.id, newStatus);
 
-                                  if (!context.mounted) return;
-                                  SnackHelper.success(
-                                    context,
-                                    'Status updated to "$newStatus"',
-                                  );
+                                  if (newStatus == 'Verified' ||
+                                      newStatus == 'Rejected') {
+                                    try {
+                                      final functions =
+                                          FirebaseFunctions.instanceFor(
+                                              region: 'us-central1');
+                                      final callable = functions.httpsCallable(
+                                          'notifyCompanyStatusChange');
+                                      await callable.call({
+                                        'companyEmail': data['Email'] ?? '',
+                                        'companyName':
+                                            data['CompanyName'] ?? '',
+                                        'status': newStatus == 'Verified'
+                                            ? 'Accepted'
+                                            : 'Rejected',
+                                      });
+                                    } catch (e) {
+                                      print(
+                                          'Company status notification failed: $e');
+                                    }
+                                  }
 
+                                  if (!context.mounted) return;
+                                  SnackHelper.success(context,
+                                      'Status updated to "$newStatus"');
                                   await loadCompanies();
                                 },
                               );
