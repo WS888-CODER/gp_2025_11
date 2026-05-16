@@ -301,7 +301,6 @@ class _CompanyProfileState extends State<CompanyProfile> {
     final oldWebsite = (current[UserFields.website] ?? '').toString().trim();
 
     final wasComplete = current[UserFields.isProfileComplete] == true;
-    final hadLogoBefore = _hasAnyLogo(current);
 
     final draftFromState = (_phoneE164Draft ?? '').trim();
     final hasContactEmail = email.isNotEmpty;
@@ -355,14 +354,14 @@ class _CompanyProfileState extends State<CompanyProfile> {
 
     final uid = FirebaseAuth.instance.currentUser!.uid;
 
-    bool hasJobs = false;
+    bool hasActiveJobs = false;
     try {
       final jobsSnap = await FirebaseFirestore.instance
           .collection(kJobsCollection)
           .where('UserID', isEqualTo: uid)
           .limit(1)
           .get();
-      hasJobs = jobsSnap.docs.isNotEmpty;
+      hasActiveJobs = jobsSnap.docs.isNotEmpty;
     } catch (_) {
       SnackHelper.error(
         uiContext,
@@ -371,32 +370,47 @@ class _CompanyProfileState extends State<CompanyProfile> {
       return false;
     }
 
-    if (wasComplete && hasJobs) {
-      if (!_hasAnyLogo(current)) {
+    // Compute whether the profile would still be complete after this save
+    bool logoAfterSave;
+    if (_pendingLogoFile != null) {
+      logoAfterSave = true;
+    } else if (_logoUrl == '') {
+      logoAfterSave = false;
+    } else {
+      logoAfterSave = _hasAnyLogo(current);
+    }
+
+    final wouldBeComplete = logoAfterSave &&
+        desc.length >= 150 &&
+        loc.isNotEmpty &&
+        hasAnyContact;
+
+    if (hasActiveJobs && !wouldBeComplete) {
+      if (!logoAfterSave) {
         SnackHelper.error(
           uiContext,
-          'While you have job posts, you must keep a company logo.',
+          'You have active job posts — a company logo is required.',
         );
         return false;
       }
       if (desc.length < 150) {
         SnackHelper.error(
           uiContext,
-          'While you have job posts, description must be at least 150 characters.',
+          'You have active job posts — description must be at least 150 characters.',
         );
         return false;
       }
       if (loc.isEmpty) {
         SnackHelper.error(
           uiContext,
-          'While you have job posts, location cannot be empty.',
+          'You have active job posts — location cannot be empty.',
         );
         return false;
       }
       if (!hasAnyContact) {
         SnackHelper.error(
           uiContext,
-          'While you have job posts, you must keep at least one contact method (email or phone).',
+          'You have active job posts — at least one contact method (email or phone) is required.',
         );
         return false;
       }
@@ -428,20 +442,7 @@ class _CompanyProfileState extends State<CompanyProfile> {
         _pendingLogoFile = null;
       }
 
-      bool hasLogoAfter;
-      if (newLogoUrl != null) {
-        hasLogoAfter = true;
-      } else if (_logoUrl == '') {
-        hasLogoAfter = false;
-      } else {
-        hasLogoAfter = hadLogoBefore;
-      }
-
-      final complete = wasComplete ||
-          (desc.length >= 150 &&
-              loc.isNotEmpty &&
-              hasLogoAfter &&
-              hasAnyContact);
+      final complete = wasComplete || wouldBeComplete;
 
       final updates = <String, dynamic>{
         UserFields.description: desc,
@@ -486,16 +487,8 @@ class _CompanyProfileState extends State<CompanyProfile> {
         }
         _logoUrl = newLogoUrl;
       } else if (_logoUrl == '') {
-        if (!wasComplete || !hasJobs) {
-          updates[UserFields.photoUrl] = FieldValue.delete();
-          updates[UserFields.photoPath] = FieldValue.delete();
-        } else {
-          SnackHelper.error(
-            uiContext,
-            'You cannot remove the logo while you have job posts.',
-          );
-          return false;
-        }
+        updates[UserFields.photoUrl] = FieldValue.delete();
+        updates[UserFields.photoPath] = FieldValue.delete();
       }
 
       if (updates.isEmpty) {
@@ -520,14 +513,14 @@ class _CompanyProfileState extends State<CompanyProfile> {
         }
       }
 
-      if (!wasComplete &&
-          _logoUrl == '' &&
-          (current[UserFields.photoPath]?.toString().isNotEmpty ?? false)) {
-        await _deleteStorageFile(current[UserFields.photoPath]?.toString());
-      } else if (!wasComplete &&
-          _logoUrl == '' &&
-          (current[UserFields.photoUrl]?.toString().isNotEmpty ?? false)) {
-        await _deleteStorageFile(current[UserFields.photoUrl]?.toString());
+      if (_logoUrl == '') {
+        final oldPath = (current[UserFields.photoPath] ?? '').toString();
+        if (oldPath.isNotEmpty) {
+          await _deleteStorageFile(oldPath);
+        } else {
+          final oldUrl = (current[UserFields.photoUrl] ?? '').toString();
+          if (oldUrl.isNotEmpty) await _deleteStorageFile(oldUrl);
+        }
       }
 
       SnackHelper.success(uiContext, 'Profile updated successfully');
