@@ -875,8 +875,7 @@ Do not include explanations or commentary outside this JSON.`;
 
         // Upload to Storage
         const bucket = storage.bucket();
-        const fileName = `${userId}_${cvHistoryId}.pdf`;
-        const filePath = `NewCV/${fileName}`;
+        const filePath = `NewCV/${userId}/${cvHistoryId}.pdf`;
         const file = bucket.file(filePath);
 
         await file.save(pdfBuffer, {
@@ -1397,54 +1396,32 @@ export const deleteUserAccount = functions.https.onCall(
 
       const bucket = storage.bucket();
 
-      if (photoPath) {
+      // Delete all user storage folders
+      const userFolders = [
+        `applications/${userId}/`,
+        `cv/${userId}/`,
+        `logos/${userId}/`,
+        `mock_interviews/${userId}/`,
+        `NewCV/${userId}/`,
+        `photos/${userId}/`,
+        `reports/${userId}/`,
+        `temp_cv_extraction/${userId}/`,
+      ];
+      for (const prefix of userFolders) {
         try {
-          await bucket.file(photoPath).delete();
-          console.log("Deleted profile photo:", photoPath);
+          const [files] = await bucket.getFiles({ prefix });
+          if (files.length) {
+            await Promise.all(files.map((f) => f.delete()));
+            console.log(`Deleted ${files.length} file(s) from ${prefix}`);
+          }
         } catch (err) {
-          console.warn("Profile photo delete warning:", err);
+          console.warn(`Storage cleanup warning for ${prefix}:`, err.message);
         }
       }
 
-      if (cvPath) {
-        try {
-          await bucket.file(cvPath).delete();
-          console.log("Deleted CV file:", cvPath);
-        } catch (err) {
-          console.warn("CV file delete warning:", err);
-        }
-      }
-      try {
-        const prefix = `NewCV/${userId}_`;
-        const [files] = await bucket.getFiles({ prefix });
-
-        if (files.length) {
-          await Promise.all(
-            files.map(async (file) => {
-              await file.delete();
-              console.log("Deleted NewCV file:", file.name);
-            })
-          );
-          console.log(
-            `Deleted ${files.length} NewCV file(s) for user: ${userId}`
-          );
-        } else {
-          console.log(`No NewCV files found for user: ${userId}`);
-        }
-      } catch (err) {
-        console.warn("NewCV files delete warning:", err);
-      }
-
-      await auth
-        .deleteUser(userId)
-        .catch((err) => {
-          console.warn("Auth delete warning:", err);
-        });
-      await auth
-        .deleteUser(userId)
-        .catch((err) => {
-          console.warn("Auth delete warning:", err);
-        });
+      await auth.deleteUser(userId).catch((err) => {
+        console.warn("Auth delete warning:", err);
+      });
 
       console.log(`Account deleted for user: ${userId}`);
 
@@ -1637,8 +1614,7 @@ export const generateCVPDF = functions.https.onCall(async (data, context) => {
     const pdfBuffer = await createProfessionalCV(newCVText);
 
     const bucket = storage.bucket();
-    const fileName = `${userId}_${cvHistoryId}.pdf`;
-    const filePath = `NewCV/${fileName}`;
+    const filePath = `NewCV/${userId}/${cvHistoryId}.pdf`;
     const file = bucket.file(filePath);
 
     await file.save(pdfBuffer, {
@@ -3314,29 +3290,25 @@ export const deleteOldMockInterviews = onSchedule(
 
         // ✅ حذف ملفات هذي المقابلة فقط
         if (userId && interviewId) {
-          try {
-            const prefix = `mock_interviews/${userId}/${interviewId}/`;
-
-            const [files] = await bucket.getFiles({ prefix });
-
-            if (files.length > 0) {
-              await Promise.all(
-                files.map(async (file) => {
-                  await file.delete();
-                  deletedFiles++;
-                  console.log("Deleted file:", file.name);
-                })
-              );
-
-              console.log(
-                `Deleted ${files.length} file(s) for interview ${interviewId}`
-              );
+          for (const prefix of [
+            `mock_interviews/${userId}/${interviewId}/`,
+            `reports/${userId}/${interviewId}/`,
+          ]) {
+            try {
+              const [files] = await bucket.getFiles({ prefix });
+              if (files.length > 0) {
+                await Promise.all(
+                  files.map(async (file) => {
+                    await file.delete();
+                    deletedFiles++;
+                    console.log("Deleted file:", file.name);
+                  })
+                );
+                console.log(`Deleted ${files.length} file(s) from ${prefix}`);
+              }
+            } catch (err) {
+              console.warn(`Could not delete files from ${prefix}:`, err.message);
             }
-          } catch (err) {
-            console.warn(
-              `Could not delete files for interview ${interviewId}:`,
-              err.message
-            );
           }
         }
 
@@ -3409,29 +3381,19 @@ export const deleteMockInterview = functions.https.onCall(
       const bucket = storage.bucket();
 
       if (userId && interviewId) {
-        try {
-          const prefix = `mock_interviews/${userId}/${interviewId}/`;
-
-          console.log("Storage prefix:", prefix);
-
-          const [files] = await bucket.getFiles({ prefix });
-
-          console.log("Files found:", files.length);
-
-          files.forEach((file) => {
-            console.log("File:", file.name);
-          });
-
-          if (files.length > 0) {
-            await Promise.all(
-              files.map(async (file) => {
-                await file.delete();
-                console.log("Deleted file:", file.name);
-              })
-            );
+        for (const prefix of [
+          `mock_interviews/${userId}/${interviewId}/`,
+          `reports/${userId}/${interviewId}/`,
+        ]) {
+          try {
+            const [files] = await bucket.getFiles({ prefix });
+            if (files.length > 0) {
+              await Promise.all(files.map((file) => file.delete()));
+              console.log(`Deleted ${files.length} file(s) from ${prefix}`);
+            }
+          } catch (err) {
+            console.warn(`Storage delete warning for ${prefix}:`, err.message);
           }
-        } catch (err) {
-          console.warn("Storage delete warning:", err.message);
         }
       } else {
         console.warn("Missing userId or interviewId, storage was not deleted");
@@ -3507,38 +3469,25 @@ export const deleteOldApplications = onSchedule(
 
         // ✅ حذف ملفات Storage
         if (userId && applicationId) {
-          try {
-            const prefix =
-              `applications/${userId}/${applicationId}/`;
-
-            console.log("Storage prefix:", prefix);
-
-            const [files] =
-              await bucket.getFiles({ prefix });
-
-            console.log(
-              "Files found:",
-              files.length
-            );
-
-            if (files.length > 0) {
-              await Promise.all(
-                files.map(async (file) => {
-                  await file.delete();
-                  deletedFiles++;
-
-                  console.log(
-                    "Deleted file:",
-                    file.name
-                  );
-                })
-              );
+          for (const prefix of [
+            `applications/${userId}/${applicationId}/`,
+            `reports/${userId}/${applicationId}/`,
+          ]) {
+            try {
+              const [files] = await bucket.getFiles({ prefix });
+              if (files.length > 0) {
+                await Promise.all(
+                  files.map(async (file) => {
+                    await file.delete();
+                    deletedFiles++;
+                    console.log("Deleted file:", file.name);
+                  })
+                );
+                console.log(`Deleted ${files.length} file(s) from ${prefix}`);
+              }
+            } catch (err) {
+              console.warn(`Storage delete warning for ${prefix}:`, err.message);
             }
-          } catch (err) {
-            console.warn(
-              `Storage delete warning for ${applicationId}:`,
-              err.message
-            );
           }
         }
 
@@ -3634,37 +3583,19 @@ export const deleteApplication = functions.https.onCall(
 
       // ✅ حذف ملفات Storage
       if (userId && realApplicationId) {
-        try {
-          const prefix =
-            `applications/${userId}/${realApplicationId}/`;
-
-          console.log("Storage prefix:", prefix);
-
-          const [files] =
-            await bucket.getFiles({ prefix });
-
-          console.log(
-            "Files found:",
-            files.length
-          );
-
-          if (files.length > 0) {
-            await Promise.all(
-              files.map(async (file) => {
-                await file.delete();
-
-                console.log(
-                  "Deleted file:",
-                  file.name
-                );
-              })
-            );
+        for (const prefix of [
+          `applications/${userId}/${realApplicationId}/`,
+          `reports/${userId}/${realApplicationId}/`,
+        ]) {
+          try {
+            const [files] = await bucket.getFiles({ prefix });
+            if (files.length > 0) {
+              await Promise.all(files.map((file) => file.delete()));
+              console.log(`Deleted ${files.length} file(s) from ${prefix}`);
+            }
+          } catch (err) {
+            console.warn(`Storage delete warning for ${prefix}:`, err.message);
           }
-        } catch (err) {
-          console.warn(
-            "Storage delete warning:",
-            err.message
-          );
         }
       }
 
