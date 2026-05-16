@@ -14,6 +14,7 @@ import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:http/http.dart' as http;
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 
@@ -134,12 +135,13 @@ class JobInterviewService {
       return;
     }
 
-    final cvUrl = await _ensureProfileCompleteAndGetCvUrl(
-      context,
-      uid: user.uid,
-    );
+    final profileOk = await _ensureProfileComplete(context, uid: user.uid);
     if (!context.mounted) return;
-    if (cvUrl == null) return;
+    if (!profileOk) return;
+
+    final cvResult = await _pickApplicationCv(context, uid: user.uid);
+    if (!context.mounted) return;
+    if (cvResult == null) return;
 
     final permOk = await _confirmPermissionsDialog(context);
     if (!context.mounted) return;
@@ -155,7 +157,8 @@ class JobInterviewService {
       jobDocId: jobDocId,
       jobId: jobId,
       specialty: specialty,
-      cvUrl: cvUrl,
+      cvUrl: cvResult.url,
+      cvPath: cvResult.path,
       questionsCount: questions.length,
       questions: questions,
       jobTitle: jobTitle,
@@ -163,7 +166,7 @@ class JobInterviewService {
     );
   }
 
-  static Future<String?> _ensureProfileCompleteAndGetCvUrl(
+  static Future<bool> _ensureProfileComplete(
     BuildContext context, {
     required String uid,
   }) async {
@@ -191,9 +194,9 @@ class JobInterviewService {
 
     final missing = <String>[];
     if (photoUrl.isEmpty) missing.add('Profile photo');
+    if (cvUrl.isEmpty) missing.add('CV file');
     if (dob == null) missing.add('Date of birth');
     if (nationality.isEmpty) missing.add('Nationality');
-    if (cvUrl.isEmpty) missing.add('CV file');
     if (!hasAnyContact) missing.add('Contact (email or phone)');
 
     final flagComplete = data['IsProfileComplete'] == true;
@@ -223,23 +226,22 @@ class JobInterviewService {
           ),
         ),
       );
-      return null;
+      return false;
     }
 
-    final lower = cvUrl.toLowerCase();
-    final looksOk = lower.contains('.pdf') ||
-        lower.contains('.doc') ||
-        lower.contains('.docx') ||
-        lower.contains('firebase');
-    if (!looksOk) {
-      SnackHelper.error(
-        context,
-        'Please upload a valid CV (PDF/DOCX) in your profile before applying.',
-      );
-      return null;
-    }
+    return true;
+  }
 
-    return cvUrl;
+  static Future<({String url, String path})?> _pickApplicationCv(
+    BuildContext context, {
+    required String uid,
+  }) {
+    return showDialog<({String url, String path})?>(
+      context: context,
+      useRootNavigator: true,
+      barrierDismissible: false,
+      builder: (_) => _ApplicationCvPicker(uid: uid, parentContext: context),
+    );
   }
 
   static Future<List<String>> _loadJobQuestions(String jobDocId) async {
@@ -277,6 +279,7 @@ class JobInterviewService {
     required String jobId,
     required String specialty,
     required String cvUrl,
+    required String cvPath,
     required int questionsCount,
     required List<String> questions,
     String jobTitle = '',
@@ -291,6 +294,7 @@ class JobInterviewService {
         'UserID': uid,
         'JobID': jobId,
         'ApplicationCVURL': cvUrl,
+        'ApplicationCVPath': cvPath,
         'ApplicationStatus': 'InInterview',
         'Answers': List<String>.filled(questionsCount, ''),
         'AnswersRecordsURL': List<String>.filled(questionsCount, ''),
@@ -875,24 +879,50 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
       await _ttsPlayer.stop();
 
       final uid = FirebaseAuth.instance.currentUser?.uid;
-      if (uid != null && uid.isNotEmpty) {
-        final folderRef = FirebaseStorage.instance
-            .ref()
-            .child('applications/$uid/${widget.applicationId}');
 
-        final list = await folderRef.listAll();
-        for (final item in list.items) {
+      // Read the document first to get the application CV path
+      String? cvPath;
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('Applications')
+            .doc(widget.applicationId)
+            .get();
+        cvPath = doc.data()?['ApplicationCVPath']?.toString();
+      } catch (_) {}
+
+      if (uid != null && uid.isNotEmpty) {
+        // Delete interview recordings folder
+        try {
+          final folderRef = FirebaseStorage.instance
+              .ref()
+              .child('applications/$uid/${widget.applicationId}');
+          final list = await folderRef.listAll();
+          for (final item in list.items) {
+            try {
+              await item.delete();
+            } catch (_) {}
+          }
+        } catch (_) {}
+
+        // Delete the application-specific CV file
+        if (cvPath != null && cvPath.isNotEmpty) {
           try {
-            await item.delete();
+            await FirebaseStorage.instance.ref(cvPath).delete();
           } catch (_) {}
         }
       }
 
+      // Keep the document so the user cannot reapply, but clear heavy fields
       await FirebaseFirestore.instance
           .collection('Applications')
           .doc(widget.applicationId)
           .set({
         'ApplicationStatus': 'InterviewCancelled',
+        'Answers': FieldValue.delete(),
+        'AnswersRecordsURL': FieldValue.delete(),
+        'ApplicationCVURL': FieldValue.delete(),
+        'ApplicationCVPath': FieldValue.delete(),
+        'ReportURL': FieldValue.delete(),
       }, SetOptions(merge: true));
     } catch (e) {
       if (mounted) SnackHelper.error(context, 'Cleanup failed: $e');
@@ -960,12 +990,13 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
           builder: (_) => const JadeerDialog<bool>(
             title: 'Exit Interview?',
             content: Text(
-              'Exiting now will cancel this interview attempt.\n\n'
-              'Are you sure you want to exit?',
+              'If you leave now, your application will be marked as cancelled and your recorded answers will be deleted.\n\n'
+              'You will NOT be able to reapply for this job.',
+              style: TextStyle(color: Colors.white, height: 1.4),
             ),
             primaryLabel: 'Exit',
             primaryResult: true,
-            secondaryLabel: 'Continue',
+            secondaryLabel: 'Stay',
             secondaryResult: false,
           ),
         );
@@ -1228,6 +1259,257 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
                 ),
               ),
       ),
+    );
+  }
+}
+
+// ============================================================
+// CV picker bottom sheet for per-application CV upload
+// ============================================================
+
+class _ApplicationCvPicker extends StatefulWidget {
+  final String uid;
+  final BuildContext parentContext;
+  const _ApplicationCvPicker({required this.uid, required this.parentContext});
+
+  @override
+  State<_ApplicationCvPicker> createState() => _ApplicationCvPickerState();
+}
+
+class _ApplicationCvPickerState extends State<_ApplicationCvPicker> {
+  static const _brandColor = Color(0xFF4A5FBC);
+  static const _dangerColor = Color(0xFFFC686A);
+
+  File? _file;
+  String _fileName = '';
+  bool _uploading = false;
+  double? _progress;
+
+  Future<void> _pick() async {
+    final res = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'docx'],
+    );
+    if (res == null || res.files.single.path == null) return;
+    final name = res.files.single.name;
+    setState(() {
+      _file = File(res.files.single.path!);
+      _fileName = name;
+    });
+    if (!mounted) return;
+    ScaffoldMessenger.of(widget.parentContext).showSnackBar(
+      SnackBar(
+        content: Text('CV selected: $name'),
+        backgroundColor: Colors.green.shade600,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Future<void> _upload() async {
+    final file = _file;
+    if (file == null) return;
+
+    if (file.lengthSync() > 10 * 1024 * 1024) {
+      SnackHelper.error(widget.parentContext, 'File too large (max 10 MB)');
+      return;
+    }
+
+    setState(() {
+      _uploading = true;
+      _progress = 0;
+    });
+
+    try {
+      final ext = _fileName.split('.').last.toLowerCase();
+      final storagePath =
+          'applications/${widget.uid}/${DateTime.now().millisecondsSinceEpoch}_cv.$ext';
+      final ref = FirebaseStorage.instance.ref(storagePath);
+      final task = ref.putFile(file);
+
+      task.snapshotEvents.listen((s) {
+        if (!mounted) return;
+        final total = s.totalBytes;
+        if (total > 0) setState(() => _progress = s.bytesTransferred / total);
+      });
+
+      final snap = await task;
+      final url = await snap.ref.getDownloadURL();
+
+      if (!mounted) return;
+      Navigator.of(context).pop((url: url, path: storagePath));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _uploading = false;
+        _progress = null;
+      });
+      SnackHelper.error(widget.parentContext, 'Upload failed: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasFile = _file != null;
+
+    return AlertDialog(
+      backgroundColor: _brandColor.withOpacity(0.92),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(30),
+      ),
+      title: const Text(
+        'Upload Your CV',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+      actionsPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      actionsAlignment: MainAxisAlignment.center,
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 320, maxWidth: 420),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Upload the CV you want to submit with this application (PDF or DOCX, max 10 MB).',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 13.5,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 20),
+              // File picker area
+              InkWell(
+                onTap: _uploading ? null : _pick,
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: hasFile
+                          ? Colors.white
+                          : Colors.white.withOpacity(0.3),
+                      width: 1.5,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    color: Colors.white.withOpacity(hasFile ? 0.12 : 0.06),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        hasFile
+                            ? Icons.description_rounded
+                            : Icons.upload_file_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          hasFile ? _fileName : 'Tap to select a CV file',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: hasFile
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                            color: hasFile
+                                ? Colors.white
+                                : Colors.white.withOpacity(0.6),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (hasFile)
+                        const Icon(
+                          Icons.check_circle_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              if (_uploading) ...[
+                const SizedBox(height: 16),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: (_progress ?? 0) == 0 ? null : _progress,
+                    minHeight: 4,
+                    backgroundColor: Colors.white24,
+                    color: _dangerColor,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  (_progress ?? 0) > 0
+                      ? 'Uploading… ${((_progress ?? 0) * 100).toInt()}%'
+                      : 'Preparing…',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.white70,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed:
+              _uploading ? null : () => Navigator.of(context).pop(null),
+          style: TextButton.styleFrom(
+            backgroundColor: Colors.white.withOpacity(0.9),
+            foregroundColor: _brandColor,
+            padding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+          child: const Text(
+            'Cancel',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+        const SizedBox(width: 8),
+        TextButton(
+          onPressed: (hasFile && !_uploading) ? _upload : null,
+          style: TextButton.styleFrom(
+            backgroundColor:
+                (hasFile && !_uploading) ? _dangerColor : Colors.white24,
+            foregroundColor: Colors.white,
+            padding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+          child: _uploading
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Text(
+                  'Upload & Continue',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+        ),
+      ],
     );
   }
 }
