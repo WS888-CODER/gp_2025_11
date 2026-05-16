@@ -20,11 +20,9 @@ import 'package:record/record.dart';
 class JobInterviewService {
   static Future<bool> _requestCamMicPermissions(BuildContext context) async {
     try {
-      // 1) check current
       final camStatus = await Permission.camera.status;
       final micStatus = await Permission.microphone.status;
 
-      // If permanently denied/restricted -> open settings
       final blocked = camStatus.isPermanentlyDenied ||
           camStatus.isRestricted ||
           micStatus.isPermanentlyDenied ||
@@ -59,7 +57,6 @@ class JobInterviewService {
         return false;
       }
 
-      // 2) request
       final cam = await Permission.camera.request();
       final mic = await Permission.microphone.request();
 
@@ -116,7 +113,6 @@ class JobInterviewService {
       return;
     }
 
-    // 1) Load questions
     final questions = await _loadJobQuestions(jobDocId);
     if (!context.mounted) return;
 
@@ -125,7 +121,6 @@ class JobInterviewService {
       return;
     }
 
-    // 2) Check profile completion + get CV
     final cvUrl = await _ensureProfileCompleteAndGetCvUrl(
       context,
       uid: user.uid,
@@ -133,9 +128,7 @@ class JobInterviewService {
     if (!context.mounted) return;
     if (cvUrl == null) return;
 
-    // ✅ 3) Show permissions dialog (like Mock Interview)
     final permOk = await _confirmPermissionsDialog(context);
-
     if (!context.mounted) return;
     if (!permOk) return;
 
@@ -143,7 +136,6 @@ class JobInterviewService {
     if (!context.mounted) return;
     if (!granted) return;
 
-    // 5) Create Applications doc then navigate
     await _createAndStart(
       context: context,
       uid: user.uid,
@@ -237,7 +229,6 @@ class JobInterviewService {
     return cvUrl;
   }
 
-  // ✅ Supports: Questions = ["..."] OR Questions = [{Text: "..."}]
   static Future<List<String>> _loadJobQuestions(String jobDocId) async {
     try {
       final doc = await FirebaseFirestore.instance
@@ -279,30 +270,23 @@ class JobInterviewService {
     String companyName = '',
   }) async {
     try {
-      // ✅ IMPORTANT: Collection name is Applications (like your DB)
       final appRef =
           FirebaseFirestore.instance.collection('Applications').doc();
 
       await appRef.set({
-        // ✅ same field names as your screenshot
         'ApplicationsID': appRef.id,
         'UserID': uid,
         'JobID': jobId,
         'ApplicationCVURL': cvUrl,
         'ApplicationStatus': 'InInterview',
-
-        // ✅ arrays like screenshot (and same length as questions)
         'Answers': List<String>.filled(questionsCount, ''),
         'AnswersRecordsURL': List<String>.filled(questionsCount, ''),
-
         'ReportURL': '',
         'Score': 0,
         'Date': FieldValue.serverTimestamp(),
         'RecordExpiresAt': Timestamp.fromDate(
           DateTime.now().add(const Duration(days: 120)),
         ),
-
-        // ✅ NEW: Save job info so history can display it (per story #38)
         'JobTitle': jobTitle,
         'CompanyName': companyName,
       }, SetOptions(merge: true));
@@ -327,8 +311,8 @@ class JobInterviewService {
 class JobInterviewSessionScreen extends StatefulWidget {
   const JobInterviewSessionScreen({
     super.key,
-    required this.applicationId, // Applications doc id
-    required this.jobDocId, // Jobs doc id
+    required this.applicationId,
+    required this.jobDocId,
   });
 
   final String applicationId;
@@ -340,11 +324,6 @@ class JobInterviewSessionScreen extends StatefulWidget {
 }
 
 class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
-  // ====== Audio playback ======
-  final AudioPlayer _player = AudioPlayer();
-  String? _currentPlaybackUrl;
-  bool _isPlaying = false;
-
   // ====== Upload ======
   bool _isUploadingAnswer = false;
   double _uploadProgress = 0.0;
@@ -359,7 +338,7 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
   bool _initializing = true;
   String? _error;
 
-  // ====== Questions (loaded from Jobs) ======
+  // ====== Questions ======
   bool _loadingQuestions = true;
   List<String> _questions = [];
   int _index = 0;
@@ -374,9 +353,8 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
   Duration _recordDuration = Duration.zero;
   Timer? _recordTimer;
 
-  // Stored in Applications
-  late List<String> _answerUrls; // AnswersRecordsURL
-  late List<String> _answers; // Answers (optional)
+  late List<String> _answerUrls;
+  late List<String> _answers;
 
   bool get _canGoNext =>
       !_loadingQuestions &&
@@ -409,13 +387,6 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
       ),
     );
 
-    _player.playerStateStream.listen((state) {
-      if (!mounted) return;
-      if (state.processingState == ProcessingState.completed) {
-        setState(() => _isPlaying = false);
-      }
-    });
-
     _ttsPlayer.playerStateStream.listen((state) {
       if (!mounted) return;
       if (state.processingState == ProcessingState.completed) {
@@ -427,7 +398,6 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
   }
 
   Future<void> _boot() async {
-    // 1) Load questions first (Jobs -> Questions)
     await _loadQuestionsFromJobs();
     if (!mounted) return;
 
@@ -440,15 +410,9 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
       return;
     }
 
-    // 2) init arrays that depend on questions length
     _answerUrls = List<String>.filled(_questions.length, '');
     _answers = List<String>.filled(_questions.length, '');
 
-    // 3) init TTS
-    await _initTts();
-    if (!mounted) return;
-
-    // 4) init camera & face detection
     await _initPermissionsAndCamera();
   }
 
@@ -492,10 +456,6 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
         _error = 'Failed to load questions: $e';
       });
     }
-  }
-
-  Future<void> _initTts() async {
-    // Google TTS — no setup needed
   }
 
   Future<void> _speakCurrentQuestion() async {
@@ -721,33 +681,6 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
     return await ref.getDownloadURL();
   }
 
-  Future<void> _togglePlayback() async {
-    final url = _answerUrls[_index].trim();
-    if (url.isEmpty) return;
-
-    try {
-      if (_isPlaying) {
-        await _player.pause();
-        if (!mounted) return;
-        setState(() => _isPlaying = false);
-        return;
-      }
-
-      if (_currentPlaybackUrl != url) {
-        await _player.setUrl(url);
-        _currentPlaybackUrl = url;
-      }
-
-      await _player.play();
-      if (!mounted) return;
-      setState(() => _isPlaying = true);
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isPlaying = false);
-      SnackHelper.error(context, 'Playback error: $e');
-    }
-  }
-
   Future<void> _toggleRecording() async {
     if (!_faceDetected && !_isRecording) {
       SnackHelper.error(
@@ -779,7 +712,7 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
           if (!mounted) return;
           setState(() {
             _answerUrls[_index] = url;
-            _answers[_index] = ''; // optional
+            _answers[_index] = '';
           });
 
           await FirebaseFirestore.instance
@@ -803,39 +736,9 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
         return;
       }
 
-      // replace existing answer
       if (_answerUrls[_index].trim().isNotEmpty) {
-        final overwrite = await showDialog<bool>(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => const JadeerDialog<bool>(
-            title: 'Replace recording?',
-            content: Text(
-                'You already recorded an answer for this question. Replace it?'),
-            primaryLabel: 'Replace',
-            primaryResult: true,
-            secondaryLabel: 'Cancel',
-            secondaryResult: false,
-          ),
-        );
-
-        if (overwrite != true) return;
-
-        if (!mounted) return;
-        setState(() {
-          _answerUrls[_index] = '';
-          _answers[_index] = '';
-          _isPlaying = false;
-          _currentPlaybackUrl = null;
-        });
-
-        await FirebaseFirestore.instance
-            .collection('Applications')
-            .doc(widget.applicationId)
-            .set({
-          'AnswersRecordsURL': _answerUrls,
-          'Answers': _answers,
-        }, SetOptions(merge: true));
+        SnackHelper.error(context, 'You have already recorded your answer.');
+        return;
       }
 
       final mic = await Permission.microphone.status;
@@ -899,8 +802,6 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
     setState(() {
       _index++;
       _recordDuration = Duration.zero;
-      _currentPlaybackUrl = null;
-      _isPlaying = false;
     });
 
     await Future.delayed(const Duration(milliseconds: 150));
@@ -925,7 +826,6 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
         'ReportURL': '',
       }, SetOptions(merge: true));
 
-      // optional cloud function
       try {
         await FirebaseFunctions.instance
             .httpsCallable(
@@ -959,7 +859,6 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
         await _recorder.stop();
         _isRecording = false;
       }
-      await _player.stop();
       await _ttsPlayer.stop();
 
       final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -1022,7 +921,6 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
     _camera?.dispose();
     _uploadSub?.cancel();
     _ttsPlayer.dispose();
-    _player.dispose();
     _faceDetector.close();
     super.dispose();
   }
@@ -1030,9 +928,7 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Loading questions screen
     if (_loadingQuestions) {
       return ThemedScaffold(
         appBar: const CustomHeader(title: 'Job Interview', showBack: true),
@@ -1228,7 +1124,7 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
                               ),
                             ),
                           ),
-                          // Mic button + status + playback
+                          // Mic button + status
                           Positioned(
                             left: 0,
                             right: 0,
@@ -1278,26 +1174,6 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
-                                if (!_isRecording &&
-                                    !_isUploadingAnswer &&
-                                    _answerUrls[_index].isNotEmpty) ...[
-                                  const SizedBox(height: 10),
-                                  FilledButton.tonalIcon(
-                                    onPressed: _togglePlayback,
-                                    style: FilledButton.styleFrom(
-                                      backgroundColor:
-                                          Colors.white.withOpacity(0.2),
-                                      foregroundColor: Colors.white,
-                                    ),
-                                    icon: Icon(
-                                      _isPlaying
-                                          ? Icons.pause
-                                          : Icons.play_arrow,
-                                    ),
-                                    label:
-                                        Text(_isPlaying ? 'Pause' : 'Listen'),
-                                  ),
-                                ],
                                 if (_isUploadingAnswer) ...[
                                   const SizedBox(height: 8),
                                   Padding(
