@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
@@ -7,10 +8,10 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_tts/flutter_tts.dart';
 import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/screens/jobseeker_home.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:http/http.dart' as http;
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -19,11 +20,9 @@ import 'package:record/record.dart';
 class JobInterviewService {
   static Future<bool> _requestCamMicPermissions(BuildContext context) async {
     try {
-      // 1) check current
       final camStatus = await Permission.camera.status;
       final micStatus = await Permission.microphone.status;
 
-      // If permanently denied/restricted -> open settings
       final blocked = camStatus.isPermanentlyDenied ||
           camStatus.isRestricted ||
           micStatus.isPermanentlyDenied ||
@@ -58,7 +57,6 @@ class JobInterviewService {
         return false;
       }
 
-      // 2) request
       final cam = await Permission.camera.request();
       final mic = await Permission.microphone.request();
 
@@ -115,7 +113,6 @@ class JobInterviewService {
       return;
     }
 
-    // 1) Load questions
     final questions = await _loadJobQuestions(jobDocId);
     if (!context.mounted) return;
 
@@ -124,7 +121,6 @@ class JobInterviewService {
       return;
     }
 
-    // 2) Check profile completion + get CV
     final cvUrl = await _ensureProfileCompleteAndGetCvUrl(
       context,
       uid: user.uid,
@@ -132,9 +128,7 @@ class JobInterviewService {
     if (!context.mounted) return;
     if (cvUrl == null) return;
 
-    // ✅ 3) Show permissions dialog (like Mock Interview)
     final permOk = await _confirmPermissionsDialog(context);
-
     if (!context.mounted) return;
     if (!permOk) return;
 
@@ -142,7 +136,6 @@ class JobInterviewService {
     if (!context.mounted) return;
     if (!granted) return;
 
-    // 5) Create Applications doc then navigate
     await _createAndStart(
       context: context,
       uid: user.uid,
@@ -236,7 +229,6 @@ class JobInterviewService {
     return cvUrl;
   }
 
-  // ✅ Supports: Questions = ["..."] OR Questions = [{Text: "..."}]
   static Future<List<String>> _loadJobQuestions(String jobDocId) async {
     try {
       final doc = await FirebaseFirestore.instance
@@ -278,30 +270,23 @@ class JobInterviewService {
     String companyName = '',
   }) async {
     try {
-      // ✅ IMPORTANT: Collection name is Applications (like your DB)
       final appRef =
           FirebaseFirestore.instance.collection('Applications').doc();
 
       await appRef.set({
-        // ✅ same field names as your screenshot
         'ApplicationsID': appRef.id,
         'UserID': uid,
         'JobID': jobId,
         'ApplicationCVURL': cvUrl,
         'ApplicationStatus': 'InInterview',
-
-        // ✅ arrays like screenshot (and same length as questions)
         'Answers': List<String>.filled(questionsCount, ''),
         'AnswersRecordsURL': List<String>.filled(questionsCount, ''),
-
         'ReportURL': '',
         'Score': 0,
         'Date': FieldValue.serverTimestamp(),
         'RecordExpiresAt': Timestamp.fromDate(
           DateTime.now().add(const Duration(days: 120)),
         ),
-
-        // ✅ NEW: Save job info so history can display it (per story #38)
         'JobTitle': jobTitle,
         'CompanyName': companyName,
       }, SetOptions(merge: true));
@@ -326,8 +311,8 @@ class JobInterviewService {
 class JobInterviewSessionScreen extends StatefulWidget {
   const JobInterviewSessionScreen({
     super.key,
-    required this.applicationId, // Applications doc id
-    required this.jobDocId, // Jobs doc id
+    required this.applicationId,
+    required this.jobDocId,
   });
 
   final String applicationId;
@@ -339,11 +324,6 @@ class JobInterviewSessionScreen extends StatefulWidget {
 }
 
 class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
-  // ====== Audio playback ======
-  final AudioPlayer _player = AudioPlayer();
-  String? _currentPlaybackUrl;
-  bool _isPlaying = false;
-
   // ====== Upload ======
   bool _isUploadingAnswer = false;
   double _uploadProgress = 0.0;
@@ -358,7 +338,7 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
   bool _initializing = true;
   String? _error;
 
-  // ====== Questions (loaded from Jobs) ======
+  // ====== Questions ======
   bool _loadingQuestions = true;
   List<String> _questions = [];
   int _index = 0;
@@ -373,9 +353,8 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
   Duration _recordDuration = Duration.zero;
   Timer? _recordTimer;
 
-  // Stored in Applications
-  late List<String> _answerUrls; // AnswersRecordsURL
-  late List<String> _answers; // Answers (optional)
+  late List<String> _answerUrls;
+  late List<String> _answers;
 
   bool get _canGoNext =>
       !_loadingQuestions &&
@@ -385,9 +364,9 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
       _answerUrls[_index].trim().isNotEmpty;
 
   // ====== TTS ======
-  late final FlutterTts _tts;
-  bool _ttsReady = false;
+  final AudioPlayer _ttsPlayer = AudioPlayer();
   bool _isSpeaking = false;
+  bool _ttsLoading = false;
 
   // ====== Face detection ======
   late final FaceDetector _faceDetector;
@@ -398,7 +377,6 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
   void initState() {
     super.initState();
 
-    _tts = FlutterTts();
     _faceDetector = FaceDetector(
       options: FaceDetectorOptions(
         enableContours: false,
@@ -409,10 +387,10 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
       ),
     );
 
-    _player.playerStateStream.listen((state) {
+    _ttsPlayer.playerStateStream.listen((state) {
       if (!mounted) return;
       if (state.processingState == ProcessingState.completed) {
-        setState(() => _isPlaying = false);
+        setState(() => _isSpeaking = false);
       }
     });
 
@@ -420,7 +398,6 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
   }
 
   Future<void> _boot() async {
-    // 1) Load questions first (Jobs -> Questions)
     await _loadQuestionsFromJobs();
     if (!mounted) return;
 
@@ -433,15 +410,9 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
       return;
     }
 
-    // 2) init arrays that depend on questions length
     _answerUrls = List<String>.filled(_questions.length, '');
     _answers = List<String>.filled(_questions.length, '');
 
-    // 3) init TTS
-    await _initTts();
-    if (!mounted) return;
-
-    // 4) init camera & face detection
     await _initPermissionsAndCamera();
   }
 
@@ -487,46 +458,65 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
     }
   }
 
-  Future<void> _initTts() async {
+  Future<void> _speakCurrentQuestion() async {
+    if (_isRecording) return;
+    await _googleSpeak(_currentQuestion);
+  }
+
+  Future<void> _stopTts() async {
+    await _ttsPlayer.stop();
+    if (!mounted) return;
+    setState(() => _isSpeaking = false);
+  }
+
+  Future<void> _googleSpeak(String text) async {
     try {
-      await _tts.setLanguage('en-US');
-      await _tts.setSpeechRate(0.48);
-      await _tts.setPitch(1.0);
-
-      _tts.setStartHandler(() {
-        if (!mounted) return;
-        setState(() => _isSpeaking = true);
+      if (!mounted) return;
+      setState(() {
+        _isSpeaking = true;
+        _ttsLoading = true;
       });
 
-      _tts.setCompletionHandler(() {
-        if (!mounted) return;
-        setState(() => _isSpeaking = false);
-      });
-
-      _tts.setErrorHandler((_) {
-        if (!mounted) return;
-        setState(() => _isSpeaking = false);
-      });
+      final response = await http.post(
+        Uri.parse(
+            'https://us-central1-jadeer-b4953.cloudfunctions.net/synthesizeSpeech'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'text': text}),
+      );
 
       if (!mounted) return;
-      setState(() => _ttsReady = true);
-    } catch (_) {
+      setState(() => _ttsLoading = false);
+
+      final data = jsonDecode(response.body);
+      final audioContent = data['audioContent'] as String?;
+
+      if (audioContent == null || audioContent.isEmpty) {
+        setState(() => _isSpeaking = false);
+        return;
+      }
+
+      final dir = await getTemporaryDirectory();
+      final file =
+          File('${dir.path}/tts_${DateTime.now().millisecondsSinceEpoch}.mp3');
+      await file.writeAsBytes(base64Decode(audioContent));
+
+      await _ttsPlayer.setFilePath(file.path);
+      await _ttsPlayer.play();
+
       if (!mounted) return;
-      setState(() => _ttsReady = false);
+      setState(() => _isSpeaking = false);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isSpeaking = false;
+        _ttsLoading = false;
+      });
     }
   }
 
-  Future<void> _speakCurrentQuestion() async {
-    if (!_ttsReady) return;
-    if (_isRecording) return;
-    await _tts.stop();
-    await _tts.speak(_currentQuestion);
-  }
-
   Future<void> _toggleSpeak() async {
-    if (!_ttsReady) return;
     if (_isSpeaking) {
-      await _tts.stop();
+      await _stopTts();
       return;
     }
     await _speakCurrentQuestion();
@@ -691,33 +681,6 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
     return await ref.getDownloadURL();
   }
 
-  Future<void> _togglePlayback() async {
-    final url = _answerUrls[_index].trim();
-    if (url.isEmpty) return;
-
-    try {
-      if (_isPlaying) {
-        await _player.pause();
-        if (!mounted) return;
-        setState(() => _isPlaying = false);
-        return;
-      }
-
-      if (_currentPlaybackUrl != url) {
-        await _player.setUrl(url);
-        _currentPlaybackUrl = url;
-      }
-
-      await _player.play();
-      if (!mounted) return;
-      setState(() => _isPlaying = true);
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isPlaying = false);
-      SnackHelper.error(context, 'Playback error: $e');
-    }
-  }
-
   Future<void> _toggleRecording() async {
     if (!_faceDetected && !_isRecording) {
       SnackHelper.error(
@@ -749,7 +712,7 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
           if (!mounted) return;
           setState(() {
             _answerUrls[_index] = url;
-            _answers[_index] = ''; // optional
+            _answers[_index] = '';
           });
 
           await FirebaseFirestore.instance
@@ -773,39 +736,9 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
         return;
       }
 
-      // replace existing answer
       if (_answerUrls[_index].trim().isNotEmpty) {
-        final overwrite = await showDialog<bool>(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => const JadeerDialog<bool>(
-            title: 'Replace recording?',
-            content: Text(
-                'You already recorded an answer for this question. Replace it?'),
-            primaryLabel: 'Replace',
-            primaryResult: true,
-            secondaryLabel: 'Cancel',
-            secondaryResult: false,
-          ),
-        );
-
-        if (overwrite != true) return;
-
-        if (!mounted) return;
-        setState(() {
-          _answerUrls[_index] = '';
-          _answers[_index] = '';
-          _isPlaying = false;
-          _currentPlaybackUrl = null;
-        });
-
-        await FirebaseFirestore.instance
-            .collection('Applications')
-            .doc(widget.applicationId)
-            .set({
-          'AnswersRecordsURL': _answerUrls,
-          'Answers': _answers,
-        }, SetOptions(merge: true));
+        SnackHelper.error(context, 'You have already recorded your answer.');
+        return;
       }
 
       final mic = await Permission.microphone.status;
@@ -821,7 +754,7 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
           'app_${widget.applicationId}_q${_index + 1}_${DateTime.now().millisecondsSinceEpoch}.m4a';
       final path = '${dir.path}/$fileName';
 
-      await _tts.stop();
+      await _stopTts();
 
       await _recorder.start(
         const RecordConfig(
@@ -869,8 +802,6 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
     setState(() {
       _index++;
       _recordDuration = Duration.zero;
-      _currentPlaybackUrl = null;
-      _isPlaying = false;
     });
 
     await Future.delayed(const Duration(milliseconds: 150));
@@ -895,7 +826,6 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
         'ReportURL': '',
       }, SetOptions(merge: true));
 
-      // optional cloud function
       try {
         await FirebaseFunctions.instance
             .httpsCallable(
@@ -929,8 +859,7 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
         await _recorder.stop();
         _isRecording = false;
       }
-      await _player.stop();
-      await _tts.stop();
+      await _ttsPlayer.stop();
 
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid != null && uid.isNotEmpty) {
@@ -987,12 +916,11 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
 
   @override
   void dispose() {
-    _tts.stop();
     _recordTimer?.cancel();
     _recorder.dispose();
     _camera?.dispose();
     _uploadSub?.cancel();
-    _player.dispose();
+    _ttsPlayer.dispose();
     _faceDetector.close();
     super.dispose();
   }
@@ -1000,9 +928,7 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Loading questions screen
     if (_loadingQuestions) {
       return ThemedScaffold(
         appBar: const CustomHeader(title: 'Job Interview', showBack: true),
@@ -1048,14 +974,13 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
             onPressed: () => Navigator.of(context).maybePop(),
           ),
         ),
-        body: Container(
-          color: isDark ? scheme.background : const Color(0xFFF5F5F5),
-          child: _isGeneratingReport
-              ? _buildGeneratingReportUI(context)
-              : _initializing
-                  ? const Center(child: CircularProgressIndicator())
-                  : (_error != null)
-                      ? Padding(
+        body: _isGeneratingReport
+            ? _buildGeneratingReportUI(context)
+            : _initializing
+                ? const Center(child: CircularProgressIndicator())
+                : (_error != null)
+                    ? Center(
+                        child: Padding(
                           padding: const EdgeInsets.all(20),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -1072,236 +997,198 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
                               ),
                             ],
                           ),
-                        )
-                      : SingleChildScrollView(
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              minHeight:
-                                  MediaQuery.of(context).size.height - 100,
+                        ),
+                      )
+                    : Stack(
+                        children: [
+                          // Fullscreen camera
+                          Positioned.fill(
+                            child: CameraPreview(_camera!),
+                          ),
+                          // Gradient overlay
+                          Positioned.fill(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.black.withOpacity(0.25),
+                                    Colors.transparent,
+                                    Colors.black.withOpacity(0.75),
+                                  ],
+                                ),
+                              ),
                             ),
-                            child: IntrinsicHeight(
+                          ),
+                          // Face detection badge
+                          Positioned(
+                            top: 20,
+                            left: 0,
+                            right: 250,
+                            child: Center(
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _faceDetected
+                                      ? Colors.green.withOpacity(0.85)
+                                      : Colors.red.withOpacity(0.85),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      _faceDetected
+                                          ? Icons.check_circle
+                                          : Icons.warning_rounded,
+                                      color: Colors.white,
+                                      size: 14,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      _faceDetected
+                                          ? 'Face detected'
+                                          : 'No face detected',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          // Question card
+                          Positioned(
+                            left: 16,
+                            right: 16,
+                            bottom: 160,
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.55),
+                                borderRadius: BorderRadius.circular(22),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.18),
+                                ),
+                              ),
                               child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Padding(
-                                    padding: const EdgeInsets.all(16),
-                                    child: Stack(
-                                      children: [
-                                        ClipRRect(
-                                          borderRadius:
-                                              BorderRadius.circular(22),
-                                          child: SizedBox(
-                                            height: 320,
-                                            width: double.infinity,
-                                            child: CameraPreview(_camera!),
-                                          ),
-                                        ),
-                                        Positioned(
-                                          top: 16,
-                                          right: 16,
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 12,
-                                              vertical: 8,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: _faceDetected
-                                                  ? Colors.green
-                                                      .withOpacity(0.9)
-                                                  : Colors.red.withOpacity(0.9),
-                                              borderRadius:
-                                                  BorderRadius.circular(20),
-                                            ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Icon(
-                                                  _faceDetected
-                                                      ? Icons.check_circle
-                                                      : Icons.warning,
-                                                  color: Colors.white,
-                                                  size: 16,
-                                                ),
-                                                const SizedBox(width: 6),
-                                                Text(
-                                                  _faceDetected
-                                                      ? 'Face detected'
-                                                      : 'No face detected',
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 16),
-                                    child: Container(
-                                      width: double.infinity,
-                                      padding: const EdgeInsets.all(16),
-                                      decoration: BoxDecoration(
-                                        color: isDark
-                                            ? scheme.surface
-                                            : Colors.white,
-                                        borderRadius: BorderRadius.circular(18),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withOpacity(
-                                              isDark ? 0.6 : 0.08,
-                                            ),
-                                            blurRadius: 10,
-                                            offset: const Offset(0, 4),
-                                          ),
-                                        ],
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Question ${_index + 1}/${_questions.length}',
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: isDark
-                                                  ? scheme.onSurface
-                                                      .withOpacity(0.7)
-                                                  : Colors.black54,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 10),
-                                          Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  _currentQuestion,
-                                                  style: const TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w800,
-                                                    height: 1.3,
-                                                  ),
-                                                ),
-                                              ),
-                                              IconButton(
-                                                onPressed: _toggleSpeak,
-                                                icon: Icon(
-                                                  size: 30,
-                                                  _isSpeaking
-                                                      ? Icons.stop_circle
-                                                      : Icons.volume_up_rounded,
-                                                  color: _isSpeaking
-                                                      ? const Color(0xFFFD6C67)
-                                                      : const Color(0xFF4A5FBC),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          Text(
-                                            'Answer by voice, then press Next.',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: isDark
-                                                  ? scheme.onSurface
-                                                      .withOpacity(0.7)
-                                                  : Colors.black54,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 20),
-                                  Center(
-                                    child: GestureDetector(
-                                      onTap: (_isUploadingAnswer)
-                                          ? null
-                                          : _toggleRecording,
-                                      child: Container(
-                                        width: 84,
-                                        height: 84,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: _isRecording
-                                              ? const Color(0xFFFD6C67)
-                                              : const Color(0xFF4A5FBC),
-                                        ),
-                                        child: Icon(
-                                          _isRecording
-                                              ? Icons.stop_rounded
-                                              : Icons.mic_rounded,
-                                          size: 40,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
                                   Text(
-                                    _isRecording
-                                        ? 'Recording… ${_fmt(_recordDuration)}'
-                                        : _isUploadingAnswer
-                                            ? 'Uploading… ${(_uploadProgress * 100).toStringAsFixed(0)}%'
-                                            : (_answerUrls[_index].isNotEmpty
-                                                ? 'Answer uploaded'
-                                                : 'Tap the mic to record'),
-                                    style: TextStyle(
+                                    'Question ${_index + 1}/${_questions.length}',
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 13,
                                       fontWeight: FontWeight.w600,
-                                      color: isDark
-                                          ? scheme.onSurface.withOpacity(0.8)
-                                          : Colors.black87,
                                     ),
                                   ),
-                                  if (!_isRecording &&
-                                      !_isUploadingAnswer &&
-                                      _answerUrls[_index].isNotEmpty) ...[
-                                    const SizedBox(height: 10),
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        FilledButton.tonalIcon(
-                                          onPressed: _togglePlayback,
-                                          icon: Icon(
-                                            _isPlaying
-                                                ? Icons.pause
-                                                : Icons.play_arrow,
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          _currentQuestion,
+                                          style: const TextStyle(
                                             color: Colors.white,
-                                          ),
-                                          label: Text(
-                                            _isPlaying ? 'Pause' : 'Listen',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                            ),
+                                            fontSize: 17,
+                                            fontWeight: FontWeight.w800,
+                                            height: 1.35,
                                           ),
                                         ),
-                                      ],
-                                    ),
-                                  ],
-                                  if (_isUploadingAnswer) ...[
-                                    const SizedBox(height: 8),
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 24),
-                                      child: LinearProgressIndicator(
-                                        value: _uploadProgress,
                                       ),
-                                    ),
-                                  ],
-                                  const SizedBox(height: 14),
+                                      IconButton(
+                                        onPressed: _toggleSpeak,
+                                        icon: Icon(
+                                          _isSpeaking
+                                              ? Icons.stop_circle
+                                              : Icons.volume_up_rounded,
+                                          color: _isSpeaking
+                                              ? const Color(0xFFFD6C67)
+                                              : Colors.white,
+                                          size: 30,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ],
                               ),
                             ),
                           ),
-                        ),
-        ),
+                          // Mic button + status
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 50,
+                            child: Column(
+                              children: [
+                                GestureDetector(
+                                  onTap: _isUploadingAnswer
+                                      ? null
+                                      : _toggleRecording,
+                                  child: Container(
+                                    width: 86,
+                                    height: 86,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: _isRecording
+                                          ? const Color(0xFFFD6C67)
+                                          : const Color(0xFF4A5FBC),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.35),
+                                          blurRadius: 18,
+                                          offset: const Offset(0, 8),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Icon(
+                                      _isRecording
+                                          ? Icons.stop_rounded
+                                          : Icons.mic_rounded,
+                                      size: 42,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  _isRecording
+                                      ? 'Recording… ${_fmt(_recordDuration)}'
+                                      : _isUploadingAnswer
+                                          ? 'Uploading… ${(_uploadProgress * 100).toStringAsFixed(0)}%'
+                                          : (_answerUrls[_index].isNotEmpty
+                                              ? 'Answer uploaded'
+                                              : 'Tap the mic to record'),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                if (_isUploadingAnswer) ...[
+                                  const SizedBox(height: 8),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 32),
+                                    child: LinearProgressIndicator(
+                                      value: _uploadProgress,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
         bottomNavigationBar: _isGeneratingReport
             ? const SizedBox.shrink()
             : SafeArea(
