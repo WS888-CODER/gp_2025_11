@@ -34,6 +34,7 @@ class _StartScreenState extends State<StartScreen>
 
   void _startAnimation() async {
     await Future.delayed(const Duration(seconds: 3));
+    if (!mounted) return;
     _splitController.forward();
     await Future.delayed(const Duration(milliseconds: 1000));
 
