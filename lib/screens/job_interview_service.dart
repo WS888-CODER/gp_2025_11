@@ -618,7 +618,7 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
 
       if (!mounted) return;
 
-      bool hasValidFace = false;
+      bool hasValidFace = true;
 
       if (faces.isNotEmpty) {
         final face = faces.first;
@@ -974,7 +974,17 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
 
     if (_loadingQuestions) {
       return ThemedScaffold(
-        appBar: const CustomHeader(title: 'Job Interview', showBack: true),
+        appBar: CustomHeader(
+          title: 'Job Interview',
+          showBack: false,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Color(0xFFFFFFFF)),
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
+          transparent: false,
+          rounded: true,
+        ),
+        extendBodyBehindAppBar: true,
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -1017,7 +1027,10 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
             icon: const Icon(Icons.arrow_back, color: Color(0xFFFFFFFF)),
             onPressed: () => Navigator.of(context).maybePop(),
           ),
+          transparent: false,
+          rounded: true,
         ),
+        extendBodyBehindAppBar: true,
         body: _isGeneratingReport
             ? _buildGeneratingReportUI(context)
             : _initializing
@@ -1297,14 +1310,6 @@ class _ApplicationCvPickerState extends State<_ApplicationCvPicker> {
       _fileName = name;
     });
     if (!mounted) return;
-    ScaffoldMessenger.of(widget.parentContext).showSnackBar(
-      SnackBar(
-        content: Text('CV selected: $name'),
-        backgroundColor: Colors.green.shade600,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
-    );
   }
 
   Future<void> _upload() async {
@@ -1391,8 +1396,8 @@ class _ApplicationCvPickerState extends State<_ApplicationCvPicker> {
                 borderRadius: BorderRadius.circular(14),
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
                     border: Border.all(
                       color: hasFile
@@ -1418,9 +1423,8 @@ class _ApplicationCvPickerState extends State<_ApplicationCvPicker> {
                           hasFile ? _fileName : 'Tap to select a CV file',
                           style: TextStyle(
                             fontSize: 14,
-                            fontWeight: hasFile
-                                ? FontWeight.w600
-                                : FontWeight.normal,
+                            fontWeight:
+                                hasFile ? FontWeight.w600 : FontWeight.normal,
                             color: hasFile
                                 ? Colors.white
                                 : Colors.white.withOpacity(0.6),
@@ -1466,13 +1470,11 @@ class _ApplicationCvPickerState extends State<_ApplicationCvPicker> {
       ),
       actions: [
         TextButton(
-          onPressed:
-              _uploading ? null : () => Navigator.of(context).pop(null),
+          onPressed: _uploading ? null : () => Navigator.of(context).pop(null),
           style: TextButton.styleFrom(
             backgroundColor: Colors.white.withOpacity(0.9),
             foregroundColor: _brandColor,
-            padding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
@@ -1489,8 +1491,7 @@ class _ApplicationCvPickerState extends State<_ApplicationCvPicker> {
             backgroundColor:
                 (hasFile && !_uploading) ? _dangerColor : Colors.white24,
             foregroundColor: Colors.white,
-            padding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),

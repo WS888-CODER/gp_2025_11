@@ -1671,10 +1671,9 @@ class _MockInterviewSessionScreenState
             onPressed: () => Navigator.of(context).maybePop(),
           ),
           transparent: false,
-          rounded: false,
+          rounded: true,
         ),
-
-        // extendBodyBehindAppBar: true,
+        extendBodyBehindAppBar: true,
         body: _isGeneratingReport
             ? _buildGeneratingReportUI(context)
             : _initializing
@@ -1711,7 +1710,7 @@ class _MockInterviewSessionScreenState
                             ),
                           ),
                           Positioned(
-                            top: 20,
+                            top: 128,
                             left: 0,
                             right: 250,
                             child: Center(

@@ -199,7 +199,10 @@ class _CompanyJobApplicationsPageState
             );
           }
 
-          final apps = snapshot.data?.docs.toList() ?? [];
+          final apps = (snapshot.data?.docs ?? []).where((doc) {
+            final s = (doc.data()['ApplicationStatus'] ?? '').toString();
+            return s != 'InInterview' && s != 'InterviewCancelled';
+          }).toList();
 
           if (apps.isEmpty) {
             return const Center(
