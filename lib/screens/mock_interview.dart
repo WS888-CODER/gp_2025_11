@@ -992,7 +992,8 @@ class MockInterviewSessionScreen extends StatefulWidget {
 
 class _MockInterviewSessionScreenState
     extends State<MockInterviewSessionScreen> {
-  final AudioPlayer _player = AudioPlayer();
+  final AudioPlayer _ttsPlayer = AudioPlayer();
+  final AudioPlayer _playbackPlayer = AudioPlayer();
   bool _isGeneratingReport = false;
   late List<int> _recordAttempts;
   bool _isUploadingAnswer = false;
@@ -1053,7 +1054,7 @@ class _MockInterviewSessionScreenState
       _initPermissionsAndCamera();
     });
 
-    _player.playerStateStream.listen((state) {
+    _playbackPlayer.playerStateStream.listen((state) {
       if (!mounted) return;
       if (state.processingState == ProcessingState.completed) {
         setState(() => _isPlaying = false);
@@ -1068,8 +1069,8 @@ class _MockInterviewSessionScreenState
         await _recorder.stop();
         _isRecording = false;
       }
-      await _player.stop();
-
+      await _ttsPlayer.stop();
+      await _playbackPlayer.stop();
       final docRef = FirebaseFirestore.instance
           .collection('MockInterviews')
           .doc(widget.mockInterviewId);
@@ -1106,7 +1107,7 @@ class _MockInterviewSessionScreenState
   }
 
   Future<void> _stopTts() async {
-    await _player.stop();
+    await _ttsPlayer.stop();
     if (!mounted) return;
     setState(() => _isSpeaking = false);
   }
@@ -1126,6 +1127,12 @@ class _MockInterviewSessionScreenState
         body: jsonEncode({'text': text}),
       );
 
+      print('TTS status: ${response.statusCode}');
+      print('TTS body: ${response.body}');
+
+      if (!mounted) return;
+      setState(() => _ttsLoading = false);
+
       if (!mounted) return;
       setState(() => _ttsLoading = false);
 
@@ -1143,8 +1150,8 @@ class _MockInterviewSessionScreenState
           File('${dir.path}/tts_${DateTime.now().millisecondsSinceEpoch}.mp3');
       await file.writeAsBytes(base64Decode(audioContent));
 
-      await _player.setFilePath(file.path);
-      await _player.play();
+      await _ttsPlayer.setFilePath(file.path);
+      await _ttsPlayer.play();
 
       if (!mounted) return;
       setState(() => _isSpeaking = false);
@@ -1319,7 +1326,8 @@ class _MockInterviewSessionScreenState
     _recorder.dispose();
     _camera?.dispose();
     _uploadSub?.cancel();
-    _player.dispose(); // يُستخدم للـ TTS والـ playback معاً
+    _ttsPlayer.dispose();
+    _playbackPlayer.dispose();
     _faceDetector.close();
     super.dispose();
   }
@@ -1330,18 +1338,18 @@ class _MockInterviewSessionScreenState
 
     try {
       if (_isPlaying) {
-        await _player.pause();
+        await _playbackPlayer.pause();
         if (!mounted) return;
         setState(() => _isPlaying = false);
         return;
       }
 
       if (_currentPlaybackUrl != url) {
-        await _player.setUrl(url);
+        await _playbackPlayer.setUrl(url);
         _currentPlaybackUrl = url;
       }
 
-      await _player.play();
+      await _playbackPlayer.play();
       if (!mounted) return;
       setState(() => _isPlaying = true);
     } catch (e) {

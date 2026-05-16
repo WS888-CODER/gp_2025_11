@@ -3690,7 +3690,7 @@ export const deleteApplication = functions.https.onCall(
   }
 );
 export const synthesizeSpeech = v2.https.onRequest(
-  { secrets: ["OPENAI_API_KEY"] },
+  { secrets: ["GOOGLE_TTS_API_KEY"] },
   async (req, res) => {
     res.set('Access-Control-Allow-Origin', '*');
     
