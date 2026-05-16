@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/screens/favorites.dart';
 import 'package:gp_2025_11/screens/job_interview_service.dart';
@@ -134,12 +135,14 @@ class JobDetailsPage extends StatefulWidget {
   final Job job;
   final CompanyInfo? company;
   final bool isSaved;
+  final bool isApplied;
 
   const JobDetailsPage({
     super.key,
     required this.job,
     this.company,
     this.isSaved = false,
+    this.isApplied = false,
   });
 
   @override
@@ -232,8 +235,8 @@ class _ExpandableTextState extends State<_ExpandableText> {
 class _JobDetailsPageState extends State<JobDetailsPage> {
   bool _companyExpanded = false;
   bool _saved = false;
-
-  bool _isApplying = false; // ✅ add
+  bool _isApplying = false;
+  bool _hasApplied = false;
 
   String _fmtDate(DateTime d) =>
       '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
@@ -242,6 +245,21 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
   void initState() {
     super.initState();
     _saved = widget.isSaved;
+    _hasApplied = widget.isApplied;
+    _checkAlreadyApplied();
+  }
+
+  Future<void> _checkAlreadyApplied() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    final snap = await FirebaseFirestore.instance
+        .collection('Applications')
+        .where('UserID', isEqualTo: uid)
+        .where('JobID', isEqualTo: widget.job.jobId)
+        .limit(1)
+        .get();
+    if (!mounted) return;
+    if (snap.docs.isNotEmpty) setState(() => _hasApplied = true);
   }
 
   Future<void> _apply() async {
@@ -257,7 +275,7 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
       SnackHelper.error(context, 'Applications are not open yet.');
       return;
     }
-    if (_isApplying) return;
+    if (_isApplying || _hasApplied) return;
     setState(() => _isApplying = true);
 
     try {
@@ -360,11 +378,16 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: FilledButton(
-          onPressed: disabled || _isApplying ? null : _apply,
+          onPressed: disabled || _isApplying || _hasApplied ? null : _apply,
           style: FilledButton.styleFrom(
-            backgroundColor:
-                disabled ? onSurface.withOpacity(0.6) : scheme.primary,
-            disabledBackgroundColor: onSurface.withOpacity(0.6),
+            backgroundColor: _hasApplied
+                ? Color.fromARGB(185, 253, 108, 103)
+                : disabled
+                    ? onSurface.withOpacity(0.6)
+                    : scheme.primary,
+            disabledBackgroundColor: _hasApplied
+                ? Color.fromARGB(185, 253, 108, 103)
+                : onSurface.withOpacity(0.6),
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(
@@ -375,7 +398,14 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          child: Text(_isApplying ? 'Starting…' : 'Apply'),
+          child: Text(
+            _hasApplied
+                ? 'Already Applied'
+                : _isApplying
+                    ? 'Starting…'
+                    : 'Apply',
+            style: const TextStyle(color: Colors.white),
+          ),
         ),
       ),
       body: ListView(
@@ -809,6 +839,7 @@ class JobCard extends StatefulWidget {
   final Job job;
   final CompanyInfo company;
   final bool isSaved;
+  final bool isApplied;
   final ValueChanged<bool>? onSavedChanged;
 
   const JobCard({
@@ -816,6 +847,7 @@ class JobCard extends StatefulWidget {
     required this.job,
     required this.company,
     this.isSaved = false,
+    this.isApplied = false,
     this.onSavedChanged,
   });
 
@@ -826,6 +858,8 @@ class JobCard extends StatefulWidget {
 class _JobCardState extends State<JobCard> {
   bool _saved = false;
   bool _isApplying = false;
+
+  bool get _isApplied => widget.isApplied;
 
   Future<void> _apply() async {
     final rootCtx = Navigator.of(context, rootNavigator: true).context;
@@ -840,8 +874,7 @@ class _JobCardState extends State<JobCard> {
       SnackHelper.error(context, 'Applications are not open yet.');
       return;
     }
-
-    if (_isApplying) return;
+    if (_isApplied || _isApplying) return;
     setState(() => _isApplying = true);
 
     try {
@@ -918,6 +951,7 @@ class _JobCardState extends State<JobCard> {
                 job: job,
                 company: company,
                 isSaved: _saved,
+                isApplied: _isApplied,
               ),
             ),
           );
@@ -1045,12 +1079,17 @@ class _JobCardState extends State<JobCard> {
                     behavior: HitTestBehavior.opaque,
                     onTap: () {},
                     child: FilledButton(
-                      onPressed: disabled || _isApplying ? null : _apply,
+                      onPressed:
+                          disabled || _isApplying || _isApplied ? null : _apply,
                       style: FilledButton.styleFrom(
-                        backgroundColor: disabled
-                            ? onSurface.withOpacity(0.6)
-                            : scheme.primary,
-                        disabledBackgroundColor: onSurface.withOpacity(0.6),
+                        backgroundColor: _isApplied
+                            ? Color.fromARGB(185, 253, 108, 103)
+                            : disabled
+                                ? onSurface.withOpacity(0.6)
+                                : scheme.primary,
+                        disabledBackgroundColor: _isApplied
+                            ? Color.fromARGB(185, 253, 108, 103)
+                            : onSurface.withOpacity(0.6),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -1059,9 +1098,15 @@ class _JobCardState extends State<JobCard> {
                             horizontal: 16, vertical: 10),
                       ),
                       child: Text(
-                        _isApplying ? 'Starting…' : 'Apply',
+                        _isApplied
+                            ? 'Applied'
+                            : _isApplying
+                                ? 'Starting…'
+                                : 'Apply',
                         style: const TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w700),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white),
                       ),
                     ),
                   ),
