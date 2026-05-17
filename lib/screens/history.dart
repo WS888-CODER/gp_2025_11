@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/screens/cv_ready.dart';
 import 'package:gp_2025_11/screens/mock_interview_report.dart';
-import 'package:gp_2025_11/screens/job_interview_report.dart'; // ← NEW
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -614,9 +613,8 @@ class _HistoryPageState extends State<HistoryPage>
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => JobInterviewReportScreen(
+                    builder: (_) => JobApplicationDetailScreen(
                       applicationId: applicationId,
-                      fromHistory: true,
                     ),
                   ),
                 );
@@ -803,6 +801,245 @@ class _HistoryPageState extends State<HistoryPage>
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// Job Application Detail Screen
+// Shows application info (title, company, date, status) — no report
+// ════════════════════════════════════════════════════════════════
+
+class JobApplicationDetailScreen extends StatelessWidget {
+  final String applicationId;
+
+  const JobApplicationDetailScreen({super.key, required this.applicationId});
+
+  String _formatStatus(String raw) {
+    switch (raw) {
+      case 'Pending':
+      case 'Submitted':
+        return 'Pending';
+      case 'Shortlisted':
+        return 'Shortlisted';
+      case 'Rejected':
+        return 'Rejected';
+      default:
+        return raw.isNotEmpty ? raw : 'Unknown';
+    }
+  }
+
+  Color _statusColor(String raw) {
+    switch (raw) {
+      case 'Pending':
+      case 'Submitted':
+        return Colors.grey;
+      case 'Shortlisted':
+        return Colors.orange;
+      case 'Rejected':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  IconData _statusIcon(String raw) {
+    switch (raw) {
+      case 'Pending':
+      case 'Submitted':
+        return Icons.hourglass_top_rounded;
+      case 'Shortlisted':
+        return Icons.check_circle_outline;
+      case 'Rejected':
+        return Icons.cancel_outlined;
+      default:
+        return Icons.info_outline;
+    }
+  }
+
+  String _statusMessage(String raw) {
+    switch (raw) {
+      case 'Pending':
+      case 'Submitted':
+        return 'Your application has been submitted and is currently under review. We\'ll notify you once a decision has been made.';
+      case 'Shortlisted':
+        return 'Congratulations! You have been shortlisted for this position. The company will be in touch with you soon.';
+      case 'Rejected':
+        return 'Unfortunately, your application was not successful at this time. Keep applying — the right opportunity is out there!';
+      default:
+        return '';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ThemedScaffold(
+      appBar: const CustomHeader(title: 'Application Details'),
+      body: FutureBuilder<DocumentSnapshot>(
+        future: FirebaseFirestore.instance
+            .collection('Applications')
+            .doc(applicationId)
+            .get(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(color: AppTheme.primaryPurple),
+            );
+          }
+
+          if (snapshot.hasError ||
+              !snapshot.hasData ||
+              !snapshot.data!.exists) {
+            return const EmptyState(
+              icon: Icons.description_outlined,
+              title: 'Application not found',
+              subtitle: 'This application may have been deleted',
+            );
+          }
+
+          final data = snapshot.data!.data() as Map<String, dynamic>;
+          final jobTitle = (data['JobTitle'] ?? 'Job Application').toString();
+          final companyName = (data['CompanyName'] ?? '').toString();
+          final status = (data['ApplicationStatus'] ?? '').toString();
+          final date = (data['Date'] as Timestamp?)?.toDate();
+          final submittedAt = (data['SubmittedAt'] as Timestamp?)?.toDate();
+
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          final stClr = _statusColor(status);
+          final message = _statusMessage(status);
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Header card ──────────────────────────────────────
+                Card(
+                  elevation: isDark ? 4 : 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [AppTheme.primaryPurple, Color(0xFF6B7FD7)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.work_rounded,
+                                color: Colors.white, size: 26),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                jobTitle.isEmpty ? 'Job Application' : jobTitle,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        if (companyName.isNotEmpty) ...[
+                          Text(
+                            companyName,
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                        ],
+                        if (date != null)
+                          Text(
+                            'Applied: ${DateFormat('MMM dd, yyyy').format(date)}',
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 13),
+                          ),
+                        if (submittedAt != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            'Submitted: ${DateFormat('MMM dd, yyyy – hh:mm a').format(submittedAt)}',
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 13),
+                          ),
+                        ],
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(_statusIcon(status), color: stClr, size: 16),
+                              const SizedBox(width: 6),
+                              Text(
+                                _formatStatus(status),
+                                style: TextStyle(
+                                  color: stClr,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // ── Status message card ──────────────────────────────
+                if (message.isNotEmpty)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: stClr.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: stClr.withOpacity(0.25)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(_statusIcon(status), color: stClr, size: 22),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Text(
+                            message,
+                            style: TextStyle(
+                              fontSize: 14,
+                              height: 1.6,
+                              color: isDark ? Colors.white70 : Colors.black87,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

@@ -485,9 +485,7 @@ class PDFViewerScreen extends StatelessWidget {
                 }
               } catch (e) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: ${e.toString()}')),
-                  );
+                  SnackHelper.error(context, 'Error: ${e.toString()}');
                 }
               }
             },
