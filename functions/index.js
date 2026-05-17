@@ -694,7 +694,7 @@ Return ONLY valid JSON in the following structure:
     {
       "section": "Education",
       "content": [
-        {"degree": "...", "institution": "...", "years": "..."}
+        {"degree": "...", "institution": "...", "years": "...", "gpa": "..."}
       ]
     },
     {
@@ -704,7 +704,7 @@ Return ONLY valid JSON in the following structure:
     {
       "section": "Projects",
       "content": [
-        {"name": "...", "year": "..."}
+        {"name": "...", "year": "...", "description": "..."}
       ]
     },
     {
@@ -2019,6 +2019,7 @@ function renderEducation(doc, content, colors, fonts, startY) {
     const degree = edu.degree || "";
     const institution = edu.institution || "";
     const years = edu.years || "";
+    const gpa = edu.gpa || "";
 
     if (y > 750) {
       doc.addPage();
@@ -2040,7 +2041,18 @@ function renderEducation(doc, content, colors, fonts, startY) {
       .fillColor(colors.gray)
       .text(institutionLine, 30, y);
 
-    y = doc.y + 10;
+    y = doc.y + 3;
+
+    if (gpa) {
+      doc
+        .font(fonts.regular)
+        .fontSize(9)
+        .fillColor(colors.lightGray)
+        .text(`GPA: ${gpa}`, 30, y);
+      y = doc.y + 3;
+    }
+
+    y += 7;
   }
 
   return y + 8;
@@ -2110,6 +2122,7 @@ function renderProjects(doc, content, colors, fonts, startY) {
   for (const proj of content) {
     const name = proj.name || "";
     const year = proj.year || "";
+    const description = proj.description || "";
 
     if (y > 750) {
       doc.addPage();
@@ -2118,12 +2131,23 @@ function renderProjects(doc, content, colors, fonts, startY) {
 
     const projectLine = [name, year].filter((x) => x).join("  •  ");
     doc
-      .font(fonts.regular)
+      .font(fonts.bold)
       .fontSize(10)
       .fillColor(colors.primary)
       .text(projectLine, 30, y);
 
-    y = doc.y + 8;
+    y = doc.y + 2;
+
+    if (description) {
+      doc
+        .font(fonts.regular)
+        .fontSize(9)
+        .fillColor(colors.gray)
+        .text(description, 30, y, { width: 535 });
+      y = doc.y + 2;
+    }
+
+    y += 6;
   }
 
   return y + 8;
