@@ -21,12 +21,17 @@ class _FavoritesPageState extends State<FavoritesPage> {
   final Map<String, CompanyInfo> _companies = {};
 
   Set<String> _favoriteIds = {};
+  // Jobs the user just un-favourited but Firestore hasn't confirmed yet.
+  // Kept separate so a stale _favSub snapshot can't resurrect a removed card.
+  final Set<String> _pendingRemovals = {};
+  Set<String> _appliedJobIds = {};
 
   bool _loading = true;
   bool _loadingCompanies = false;
 
   StreamSubscription<List<Job>>? _jobsSub;
   StreamSubscription<Set<String>>? _favSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _appliedSub;
 
   @override
   void initState() {
@@ -51,27 +56,45 @@ class _FavoritesPageState extends State<FavoritesPage> {
       if (!mounted) return;
       setState(() {
         _favoriteIds = ids;
+        // Once Firestore confirms a removal, drop it from _pendingRemovals.
+        _pendingRemovals.removeWhere((id) => !ids.contains(id));
       });
     });
+
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      _appliedSub = FirebaseFirestore.instance
+          .collection('Applications')
+          .where('UserID', isEqualTo: uid)
+          .snapshots()
+          .listen((qs) {
+        if (!mounted) return;
+        setState(() {
+          _appliedJobIds =
+              qs.docs.map((d) => (d.data()['JobID'] ?? '').toString()).toSet();
+        });
+      });
+    }
   }
 
   @override
   void dispose() {
     _jobsSub?.cancel();
     _favSub?.cancel();
+    _appliedSub?.cancel();
     super.dispose();
   }
 
   Stream<List<Job>> _jobsStream() {
     return FirebaseFirestore.instance
         .collection(kJobsCollection)
-        .orderBy(JobFields.startDate, descending: true)
+        .orderBy(JobFields.postedAt, descending: true)
         .snapshots()
         .map((qs) => qs.docs.map((d) => Job.fromDoc(d)).toList());
   }
 
   List<Job> get _favoriteJobs {
-    final jobs = _favoriteIds
+    final jobs = (_favoriteIds.difference(_pendingRemovals))
         .where((id) => _jobsById.containsKey(id))
         .map((id) => _jobsById[id]!)
         .toList();
@@ -81,9 +104,17 @@ class _FavoritesPageState extends State<FavoritesPage> {
   }
 
   Future<void> _handleToggleFavorite(Job job, bool newValue) async {
+    if (!newValue) {
+      // Hide immediately; _pendingRemovals blocks the job from reappearing
+      // even if _favSub fires a stale snapshot before Firestore confirms.
+      setState(() => _pendingRemovals.add(job.jobId));
+    }
+
     try {
       await FavoritesService.toggleFavorite(job.jobId, newValue);
     } catch (e) {
+      // Revert: let the job reappear.
+      if (mounted) setState(() => _pendingRemovals.remove(job.jobId));
       if (!mounted) return;
       SnackHelper.error(
         context,
@@ -244,9 +275,11 @@ class _FavoritesPageState extends State<FavoritesPage> {
                         _companies[job.userId] ?? const CompanyInfo();
 
                     return JobCard(
+                      key: ValueKey(job.jobId),
                       job: job,
                       company: company,
                       isSaved: true,
+                      isApplied: _appliedJobIds.contains(job.jobId),
                       onSavedChanged: (newValue) {
                         _handleToggleFavorite(job, newValue);
                       },

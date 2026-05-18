@@ -1109,7 +1109,7 @@ class _JobCardState extends State<JobCard> {
                             color: Colors.white),
                       ),
                     ),
-                  ),
+                  )
                 ],
               ),
             ],

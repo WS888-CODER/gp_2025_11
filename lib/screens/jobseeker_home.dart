@@ -11,24 +11,6 @@ import 'package:gp_2025_11/screens/favorites.dart';
 import 'package:gp_2025_11/screens/jobseeker_profile.dart';
 import 'package:gp_2025_11/screens/mock_interview.dart';
 
-String effectiveStatusFromDates(dynamic start, dynamic end) {
-  final now = DateTime.now();
-
-  final DateTime startDate =
-      start is Timestamp ? start.toDate() : start as DateTime;
-
-  final DateTime endDate = end is Timestamp ? end.toDate() : end as DateTime;
-
-  if (now.isBefore(startDate)) {
-    return 'Soon';
-  }
-
-  if (now.isAfter(endDate)) {
-    return 'Closed';
-  }
-
-  return 'Open';
-}
 
 class JobSeekerHome extends StatefulWidget {
   const JobSeekerHome({super.key, this.userId});
@@ -794,9 +776,20 @@ class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
           }
         }
 
+        final newCvUrl = cv.isNotEmpty ? cv : null;
+
+        // Only rebuild if CV data actually changed.
+        // Favorites updates also hit this listener — skip them to avoid
+        // unnecessary rebuilds that scroll the home page to the top.
+        if (newCvUrl == _cvUrl &&
+            cvKeys.length == _cvKeywords.length &&
+            cvKeys.containsAll(_cvKeywords)) {
+          return;
+        }
+
         if (!mounted) return;
         setState(() {
-          _cvUrl = cv.isNotEmpty ? cv : null;
+          _cvUrl = newCvUrl;
           _cvKeywords = cvKeys;
         });
       });

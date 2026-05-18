@@ -1,26 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gp_2025_11/config/theme.dart';
 import 'package:gp_2025_11/screens/favorites.dart';
 import 'package:gp_2025_11/screens/job_card.dart';
-
-String effectiveStatusFromDates(DateTime? start, DateTime? end) {
-  final now = DateTime.now();
-  if (end != null && end.isBefore(now)) return 'Closed';
-  if (start != null && start.isAfter(now)) return 'Soon';
-  return 'Open';
-}
-
-/// Checks the Firestore JobStatus field first (e.g. manually closed by company),
-/// then falls back to date-based logic.
-String effectiveJobStatus(Job job) {
-  final raw = job.status.trim().toLowerCase();
-  if (raw == 'closed') return 'Closed';
-  return effectiveStatusFromDates(job.startDate, job.endDate);
-}
 
 const kJobsCollection = 'Jobs';
 const kUsersCollection = 'Users';
@@ -138,7 +122,7 @@ Stream<List<Job>> _jobsStream() {
 
 /* ========================== UI ========================== */
 
-enum SortOrder { newestFirst, oldestFirst }
+enum SortOrder { newestFirst, oldestFirst, byRelevance }
 
 class JobsPage extends StatefulWidget {
   final UserProfile profile;
@@ -173,15 +157,32 @@ class _JobsPageState extends State<JobsPage> {
   StreamSubscription<List<Job>>? _jobsSub;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _appliedSub;
+  StreamSubscription<Set<String>>? _favSub;
   Set<String> _appliedJobIds = {};
+  Set<String> _favoriteIds = {};
   final Map<String, CompanyInfo> _company = {};
   bool _loadingCompanies = false;
+
   Future<void> _handleToggleFavorite(Job job, bool newValue) async {
+    setState(() {
+      if (newValue) {
+        _favoriteIds = {..._favoriteIds, job.jobId};
+      } else {
+        _favoriteIds = {..._favoriteIds}..remove(job.jobId);
+      }
+    });
     try {
       await FavoritesService.toggleFavorite(job.jobId, newValue);
     } catch (e) {
-      SnackHelper.error(
-          context, 'Failed to update favorites. Please try again.');
+      setState(() {
+        if (newValue) {
+          _favoriteIds = {..._favoriteIds}..remove(job.jobId);
+        } else {
+          _favoriteIds = {..._favoriteIds, job.jobId};
+        }
+      });
+      if (!mounted) return;
+      SnackHelper.error(context, 'Failed to update favorites. Please try again.');
     }
   }
 
@@ -204,6 +205,11 @@ class _JobsPageState extends State<JobsPage> {
         _allJobs = jobs;
         _specialties = ['All', ...kSpecialtyOptions];
       });
+    });
+
+    _favSub = FavoritesService.favoritesStream().listen((ids) {
+      if (!mounted) return;
+      setState(() => _favoriteIds = ids);
     });
 
     final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -353,13 +359,11 @@ class _JobsPageState extends State<JobsPage> {
     }
 
     list.sort((a, b) {
-      if (_forYou) {
+      if (_sort == SortOrder.byRelevance) {
         final scoreA = relevanceScores[a.jobId] ?? 0;
         final scoreB = relevanceScores[b.jobId] ?? 0;
-
-        if (scoreA != scoreB) {
-          return scoreB.compareTo(scoreA);
-        }
+        if (scoreA != scoreB) return scoreB.compareTo(scoreA);
+        return b.postedAt.compareTo(a.postedAt);
       }
 
       return _sort == SortOrder.newestFirst
@@ -422,6 +426,7 @@ class _JobsPageState extends State<JobsPage> {
     _jobsSub?.cancel();
     _userSub?.cancel();
     _appliedSub?.cancel();
+    _favSub?.cancel();
     _searchController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
@@ -579,12 +584,17 @@ class _JobsPageState extends State<JobsPage> {
                                     color: scheme.primary,
                                     fontWeight: FontWeight.w600,
                                   ),
-                                  items: const [
-                                    DropdownMenuItem(
+                                  items: [
+                                    if (_forYou)
+                                      const DropdownMenuItem(
+                                        value: SortOrder.byRelevance,
+                                        child: Text('Best match'),
+                                      ),
+                                    const DropdownMenuItem(
                                       value: SortOrder.newestFirst,
                                       child: Text('Newest first'),
                                     ),
-                                    DropdownMenuItem(
+                                    const DropdownMenuItem(
                                       value: SortOrder.oldestFirst,
                                       child: Text('Oldest first'),
                                     ),
@@ -612,12 +622,15 @@ class _JobsPageState extends State<JobsPage> {
                                 _forYou = v;
 
                                 if (v) {
-                                  // Reset filters when turning ON For You
                                   _selectedSpecialty = 'All';
-                                  _sort = SortOrder.newestFirst;
+                                  _sort = SortOrder.byRelevance;
                                   _search = '';
                                   _searchController.text = '';
                                   _showAllJobs = false;
+                                } else {
+                                  if (_sort == SortOrder.byRelevance) {
+                                    _sort = SortOrder.newestFirst;
+                                  }
                                 }
 
                                 final hasCv = _profile.cvUrl != null;
@@ -791,100 +804,83 @@ class _JobsPageState extends State<JobsPage> {
             ),
           ),
           Expanded(
-            child: StreamBuilder<Set<String>>(
-              stream: FavoritesService.favoritesStream(),
-              builder: (context, favSnap) {
-                final favIds = favSnap.data ?? <String>{};
-
-                if (_allJobs.isEmpty) {
-                  return Center(
+            child: _allJobs.isEmpty
+                ? Center(
                     child: Text(
                       _forYou && _profile.cvUrl == null
                           ? 'Upload your CV to see personalized jobs.'
                           : 'No jobs available.',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
-                  );
-                }
-
-                if (jobs.isEmpty) {
-                  String message;
-
-                  if (_forYou) {
-                    final hasCv = _profile.cvUrl != null;
-                    final hasKeywords = _profile.cvKeywords.isNotEmpty;
-
-                    if (!hasCv) {
-                      message = 'Upload your CV to see personalized jobs.';
-                    } else if (!hasKeywords) {
-                      message =
-                          "We couldn't analyze your CV. Try uploading a clearer version.";
-                    } else {
-                      message =
-                          'No strong matches found yet – check All Jobs for more opportunities.';
-                    }
-                  } else {
-                    message = 'No jobs match your filters.';
-                  }
-
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 28),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.work_off_rounded,
-                          size: 56,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .primary
-                              .withOpacity(0.30),
-                        ),
-                        const SizedBox(height: 16),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(
-                            maxWidth: 300,
-                          ),
-                          child: Text(
-                            message,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 14.5,
-                              height: 1.45,
-                              fontWeight: FontWeight.w500,
+                  )
+                : jobs.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 28),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.work_off_rounded,
+                              size: 56,
                               color: Theme.of(context)
                                   .colorScheme
-                                  .onSurface
-                                  .withOpacity(0.75),
+                                  .primary
+                                  .withOpacity(0.30),
                             ),
-                          ),
+                            const SizedBox(height: 16),
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 300),
+                              child: Text(
+                                () {
+                                  if (_forYou) {
+                                    final hasCv = _profile.cvUrl != null;
+                                    final hasKeywords =
+                                        _profile.cvKeywords.isNotEmpty;
+                                    if (!hasCv) {
+                                      return 'Upload your CV to see personalized jobs.';
+                                    } else if (!hasKeywords) {
+                                      return "We couldn't analyze your CV. Try uploading a clearer version.";
+                                    } else {
+                                      return 'No strong matches found yet – check All Jobs for more opportunities.';
+                                    }
+                                  }
+                                  return 'No jobs match your filters.';
+                                }(),
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 14.5,
+                                  height: 1.45,
+                                  fontWeight: FontWeight.w500,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withOpacity(0.75),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  );
-                }
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(12),
+                        itemCount: jobs.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        itemBuilder: (context, i) {
+                          final j = jobs[i];
+                          final info = _company[j.userId] ?? const CompanyInfo();
 
-                return ListView.separated(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: jobs.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (context, i) {
-                    final j = jobs[i];
-                    final info = _company[j.userId] ?? const CompanyInfo();
-
-                    return JobCard(
-                      job: j,
-                      company: info,
-                      isSaved: favIds.contains(j.jobId),
-                      isApplied: _appliedJobIds.contains(j.jobId),
-                      onSavedChanged: (bool newValue) {
-                        _handleToggleFavorite(j, newValue);
-                      },
-                    );
-                  },
-                );
-              },
-            ),
+                          return JobCard(
+                            key: ValueKey(j.jobId),
+                            job: j,
+                            company: info,
+                            isSaved: _favoriteIds.contains(j.jobId),
+                            isApplied: _appliedJobIds.contains(j.jobId),
+                            onSavedChanged: (bool newValue) {
+                              _handleToggleFavorite(j, newValue);
+                            },
+                          );
+                        },
+                      ),
           ),
         ],
       ),
