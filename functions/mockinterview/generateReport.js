@@ -131,7 +131,7 @@ export const generateMockInterviewReport = onCall(
           validVoiceCount++;
         }
       }
-      const overallVoiceConfidenceScore = validVoiceCount > 0 ? Math.round(totalVoiceScore / validVoiceCount) : 70;
+      const overallVoiceConfidenceScore = validVoiceCount > 0 ? Math.round(totalVoiceScore / validVoiceCount) : 0;
 
       // Step 3: Call GPT-4 to generate report and summarize voice confidence
       const gptPrompt = `You are an expert interview coach giving personal mock interview feedback to a jobseeker practicing for a ${specialty} position.
@@ -145,13 +145,19 @@ The microphone analysis registered an overall vocal confidence metric of ${overa
 
 Respond with a JSON object containing:
 {
-  "overallScore": <number between 1-10>,
+  "overallScore": <number between 0-100>,
   "overallSummary": "<2-3 sentences summarizing performance, using 'you' language.>",
   "strengths": ["<strength 1>", "<strength 2>", "<strength 3>"],
   "weaknesses": ["<weakness 1>", "<weakness 2>", "<weakness 3>"],
   "advice": ["<actionable recommendation 1>", "<actionable recommendation 2>", "<actionable recommendation 3>"],
   "mockVoiceComment": "<Based on the voice score of ${overallVoiceConfidenceScore}/100, generate a friendly comment offering voice tone advice. Do NOT mention the exact score number, percentages, or basic instructions like 'take a deep breath'. Instead, analyze their pacing, conviction, or hesitation, and provide constructive advice tailored to a jobseeker trying to sound confident in a ${specialty} interview. Speak to the user as 'you'.>"
 }
+
+SCORING GUIDELINES (0-100 scale):
+- 80-100: Exceptional — strong knowledge, clear communication, confident delivery
+- 60-79: Good — adequate knowledge and communication, room for improvement
+- 40-59: Average — partial knowledge, needs development in key areas
+- 0-39: Below expectations — unclear answers, significant gaps
 
 CRITICAL: NEVER use references like "the candidate" inside this file. Always use "you" and "your".`;
 
@@ -190,6 +196,8 @@ CRITICAL: NEVER use references like "the candidate" inside this file. Always use
       await interviewRef.update({
         Report: reportData,
         VoiceToneAnalysis: voiceCommentsArray,
+        VoiceToneRawResults: voiceAnalysisResults,
+        VoiceConfidenceScore: overallVoiceConfidenceScore,
         ReportGeneratedAt: FieldValue.serverTimestamp(),
       });
 

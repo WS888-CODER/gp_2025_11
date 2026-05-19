@@ -1081,44 +1081,41 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
                           // Face detection badge
                           Positioned(
                             top: 20,
-                            left: 0,
-                            right: 250,
-                            child: Center(
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: _faceDetected
-                                      ? Colors.green.withOpacity(0.85)
-                                      : Colors.red.withOpacity(0.85),
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      _faceDetected
-                                          ? Icons.check_circle
-                                          : Icons.warning_rounded,
+                            left: 16,
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _faceDetected
+                                    ? Colors.green.withOpacity(0.85)
+                                    : Colors.red.withOpacity(0.85),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    _faceDetected
+                                        ? Icons.check_circle
+                                        : Icons.warning_rounded,
+                                    color: Colors.white,
+                                    size: 14,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    _faceDetected
+                                        ? 'Face detected'
+                                        : 'No face detected',
+                                    style: const TextStyle(
                                       color: Colors.white,
-                                      size: 14,
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w700,
                                     ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      _faceDetected
-                                          ? 'Face detected'
-                                          : 'No face detected',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -1126,7 +1123,7 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
                           Positioned(
                             left: 16,
                             right: 16,
-                            bottom: 160,
+                            bottom: 200,
                             child: Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
@@ -1163,16 +1160,29 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
                                           ),
                                         ),
                                       ),
-                                      IconButton(
-                                        onPressed: _toggleSpeak,
-                                        icon: Icon(
-                                          _isSpeaking
-                                              ? Icons.stop_circle
-                                              : Icons.volume_up_rounded,
-                                          color: _isSpeaking
-                                              ? const Color(0xFFFD6C67)
-                                              : Colors.white,
-                                          size: 30,
+                                      const SizedBox(width: 8),
+                                      GestureDetector(
+                                        onTap: _toggleSpeak,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: _isSpeaking
+                                                ? const Color(0xFFFD6C67)
+                                                    .withOpacity(0.3)
+                                                : Colors.white
+                                                    .withOpacity(0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                          child: Icon(
+                                            _isSpeaking
+                                                ? Icons.stop_circle
+                                                : Icons.volume_up_rounded,
+                                            color: _isSpeaking
+                                                ? const Color(0xFFFD6C67)
+                                                : Colors.white,
+                                            size: 24,
+                                          ),
                                         ),
                                       ),
                                     ],
