@@ -121,9 +121,20 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
                   ?.map((e) => e.toString())
                   .toList() ??
               [];
-          final voiceAnalysis = voiceToneAnalysis;
 
-          final overallScore = (report['overallScore'] ?? 7.0) as num;
+          // Extract the dynamic overall voice feedback comments cleanly
+          final List<String> voiceComments = [];
+          if (voiceToneAnalysis != null && voiceToneAnalysis.isNotEmpty) {
+            for (var item in voiceToneAnalysis) {
+              String commentText = item['result'] ?? '';
+              if (commentText.isNotEmpty) {
+                voiceComments.add(commentText);
+              }
+            }
+          }
+
+          // Force the overall score scale display rules to be /100 instead of /10
+          final overallScore = (report['overallScore'] ?? 70.0) as num;
           final score = overallScore.toDouble();
           final overallSummary = (report['overallSummary'] ??
                   'Your interview performance shows potential with room for growth.')
@@ -138,25 +149,18 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header Card
                       _buildHeaderCard(context, specialty, date),
                       const SizedBox(height: 20),
-
-                      // OVERVIEW SECTION (Redesigned)
                       _buildOverviewSection(context, score, overallSummary),
                       const SizedBox(height: 20),
-
-                      // TABS (Now with Voice Analysis)
-                      _buildTabsSection(context, strengths, weaknesses, advice,
-                          voiceAnalysis),
+                      _buildTabsSection(context, strengths, weaknesses, advice, voiceComments),
                     ],
                   ),
                 ),
               ),
               if (!widget.fromHistory)
                 Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
                   child: SizedBox(
                     width: double.infinity,
                     height: 50,
@@ -193,8 +197,7 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
     );
   }
 
-  Widget _buildHeaderCard(
-      BuildContext context, String specialty, Timestamp? date) {
+  Widget _buildHeaderCard(BuildContext context, String specialty, Timestamp? date) {
     final dateStr = date != null
         ? '${date.toDate().day}/${date.toDate().month}/${date.toDate().year}'
         : 'Unknown date';
@@ -271,18 +274,16 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
     );
   }
 
-  Widget _buildOverviewSection(
-      BuildContext context, double score, String summary) {
+  Widget _buildOverviewSection(BuildContext context, double score, String summary) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     Color scoreColor;
     String scoreLabel;
     Color accentGold = const Color(0xFFD4A843);
-    if (score >= 8) {
+    if (score >= 80) {
       scoreColor = const Color(0xFF2E7D32);
       scoreLabel = 'Excellent';
-      accentGold = const Color(0xFFD4A843);
-    } else if (score >= 6) {
+    } else if (score >= 60) {
       scoreColor = const Color(0xFFE67E22);
       scoreLabel = 'Good';
       accentGold = const Color(0xFFE67E22);
@@ -299,9 +300,7 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(
-              Theme.of(context).brightness == Brightness.dark ? 0.12 : 0.05,
-            ),
+            color: Colors.black.withOpacity(isDark ? 0.12 : 0.05),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -310,7 +309,6 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       child: Column(
         children: [
-          // Title row
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -327,12 +325,9 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
             ],
           ),
           const SizedBox(height: 22),
-
-          // Score Circle (CENTERED, bigger)
           Stack(
             alignment: Alignment.center,
             children: [
-              // Outer glow
               Container(
                 width: 150,
                 height: 150,
@@ -347,7 +342,6 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
                   ],
                 ),
               ),
-              // Background track
               SizedBox(
                 width: 135,
                 height: 135,
@@ -356,28 +350,26 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
                   strokeWidth: 12,
                   strokeCap: StrokeCap.round,
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    isDark ? Colors.grey[800]! : Colors.grey[200]!,
+                    isDark ? Colors.grey[850]! : Colors.grey[200]!,
                   ),
                 ),
               ),
-              // Score arc
               SizedBox(
                 width: 135,
                 height: 135,
                 child: CircularProgressIndicator(
-                  value: score / 10,
+                  value: score / 100,
                   strokeWidth: 12,
                   strokeCap: StrokeCap.round,
                   backgroundColor: Colors.transparent,
                   valueColor: AlwaysStoppedAnimation<Color>(scoreColor),
                 ),
               ),
-              // Score text
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    score.toStringAsFixed(1),
+                    score.toStringAsFixed(0),
                     style: TextStyle(
                       fontSize: 42,
                       fontWeight: FontWeight.w800,
@@ -387,10 +379,10 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '/ 10',
+                    '/ 100',
                     style: TextStyle(
                       fontSize: 15,
-                      color: isDark ? Colors.grey[500] : Colors.grey[500],
+                      color: Colors.grey[500],
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -399,8 +391,6 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
             ],
           ),
           const SizedBox(height: 16),
-
-          // Score label pill
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
             decoration: BoxDecoration(
@@ -422,17 +412,11 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
             ),
           ),
           const SizedBox(height: 20),
-
-          const SizedBox(height: 16),
-
-          // Summary text (BELOW score) - bolder & more readable
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.grey[800]!.withOpacity(0.5)
-                  : Colors.grey[100]!.withOpacity(0.8),
+              color: isDark ? Colors.grey[800]!.withOpacity(0.5) : Colors.grey[100]!.withOpacity(0.8),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Text(
@@ -456,7 +440,7 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
     List<String> strengths,
     List<String> weaknesses,
     List<String> advice,
-    List<dynamic>? voiceAnalysis,
+    List<String> voiceComments,
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -474,7 +458,6 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
       ),
       child: Column(
         children: [
-          // ✨ CUSTOM TAB BAR (Modern Pill Style)
           AnimatedBuilder(
             animation: _tabController,
             builder: (context, _) {
@@ -487,65 +470,24 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
                 ),
                 child: Row(
                   children: [
-                    _buildPillTab(
-                      context,
-                      index: 0,
-                      label: 'Strengths',
-                      color: Colors.green[700]!,
-                    ),
-                    _buildPillTab(
-                      context,
-                      index: 1,
-                      label: 'Improve',
-                      color: const Color(0xFFFD6C67),
-                    ),
-                    _buildPillTab(
-                      context,
-                      index: 2,
-                      label: 'Tips',
-                      color: AppTheme.primaryPurple,
-                    ),
-                    _buildPillTab(
-                      context,
-                      index: 3,
-                      label: 'Voice',
-                      color: const Color(0xFF2196F3),
-                    ),
+                    _buildPillTab(context, index: 0, label: 'Strengths', color: Colors.green[700]!),
+                    _buildPillTab(context, index: 1, label: 'Improve', color: const Color(0xFFFD6C67)),
+                    _buildPillTab(context, index: 2, label: 'Tips', color: AppTheme.primaryPurple),
+                    _buildPillTab(context, index: 3, label: 'Voice', color: const Color(0xFF2196F3)),
                   ],
                 ),
               );
             },
           ),
-
-          // TAB CONTENT
           SizedBox(
             height: 500,
             child: TabBarView(
               controller: _tabController,
               children: [
-                // Strengths
-                _buildListTab(
-                  context,
-                  items: strengths,
-                  itemColor: Colors.green[700]!,
-                  emptyMessage: 'No strengths identified yet.',
-                ),
-                // Weaknesses
-                _buildListTab(
-                  context,
-                  items: weaknesses,
-                  itemColor: const Color(0xFFFD6C67),
-                  emptyMessage: 'No areas for improvement identified.',
-                ),
-                // Recommendations
-                _buildListTab(
-                  context,
-                  items: advice,
-                  itemColor: AppTheme.primaryPurple,
-                  emptyMessage: 'No recommendations yet.',
-                ),
-                // Voice Analysis
-                _buildVoiceTab(context, voiceAnalysis),
+                _buildListTab(context, items: strengths, itemColor: Colors.green[700]!, emptyMessage: 'No strengths identified yet.'),
+                _buildListTab(context, items: weaknesses, itemColor: const Color(0xFFFD6C67), emptyMessage: 'No areas for improvement identified.'),
+                _buildListTab(context, items: advice, itemColor: AppTheme.primaryPurple, emptyMessage: 'No recommendations yet.'),
+                _buildListTab(context, items: voiceComments, itemColor: const Color(0xFF2196F3), emptyMessage: 'Voice analysis will be available soon.'),
               ],
             ),
           ),
@@ -554,45 +496,26 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
     );
   }
 
-// ✨ PILL TAB BUILDER - Modern text-only design
-  Widget _buildPillTab(
-    BuildContext context, {
-    required int index,
-    required String label,
-    required Color color,
-  }) {
+  Widget _buildPillTab(BuildContext context, {required int index, required String label, required Color color}) {
     final isSelected = _tabController.index == index;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Expanded(
       child: GestureDetector(
-        onTap: () {
-          _tabController.animateTo(index);
-        },
+        onTap: () => _tabController.animateTo(index),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
             color: isSelected ? color : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: color.withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
-                : [],
           ),
           child: Text(
             label,
             style: TextStyle(
               fontSize: 13,
               fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-              color: isSelected
-                  ? Colors.white
-                  : (isDark ? Colors.grey[400] : Colors.grey[700]),
+              color: isSelected ? Colors.white : (isDark ? Colors.grey[400] : Colors.grey[700]),
             ),
             textAlign: TextAlign.center,
             maxLines: 1,
@@ -602,24 +525,12 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
     );
   }
 
-  Widget _buildListTab(
-    BuildContext context, {
-    required List<String> items,
-    required Color itemColor,
-    required String emptyMessage,
-  }) {
+  Widget _buildListTab(BuildContext context, {required List<String> items, required Color itemColor, required String emptyMessage}) {
     if (items.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text(
-            emptyMessage,
-            style: const TextStyle(
-              fontSize: 15,
-              color: Colors.grey,
-            ),
-            textAlign: TextAlign.center,
-          ),
+          child: Text(emptyMessage, style: const TextStyle(fontSize: 15, color: Colors.grey), textAlign: TextAlign.center),
         ),
       );
     }
@@ -629,9 +540,7 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
       itemCount: items.length,
       itemBuilder: (context, index) {
         return Padding(
-          padding: EdgeInsets.only(
-            bottom: index < items.length - 1 ? 16 : 0,
-          ),
+          padding: EdgeInsets.only(bottom: index < items.length - 1 ? 16 : 0),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -639,311 +548,19 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
                 margin: const EdgeInsets.only(top: 8),
                 width: 10,
                 height: 10,
-                decoration: BoxDecoration(
-                  color: itemColor,
-                  shape: BoxShape.circle,
-                ),
+                decoration: BoxDecoration(color: itemColor, shape: BoxShape.circle),
               ),
               const SizedBox(width: 14),
               Expanded(
                 child: Text(
                   items[index],
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        height: 1.7,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                      ),
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.7, fontSize: 15, fontWeight: FontWeight.w500),
                 ),
               ),
             ],
           ),
         );
       },
-    );
-  }
-
-  Widget _buildVoiceTab(BuildContext context, List<dynamic>? voiceAnalysis) {
-    final isAvailable = voiceAnalysis != null && voiceAnalysis.isNotEmpty;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    if (!isAvailable) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFD6C67).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: const Color(0xFFFD6C67).withOpacity(0.5),
-              ),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.schedule_rounded,
-                  color: Color(0xFFFD6C67),
-                  size: 48,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Voice analysis will be available soon',
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: isDark ? Colors.white70 : Colors.grey[700],
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    double totalScore = 0.0;
-    for (var item in voiceAnalysis) {
-      String resultText = item['result'] ?? '';
-      if (!resultText.contains('REJECTED')) {
-        final match =
-            RegExp(r'Assessment Score:\s*([\d.]+)%').firstMatch(resultText);
-        if (match != null) {
-          totalScore += double.tryParse(match.group(1) ?? '0.0') ?? 0.0;
-        }
-      }
-    }
-    double overallVoiceScore = totalScore / voiceAnalysis.length;
-
-    Color voiceScoreColor;
-    if (overallVoiceScore >= 80) {
-      voiceScoreColor = const Color(0xFF2E7D32);
-    } else if (overallVoiceScore >= 50) {
-      voiceScoreColor = const Color(0xFFE67E22);
-    } else {
-      voiceScoreColor = const Color(0xFFC0392B);
-    }
-
-    return Column(
-      children: [
-        Container(
-          margin: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: isDark ? Colors.grey[900] : Colors.grey[50],
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  Container(
-                    width: 85,
-                    height: 85,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: voiceScoreColor.withOpacity(0.2),
-                          blurRadius: 20,
-                          spreadRadius: 4,
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(
-                    width: 75,
-                    height: 75,
-                    child: CircularProgressIndicator(
-                      value: 1.0,
-                      strokeWidth: 7,
-                      strokeCap: StrokeCap.round,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        isDark ? Colors.grey[800]! : Colors.grey[200]!,
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    width: 75,
-                    height: 75,
-                    child: CircularProgressIndicator(
-                      value: overallVoiceScore / 100,
-                      strokeWidth: 7,
-                      strokeCap: StrokeCap.round,
-                      backgroundColor: Colors.transparent,
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(voiceScoreColor),
-                    ),
-                  ),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        overallVoiceScore.toStringAsFixed(1),
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: voiceScoreColor,
-                          height: 1,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '%',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark ? Colors.grey[500] : Colors.grey[400],
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      "Overall Vocal Confidence",
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: voiceScoreColor.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: voiceScoreColor.withOpacity(0.3),
-                          width: 1.0,
-                        ),
-                      ),
-                      child: Text(
-                        overallVoiceScore >= 80
-                            ? "Excellent"
-                            : (overallVoiceScore >= 50
-                                ? "Good"
-                                : "Needs Improvement"),
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: voiceScoreColor,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.all(20),
-            itemCount: voiceAnalysis.length,
-            itemBuilder: (context, index) {
-              final item = voiceAnalysis[index] as Map<String, dynamic>;
-              final questionIndex =
-                  (item['questionIndex'] as int? ?? index) + 1;
-              final result =
-                  item['result'] as String? ?? 'Analysis unavailable';
-
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 20),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      margin: const EdgeInsets.only(top: 6, right: 12),
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF2196F3),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Question $questionIndex',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF2196F3),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            result,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              height: 1.6,
-                              color: isDark ? Colors.grey[300] : Colors.black87,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildVoiceMetric(
-      BuildContext context, String label, int value, Color color) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              label,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-            Text(
-              '$value%',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(6),
-          child: LinearProgressIndicator(
-            value: value / 100,
-            backgroundColor: Colors.grey[200],
-            valueColor: AlwaysStoppedAnimation<Color>(color),
-            minHeight: 10,
-          ),
-        ),
-      ],
     );
   }
 }
