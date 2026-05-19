@@ -23,9 +23,20 @@ class CVNextStepsScreen extends StatefulWidget {
 }
 
 class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
+  static const List<String> _allSections = [
+    'PersonalInformation',
+    'Summary',
+    'Experience',
+    'Education',
+    'Skills',
+    'Certifications',
+    'Languages',
+  ];
+
   bool _isDetecting = true;
   bool _isEnhancing = false;
   List<String> _missingSections = [];
+  List<String> _sectionsToShow = [];
   List<String>? _suggestedSkills;
   int _currentSectionIndex = 0;
   Map<String, dynamic> _filledSections = {};
@@ -119,17 +130,18 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
           ? List<String>.from(result.data['suggestedSkills'])
           : null;
 
+      // Missing sections first, then existing ones as optional
+      final optional =
+          _allSections.where((s) => !missingSections.contains(s)).toList();
+
       setState(() {
         _missingSections = missingSections;
+        _sectionsToShow = [...missingSections, ...optional];
         _suggestedSkills = suggestedSkills;
         _isDetecting = false;
       });
 
-      // If no missing sections, automatically enhance CV
-      if (missingSections.isEmpty) {
-        _enhanceCV();
-      } else {
-        // Show info dialog about missing sections
+      if (missingSections.isNotEmpty) {
         _showMissingSectionsDialog();
       }
     } catch (e) {
@@ -240,47 +252,55 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
   }
 
   void _skipSection() {
-    if (_currentSectionIndex < _missingSections.length - 1) {
+    if (_currentSectionIndex < _sectionsToShow.length - 1) {
       setState(() {
         _currentSectionIndex++;
       });
     } else {
-      // All sections processed, enhance CV
       _enhanceCV();
     }
   }
 
   Future<void> _skipAll() async {
+    final stillMissing = _missingSections
+        .where((s) => !_filledSections.containsKey(s))
+        .toList();
+    final hasMissing = stillMissing.isNotEmpty;
+
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => JadeerDialog<bool>(
-        title: '⚠️ Skip All Sections?',
+        title: hasMissing ? '⚠️ Skip All Sections?' : 'Enhance CV Now?',
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'Completing these sections significantly improves your CV quality and makes it more attractive to employers.',
+            Text(
+              hasMissing
+                  ? 'Completing these sections significantly improves your CV quality and makes it more attractive to employers.'
+                  : 'Your CV looks complete. You can skip the optional sections and enhance your CV now.',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 15,
                 height: 1.4,
               ),
             ),
-            const SizedBox(height: 12),
-            Text(
-              'Missing: ${_missingSections.join(", ")}',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 13,
+            if (hasMissing) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Still missing: ${stillMissing.join(", ")}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 13,
+                ),
               ),
-            ),
+            ],
           ],
         ),
         secondaryLabel: 'Go Back',
         secondaryResult: false,
-        primaryLabel: 'Skip Anyway',
+        primaryLabel: hasMissing ? 'Skip Anyway' : 'Enhance Now',
         primaryResult: true,
       ),
     );
@@ -299,17 +319,16 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
   }
 
   void _saveAndNext(Map<String, dynamic> sectionData) {
-    final sectionName = _missingSections[_currentSectionIndex];
+    final sectionName = _sectionsToShow[_currentSectionIndex];
     setState(() {
       _filledSections[sectionName] = sectionData;
     });
 
-    if (_currentSectionIndex < _missingSections.length - 1) {
+    if (_currentSectionIndex < _sectionsToShow.length - 1) {
       setState(() {
         _currentSectionIndex++;
       });
     } else {
-      // All sections processed, enhance CV
       _enhanceCV();
     }
   }
@@ -390,10 +409,6 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
           'Enhancing your CV...\nThis may take a moment.');
     }
 
-    if (_missingSections.isEmpty) {
-      return _buildLoadingState('No missing sections!\nEnhancing your CV...');
-    }
-
     return _buildMissingSectionForm();
   }
 
@@ -422,8 +437,9 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
   Widget _buildMissingSectionForm() {
     final scheme = Theme.of(context).colorScheme;
 
-    final sectionName = _missingSections[_currentSectionIndex];
-    final progress = (_currentSectionIndex + 1) / _missingSections.length;
+    final sectionName = _sectionsToShow[_currentSectionIndex];
+    final isMissing = _missingSections.contains(sectionName);
+    final progress = (_currentSectionIndex + 1) / _sectionsToShow.length;
 
     return Column(
       children: [
@@ -457,12 +473,35 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
                     const SizedBox(width: 80),
                   Expanded(
                     child: Center(
-                      child: Text(
-                        'Section ${_currentSectionIndex + 1} of ${_missingSections.length}',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: scheme.onSurface,
-                        ),
+                      child: Column(
+                        children: [
+                          Text(
+                            'Section ${_currentSectionIndex + 1} of ${_sectionsToShow.length}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: scheme.onSurface,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: isMissing
+                                  ? Colors.red.withOpacity(0.12)
+                                  : Colors.blue.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              isMissing ? 'Missing' : 'Optional',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: isMissing ? Colors.red : Colors.blue,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -492,15 +531,18 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
           ),
         ),
         Expanded(
-          child: _buildSectionForm(sectionName),
+          child: _buildSectionForm(sectionName, isMissing: isMissing),
         ),
       ],
     );
   }
 
-  Widget _buildSectionForm(String sectionName) {
-    // Get previously saved data for this section if it exists
+  Widget _buildSectionForm(String sectionName, {bool isMissing = true}) {
     final existingData = _filledSections[sectionName];
+    const missingSubtitle = null; // use each form's default subtitle
+    const optionalSubtitle =
+        'This section already exists in your CV. Add any extra details you\'d like to include.';
+    final subtitle = isMissing ? missingSubtitle : optionalSubtitle;
 
     switch (sectionName) {
       case 'PersonalInformation':
@@ -508,24 +550,28 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
           onSave: _saveAndNext,
           onSkip: _skipSection,
           initialData: existingData,
+          subtitle: subtitle,
         );
       case 'Summary':
         return _SummaryForm(
           onSave: _saveAndNext,
           onSkip: _skipSection,
           initialData: existingData,
+          subtitle: subtitle,
         );
       case 'Experience':
         return _ExperienceForm(
           onSave: _saveAndNext,
           onSkip: _skipSection,
           initialData: existingData,
+          subtitle: subtitle,
         );
       case 'Education':
         return _EducationForm(
           onSave: _saveAndNext,
           onSkip: _skipSection,
           initialData: existingData,
+          subtitle: subtitle,
         );
       case 'Skills':
         return _SkillsForm(
@@ -533,18 +579,21 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
           onSkip: _skipSection,
           suggestedSkills: _suggestedSkills,
           initialData: existingData,
+          subtitle: subtitle,
         );
       case 'Certifications':
         return _CertificationsForm(
           onSave: _saveAndNext,
           onSkip: _skipSection,
           initialData: existingData,
+          subtitle: subtitle,
         );
       case 'Languages':
         return _LanguagesForm(
           onSave: _saveAndNext,
           onSkip: _skipSection,
           initialData: existingData,
+          subtitle: subtitle,
         );
       default:
         return Center(child: Text('Unknown section: $sectionName'));
@@ -557,11 +606,13 @@ class _PersonalInformationForm extends StatefulWidget {
   final Function(Map<String, dynamic>) onSave;
   final VoidCallback onSkip;
   final Map<String, dynamic>? initialData;
+  final String? subtitle;
 
   const _PersonalInformationForm({
     required this.onSave,
     required this.onSkip,
     this.initialData,
+    this.subtitle,
   });
 
   @override
@@ -625,7 +676,7 @@ class _PersonalInformationFormState extends State<_PersonalInformationForm> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Fill in your personal details.',
+                  widget.subtitle ?? 'Fill in your personal details.',
                   style: TextStyle(color: scheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 20),
@@ -896,11 +947,13 @@ class _SummaryForm extends StatefulWidget {
   final Function(Map<String, dynamic>) onSave;
   final VoidCallback onSkip;
   final Map<String, dynamic>? initialData;
+  final String? subtitle;
 
   const _SummaryForm({
     required this.onSave,
     required this.onSkip,
     this.initialData,
+    this.subtitle,
   });
 
   @override
@@ -946,7 +999,7 @@ class _SummaryFormState extends State<_SummaryForm> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Write a brief summary about yourself and your career goals.',
+                  widget.subtitle ?? 'Write a brief summary about yourself and your career goals.',
                   style: TextStyle(
                     color: scheme.onSurfaceVariant,
                   ),
@@ -1055,11 +1108,13 @@ class _ExperienceForm extends StatefulWidget {
   final Function(Map<String, dynamic>) onSave;
   final VoidCallback onSkip;
   final Map<String, dynamic>? initialData;
+  final String? subtitle;
 
   const _ExperienceForm({
     required this.onSave,
     required this.onSkip,
     this.initialData,
+    this.subtitle,
   });
 
   @override
@@ -1152,6 +1207,14 @@ class _ExperienceFormState extends State<_ExperienceForm> {
                   ],
                 ),
                 const SizedBox(height: 8),
+                if (widget.subtitle != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      widget.subtitle!,
+                      style: TextStyle(color: scheme.onSurfaceVariant),
+                    ),
+                  ),
                 Text(
                   'Add up to ${10 - _experiences.length} more experience(s)',
                   style: TextStyle(color: scheme.onSurfaceVariant),
@@ -1419,11 +1482,13 @@ class _EducationForm extends StatefulWidget {
   final Function(Map<String, dynamic>) onSave;
   final VoidCallback onSkip;
   final Map<String, dynamic>? initialData;
+  final String? subtitle;
 
   const _EducationForm({
     required this.onSave,
     required this.onSkip,
     this.initialData,
+    this.subtitle,
   });
 
   @override
@@ -1514,6 +1579,14 @@ class _EducationFormState extends State<_EducationForm> {
                   ],
                 ),
                 const SizedBox(height: 8),
+                if (widget.subtitle != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      widget.subtitle!,
+                      style: TextStyle(color: scheme.onSurfaceVariant),
+                    ),
+                  ),
                 Text(
                   'Add up to ${10 - _education.length} more education entries',
                   style: TextStyle(color: scheme.onSurfaceVariant),
@@ -1756,12 +1829,14 @@ class _SkillsForm extends StatefulWidget {
   final VoidCallback onSkip;
   final List<String>? suggestedSkills;
   final Map<String, dynamic>? initialData;
+  final String? subtitle;
 
   const _SkillsForm({
     required this.onSave,
     required this.onSkip,
     this.suggestedSkills,
     this.initialData,
+    this.subtitle,
   });
 
   @override
@@ -1855,6 +1930,14 @@ class _SkillsFormState extends State<_SkillsForm> {
                   ),
                 ),
                 const SizedBox(height: 8),
+                if (widget.subtitle != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      widget.subtitle!,
+                      style: TextStyle(color: scheme.onSurfaceVariant),
+                    ),
+                  ),
                 Text(
                   hasSuggestions
                       ? 'Add custom skills or select from suggestions below (max 20)'
@@ -2057,11 +2140,13 @@ class _CertificationsForm extends StatefulWidget {
   final Function(Map<String, dynamic>) onSave;
   final VoidCallback onSkip;
   final Map<String, dynamic>? initialData;
+  final String? subtitle;
 
   const _CertificationsForm({
     required this.onSave,
     required this.onSkip,
     this.initialData,
+    this.subtitle,
   });
 
   @override
@@ -2152,6 +2237,14 @@ class _CertificationsFormState extends State<_CertificationsForm> {
                   ],
                 ),
                 const SizedBox(height: 8),
+                if (widget.subtitle != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      widget.subtitle!,
+                      style: TextStyle(color: scheme.onSurfaceVariant),
+                    ),
+                  ),
                 Text(
                   'Add up to ${10 - _certifications.length} more certifications',
                   style: TextStyle(color: scheme.onSurfaceVariant),
@@ -2394,11 +2487,13 @@ class _LanguagesForm extends StatefulWidget {
   final Function(Map<String, dynamic>) onSave;
   final VoidCallback onSkip;
   final Map<String, dynamic>? initialData;
+  final String? subtitle;
 
   const _LanguagesForm({
     required this.onSave,
     required this.onSkip,
     this.initialData,
+    this.subtitle,
   });
 
   @override
@@ -2602,6 +2697,14 @@ class _LanguagesFormState extends State<_LanguagesForm> {
                   ],
                 ),
                 const SizedBox(height: 8),
+                if (widget.subtitle != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      widget.subtitle!,
+                      style: TextStyle(color: scheme.onSurfaceVariant),
+                    ),
+                  ),
                 Text(
                   'Add up to ${10 - _languages.length} more languages',
                   style: TextStyle(color: scheme.onSurfaceVariant),
