@@ -2,7 +2,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import FormData from "form-data";
 import fetch from "node-fetch";
-import { Client } from "@gradio/client"; 
+import { Client } from "@gradio/client";
 
 export const generateMockInterviewReport = onCall(
   {
@@ -33,6 +33,8 @@ export const generateMockInterviewReport = onCall(
       const questions = interviewData.Questions || [];
       const specialty = interviewData.Specialty || "Unknown";
 
+      console.log(`[generateReport] Found ${audioUrls.length} audio files`);
+
       if (audioUrls.length === 0) {
         throw new HttpsError(
           "failed-precondition",
@@ -40,104 +42,198 @@ export const generateMockInterviewReport = onCall(
         );
       }
 
-      // Step 1: Transcribe all audio files
+      // ══════════════════════════════════════════════════════════
+      // Step 1: Transcribe all audio files (Whisper)
+      // ══════════════════════════════════════════════════════════
       const transcripts = [];
       const OPENAI_KEY = process.env.OPENAI_API_KEY;
 
       for (let i = 0; i < audioUrls.length; i++) {
         const audioUrl = audioUrls[i];
-        if (!audioUrl || audioUrl.trim() === "") continue;
+        if (!audioUrl || audioUrl.trim() === "") {
+          console.log(`[generateReport] Skipping empty URL at index ${i}`);
+          continue;
+        }
 
         try {
+          console.log(`[generateReport] Transcribing audio ${i + 1}/${audioUrls.length}`);
+
           const audioResponse = await fetch(audioUrl);
-          if (!audioResponse.ok) throw new Error("Audio download failed");
+          if (!audioResponse.ok) {
+            throw new Error(`Failed to download audio: ${audioResponse.statusText}`);
+          }
 
           const audioBuffer = await audioResponse.buffer();
-          if (audioBuffer.length < 100) throw new Error('Audio file corrupted');
+          console.log(`[generateReport] Downloaded ${audioBuffer.length} bytes`);
+
+          if (audioBuffer.length < 100) {
+            throw new Error("Audio file too small (likely corrupted)");
+          }
 
           const formData = new FormData();
-          formData.append("file", audioBuffer, { filename: `audio_${i}.m4a`, contentType: "audio/m4a" });
+          formData.append("file", audioBuffer, {
+            filename: `audio_${i}.m4a`,
+            contentType: "audio/m4a",
+          });
           formData.append("model", "whisper-1");
 
           const transcriptionResponse = await fetch(
             "https://api.openai.com/v1/audio/transcriptions",
-            { method: "POST", headers: { Authorization: `Bearer ${OPENAI_KEY}`, ...formData.getHeaders() }, body: formData }
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${OPENAI_KEY}`,
+                ...formData.getHeaders(),
+              },
+              body: formData,
+            }
           );
 
-          if (!transcriptionResponse.ok) throw new Error("Whisper API error");
+          if (!transcriptionResponse.ok) {
+            const errorText = await transcriptionResponse.text();
+            console.error(`[generateReport] Whisper error: ${errorText}`);
+            throw new Error(`Whisper API error: ${transcriptionResponse.statusText}`);
+          }
 
           const result = await transcriptionResponse.json();
-          transcripts.push({ question: questions[i] || `Question ${i + 1}`, answer: result.text || "[No transcription]" });
+          transcripts.push({
+            question: questions[i] || `Question ${i + 1}`,
+            answer: result.text || "[No transcription]",
+          });
+
+          console.log(`[generateReport] ✅ Transcribed Q${i + 1}: ${result.text.substring(0, 50)}...`);
         } catch (error) {
-          transcripts.push({ question: questions[i] || `Question ${i + 1}`, answer: "[Transcription failed]" });
+          console.error(`[generateReport] ❌ Transcription failed for audio ${i}:`, error);
+          transcripts.push({
+            question: questions[i] || `Question ${i + 1}`,
+            answer: "[Transcription failed]",
+          });
         }
       }
 
-      const validTranscripts = transcripts.filter(t => t.answer !== "[Transcription failed]");
-      const transcriptText = validTranscripts.map((t, i) => `Q${i + 1}: ${t.question}\nA${i + 1}: ${t.answer}`).join("\n\n");
+      if (transcripts.length === 0) {
+        throw new HttpsError("internal", "Failed to transcribe any audio files");
+      }
 
-      // Step 2: Voice Tone Analysis (SER Model)
-      const voiceAnalysisResults = [];
+      const validTranscripts = transcripts.filter((t) => t.answer !== "[Transcription failed]");
+
+      if (validTranscripts.length === 0) {
+        throw new HttpsError(
+          "failed-precondition",
+          "All audio transcriptions failed. Please check your microphone and try again."
+        );
+      }
+
+      const transcriptText = validTranscripts
+        .map((t, i) => `Q${i + 1}: ${t.question}\nA${i + 1}: ${t.answer}`)
+        .join("\n\n");
+
+      const failedCount = transcripts.length - validTranscripts.length;
+      const transcriptionNote =
+        failedCount > 0
+          ? `Note: ${failedCount} answer(s) could not be transcribed and were excluded from analysis.\n\n`
+          : "";
+
+      console.log(`[generateReport] Successfully transcribed ${validTranscripts.length} answers`);
+
+      // ══════════════════════════════════════════════════════════
+      // Step 2: Voice Tone Analysis (SER Model) — EXACT OLD WORKING CODE
+      // ══════════════════════════════════════════════════════════
+      console.log("[generateReport] Starting voice tone analysis via Public Client...");
+      const voiceResults = [];
+
       try {
         const spaceApiUrl = "https://huggingface.co/api/spaces/wsaifaleslam/jadeer-smart-assessment";
         let isAwake = false;
         let attempts = 0;
 
+        console.log("[generateReport] Checking real-time Hugging Face Space status...");
+
         while (!isAwake && attempts < 10) {
           const response = await fetch(spaceApiUrl);
           if (response.ok) {
             const metadata = await response.json();
-            if (metadata.runtime?.stage === "RUNNING") {
+            const runtimeStatus = metadata.runtime?.stage;
+
+            console.log(`[generateReport] Space status is currently: ${runtimeStatus}`);
+
+            if (runtimeStatus === "RUNNING") {
               isAwake = true;
               break;
             }
           }
+
           attempts++;
           await fetch("https://wsaifaleslam-jadeer-smart-assessment.hf.space").catch(() => {});
-          await new Promise(resolve => setTimeout(resolve, 4000));
+          await new Promise((resolve) => setTimeout(resolve, 4000));
         }
 
         const app = await Client.connect("wsaifaleslam/jadeer-smart-assessment");
+        console.log("[generateReport] ✅ Connected to Hugging Face Space successfully.");
 
         for (let i = 0; i < audioUrls.length; i++) {
           const audioUrl = audioUrls[i];
           if (!audioUrl || audioUrl.trim() === "") continue;
 
           try {
+            console.log(`[generateReport] Connecting client for audio ${i + 1}/${audioUrls.length}`);
+
             const audioResponse = await fetch(audioUrl);
+            if (!audioResponse.ok) throw new Error("Audio download failed");
+
             const arrayBuffer = await audioResponse.arrayBuffer();
-            const audioBlob = new Blob([arrayBuffer], { type: 'audio/wav' });
+            const audioBlob = new Blob([arrayBuffer], { type: "audio/wav" });
 
             const hfResult = await app.predict("predict_confidence", [audioBlob]);
-            const resultText = hfResult.data && hfResult.data[0] ? String(hfResult.data[0]) : "Score: 0%";
 
-            voiceAnalysisResults.push({ questionIndex: i, result: resultText });
+            const resultText =
+              hfResult.data && hfResult.data[0]
+                ? String(hfResult.data[0])
+                : "Analysis unavailable";
+
+            voiceResults.push({
+              questionIndex: i,
+              result: resultText,
+            });
+
+            console.log(`[generateReport] ✅ Voice analysis Q${i + 1}: ${resultText}`);
           } catch (err) {
-            voiceAnalysisResults.push({ questionIndex: i, result: "Score: 0%" });
+            console.error(`[generateReport] ❌ Voice analysis failed for Q${i + 1}:`, err.message || err);
+            voiceResults.push({
+              questionIndex: i,
+              result: "Analysis unavailable",
+            });
           }
         }
       } catch (outerErr) {
+        console.error("[generateReport] ❌ Critical failure in SER Outer Block:", outerErr.message || outerErr);
         for (let i = 0; i < audioUrls.length; i++) {
-          voiceAnalysisResults.push({ questionIndex: i, result: "Score: 0%" });
+          voiceResults.push({ questionIndex: i, result: "Analysis unavailable" });
         }
       }
 
+      // ── Calculate voice confidence score from SER results ──
       let totalVoiceScore = 0.0;
       let validVoiceCount = 0;
-      for (const v of voiceAnalysisResults) {
+      for (const v of voiceResults) {
         const match = v.result.match(/Assessment Score:\s*([\d.]+)%/);
         if (match) {
           totalVoiceScore += parseFloat(match[1]);
           validVoiceCount++;
         }
       }
-      const overallVoiceConfidenceScore = validVoiceCount > 0 ? Math.round(totalVoiceScore / validVoiceCount) : 0;
+      const overallVoiceConfidenceScore =
+        validVoiceCount > 0 ? Math.round(totalVoiceScore / validVoiceCount) : 0;
 
-      // Step 3: Call GPT-4 to generate report and summarize voice confidence
+      console.log(`[generateReport] Voice confidence score: ${overallVoiceConfidenceScore} (from ${validVoiceCount} samples)`);
+
+      // ══════════════════════════════════════════════════════════
+      // Step 3: GPT-4 Analysis (with voice score + voice comment)
+      // ══════════════════════════════════════════════════════════
       const gptPrompt = `You are an expert interview coach giving personal mock interview feedback to a jobseeker practicing for a ${specialty} position.
 IMPORTANT: Address the user directly using "you" and "your".
 
-Interview Transcripts:
+${transcriptionNote}Interview Transcripts:
 ${transcriptText}
 
 Acoustic Tone Reading Parameters:
@@ -165,45 +261,89 @@ CRITICAL: NEVER use references like "the candidate" inside this file. Always use
 
       const gptResponse = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
-        headers: { Authorization: `Bearer ${OPENAI_KEY}`, "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${OPENAI_KEY}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           model: "gpt-4",
           messages: [
-            { role: "system", content: "You are a friendly mock interview coach. Always respond with valid JSON only, no markdown." },
-            { role: "user", content: gptPrompt }
+            {
+              role: "system",
+              content:
+                "You are a friendly mock interview coach. Always respond with valid JSON only, no markdown.",
+            },
+            {
+              role: "user",
+              content: gptPrompt,
+            },
           ],
           temperature: 0.7,
+          max_tokens: 2000,
         }),
       });
 
+      if (!gptResponse.ok) {
+        const errorText = await gptResponse.text();
+        throw new Error(`GPT-4 API error: ${gptResponse.statusText} - ${errorText}`);
+      }
+
       const gptResult = await gptResponse.json();
-      let cleanedResponse = gptResult.choices[0].message.content.trim();
-      if (cleanedResponse.startsWith("```json")) {
-        cleanedResponse = cleanedResponse.replace(/```json\n?/g, "").replace(/```\n?/g, "");
+      const rawResponse = gptResult.choices[0].message.content.trim();
+
+      console.log("[generateReport] GPT-4 raw response:", rawResponse.substring(0, 200));
+
+      let cleanedResponse = rawResponse;
+      if (rawResponse.startsWith("```json")) {
+        cleanedResponse = rawResponse.replace(/```json\n?/g, "").replace(/```\n?/g, "");
+      } else if (rawResponse.startsWith("```")) {
+        cleanedResponse = rawResponse.replace(/```\n?/g, "");
       }
 
       const reportData = JSON.parse(cleanedResponse);
+      console.log("[generateReport] ✅ Successfully parsed GPT-4 response");
 
+      // ── Extract voice comment from GPT ──
       const voiceCommentsArray = [
         {
           questionIndex: 0,
-          result: reportData.mockVoiceComment || "Your delivery was steady and clear throughout the interview."
-        }
+          result:
+            reportData.mockVoiceComment ||
+            "Your delivery was steady and clear throughout the interview.",
+        },
       ];
 
       delete reportData.mockVoiceComment;
 
+      // ══════════════════════════════════════════════════════════
+      // Step 4: Save report first (like old working version)
+      // ══════════════════════════════════════════════════════════
       await interviewRef.update({
         Report: reportData,
-        VoiceToneAnalysis: voiceCommentsArray,
-        VoiceToneRawResults: voiceAnalysisResults,
-        VoiceConfidenceScore: overallVoiceConfidenceScore,
         ReportGeneratedAt: FieldValue.serverTimestamp(),
       });
 
+      console.log("[generateReport] ✅ Report saved");
+
+      // ══════════════════════════════════════════════════════════
+      // Step 5: Save voice results separately (like old working version)
+      // ══════════════════════════════════════════════════════════
+      await interviewRef.update({
+        VoiceToneAnalysis: voiceCommentsArray,
+        VoiceToneRawResults: voiceResults,
+        VoiceConfidenceScore: overallVoiceConfidenceScore,
+      });
+
+      console.log("[generateReport] ✅ Voice tone analysis saved");
+      console.log(`[generateReport] ✅ Complete for ${mockInterviewID}`);
+
       return { success: true, report: reportData };
     } catch (error) {
-      throw new HttpsError("internal", error.message);
+      console.error("[generateReport] ❌ Error:", error);
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+      throw new HttpsError("internal", `Failed to generate report: ${error.message}`);
     }
   }
 );
