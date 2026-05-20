@@ -739,63 +739,6 @@ function generatePDF({
         doc.moveDown(0.5);
       }
 
-      // ── Strengths ──
-      if (reportData.strengths && reportData.strengths.length > 0) {
-        checkPageBreak(doc, 50);
-        doc
-          .font("Helvetica-Bold")
-          .fontSize(14)
-          .fillColor(darkText)
-          .text("Strengths", 50, doc.y);
-        doc.moveDown(0.3);
-
-        doc.font("Helvetica").fontSize(10).fillColor(darkText);
-        for (const s of reportData.strengths) {
-          checkPageBreak(doc, 30);
-          doc.text(`•  ${s}`, 55, doc.y, { width: pageWidth - 10 });
-          doc.moveDown(0.3);
-        }
-        doc.moveDown(0.5);
-      }
-
-      // ── Weaknesses ──
-      if (reportData.weaknesses && reportData.weaknesses.length > 0) {
-        checkPageBreak(doc, 50);
-        doc
-          .font("Helvetica-Bold")
-          .fontSize(14)
-          .fillColor(darkText)
-          .text("Areas for Improvement", 50, doc.y);
-        doc.moveDown(0.3);
-
-        doc.font("Helvetica").fontSize(10).fillColor(darkText);
-        for (const w of reportData.weaknesses) {
-          checkPageBreak(doc, 30);
-          doc.text(`•  ${w}`, 55, doc.y, { width: pageWidth - 10 });
-          doc.moveDown(0.3);
-        }
-        doc.moveDown(0.5);
-      }
-
-      // ── Recommendations ──
-      if (reportData.advice && reportData.advice.length > 0) {
-        checkPageBreak(doc, 50);
-        doc
-          .font("Helvetica-Bold")
-          .fontSize(14)
-          .fillColor(darkText)
-          .text("Recommendations", 50, doc.y);
-        doc.moveDown(0.3);
-
-        doc.font("Helvetica").fontSize(10).fillColor(darkText);
-        for (const a of reportData.advice) {
-          checkPageBreak(doc, 30);
-          doc.text(`•  ${a}`, 55, doc.y, { width: pageWidth - 10 });
-          doc.moveDown(0.3);
-        }
-        doc.moveDown(0.5);
-      }
-
       // ── Psychometric Analysis ──
       if (reportData.psychometricAnalysis) {
         checkPageBreak(doc, 80);
@@ -826,29 +769,84 @@ function generatePDF({
 
       // ── Voice Tone Analysis ──
       if (voiceAnalysisResults && voiceAnalysisResults.length > 0) {
-        checkPageBreak(doc, 50);
+        checkPageBreak(doc, 80);
         doc
           .font("Helvetica-Bold")
           .fontSize(14)
           .fillColor(darkText)
           .text("Voice Tone Analysis", 50, doc.y);
-        doc.moveDown(0.3);
+        doc.moveDown(0.4);
 
+        // Info message
+        doc
+          .font("Helvetica")
+          .fontSize(9)
+          .fillColor(grey)
+          .text(
+            "These results are based on an AI analysis of the candidate's vocal confidence during the interview. The model evaluates tone, pacing, and delivery for each answer.",
+            50,
+            doc.y,
+            { width: pageWidth }
+          );
+        doc.moveDown(0.6);
+
+        // Per-question results
         doc
           .font("Helvetica-Bold")
           .fontSize(11)
-          .fillColor(blue)
-          .text(`Average Voice Score: ${voiceScore}/100`, 55, doc.y);
+          .fillColor(darkText)
+          .text("Per-Question Analysis", 50, doc.y);
+        doc.moveDown(0.4);
+
+        for (const v of voiceAnalysisResults) {
+          checkPageBreak(doc, 40);
+          const qNum = v.questionIndex + 1;
+          const scoreMatch = v.result.match(/Assessment Score:\s*([\d.]+)%/);
+          const score = scoreMatch ? parseFloat(scoreMatch[1]).toFixed(1) : "0.0";
+          const insight = v.result.includes("Insight:")
+            ? v.result.split("Insight:")[1].trim()
+            : v.result;
+
+          // Question label + score
+          doc
+            .font("Helvetica-Bold")
+            .fontSize(10)
+            .fillColor(blue)
+            .text(`Q${qNum}`, 50, doc.y, { continued: true })
+            .fillColor(darkText)
+            .text(`                                                                                    ${score} / 100`, {
+              align: "right",
+            });
+
+          // Progress bar
+          const barY = doc.y;
+          doc.rect(50, barY, pageWidth, 5).fill("#E8E8EE");
+          const barWidth = Math.max(0, (parseFloat(score) / 100) * pageWidth);
+          if (barWidth > 0) {
+            const barColor = parseFloat(score) >= 70 ? green : parseFloat(score) >= 40 ? "#FFB347" : red;
+            doc.rect(50, barY, barWidth, 5).fill(barColor);
+          }
+          doc.y = barY + 10;
+
+          // Insight text
+          doc
+            .font("Helvetica")
+            .fontSize(9)
+            .fillColor(grey)
+            .text(insight, 50, doc.y, { width: pageWidth });
+          doc.moveDown(0.5);
+        }
+
         doc.moveDown(0.3);
 
-        doc.font("Helvetica").fontSize(9).fillColor(grey);
-        for (const v of voiceAnalysisResults) {
-          checkPageBreak(doc, 20);
-          const qNum = v.questionIndex + 1;
-          doc.text(`Q${qNum}: ${v.result}`, 55, doc.y, { width: pageWidth - 10 });
-          doc.moveDown(0.2);
-        }
-        doc.moveDown(0.5);
+        // Average voice score footer
+        checkPageBreak(doc, 30);
+        doc
+          .font("Helvetica-Bold")
+          .fontSize(10)
+          .fillColor(darkText)
+          .text(`Average Voice Confidence: ${voiceScore} / 100`, 50, doc.y);
+        doc.moveDown(0.8);
       }
 
       // ── Interview Questions & Answers ──
