@@ -121,6 +121,36 @@ class SnackHelper {
     );
   }
 
+  static void successWithAction(
+    BuildContext context,
+    String message, {
+    required String actionLabel,
+    required VoidCallback onAction,
+  }) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: const Color(0xFF4CAF50).withOpacity(0.9),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        action: SnackBarAction(
+          label: actionLabel,
+          textColor: Colors.white,
+          onPressed: onAction,
+        ),
+      ),
+    );
+  }
+
   // Base snack builder
   static void _show(BuildContext context, String message, Color color) {
     if (context.mounted == false) return;

@@ -380,10 +380,8 @@ class _CompanyProfileState extends State<CompanyProfile> {
       logoAfterSave = _hasAnyLogo(current);
     }
 
-    final wouldBeComplete = logoAfterSave &&
-        desc.length >= 150 &&
-        loc.isNotEmpty &&
-        hasAnyContact;
+    final wouldBeComplete =
+        logoAfterSave && desc.length >= 150 && loc.isNotEmpty && hasAnyContact;
 
     if (hasActiveJobs && !wouldBeComplete) {
       if (!logoAfterSave) {
@@ -1128,6 +1126,7 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                 color: Colors.white,
                 height: 1.4,
               ),
+              textAlign: TextAlign.left,
             ),
             SizedBox(height: 12),
             Text(
@@ -1137,6 +1136,7 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                 fontWeight: FontWeight.w600,
                 height: 1.4,
               ),
+              textAlign: TextAlign.center,
             ),
             SizedBox(height: 6),
             Text(
@@ -1146,6 +1146,7 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                 color: Colors.white,
                 height: 1.4,
               ),
+              textAlign: TextAlign.left,
             ),
           ],
         ),
@@ -1575,16 +1576,17 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                             ),
                           ),
                           const SizedBox(height: 8),
-                          buildJadeerInputCard(
-                            context: context,
-                            child: ValueListenableBuilder<TextEditingValue>(
-                              valueListenable: parent._desc,
-                              builder: (context, value, _) {
-                                final text = value.text.trim();
-                                final length = text.length;
-                                final tooShort = length > 0 && length < 150;
+                          ValueListenableBuilder<TextEditingValue>(
+                            valueListenable: parent._desc,
+                            builder: (context, value, _) {
+                              final length = value.text.trim().length;
+                              final isInvalid =
+                                  (length > 0 && length < 150) || length > 900;
+                              final tooShort = length > 0 && length < 150;
 
-                                return TextFormField(
+                              return buildJadeerInputCard(
+                                context: context,
+                                child: TextFormField(
                                   key: parent._descKey,
                                   focusNode: parent._descFocus,
                                   controller: parent._desc,
@@ -1598,17 +1600,18 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                                         const TextStyle(color: Colors.grey),
                                     filled: true,
                                     fillColor: Colors.transparent,
+                                    counterText: '',
                                     border: const OutlineInputBorder(
                                       borderRadius:
                                           BorderRadius.all(Radius.circular(12)),
                                       borderSide: BorderSide.none,
                                     ),
                                     helperText: tooShort
-                                        ? '$length/900 – minimum 150 characters for a complete profile'
+                                        ? '$length/900 – minimum 150 characters'
                                         : '$length/900',
                                     helperStyle: TextStyle(
                                       fontSize: 12,
-                                      color: tooShort
+                                      color: isInvalid
                                           ? const Color(0xFFFC686A)
                                           : Theme.of(context)
                                               .colorScheme
@@ -1617,9 +1620,9 @@ class _EditCompanyPageState extends State<EditCompanyPage>
                                     ),
                                   ),
                                   validator: (_) => null,
-                                );
-                              },
-                            ),
+                                ),
+                              );
+                            },
                           ),
                           const SizedBox(height: 24),
                           const Text(

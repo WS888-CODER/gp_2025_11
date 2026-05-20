@@ -1569,16 +1569,11 @@ Future<void> _downloadFileFromPage(
 
     if (!context.mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Downloaded successfully: $fileName'),
-        action: SnackBarAction(
-          label: 'Open',
-          onPressed: () {
-            OpenFilex.open(savePath);
-          },
-        ),
-      ),
+    SnackHelper.successWithAction(
+      context,
+      'Downloaded: $fileName',
+      actionLabel: 'Open',
+      onAction: () => OpenFilex.open(savePath),
     );
   } catch (e) {
     if (!context.mounted) return;
@@ -1642,7 +1637,7 @@ class InAppPdfViewerPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomHeader(title: title),
+      appBar: CustomHeader(title: title, rounded: false),
       body: SfPdfViewer.network(
         pdfUrl,
         canShowScrollHead: true,

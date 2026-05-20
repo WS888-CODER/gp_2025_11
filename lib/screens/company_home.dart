@@ -1506,30 +1506,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                                                         mainAxisSize:
                                                             MainAxisSize.min,
                                                         children: [
-                                                          ListTile(
-                                                            leading: Icon(
-                                                              isClosed
-                                                                  ? Icons
-                                                                      .lock_open_outlined
-                                                                  : Icons
-                                                                      .lock_outline,
-                                                              color:
-                                                                  Colors.white,
-                                                              size: 22,
-                                                            ),
-                                                            title: Text(
-                                                              isClosed
-                                                                  ? 'Reopen Job'
-                                                                  : 'Close Job',
-                                                              style:
-                                                                  const TextStyle(
-                                                                color: Colors
-                                                                    .white,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w600,
-                                                              ),
-                                                            ),
+                                                          InkWell(
                                                             onTap: () {
                                                               Navigator.pop(
                                                                   dialogContext);
@@ -1540,30 +1517,50 @@ class _CompanyHomeState extends State<CompanyHome> {
                                                                 endDate,
                                                               );
                                                             },
+                                                            child: Padding(
+                                                              padding: const EdgeInsets.symmetric(
+                                                                  vertical: 14),
+                                                              child: Row(
+                                                                mainAxisAlignment:
+                                                                    MainAxisAlignment
+                                                                        .center,
+                                                                children: [
+                                                                  Icon(
+                                                                    isClosed
+                                                                        ? Icons
+                                                                            .lock_open_outlined
+                                                                        : Icons
+                                                                            .lock_outline,
+                                                                    color: Colors
+                                                                        .white,
+                                                                    size: 26,
+                                                                  ),
+                                                                  const SizedBox(
+                                                                      width: 10),
+                                                                  Text(
+                                                                    isClosed
+                                                                        ? 'Reopen Job'
+                                                                        : 'Close Job',
+                                                                    style:
+                                                                        const TextStyle(
+                                                                      color: Colors
+                                                                          .white,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .w600,
+                                                                      fontSize: 16,
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
                                                           ),
                                                           const Divider(
                                                             color:
                                                                 Colors.white24,
                                                             height: 1,
                                                           ),
-                                                          ListTile(
-                                                            leading: const Icon(
-                                                              Icons
-                                                                  .delete_outline,
-                                                              color: Color(
-                                                                  0xFFFF7B7B),
-                                                              size: 22,
-                                                            ),
-                                                            title: const Text(
-                                                              'Delete Job',
-                                                              style: TextStyle(
-                                                                color: Color(
-                                                                    0xFFFF7B7B),
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w600,
-                                                              ),
-                                                            ),
+                                                          InkWell(
                                                             onTap: () {
                                                               Navigator.pop(
                                                                   dialogContext);
@@ -1573,6 +1570,38 @@ class _CompanyHomeState extends State<CompanyHome> {
                                                                 safeCtx,
                                                               );
                                                             },
+                                                            child: Padding(
+                                                              padding: const EdgeInsets.symmetric(
+                                                                  vertical: 14),
+                                                              child: Row(
+                                                                mainAxisAlignment:
+                                                                    MainAxisAlignment
+                                                                        .center,
+                                                                children: const [
+                                                                  Icon(
+                                                                    Icons
+                                                                        .delete_outline,
+                                                                    color: Color(
+                                                                        0xFFFF7B7B),
+                                                                    size: 26,
+                                                                  ),
+                                                                  SizedBox(
+                                                                      width: 10),
+                                                                  Text(
+                                                                    'Delete Job',
+                                                                    style:
+                                                                        TextStyle(
+                                                                      color: Color(
+                                                                          0xFFFF7B7B),
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .w600,
+                                                                      fontSize: 16,
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
                                                           ),
                                                         ],
                                                       ),
