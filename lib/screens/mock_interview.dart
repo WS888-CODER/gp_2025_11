@@ -1749,51 +1749,127 @@ class _MockInterviewSessionScreenState
                               ),
                             ),
                           ),
+                          // ── Bottom bar: mic + question + speaker ──
                           Positioned(
-                            left: 16,
-                            right: 16,
-                            bottom: 195,
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.55),
-                                borderRadius: BorderRadius.circular(22),
-                                border: Border.all(
-                                  color: Colors.white.withOpacity(0.18),
-                                ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Question ${_index + 1}/${widget.questions.length}',
-                                    style: const TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
+                            left: 12,
+                            right: 12,
+                            bottom: 60,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Status text
+                                if (_isRecording ||
+                                    _isUploadingAnswer ||
+                                    _answerUrls[_index].isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 10),
+                                    child: Text(
+                                      _isRecording
+                                          ? 'Recording… ${_fmt(_recordDuration)}'
+                                          : _isUploadingAnswer
+                                              ? 'Uploading… ${(_uploadProgress * 100).toStringAsFixed(0)}%'
+                                              : '✓ Answer recorded',
+                                      style: TextStyle(
+                                        color: _answerUrls[_index].isNotEmpty &&
+                                                !_isRecording &&
+                                                !_isUploadingAnswer
+                                            ? Colors.green.shade300
+                                            : Colors.white,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 13,
+                                      ),
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                if (_isUploadingAnswer)
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                        bottom: 10, left: 32, right: 32),
+                                    child: LinearProgressIndicator(
+                                      value: _uploadProgress,
+                                    ),
+                                  ),
+                                // Main bar
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.6),
+                                    borderRadius: BorderRadius.circular(22),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.15),
+                                    ),
+                                  ),
+                                  child: Row(
                                     children: [
-                                      Expanded(
-                                        child: Text(
-                                          _currentQuestion,
-                                          style: const TextStyle(
+                                      // Mic button
+                                      GestureDetector(
+                                        onTap: _isUploadingAnswer
+                                            ? null
+                                            : _toggleRecording,
+                                        child: Container(
+                                          width: 56,
+                                          height: 56,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: _isRecording
+                                                ? const Color(0xFFFD6C67)
+                                                : const Color(0xFF4A5FBC),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: (_isRecording
+                                                        ? const Color(0xFFFD6C67)
+                                                        : const Color(0xFF4A5FBC))
+                                                    .withOpacity(0.4),
+                                                blurRadius: 12,
+                                                offset: const Offset(0, 4),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Icon(
+                                            _isRecording
+                                                ? Icons.stop_rounded
+                                                : Icons.mic_rounded,
+                                            size: 28,
                                             color: Colors.white,
-                                            fontSize: 17,
-                                            fontWeight: FontWeight.w800,
-                                            height: 1.35,
                                           ),
                                         ),
                                       ),
+                                      const SizedBox(width: 12),
+                                      // Question text
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Question ${_index + 1}/${widget.questions.length}',
+                                              style: TextStyle(
+                                                color: Colors.white
+                                                    .withOpacity(0.5),
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              _currentQuestion,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w700,
+                                                height: 1.3,
+                                              ),
+                                              maxLines: 3,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                       const SizedBox(width: 8),
+                                      // Speaker button
                                       GestureDetector(
                                         onTap: _toggleSpeak,
                                         child: Container(
-                                          padding: const EdgeInsets.all(8),
+                                          padding: const EdgeInsets.all(10),
                                           decoration: BoxDecoration(
                                             color: _isSpeaking
                                                 ? const Color(0xFFFD6C67)
@@ -1801,7 +1877,7 @@ class _MockInterviewSessionScreenState
                                                 : Colors.white
                                                     .withOpacity(0.1),
                                             borderRadius:
-                                                BorderRadius.circular(12),
+                                                BorderRadius.circular(14),
                                           ),
                                           child: Icon(
                                             _isSpeaking
@@ -1810,75 +1886,13 @@ class _MockInterviewSessionScreenState
                                             color: _isSpeaking
                                                 ? const Color(0xFFFD6C67)
                                                 : Colors.white,
-                                            size: 24,
+                                            size: 22,
                                           ),
                                         ),
                                       ),
                                     ],
                                   ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            left: 0,
-                            right: 0,
-                            bottom: 50,
-                            child: Column(
-                              children: [
-                                GestureDetector(
-                                  onTap: _isUploadingAnswer
-                                      ? null
-                                      : _toggleRecording,
-                                  child: Container(
-                                    width: 86,
-                                    height: 86,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: _isRecording
-                                          ? const Color(0xFFFD6C67)
-                                          : const Color(0xFF4A5FBC),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.35),
-                                          blurRadius: 18,
-                                          offset: const Offset(0, 8),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Icon(
-                                      _isRecording
-                                          ? Icons.stop_rounded
-                                          : Icons.mic_rounded,
-                                      size: 42,
-                                      color: Colors.white,
-                                    ),
-                                  ),
                                 ),
-                                const SizedBox(height: 10),
-                                Text(
-                                  _isRecording
-                                      ? 'Recording… ${_fmt(_recordDuration)}'
-                                      : _isUploadingAnswer
-                                          ? 'Uploading… ${(_uploadProgress * 100).toStringAsFixed(0)}%'
-                                          : (_answerUrls[_index].isNotEmpty
-                                              ? 'Answer uploaded'
-                                              : 'Tap the mic to record'),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                if (_isUploadingAnswer) ...[
-                                  const SizedBox(height: 8),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 32),
-                                    child: LinearProgressIndicator(
-                                      value: _uploadProgress,
-                                    ),
-                                  ),
-                                ],
                               ],
                             ),
                           ),
