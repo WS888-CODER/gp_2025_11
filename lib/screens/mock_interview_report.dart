@@ -133,6 +133,10 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
             }
           }
 
+          // Per-question SER results (new field from updated function)
+          final voiceRawResults = data['VoiceToneRawResults'] as List<dynamic>?;
+          final voiceConfidenceScore = (data['VoiceConfidenceScore'] as num?)?.toInt();
+
           // Force the overall score scale display rules to be /100 instead of /10
           final overallScore = (report['overallScore'] ?? 70.0) as num;
           final score = overallScore.toDouble();
@@ -153,7 +157,7 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
                       const SizedBox(height: 20),
                       _buildOverviewSection(context, score, overallSummary),
                       const SizedBox(height: 20),
-                      _buildTabsSection(context, strengths, weaknesses, advice, voiceComments),
+                      _buildTabsSection(context, strengths, weaknesses, advice, voiceComments, voiceRawResults, voiceConfidenceScore),
                     ],
                   ),
                 ),
@@ -441,6 +445,8 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
     List<String> weaknesses,
     List<String> advice,
     List<String> voiceComments,
+    List<dynamic>? voiceRawResults,
+    int? voiceConfidenceScore,
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -487,7 +493,7 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
                 _buildListTab(context, items: strengths, itemColor: Colors.green[700]!, emptyMessage: 'No strengths identified yet.'),
                 _buildListTab(context, items: weaknesses, itemColor: const Color(0xFFFD6C67), emptyMessage: 'No areas for improvement identified.'),
                 _buildListTab(context, items: advice, itemColor: AppTheme.primaryPurple, emptyMessage: 'No recommendations yet.'),
-                _buildListTab(context, items: voiceComments, itemColor: const Color(0xFF2196F3), emptyMessage: 'Voice analysis will be available soon.'),
+                _buildVoiceTab(context, voiceComments, voiceRawResults, voiceConfidenceScore),
               ],
             ),
           ),
@@ -563,4 +569,279 @@ class _MockInterviewReportScreenState extends State<MockInterviewReportScreen>
       },
     );
   }
+
+  Widget _buildVoiceTab(
+    BuildContext context,
+    List<String> voiceComments,
+    List<dynamic>? rawResults,
+    int? confidenceScore,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Parse per-question data from raw SER results
+    final List<_VoiceQuestionData> questions = [];
+    final resultsList = rawResults ?? [];
+
+    for (final item in resultsList) {
+      final resultText = (item['result'] ?? '').toString();
+      final match = RegExp(r'Assessment Score:\s*([\d.]+)%').firstMatch(resultText);
+      final score = match != null ? (double.tryParse(match.group(1)!) ?? 0).round() : 0;
+      final insight = resultText.contains('Insight:')
+          ? resultText.split('Insight:').last.trim()
+          : resultText;
+      questions.add(_VoiceQuestionData(score: score, insight: insight));
+    }
+
+    // Calculate average if not provided
+    final avgScore = confidenceScore ??
+        (questions.isNotEmpty
+            ? (questions.map((q) => q.score).reduce((a, b) => a + b) / questions.length).round()
+            : 0);
+
+    final gptFeedback = voiceComments.isNotEmpty ? voiceComments.first : null;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── 1. Info message ──
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2196F3).withOpacity(0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color(0xFF2196F3).withOpacity(0.15),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.info_outline_rounded,
+                  size: 18,
+                  color: const Color(0xFF2196F3).withOpacity(0.7),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'These results are based on an AI analysis of your vocal confidence during the mock interview. The model evaluates tone, pacing, and delivery for each answer.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // ── 2. Per-question results ──
+          if (questions.isNotEmpty) ...[
+            Text(
+              'Per-Question Analysis',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...List.generate(questions.length, (i) {
+              final q = questions[i];
+              final qColor = q.score >= 70
+                  ? const Color(0xFF2E7D32)
+                  : q.score >= 40
+                      ? const Color(0xFFE67E22)
+                      : const Color(0xFFC0392B);
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey[900] : Colors.grey[50],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2196F3).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'Q${i + 1}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12,
+                              color: Color(0xFF2196F3),
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '${q.score} / 100',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                            color: qColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: (q.score / 100).clamp(0.0, 1.0),
+                        backgroundColor:
+                            isDark ? Colors.grey[800] : Colors.grey[200],
+                        valueColor: AlwaysStoppedAnimation<Color>(qColor),
+                        minHeight: 5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      q.insight,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? Colors.grey[400] : Colors.grey[600],
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+            const SizedBox(height: 10),
+
+            // Divider
+            Divider(color: isDark ? Colors.grey[800] : Colors.grey[200]),
+            const SizedBox(height: 14),
+          ],
+
+          // ── 3. Overall voice feedback from GPT ──
+          if (gptFeedback != null && gptFeedback.isNotEmpty) ...[
+            Text(
+              'Overall Voice Feedback',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.grey[900] : Colors.grey[50],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                gptFeedback,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isDark ? Colors.grey[300] : Colors.grey[700],
+                  height: 1.6,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          // ── 4. Average score — subtle footer ──
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.grey[900] : Colors.grey[50],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2196F3).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.mic_rounded,
+                    color: Color(0xFF2196F3),
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Average Voice Confidence',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.grey[500] : Colors.grey[500],
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Text(
+                          '$avgScore',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                        Text(
+                          ' / 100',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: isDark ? Colors.grey[500] : Colors.grey[400],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // No per-question data fallback
+          if (questions.isEmpty && (gptFeedback == null || gptFeedback.isEmpty))
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'Voice analysis will be available soon.',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: isDark ? Colors.grey[500] : Colors.grey[400],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _VoiceQuestionData {
+  final int score;
+  final String insight;
+  const _VoiceQuestionData({required this.score, required this.insight});
 }

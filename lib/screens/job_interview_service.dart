@@ -114,7 +114,6 @@ class JobInterviewService {
       return;
     }
 
-    // Prevent duplicate applications
     final existing = await FirebaseFirestore.instance
         .collection('Applications')
         .where('UserID', isEqualTo: user.uid)
@@ -341,22 +340,17 @@ class JobInterviewSessionScreen extends StatefulWidget {
 }
 
 class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
-  // ====== Upload ======
   bool _isUploadingAnswer = false;
   double _uploadProgress = 0.0;
   StreamSubscription<TaskSnapshot>? _uploadSub;
 
-  // ====== Finish ======
   bool _isGeneratingReport = false;
   bool _isFinishing = false;
 
-  // ====== Camera ======
   CameraController? _camera;
   bool _initializing = true;
   String? _error;
 
-  // ====== Questions ======
-  bool _loadingQuestions = true;
   List<String> _questions = [];
   int _index = 0;
 
@@ -364,7 +358,6 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
       (_questions.isEmpty) ? '—' : _questions[_index];
   bool get _isLast => _questions.isNotEmpty && _index >= _questions.length - 1;
 
-  // ====== Recording ======
   final AudioRecorder _recorder = AudioRecorder();
   bool _isRecording = false;
   Duration _recordDuration = Duration.zero;
@@ -380,12 +373,12 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
       !_isUploadingAnswer &&
       _answerUrls[_index].trim().isNotEmpty;
 
-  // ====== TTS ======
+  bool _loadingQuestions = true;
+
   final AudioPlayer _ttsPlayer = AudioPlayer();
   bool _isSpeaking = false;
   bool _ttsLoading = false;
 
-  // ====== Face detection ======
   late final FaceDetector _faceDetector;
   bool _faceDetected = false;
   bool _processingFrame = false;
@@ -618,7 +611,7 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
 
       if (!mounted) return;
 
-      bool hasValidFace = true;
+      bool hasValidFace = false;
 
       if (faces.isNotEmpty) {
         final face = faces.first;
@@ -880,7 +873,6 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
 
       final uid = FirebaseAuth.instance.currentUser?.uid;
 
-      // Read the document first to get the application CV path
       String? cvPath;
       try {
         final doc = await FirebaseFirestore.instance
@@ -891,7 +883,6 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
       } catch (_) {}
 
       if (uid != null && uid.isNotEmpty) {
-        // Delete interview recordings folder
         try {
           final folderRef = FirebaseStorage.instance
               .ref()
@@ -904,7 +895,6 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
           }
         } catch (_) {}
 
-        // Delete the application-specific CV file
         if (cvPath != null && cvPath.isNotEmpty) {
           try {
             await FirebaseStorage.instance.ref(cvPath).delete();
@@ -912,7 +902,6 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
         }
       }
 
-      // Keep the document so the user cannot reapply, but clear heavy fields
       await FirebaseFirestore.instance
           .collection('Applications')
           .doc(widget.applicationId)
@@ -1058,11 +1047,9 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
                       )
                     : Stack(
                         children: [
-                          // Fullscreen camera
                           Positioned.fill(
                             child: CameraPreview(_camera!),
                           ),
-                          // Gradient overlay
                           Positioned.fill(
                             child: Container(
                               decoration: BoxDecoration(
@@ -1078,9 +1065,10 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
                               ),
                             ),
                           ),
-                          // Face detection badge
+                          
+                          // ── FIXED: Moved the badge layout stack index below the top padding buffer boundary ──
                           Positioned(
-                            top: 20,
+                            top: 128, 
                             left: 16,
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 200),
@@ -1119,7 +1107,7 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
                               ),
                             ),
                           ),
-                          // ── Bottom bar: mic + question + speaker ──
+                          
                           Positioned(
                             left: 12,
                             right: 12,
@@ -1127,7 +1115,6 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                // Status text
                                 if (_isRecording ||
                                     _isUploadingAnswer ||
                                     _answerUrls[_index].isNotEmpty)
@@ -1158,7 +1145,6 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
                                       value: _uploadProgress,
                                     ),
                                   ),
-                                // Main bar
                                 Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
@@ -1170,7 +1156,6 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
                                   ),
                                   child: Row(
                                     children: [
-                                      // Mic button
                                       GestureDetector(
                                         onTap: _isUploadingAnswer
                                             ? null
@@ -1204,7 +1189,6 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
                                         ),
                                       ),
                                       const SizedBox(width: 12),
-                                      // Question text
                                       Expanded(
                                         child: Column(
                                           crossAxisAlignment:
@@ -1239,7 +1223,6 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
                                         ),
                                       ),
                                       const SizedBox(width: 8),
-                                      // Speaker button
                                       GestureDetector(
                                         onTap: _toggleSpeak,
                                         child: Container(
@@ -1301,10 +1284,6 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
     );
   }
 }
-
-// ============================================================
-// CV picker bottom sheet for per-application CV upload
-// ============================================================
 
 class _ApplicationCvPicker extends StatefulWidget {
   final String uid;
@@ -1416,7 +1395,6 @@ class _ApplicationCvPickerState extends State<_ApplicationCvPicker> {
                 ),
               ),
               const SizedBox(height: 20),
-              // File picker area
               InkWell(
                 onTap: _uploading ? null : _pick,
                 borderRadius: BorderRadius.circular(14),
