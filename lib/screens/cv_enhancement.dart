@@ -728,14 +728,25 @@ class _CVEnhancementScreenState extends State<CVEnhancementScreen> {
               ),
             ),
           ),
-          if (_isUploading) ...[
+          if (_isUploading || _isExtracting) ...[
             const SizedBox(height: 16),
-            const Text('Uploading CV...',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(
+              _isUploading ? 'Uploading CV...' : 'Analyzing CV...',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
-            LinearProgressIndicator(value: _uploadProgress),
+            LinearProgressIndicator(
+              value: _isUploading ? _uploadProgress : null,
+            ),
             const SizedBox(height: 8),
-            Text('${(_uploadProgress * 100).toStringAsFixed(0)}%'),
+            Text(
+              _isUploading
+                  ? _uploadProgress > 0
+                      ? '${(_uploadProgress * 100).toStringAsFixed(0)}%'
+                      : 'Starting upload...'
+                  : 'This may take a few seconds',
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
           ],
           const Spacer(),
           SizedBox(

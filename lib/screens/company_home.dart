@@ -158,7 +158,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                       primary: const Color(0xFFFC686A),
                       onPrimary: Colors.white,
                       onSurface: Colors.white,
-                      surface: const Color(0xFF4A5FBC).withOpacity(0.95),
+                      surface: const Color(0xFF4A5FBC).withOpacity(0.7),
                     ),
                     textTheme: theme.textTheme.copyWith(
                       bodyLarge: const TextStyle(color: Colors.white),
@@ -186,7 +186,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                     ),
                     datePickerTheme: DatePickerThemeData(
                       backgroundColor:
-                          const Color(0xFF4A5FBC).withOpacity(0.95),
+                          const Color(0xFF4A5FBC).withOpacity(0.7),
                       headerForegroundColor: Colors.white,
                       weekdayStyle: const TextStyle(color: Colors.white),
                       yearStyle: const TextStyle(color: Colors.white),
@@ -269,7 +269,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                       primary: const Color(0xFFFC686A),
                       onPrimary: Colors.white,
                       onSurface: Colors.white,
-                      surface: const Color(0xFF4A5FBC).withOpacity(0.95),
+                      surface: const Color(0xFF4A5FBC).withOpacity(0.7),
                     ),
                     textTheme: theme.textTheme.copyWith(
                       bodyLarge: const TextStyle(color: Colors.white),
@@ -297,7 +297,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                     ),
                     datePickerTheme: DatePickerThemeData(
                       backgroundColor:
-                          const Color(0xFF4A5FBC).withOpacity(0.95),
+                          const Color(0xFF4A5FBC).withOpacity(0.7),
                       headerForegroundColor: Colors.white,
                       weekdayStyle: const TextStyle(color: Colors.white),
                       yearStyle: const TextStyle(color: Colors.white),
@@ -354,7 +354,7 @@ class _CompanyHomeState extends State<CompanyHome> {
           }
 
           return AlertDialog(
-            backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.95),
+            backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
@@ -523,62 +523,17 @@ class _CompanyHomeState extends State<CompanyHome> {
         // Show dialog explaining the job is expired
         final shouldExtend = await showDialog<bool>(
           context: ctx,
-          builder: (context) => AlertDialog(
-            backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.95),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            title: const Text(
-              'Job Expired',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-            ),
+          builder: (context) => JadeerDialog<bool>(
+            title: 'Job Expired',
+            primaryLabel: 'Select New Date',
+            primaryResult: true,
+            secondaryLabel: 'Cancel',
+            secondaryResult: false,
             content: Text(
               'This job expired on ${endDate.day}/${endDate.month}/${endDate.year}.\n\nTo reopen it, please select a new end date.',
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                height: 1.5,
-              ),
+              style: const TextStyle(color: Colors.white, height: 1.5),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                style: TextButton.styleFrom(
-                  backgroundColor: Colors.white.withOpacity(0.9),
-                  foregroundColor: const Color(0xFF4A5FBC),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                ),
-                child: const Text('Cancel',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-              const SizedBox(width: 12),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                style: TextButton.styleFrom(
-                  backgroundColor: const Color(0xFFFD6C67),
-                  foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                ),
-                child: const Text('Select New Date',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ],
-            actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-            actionsAlignment: MainAxisAlignment.center,
           ),
         );
 
@@ -603,7 +558,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                   primary: const Color(0xFFFC686A),
                   onPrimary: Colors.white,
                   onSurface: Colors.white, // السنوات والأرقام
-                  surface: const Color(0xFF4A5FBC).withOpacity(0.95),
+                  surface: const Color(0xFF4A5FBC).withOpacity(0.7),
                 ),
                 textTheme: theme.textTheme.copyWith(
                   bodyLarge: const TextStyle(color: Colors.white),
@@ -628,7 +583,7 @@ class _CompanyHomeState extends State<CompanyHome> {
                   ),
                 ),
                 datePickerTheme: DatePickerThemeData(
-                  backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.95),
+                  backgroundColor: const Color(0xFF4A5FBC).withOpacity(0.7),
                   headerForegroundColor: Colors.white,
                   weekdayStyle: const TextStyle(color: Colors.white),
                   yearStyle: const TextStyle(color: Colors.white),
@@ -1491,12 +1446,12 @@ class _CompanyHomeState extends State<CompanyHome> {
                                                           const Color(
                                                                   0xFF4A5FBC)
                                                               .withOpacity(
-                                                                  0.95),
+                                                                  0.7),
                                                       shape:
                                                           RoundedRectangleBorder(
                                                         borderRadius:
                                                             BorderRadius
-                                                                .circular(20),
+                                                                .circular(30),
                                                       ),
                                                       contentPadding:
                                                           const EdgeInsets

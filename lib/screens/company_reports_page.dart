@@ -170,6 +170,7 @@ class _CompanyJobApplicationsPageState
     extends State<CompanyJobApplicationsPage> {
   final Set<String> _selectedApplicationIds = {};
   bool _bulkLoading = false;
+  String _statusFilter = 'All';
 
   @override
   Widget build(BuildContext context) {
@@ -221,9 +222,69 @@ class _CompanyJobApplicationsPageState
             return scoreB.compareTo(scoreA);
           });
 
+          final filteredApps = _statusFilter == 'All'
+              ? apps
+              : apps.where((app) {
+                  final s =
+                      (app.data()['ApplicationStatus'] ?? 'Pending').toString();
+                  if (_statusFilter == 'Pending') {
+                    return s == 'Pending' || s == 'Submitted';
+                  }
+                  return s == _statusFilter;
+                }).toList();
+
           return Column(
             children: [
-              _ApplicationsSummary(apps: apps),
+              _ApplicationsSummary(
+                apps: apps,
+                selectedFilter: _statusFilter,
+                onFilterChanged: (f) {
+                  setState(() {
+                    _statusFilter = f;
+                    _selectedApplicationIds.clear();
+                  });
+                },
+              ),
+              if (_selectedApplicationIds.isNotEmpty || filteredApps.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton.icon(
+                        onPressed: filteredApps.isEmpty
+                            ? null
+                            : () {
+                                setState(() {
+                                  final allIds =
+                                      filteredApps.map((a) => a.id).toSet();
+                                  if (_selectedApplicationIds
+                                      .containsAll(allIds)) {
+                                    _selectedApplicationIds
+                                        .removeAll(allIds);
+                                  } else {
+                                    _selectedApplicationIds.addAll(allIds);
+                                  }
+                                });
+                              },
+                        icon: Icon(
+                          _selectedApplicationIds.containsAll(
+                                  filteredApps.map((a) => a.id).toSet())
+                              ? Icons.deselect_rounded
+                              : Icons.select_all_rounded,
+                          size: 18,
+                        ),
+                        label: Text(
+                          _selectedApplicationIds.containsAll(
+                                  filteredApps.map((a) => a.id).toSet())
+                              ? 'Deselect All'
+                              : 'Select All',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               if (_selectedApplicationIds.isNotEmpty)
                 Container(
                   margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -302,16 +363,28 @@ class _CompanyJobApplicationsPageState
                   ),
                 ),
               Expanded(
-                child: ListView.separated(
+                child: filteredApps.isEmpty
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(24),
+                          child: EmptyState(
+                            icon: Icons.filter_list_rounded,
+                            title: 'No results',
+                            subtitle:
+                                'No applications match the selected filter',
+                          ),
+                        ),
+                      )
+                    : ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-                  itemCount: apps.length,
+                  itemCount: filteredApps.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
-                    final app = apps[index];
+                    final app = filteredApps[index];
                     final data = app.data();
                     final applicantId = (data['UserID'] ?? '').toString();
                     final score = _finalScore(data);
-                    final rank = _rankForIndex(apps, index);
+                    final rank = _rankForIndex(filteredApps, index);
 
                     return FutureBuilder<
                         DocumentSnapshot<Map<String, dynamic>>>(
@@ -328,6 +401,10 @@ class _CompanyJobApplicationsPageState
                         final status =
                             (data['ApplicationStatus'] ?? 'Pending').toString();
                         final reportUrl = (data['ReportURL'] ?? '').toString();
+                        final statusUpdatedAt = _asDate(data['StatusUpdatedAt']);
+                        final appliedAt = _asDate(data['Date']);
+                        final expiryText = _applicationExpiry(
+                            status, statusUpdatedAt, appliedAt);
 
                         return Container(
                           decoration: BoxDecoration(
@@ -394,7 +471,17 @@ class _CompanyJobApplicationsPageState
                                         ],
                                       ),
                                     ),
-                                    _StatusChip(status: status),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      children: [
+                                        _StatusChip(status: status),
+                                        if (expiryText != null) ...[
+                                          const SizedBox(height: 4),
+                                          _ExpiryBadge(text: expiryText),
+                                        ],
+                                      ],
+                                    ),
                                   ],
                                 ),
                                 const SizedBox(height: 12),
@@ -833,6 +920,21 @@ double _toDouble(dynamic value) {
   return double.tryParse(value.toString()) ?? 0;
 }
 
+/// Returns expiry label for Rejected/Shortlisted applications (180-day window).
+/// Uses [statusUpdatedAt] (or falls back to [appliedAt]) as the start date.
+String? _applicationExpiry(
+  String status,
+  DateTime? statusUpdatedAt,
+  DateTime? appliedAt,
+) {
+  if (status != 'Rejected' && status != 'Shortlisted') return null;
+  final base = statusUpdatedAt ?? appliedAt;
+  if (base == null) return null;
+  final daysLeft = base.add(const Duration(days: 180)).difference(DateTime.now()).inDays;
+  if (daysLeft <= 0) return 'Expired';
+  return '$daysLeft days left';
+}
+
 DateTime? _asDate(dynamic v) {
   if (v == null) return null;
   if (v is Timestamp) return v.toDate();
@@ -866,9 +968,15 @@ Widget _detailRow(String label, String value) {
 }
 
 class _ApplicationsSummary extends StatelessWidget {
-  const _ApplicationsSummary({required this.apps});
+  const _ApplicationsSummary({
+    required this.apps,
+    required this.selectedFilter,
+    required this.onFilterChanged,
+  });
 
   final List<QueryDocumentSnapshot<Map<String, dynamic>>> apps;
+  final String selectedFilter;
+  final ValueChanged<String> onFilterChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -877,6 +985,9 @@ class _ApplicationsSummary extends StatelessWidget {
         final s = (app.data()['ApplicationStatus'] ?? 'Pending')
             .toString()
             .toLowerCase();
+        if (status.toLowerCase() == 'pending') {
+          return s == 'pending' || s == 'submitted';
+        }
         return s == status.toLowerCase();
       }).length;
     }
@@ -885,19 +996,41 @@ class _ApplicationsSummary extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
       child: Row(
         children: [
-          Expanded(child: _SummaryBox(label: 'Total', value: apps.length)),
+          Expanded(
+            child: _SummaryBox(
+              label: 'Total',
+              value: apps.length,
+              isSelected: selectedFilter == 'All',
+              onTap: () => onFilterChanged('All'),
+            ),
+          ),
           const SizedBox(width: 8),
           Expanded(
-              child:
-                  _SummaryBox(label: 'Pending', value: countStatus('Pending'))),
+            child: _SummaryBox(
+              label: 'Pending',
+              value: countStatus('Pending'),
+              isSelected: selectedFilter == 'Pending',
+              onTap: () => onFilterChanged('Pending'),
+            ),
+          ),
           const SizedBox(width: 8),
           Expanded(
-              child: _SummaryBox(
-                  label: 'Shortlisted', value: countStatus('Shortlisted'))),
+            child: _SummaryBox(
+              label: 'Shortlisted',
+              value: countStatus('Shortlisted'),
+              isSelected: selectedFilter == 'Shortlisted',
+              onTap: () => onFilterChanged('Shortlisted'),
+            ),
+          ),
           const SizedBox(width: 8),
           Expanded(
-              child: _SummaryBox(
-                  label: 'Rejected', value: countStatus('Rejected'))),
+            child: _SummaryBox(
+              label: 'Rejected',
+              value: countStatus('Rejected'),
+              isSelected: selectedFilter == 'Rejected',
+              onTap: () => onFilterChanged('Rejected'),
+            ),
+          ),
         ],
       ),
     );
@@ -905,44 +1038,62 @@ class _ApplicationsSummary extends StatelessWidget {
 }
 
 class _SummaryBox extends StatelessWidget {
-  const _SummaryBox({required this.label, required this.value});
+  const _SummaryBox({
+    required this.label,
+    required this.value,
+    this.isSelected = false,
+    this.onTap,
+  });
 
   final String label;
   final int value;
+  final bool isSelected;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 14,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Text(
-            '$value',
-            style: TextStyle(
-              color: scheme.primary,
-              fontWeight: FontWeight.w900,
-              fontSize: 18,
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? scheme.primary : scheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: isSelected
+              ? Border.all(color: scheme.primary, width: 2)
+              : Border.all(color: Colors.transparent, width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isSelected ? 0.12 : 0.06),
+              blurRadius: 14,
+              offset: const Offset(0, 3),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-          ),
-        ],
+          ],
+        ),
+        child: Column(
+          children: [
+            Text(
+              '$value',
+              style: TextStyle(
+                color: isSelected ? Colors.white : scheme.primary,
+                fontWeight: FontWeight.w900,
+                fontSize: 18,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: isSelected ? Colors.white70 : null,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1619,6 +1770,40 @@ class _DocumentButton extends StatelessWidget {
         textStyle: const TextStyle(
           fontWeight: FontWeight.w700,
         ),
+      ),
+    );
+  }
+}
+
+class _ExpiryBadge extends StatelessWidget {
+  const _ExpiryBadge({required this.text});
+
+  final String text;
+
+  static const _color = Color(0xFFB8860B);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.amber.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.access_time_rounded, size: 11, color: _color),
+          const SizedBox(width: 3),
+          Text(
+            text,
+            style: const TextStyle(
+              color: _color,
+              fontWeight: FontWeight.w700,
+              fontSize: 10,
+            ),
+          ),
+        ],
       ),
     );
   }
