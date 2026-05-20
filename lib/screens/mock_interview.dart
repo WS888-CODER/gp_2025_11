@@ -1850,16 +1850,20 @@ class _MockInterviewSessionScreenState
                                               ),
                                             ),
                                             const SizedBox(height: 4),
-                                            Text(
-                                              _currentQuestion,
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w700,
-                                                height: 1.3,
+                                            ConstrainedBox(
+                                              constraints: const BoxConstraints(
+                                                  maxHeight: 110),
+                                              child: SingleChildScrollView(
+                                                child: Text(
+                                                  _currentQuestion,
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w700,
+                                                    height: 1.3,
+                                                  ),
+                                                ),
                                               ),
-                                              maxLines: 3,
-                                              overflow: TextOverflow.ellipsis,
                                             ),
                                           ],
                                         ),
