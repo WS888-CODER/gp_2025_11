@@ -380,14 +380,22 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
         child: FilledButton(
           onPressed: disabled || _isApplying || _hasApplied ? null : _apply,
           style: FilledButton.styleFrom(
-            backgroundColor: _hasApplied
-                ? Color.fromARGB(185, 253, 108, 103)
-                : disabled
-                    ? onSurface.withOpacity(0.6)
-                    : scheme.primary,
-            disabledBackgroundColor: _hasApplied
-                ? Color.fromARGB(185, 253, 108, 103)
-                : onSurface.withOpacity(0.6),
+            backgroundColor: _hasApplied && isClosed
+                ? onSurface.withOpacity(0.6)
+                : _hasApplied
+                    ? Color.fromARGB(185, 253, 108, 103)
+                    : isSoon
+                        ? Colors.amber.withOpacity(0.18)
+                        : disabled
+                            ? onSurface.withOpacity(0.6)
+                            : scheme.primary,
+            disabledBackgroundColor: _hasApplied && isClosed
+                ? onSurface.withOpacity(0.6)
+                : _hasApplied
+                    ? Color.fromARGB(184, 21, 14, 14)
+                    : isSoon
+                        ? Colors.amber.withOpacity(0.18)
+                        : onSurface.withOpacity(0.6),
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(
@@ -400,11 +408,15 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
           ),
           child: Text(
             _hasApplied
-                ? 'Already Applied'
+                ? 'Applied'
                 : _isApplying
                     ? 'Starting…'
-                    : 'Apply',
-            style: const TextStyle(color: Colors.white),
+                    : isSoon
+                        ? 'Soon'
+                        : 'Apply',
+            style: TextStyle(
+              color: isSoon ? const Color(0xFFB8860B) : Colors.white,
+            ),
           ),
         ),
       ),
@@ -484,7 +496,7 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                                 decoration: BoxDecoration(
                                   color: isClosed
                                       ? Colors.grey.shade600
-                                      : scheme.primary.withOpacity(0.15),
+                                      : Colors.amber.withOpacity(0.18),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
@@ -492,7 +504,7 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
                                   style: TextStyle(
                                     color: isClosed
                                         ? Colors.white
-                                        : scheme.primary,
+                                        : const Color(0xFFB8860B),
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -1062,13 +1074,14 @@ class _JobCardState extends State<JobCard> {
                       decoration: BoxDecoration(
                         color: isClosed
                             ? Colors.grey.shade600
-                            : scheme.primary.withOpacity(0.15),
+                            : Colors.amber.withOpacity(0.18),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         isClosed ? 'Closed' : 'Soon',
                         style: TextStyle(
-                          color: isClosed ? Colors.white : scheme.primary,
+                          color:
+                              isClosed ? Colors.white : const Color(0xFFB8860B),
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
@@ -1082,14 +1095,22 @@ class _JobCardState extends State<JobCard> {
                       onPressed:
                           disabled || _isApplying || _isApplied ? null : _apply,
                       style: FilledButton.styleFrom(
-                        backgroundColor: _isApplied
-                            ? Color.fromARGB(185, 253, 108, 103)
-                            : disabled
-                                ? onSurface.withOpacity(0.6)
-                                : scheme.primary,
-                        disabledBackgroundColor: _isApplied
-                            ? Color.fromARGB(185, 253, 108, 103)
-                            : onSurface.withOpacity(0.6),
+                        backgroundColor: _isApplied && isClosed
+                            ? onSurface.withOpacity(0.6)
+                            : _isApplied
+                                ? Color.fromARGB(185, 253, 108, 103)
+                                : isSoon
+                                    ? Colors.amber.withOpacity(0.18)
+                                    : disabled
+                                        ? onSurface.withOpacity(0.6)
+                                        : scheme.primary,
+                        disabledBackgroundColor: _isApplied && isClosed
+                            ? onSurface.withOpacity(0.6)
+                            : _isApplied
+                                ? Color.fromARGB(185, 253, 108, 103)
+                                : isSoon
+                                    ? Colors.amber.withOpacity(0.18)
+                                    : onSurface.withOpacity(0.6),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -1102,11 +1123,15 @@ class _JobCardState extends State<JobCard> {
                             ? 'Applied'
                             : _isApplying
                                 ? 'Starting…'
-                                : 'Apply',
-                        style: const TextStyle(
+                                : isSoon
+                                    ? 'Soon'
+                                    : 'Apply',
+                        style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
-                            color: Colors.white),
+                            color: isSoon
+                                ? const Color(0xFFB8860B)
+                                : Colors.white),
                       ),
                     ),
                   )

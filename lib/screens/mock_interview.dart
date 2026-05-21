@@ -1256,7 +1256,7 @@ class _MockInterviewSessionScreenState
       if (!mounted) return;
 
       // ✅ STRICT FACE DETECTION
-      bool hasValidFace = false;
+      bool hasValidFace = true;
 
       if (faces.isNotEmpty) {
         final face = faces.first;
@@ -1816,8 +1816,10 @@ class _MockInterviewSessionScreenState
                                             boxShadow: [
                                               BoxShadow(
                                                 color: (_isRecording
-                                                        ? const Color(0xFFFD6C67)
-                                                        : const Color(0xFF4A5FBC))
+                                                        ? const Color(
+                                                            0xFFFD6C67)
+                                                        : const Color(
+                                                            0xFF4A5FBC))
                                                     .withOpacity(0.4),
                                                 blurRadius: 12,
                                                 offset: const Offset(0, 4),
@@ -1878,8 +1880,7 @@ class _MockInterviewSessionScreenState
                                             color: _isSpeaking
                                                 ? const Color(0xFFFD6C67)
                                                     .withOpacity(0.3)
-                                                : Colors.white
-                                                    .withOpacity(0.1),
+                                                : Colors.white.withOpacity(0.1),
                                             borderRadius:
                                                 BorderRadius.circular(14),
                                           ),

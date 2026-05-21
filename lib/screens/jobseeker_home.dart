@@ -932,14 +932,19 @@ class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
         final allJobs = docs.map((d) => Job.fromDoc(d)).toList();
 
         final openJobs = allJobs.where((j) => _effective(j) == 'Open').toList();
+        final soonJobs = allJobs.where((j) => _effective(j) == 'Soon').toList();
+        // Closed jobs never appear on home page
 
         List<Job> prioritized = [];
+
+        // Use Open jobs; fall back to Soon only if no Open jobs exist
+        final baseJobs = openJobs.isNotEmpty ? openJobs : soonJobs;
 
         if (_hasCv && _hasKeywords) {
           final List<Job> strongMatches = [];
           final List<Job> otherJobs = [];
 
-          for (final j in openJobs) {
+          for (final j in baseJobs) {
             final score = _cvMatchScore(j);
             if (score >= 2) {
               strongMatches.add(j);
@@ -962,7 +967,7 @@ class _JobsPreviewCompactState extends State<_JobsPreviewCompact> {
 
           prioritized = [...strongMatches, ...otherJobs];
         } else {
-          prioritized = List<Job>.from(openJobs)
+          prioritized = List<Job>.from(baseJobs)
             ..sort((a, b) => b.postedAt.compareTo(a.postedAt));
         }
 

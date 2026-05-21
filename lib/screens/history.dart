@@ -53,7 +53,7 @@ class _HistoryPageState extends State<HistoryPage>
     switch (raw) {
       case 'Pending':
       case 'Submitted':
-        return Colors.grey;
+        return Colors.orange;
       case 'Shortlisted':
         return Colors.orange;
       case 'Rejected':
@@ -834,7 +834,7 @@ class JobApplicationDetailScreen extends StatelessWidget {
     switch (raw) {
       case 'Pending':
       case 'Submitted':
-        return Colors.grey;
+        return Colors.orange;
       case 'Shortlisted':
         return Colors.orange;
       case 'Rejected':

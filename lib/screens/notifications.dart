@@ -109,17 +109,33 @@ class NotificationsPage extends StatelessWidget {
                       const Spacer(),
                       TextButton.icon(
                         onPressed: () async {
+                          final confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (_) => const JadeerDialog<bool>(
+                              title: 'Clear all notifications?',
+                              content: Text(
+                                'This will permanently delete all your notifications.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: Colors.white70),
+                              ),
+                              primaryLabel: 'Clear',
+                              primaryResult: true,
+                              secondaryLabel: 'Cancel',
+                              secondaryResult: false,
+                            ),
+                          );
+
+                          if (confirmed != true) return;
+
                           final snap = await FirebaseFirestore.instance
                               .collection('Notification')
                               .where('UserID', isEqualTo: uid)
                               .get();
 
                           final batch = FirebaseFirestore.instance.batch();
-
                           for (final d in snap.docs) {
                             batch.delete(d.reference);
                           }
-
                           await batch.commit();
 
                           if (context.mounted) {

@@ -318,7 +318,7 @@ class _JobsPageState extends State<JobsPage> {
     if (!_showAllJobs) {
       res = res.where((j) {
         final s = effectiveJobStatus(j);
-        return s == 'Open';
+        return s == 'Open' || s == 'Soon';
       });
     }
 

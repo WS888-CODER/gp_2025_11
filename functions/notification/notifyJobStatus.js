@@ -47,7 +47,9 @@ export const notifyOnJobStatusChange = onDocumentUpdated(
     const applicantUserIds = new Set();
     appsSnap.forEach((doc) => {
       const d = doc.data() || {};
-      if (d.UserID) applicantUserIds.add(String(d.UserID));
+      if (d.UserID && d.ApplicationStatus !== 'InterviewCancelled') {
+        applicantUserIds.add(String(d.UserID));
+      }
     });
 
     // 2) Favorites
