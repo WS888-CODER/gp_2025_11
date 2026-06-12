@@ -1258,7 +1258,7 @@ class _MockInterviewSessionScreenState
       final faces = await _faceDetector.processImage(inputImage);
       if (!mounted) return;
 
-      bool hasValidFace = true;
+      bool hasValidFace = false;
 
       if (faces.isNotEmpty) {
         final face = faces.first;
