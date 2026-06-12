@@ -8,7 +8,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 String effectiveStatusFromDates(DateTime? start, DateTime? end) {
   final now = DateTime.now();
-  if (end != null && end.isBefore(now)) return 'Closed';
+  final endOfDay = end != null ? DateTime(end.year, end.month, end.day, 23, 59, 59) : null;
+  if (endOfDay != null && endOfDay.isBefore(now)) return 'Closed';
   if (start != null && start.isAfter(now)) return 'Soon';
   return 'Open';
 }

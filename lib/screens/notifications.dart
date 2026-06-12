@@ -165,7 +165,6 @@ class NotificationsPage extends StatelessWidget {
                       final title =
                           (data['JobTitle'] ?? 'Job Update').toString();
                       final msg = (data['Message'] ?? '').toString();
-                      final status = (data['Status'] ?? '').toString();
                       final read = (data['Read'] ?? false) == true;
                       final dateValue = data['Date'];
                       String dateText = '';
@@ -268,16 +267,6 @@ class NotificationsPage extends StatelessWidget {
                                                   .withOpacity(0.45),
                                               fontSize: 12,
                                               fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ],
-                                        if (status.isNotEmpty) ...[
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            status,
-                                            style: TextStyle(
-                                              color: scheme.primary,
-                                              fontWeight: FontWeight.w600,
                                             ),
                                           ),
                                         ],

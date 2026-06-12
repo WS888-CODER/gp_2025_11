@@ -805,61 +805,26 @@ class _JobsPageState extends State<JobsPage> {
           ),
           Expanded(
             child: _allJobs.isEmpty
-                ? Center(
-                    child: Text(
-                      _forYou && _profile.cvUrl == null
-                          ? 'Upload your CV to see personalized jobs.'
-                          : 'No jobs available.',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
+                ? const EmptyState(
+                    icon: Icons.work_outline,
+                    title: 'No jobs yet',
+                    subtitle: 'Check back later for new opportunities.',
                   )
                 : jobs.isEmpty
-                    ? Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 28),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.work_off_rounded,
-                              size: 56,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .primary
-                                  .withOpacity(0.30),
-                            ),
-                            const SizedBox(height: 16),
-                            ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 300),
-                              child: Text(
-                                () {
-                                  if (_forYou) {
-                                    final hasCv = _profile.cvUrl != null;
-                                    final hasKeywords =
-                                        _profile.cvKeywords.isNotEmpty;
-                                    if (!hasCv) {
-                                      return 'Upload your CV to see personalized jobs.';
-                                    } else if (!hasKeywords) {
-                                      return "We couldn't analyze your CV. Try uploading a clearer version.";
-                                    } else {
-                                      return 'No strong matches found yet – check All Jobs for more opportunities.';
-                                    }
-                                  }
-                                  return 'No jobs match your filters.';
-                                }(),
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 14.5,
-                                  height: 1.45,
-                                  fontWeight: FontWeight.w500,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withOpacity(0.75),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                    ? EmptyState(
+                        icon: Icons.search_off_rounded,
+                        title: 'No jobs found',
+                        subtitle: () {
+                          if (_forYou) {
+                            if (_profile.cvUrl == null) {
+                              return 'Upload your CV to see personalized jobs.';
+                            } else if (_profile.cvKeywords.isEmpty) {
+                              return "We couldn't analyze your CV. Try uploading a clearer version.";
+                            }
+                            return 'No strong matches yet – check All Jobs for more opportunities.';
+                          }
+                          return 'No jobs match your current filters.';
+                        }(),
                       )
                     : ListView.separated(
                         padding: const EdgeInsets.all(12),

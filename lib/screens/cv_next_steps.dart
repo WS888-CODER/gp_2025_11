@@ -61,10 +61,9 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
   @override
   void dispose() {
     if (!_completedSuccessfully && widget.cvHistoryId != null) {
-      FirebaseFirestore.instance
-          .collection('CVHistory')
-          .doc(widget.cvHistoryId)
-          .delete();
+      FirebaseFunctions.instance
+          .httpsCallable('deleteCVHistory')
+          .call({'cvHistoryId': widget.cvHistoryId});
     }
     super.dispose();
   }
@@ -358,10 +357,9 @@ class _CVNextStepsScreenState extends State<CVNextStepsScreen> {
     );
 
     if (shouldPop == true && widget.cvHistoryId != null) {
-      await FirebaseFirestore.instance
-          .collection('CVHistory')
-          .doc(widget.cvHistoryId)
-          .delete();
+      await FirebaseFunctions.instance
+          .httpsCallable('deleteCVHistory')
+          .call({'cvHistoryId': widget.cvHistoryId});
     }
 
     return shouldPop ?? false;

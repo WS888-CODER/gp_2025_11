@@ -18,7 +18,8 @@ class _JobDetailsViewState extends State<JobDetailsView> {
   }) {
     final now = DateTime.now();
 
-    if (end != null && end.isBefore(now)) return 'Closed';
+    final endOfDay = end != null ? DateTime(end.year, end.month, end.day, 23, 59, 59) : null;
+    if (endOfDay != null && endOfDay.isBefore(now)) return 'Closed';
     if (start != null && start.isAfter(now)) return 'Soon';
     return 'Open';
   }
@@ -138,7 +139,7 @@ class _JobDetailsViewState extends State<JobDetailsView> {
         statusColor = Colors.green;
         break;
       case 'Soon':
-        statusColor = const Color(0xFFFD6C67);
+        statusColor = const Color(0xFFB8860B);
         break;
       case 'Closed':
         statusColor = Colors.redAccent;

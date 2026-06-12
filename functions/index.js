@@ -196,55 +196,6 @@ export const sendSignupOtp = functions.https.onCall(async (data, context) => {
 });
 
 /**
- * 3️⃣ Notify Admin about new Company registration
- */
-export const notifyAdminNewCompany = functions.https.onCall(
-  async (data, context) => {
-    console.log("📥 Admin notification - Full data:", data);
-
-    const actualData = data.data || data;
-    const companyName =
-      actualData.companyName || actualData["companyName"] || "";
-    const companyEmail =
-      actualData.companyEmail || actualData["companyEmail"] || "";
-
-    if (!companyName || !companyEmail) {
-      throw new functions.https.HttpsError(
-        "invalid-argument",
-        "Company name and email are required"
-      );
-    }
-
-    try {
-      const mailOptions = {
-        from: `"Jadeer System" <${EMAIL_USER}>`,
-        to: ADMIN_EMAIL,
-        subject: "🚀 New Company Registration - Action Required",
-        html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
-          <div style="background-color: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-            <h2 style="color: #333; font-size: 20px;">New Company Registered!</h2>
-            <p><strong>Company:</strong> ${companyName}</p>
-            <p><strong>Email:</strong> ${companyEmail}</p>
-            <p>Please review documents in the admin dashboard.</p>
-          </div>
-        </div>
-      `,
-      };
-
-      await transporter.sendMail(mailOptions);
-      console.log(`✅ Admin notified about: ${companyName}`);
-
-      return { success: true, message: "Admin notification sent successfully" };
-    } catch (error) {
-      console.error("❌ Error sending admin notification:", error);
-      throw new functions.https.HttpsError(
-        "internal",
-        "Failed to send notification: " + error.message
-      );
-    }
-  }
-);
 
 /**
  * 4️⃣ Send Company Document Request Email
@@ -1344,6 +1295,8 @@ export const deleteUserAccount = functions.https.onCall(
         "userID",
       ]);
 
+      const bucket = storage.bucket();
+
       // Company-specific: delete its jobs and related data
       if (userType === "Company") {
         const jobQueries = [
@@ -1357,12 +1310,31 @@ export const deleteUserAccount = functions.https.onCall(
           for (const jobDoc of jobsSnap.docs) {
             const jobId = jobDoc.id;
 
-            await deleteByQuery(
-              db.collection("Applications").where("JobID", "==", jobId)
-            );
-            await deleteByQuery(
-              db.collection("Applications").where("jobID", "==", jobId)
-            );
+            // Delete applications with their storage files
+            for (const field of ["JobID", "jobID"]) {
+              const appsSnap = await db.collection("Applications").where(field, "==", jobId).get();
+              for (const appDoc of appsSnap.docs) {
+                const app = appDoc.data();
+                const appUserId = app.UserID || app.userID || "";
+                const appId = appDoc.id;
+                if (appUserId && appId) {
+                  for (const prefix of [
+                    `applications/${appUserId}/${appId}/`,
+                    `reports/${appUserId}/${appId}/`,
+                  ]) {
+                    try {
+                      const [files] = await bucket.getFiles({ prefix });
+                      if (files.length) await Promise.all(files.map((f) => f.delete()));
+                    } catch (_) {}
+                  }
+                }
+                const cvPath = app.ApplicationCVPath || "";
+                if (cvPath) {
+                  try { await bucket.file(cvPath).delete(); } catch (_) {}
+                }
+                await appDoc.ref.delete();
+              }
+            }
 
             await deleteByQuery(
               db.collection("MockInterviews").where("JobID", "==", jobId)
@@ -1393,8 +1365,6 @@ export const deleteUserAccount = functions.https.onCall(
       await userDocRef.delete().catch((err) => {
         console.warn("User document delete warning:", err);
       });
-
-      const bucket = storage.bucket();
 
       // Delete all user storage folders
       const userFolders = [
@@ -3197,8 +3167,54 @@ export const deleteOldCVHistory = onSchedule(
   }
 );
 
-// ✅ Add this function to your functions/index.js file
-// This should be added AFTER the deleteOldCVHistory function
+// ============================================
+// 🗑️ onJobDeleted: cleanup applications + storage when a job is deleted
+// ============================================
+export const onJobDeleted = v2.firestore.onDocumentDeleted(
+  "Jobs/{jobId}",
+  async (event) => {
+    const jobId = event.params.jobId;
+
+    // 1. Get all applications for this job
+    const appsSnap = await db
+      .collection("Applications")
+      .where("JobID", "==", jobId)
+      .get();
+
+    const bucket = getStorage().bucket();
+    const deletionPromises = [];
+
+    for (const appDoc of appsSnap.docs) {
+      const app = appDoc.data();
+      const uid = app.UserID || "";
+
+      // 2. Delete audio files from storage: applications/{uid}/{appId}/
+      if (uid) {
+        const audioFolder = `applications/${uid}/${appDoc.id}/`;
+        deletionPromises.push(
+          bucket.deleteFiles({ prefix: audioFolder }).catch(() => {})
+        );
+      }
+
+      // 3. Delete CV file using saved path
+      const cvPath = app.ApplicationCVPath || "";
+      if (cvPath) {
+        deletionPromises.push(
+          bucket.file(cvPath).delete().catch(() => {})
+        );
+      }
+
+      // 4. Delete the application document
+      deletionPromises.push(appDoc.ref.delete());
+    }
+
+    await Promise.all(deletionPromises);
+
+    console.log(
+      `Job ${jobId} deleted — removed ${appsSnap.size} applications and their storage files.`
+    );
+  }
+);
 
 export {
   notifyOnJobStatusChange,deleteOldNotifications,closeExpiredJobsAndNotify
@@ -3515,6 +3531,18 @@ export const deleteOldApplications = onSchedule(
           }
         }
 
+        // ✅ حذف ملف الـ CV
+        const cvPath = data.ApplicationCVPath || "";
+        if (cvPath) {
+          try {
+            await bucket.file(cvPath).delete();
+            deletedFiles++;
+            console.log("Deleted CV file:", cvPath);
+          } catch (err) {
+            console.warn("Could not delete CV file:", err.message);
+          }
+        }
+
         // ✅ حذف document
         batch.delete(docSnap.ref);
 
@@ -3553,94 +3581,6 @@ export const deleteOldApplications = onSchedule(
         success: false,
         error: error.message,
       };
-    }
-  }
-);
-export const deleteApplication = functions.https.onCall(
-  async (data, context) => {
-    const actualData = data.data || data;
-
-    const applicationId =
-      actualData.applicationId || "";
-
-    if (!applicationId) {
-      throw new functions.https.HttpsError(
-        "invalid-argument",
-        "applicationId is required"
-      );
-    }
-
-    try {
-      const docRef = db
-        .collection("Applications")
-        .doc(applicationId);
-
-      const docSnap = await docRef.get();
-
-      if (!docSnap.exists) {
-        throw new functions.https.HttpsError(
-          "not-found",
-          "Application not found"
-        );
-      }
-
-      const dataDoc = docSnap.data() || {};
-
-      const userId =
-        dataDoc.UserID ||
-        dataDoc.userID ||
-        dataDoc.userId ||
-        dataDoc.uid;
-
-      const realApplicationId =
-        dataDoc.ApplicationID ||
-        dataDoc.applicationId ||
-        applicationId;
-
-      console.log("userId:", userId);
-      console.log(
-        "applicationId:",
-        realApplicationId
-      );
-
-      const bucket = storage.bucket();
-
-      // ✅ حذف ملفات Storage
-      if (userId && realApplicationId) {
-        for (const prefix of [
-          `applications/${userId}/${realApplicationId}/`,
-          `reports/${userId}/${realApplicationId}/`,
-        ]) {
-          try {
-            const [files] = await bucket.getFiles({ prefix });
-            if (files.length > 0) {
-              await Promise.all(files.map((file) => file.delete()));
-              console.log(`Deleted ${files.length} file(s) from ${prefix}`);
-            }
-          } catch (err) {
-            console.warn(`Storage delete warning for ${prefix}:`, err.message);
-          }
-        }
-      }
-
-      // ✅ حذف document
-      await docRef.delete();
-
-      return {
-        success: true,
-        message:
-          "Application deleted successfully",
-      };
-    } catch (error) {
-      console.error(
-        "Error deleting application:",
-        error
-      );
-
-      throw new functions.https.HttpsError(
-        "internal",
-        error.message
-      );
     }
   }
 );

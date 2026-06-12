@@ -55,7 +55,7 @@ class _HistoryPageState extends State<HistoryPage>
       case 'Submitted':
         return Colors.orange;
       case 'Shortlisted':
-        return Colors.orange;
+        return Colors.green;
       case 'Rejected':
         return Colors.red;
       case 'InInterview':
@@ -619,46 +619,6 @@ class _HistoryPageState extends State<HistoryPage>
                   ),
                 );
               },
-              onDelete: () async {
-                final confirm = await showDialog<bool>(
-                  context: context,
-                  builder: (ctx) => const JadeerDialog<bool>(
-                    title: 'Delete Application',
-                    content: Text(
-                      'Are you sure you want to delete this job application? This action cannot be undone.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 15,
-                      ),
-                    ),
-                    secondaryLabel: 'Cancel',
-                    secondaryResult: false,
-                    primaryLabel: 'Delete',
-                    primaryResult: true,
-                  ),
-                );
-
-                if (confirm == true) {
-                  try {
-                    await FirebaseFunctions.instance
-                        .httpsCallable('deleteApplication')
-                        .call({
-                      'applicationId': applicationId,
-                    });
-
-                    if (context.mounted) {
-                      SnackHelper.success(
-                          context, 'Application deleted successfully');
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
-                      SnackHelper.error(
-                          context, 'Failed to delete application');
-                    }
-                  }
-                }
-              },
             );
           },
         );
@@ -695,6 +655,7 @@ class _HistoryPageState extends State<HistoryPage>
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               CircleAvatar(
                 radius: 22,
@@ -706,7 +667,6 @@ class _HistoryPageState extends State<HistoryPage>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Title
                     Text(
                       title,
                       style: TextStyle(
@@ -717,87 +677,61 @@ class _HistoryPageState extends State<HistoryPage>
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 6),
-
-                    // Date (left) + Status & Expiry (right)
-                    Row(
-                      children: [
-                        // Date on the left
-                        Expanded(
-                          child: Text(
-                            subtitle,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: isDark
-                                  ? scheme.onSurface.withOpacity(0.7)
-                                  : Colors.grey.shade600,
-                            ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark
+                            ? scheme.onSurface.withOpacity(0.7)
+                            : Colors.grey.shade600,
+                      ),
+                    ),
+                    if (expiryText != null && expiryColor != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        expiryText,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: expiryColor,
+                        ),
+                      ),
+                    ],
+                    if (statusText != null && statusColor != null) ...[
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: Text(
+                          statusText,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: statusColor,
                           ),
                         ),
-
-                        // Status + Expiry stacked on the right
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            if (statusText != null && statusColor != null)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: statusColor.withOpacity(0.12),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border:
-                                      Border.all(color: statusColor, width: 1),
-                                ),
-                                child: Text(
-                                  statusText,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: statusColor,
-                                  ),
-                                ),
-                              ),
-                            if (expiryColor != null && expiryText != null) ...[
-                              if (statusText != null) const SizedBox(height: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: expiryColor.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border:
-                                      Border.all(color: expiryColor, width: 1),
-                                ),
-                                child: Text(
-                                  expiryText,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: expiryColor,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ],
                 ),
               ),
-              if (onDelete != null)
+              if (onDelete != null) ...[
+                const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.delete_outline),
                   color: Colors.red.shade400,
                   iconSize: 22,
                   onPressed: onDelete,
                   tooltip: 'Delete',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
-              Icon(Icons.chevron_right,
-                  color: isDark
-                      ? scheme.onSurface.withOpacity(0.5)
-                      : Colors.black45),
+              ],
             ],
           ),
         ),
@@ -836,7 +770,7 @@ class JobApplicationDetailScreen extends StatelessWidget {
       case 'Submitted':
         return Colors.orange;
       case 'Shortlisted':
-        return Colors.orange;
+        return Colors.green;
       case 'Rejected':
         return Colors.red;
       default:
@@ -903,7 +837,6 @@ class JobApplicationDetailScreen extends StatelessWidget {
           final companyName = (data['CompanyName'] ?? '').toString();
           final status = (data['ApplicationStatus'] ?? '').toString();
           final date = (data['Date'] as Timestamp?)?.toDate();
-          final submittedAt = (data['SubmittedAt'] as Timestamp?)?.toDate();
 
           final isDark = Theme.of(context).brightness == Brightness.dark;
           final stClr = _statusColor(status);
@@ -969,36 +902,21 @@ class JobApplicationDetailScreen extends StatelessWidget {
                             style: const TextStyle(
                                 color: Colors.white70, fontSize: 13),
                           ),
-                        if (submittedAt != null) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            'Submitted: ${DateFormat('MMM dd, yyyy – hh:mm a').format(submittedAt)}',
-                            style: const TextStyle(
-                                color: Colors.white70, fontSize: 13),
-                          ),
-                        ],
                         const SizedBox(height: 12),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 6),
+                              horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
+                            color: stClr.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(30),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(_statusIcon(status), color: stClr, size: 16),
-                              const SizedBox(width: 6),
-                              Text(
-                                _formatStatus(status),
-                                style: TextStyle(
-                                  color: stClr,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
+                          child: Text(
+                            _formatStatus(status),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: stClr,
+                            ),
                           ),
                         ),
                       ],

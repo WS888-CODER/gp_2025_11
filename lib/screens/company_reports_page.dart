@@ -69,14 +69,10 @@ class CompanyReportsPage extends StatelessWidget {
                   });
 
                   if (jobs.isEmpty) {
-                    return const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Text(
-                          'No job posts found for reports.',
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
+                    return const EmptyState(
+                      icon: Icons.work_outline,
+                      title: 'No job posts yet',
+                      subtitle: 'Your job posts will appear here once created.',
                     );
                   }
 
@@ -110,6 +106,12 @@ class CompanyReportsPage extends StatelessWidget {
                             horizontal: 18,
                             vertical: 14,
                           ),
+                          leading: CircleAvatar(
+                            radius: 22,
+                            backgroundColor: AppTheme.accentCoral,
+                            child: const Icon(Icons.work,
+                                color: Colors.white, size: 20),
+                          ),
                           title: Text(
                             title,
                             style: const TextStyle(
@@ -125,7 +127,7 @@ class CompanyReportsPage extends StatelessWidget {
                                   .join(' / '),
                             ),
                           ),
-                          trailing: const Icon(Icons.chevron_right_rounded),
+                          trailing: null,
                           onTap: () {
                             Navigator.push(
                               context,
@@ -144,12 +146,13 @@ class CompanyReportsPage extends StatelessWidget {
                 },
               ),
             ),
-          ),
+          )
         ],
       ),
     );
   }
 }
+
 
 class CompanyJobApplicationsPage extends StatefulWidget {
   const CompanyJobApplicationsPage({
@@ -260,8 +263,7 @@ class _CompanyJobApplicationsPageState
                                       filteredApps.map((a) => a.id).toSet();
                                   if (_selectedApplicationIds
                                       .containsAll(allIds)) {
-                                    _selectedApplicationIds
-                                        .removeAll(allIds);
+                                    _selectedApplicationIds.removeAll(allIds);
                                   } else {
                                     _selectedApplicationIds.addAll(allIds);
                                   }
@@ -376,211 +378,218 @@ class _CompanyJobApplicationsPageState
                         ),
                       )
                     : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-                  itemCount: filteredApps.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final app = filteredApps[index];
-                    final data = app.data();
-                    final applicantId = (data['UserID'] ?? '').toString();
-                    final score = _finalScore(data);
-                    final rank = _rankForIndex(filteredApps, index);
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                        itemCount: filteredApps.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final app = filteredApps[index];
+                          final data = app.data();
+                          final applicantId = (data['UserID'] ?? '').toString();
+                          final score = _finalScore(data);
+                          final rank = _rankForIndex(filteredApps, index);
 
-                    return FutureBuilder<
-                        DocumentSnapshot<Map<String, dynamic>>>(
-                      future: FirebaseFirestore.instance
-                          .collection('Users')
-                          .doc(applicantId)
-                          .get(),
-                      builder: (context, userSnap) {
-                        final user = userSnap.data?.data() ?? {};
-                        final fullName =
-                            (user['FullName'] ?? user['Name'] ?? 'Unknown')
-                                .toString();
-                        final photoUrl = (user['PhotoURL'] ?? '').toString();
-                        final status =
-                            (data['ApplicationStatus'] ?? 'Pending').toString();
-                        final reportUrl = (data['ReportURL'] ?? '').toString();
-                        final statusUpdatedAt = _asDate(data['StatusUpdatedAt']);
-                        final appliedAt = _asDate(data['Date']);
-                        final expiryText = _applicationExpiry(
-                            status, statusUpdatedAt, appliedAt);
+                          return FutureBuilder<
+                              DocumentSnapshot<Map<String, dynamic>>>(
+                            future: FirebaseFirestore.instance
+                                .collection('Users')
+                                .doc(applicantId)
+                                .get(),
+                            builder: (context, userSnap) {
+                              final user = userSnap.data?.data() ?? {};
+                              final fullName = (user['FullName'] ??
+                                      user['Name'] ??
+                                      'Unknown')
+                                  .toString();
+                              final photoUrl =
+                                  (user['PhotoURL'] ?? '').toString();
+                              final status =
+                                  (data['ApplicationStatus'] ?? 'Pending')
+                                      .toString();
+                              final reportUrl =
+                                  (data['ReportURL'] ?? '').toString();
+                              final statusUpdatedAt =
+                                  _asDate(data['StatusUpdatedAt']);
+                              final appliedAt = _asDate(data['Date']);
+                              final expiryText = _applicationExpiry(
+                                  status, statusUpdatedAt, appliedAt);
 
-                        return Container(
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surface,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.08),
-                                blurRadius: 18,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(14),
-                            child: Column(
-                              children: [
-                                Row(
-                                  children: [
-                                    Checkbox(
-                                      value: _selectedApplicationIds
-                                          .contains(app.id),
-                                      onChanged: (value) {
-                                        setState(() {
-                                          if (value == true) {
-                                            _selectedApplicationIds.add(app.id);
-                                          } else {
-                                            _selectedApplicationIds
-                                                .remove(app.id);
-                                          }
-                                        });
-                                      },
+                              return Container(
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.surface,
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.08),
+                                      blurRadius: 18,
+                                      offset: const Offset(0, 4),
                                     ),
-                                    CircleAvatar(
-                                      radius: 24,
-                                      backgroundImage: photoUrl.isNotEmpty
-                                          ? NetworkImage(photoUrl)
-                                          : null,
-                                      child: photoUrl.isEmpty
-                                          ? const Icon(Icons.person)
-                                          : null,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
+                                  ],
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(14),
+                                  child: Column(
+                                    children: [
+                                      Row(
                                         children: [
-                                          Text(
-                                            fullName,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 16,
+                                          Checkbox(
+                                            value: _selectedApplicationIds
+                                                .contains(app.id),
+                                            onChanged: (value) {
+                                              setState(() {
+                                                if (value == true) {
+                                                  _selectedApplicationIds
+                                                      .add(app.id);
+                                                } else {
+                                                  _selectedApplicationIds
+                                                      .remove(app.id);
+                                                }
+                                              });
+                                            },
+                                          ),
+                                          CircleAvatar(
+                                            radius: 24,
+                                            backgroundImage: photoUrl.isNotEmpty
+                                                ? NetworkImage(photoUrl)
+                                                : null,
+                                            child: photoUrl.isEmpty
+                                                ? const Icon(Icons.person)
+                                                : null,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  fullName,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w700,
+                                                    fontSize: 16,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  'Rank #$rank',
+                                                  style: TextStyle(
+                                                    color: scheme.primary,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            'Rank #$rank',
-                                            style: TextStyle(
-                                              color: scheme.primary,
-                                              fontWeight: FontWeight.w600,
-                                            ),
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.end,
+                                            children: [
+                                              _StatusChip(status: status),
+                                              if (expiryText != null) ...[
+                                                const SizedBox(height: 4),
+                                                _ExpiryBadge(text: expiryText),
+                                              ],
+                                            ],
                                           ),
                                         ],
                                       ),
-                                    ),
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.end,
-                                      children: [
-                                        _StatusChip(status: status),
-                                        if (expiryText != null) ...[
-                                          const SizedBox(height: 4),
-                                          _ExpiryBadge(text: expiryText),
+                                      const SizedBox(height: 12),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: _InfoBox(
+                                              label: 'Final Score',
+                                              value: '$score / 100',
+                                            ),
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: _ReportStatusBox(
+                                                isAvailable:
+                                                    reportUrl.isNotEmpty),
+                                          ),
                                         ],
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: _InfoBox(
-                                        label: 'Final Score',
-                                        value: '$score / 100',
                                       ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: _ReportStatusBox(
-                                          isAvailable: reportUrl.isNotEmpty),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: OutlinedButton(
-                                        style: OutlinedButton.styleFrom(
-                                          side: const BorderSide(
-                                            color: Color(0xFF4A5FBC),
-                                            width: 2,
+                                      const SizedBox(height: 12),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: OutlinedButton(
+                                              style: OutlinedButton.styleFrom(
+                                                side: const BorderSide(
+                                                  color: Color(0xFF4A5FBC),
+                                                  width: 2,
+                                                ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                ),
+                                              ),
+                                              onPressed: () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (_) =>
+                                                        CandidateDetailsPage(
+                                                      applicationId: app.id,
+                                                      applicationData: data,
+                                                      userData: user,
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                              child: const Text('View Details'),
+                                            ),
                                           ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(10),
-                                          ),
-                                        ),
-                                        onPressed: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) =>
-                                                  CandidateDetailsPage(
-                                                applicationId: app.id,
-                                                applicationData: data,
-                                                userData: user,
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: PopupMenuButton<String>(
+                                              onSelected: (value) async {
+                                                await _updateSingleStatus(
+                                                  context,
+                                                  applicationId: app.id,
+                                                  applicantId: applicantId,
+                                                  applicantName: fullName,
+                                                  newStatus: value,
+                                                );
+                                              },
+                                              itemBuilder: (_) => const [
+                                                PopupMenuItem(
+                                                  value: 'Shortlisted',
+                                                  child: Text('Shortlisted'),
+                                                ),
+                                                PopupMenuItem(
+                                                  value: 'Rejected',
+                                                  child: Text('Rejected'),
+                                                ),
+                                              ],
+                                              child: Container(
+                                                height: 40,
+                                                decoration: BoxDecoration(
+                                                  color: scheme.primary,
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                ),
+                                                alignment: Alignment.center,
+                                                child: const Text(
+                                                  'Change Status',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
                                               ),
                                             ),
-                                          );
-                                        },
-                                        child: const Text('View Details'),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: PopupMenuButton<String>(
-                                        onSelected: (value) async {
-                                          await _updateSingleStatus(
-                                            context,
-                                            applicationId: app.id,
-                                            applicantId: applicantId,
-                                            applicantName: fullName,
-                                            newStatus: value,
-                                          );
-                                        },
-                                        itemBuilder: (_) => const [
-                                          PopupMenuItem(
-                                            value: 'Shortlisted',
-                                            child: Text('Shortlisted'),
-                                          ),
-                                          PopupMenuItem(
-                                            value: 'Rejected',
-                                            child: Text('Rejected'),
                                           ),
                                         ],
-                                        child: Container(
-                                          height: 40,
-                                          decoration: BoxDecoration(
-                                            color: scheme.primary,
-                                            borderRadius:
-                                                BorderRadius.circular(10),
-                                          ),
-                                          alignment: Alignment.center,
-                                          child: const Text(
-                                            'Change Status',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
               ),
             ],
           );
@@ -930,7 +939,8 @@ String? _applicationExpiry(
   if (status != 'Rejected' && status != 'Shortlisted') return null;
   final base = statusUpdatedAt ?? appliedAt;
   if (base == null) return null;
-  final daysLeft = base.add(const Duration(days: 180)).difference(DateTime.now()).inDays;
+  final daysLeft =
+      base.add(const Duration(days: 180)).difference(DateTime.now()).inDays;
   if (daysLeft <= 0) return 'Expired';
   return '$daysLeft days left';
 }

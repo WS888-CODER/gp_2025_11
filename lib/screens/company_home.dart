@@ -23,7 +23,10 @@ String effectiveStatusFromDates({
   // If company manually closed it
   if ((storedStatus ?? '').toLowerCase() == 'closed') return 'Closed';
 
-  if (end != null && end.isBefore(now)) return 'Closed';
+  final endOfDay = end != null
+      ? DateTime(end.year, end.month, end.day, 23, 59, 59)
+      : null;
+  if (endOfDay != null && endOfDay.isBefore(now)) return 'Closed';
   if (start != null && start.isAfter(now)) return 'Soon';
   return 'Open';
 }
@@ -46,6 +49,7 @@ class CompanyHome extends StatefulWidget {
 class _CompanyHomeState extends State<CompanyHome> {
   int _tab = 1; // 0: Reports, 1: Home
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final ScrollController _jobsScrollController = ScrollController();
   String get _effectiveCompanyId {
     final args =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
@@ -488,15 +492,22 @@ class _CompanyHomeState extends State<CompanyHome> {
         final newEnd = result['endDate'];
 
         String newStatus;
-        if (newEnd != null && newEnd.isBefore(now)) {
+        final newEndOfDay = newEnd != null
+            ? DateTime(newEnd.year, newEnd.month, newEnd.day, 23, 59, 59)
+            : null;
+        if (newEndOfDay != null && newEndOfDay.isBefore(now)) {
           newStatus = 'Closed';
         } else {
           newStatus = 'Open';
         }
 
+        final savedEnd = newEnd != null
+            ? DateTime(newEnd.year, newEnd.month, newEnd.day, 23, 59, 59)
+            : null;
+
         await FirebaseFirestore.instance.collection('Jobs').doc(jobId).update({
           'StartDate': newStart,
-          'EndDate': newEnd,
+          'EndDate': savedEnd,
         });
 
         await FirebaseFirestore.instance.collection('Jobs').doc(jobId).update({
@@ -633,9 +644,19 @@ class _CompanyHomeState extends State<CompanyHome> {
 
         if (newEndDate == null || !mounted) return;
 
+        // Save end of day so Cloud Function doesn't immediately close it
+        final endOfPickedDay = DateTime(
+          newEndDate.year,
+          newEndDate.month,
+          newEndDate.day,
+          23,
+          59,
+          59,
+        );
+
         // Update EndDate first, then JobStatus (Firestore rules require separate updates)
         await FirebaseFirestore.instance.collection('Jobs').doc(jobId).update({
-          'EndDate': newEndDate,
+          'EndDate': endOfPickedDay,
         });
 
         await FirebaseFirestore.instance.collection('Jobs').doc(jobId).update({
@@ -714,6 +735,12 @@ class _CompanyHomeState extends State<CompanyHome> {
         ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _jobsScrollController.dispose();
+    super.dispose();
   }
 
   Widget _buildAnimatedNavBar() {
@@ -1082,6 +1109,8 @@ class _CompanyHomeState extends State<CompanyHome> {
                 ),
               ),
               child: ListView(
+                key: const PageStorageKey('company_jobs_list'),
+                controller: _jobsScrollController,
                 padding: const EdgeInsets.all(20),
                 children: [
                   const SizedBox(height: 8),
@@ -1106,45 +1135,10 @@ class _CompanyHomeState extends State<CompanyHome> {
 
                       final jobs = snap.data ?? const [];
                       if (jobs.isEmpty) {
-                        return Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.work_outline,
-                                size: 40,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withOpacity(0.4),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'No job posts yet',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Tap "Create Job Post" to add your first opening.',
-                                textAlign: TextAlign.center,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withOpacity(0.7),
-                                    ),
-                              ),
-                            ],
-                          ),
+                        return const EmptyState(
+                          icon: Icons.work_outline,
+                          title: 'No job posts yet',
+                          subtitle: 'Tap "Create Job Post" to add your first opening.',
                         );
                       }
 
@@ -1178,7 +1172,8 @@ class _CompanyHomeState extends State<CompanyHome> {
                             if ((storedStatus ?? '').toLowerCase() == 'closed')
                               return 'Closed';
 
-                            if (end != null && end.isBefore(now))
+                            final endOfDay = end != null ? DateTime(end.year, end.month, end.day, 23, 59, 59) : null;
+                            if (endOfDay != null && endOfDay.isBefore(now))
                               return 'Closed';
                             if (start != null && start.isAfter(now))
                               return 'Soon';
@@ -1283,25 +1278,24 @@ class _CompanyHomeState extends State<CompanyHome> {
                                             Container(
                                               padding:
                                                   const EdgeInsets.symmetric(
-                                                      horizontal: 12,
-                                                      vertical: 6),
+                                                      horizontal: 8,
+                                                      vertical: 4),
                                               decoration: BoxDecoration(
                                                 color: isClosed
-                                                    ? scheme.error
-                                                        .withOpacity(0.15)
-                                                    : scheme.secondary
-                                                        .withOpacity(0.15),
+                                                    ? Colors.grey.shade600
+                                                    : Colors.amber
+                                                        .withOpacity(0.18),
                                                 borderRadius:
-                                                    BorderRadius.circular(20),
+                                                    BorderRadius.circular(12),
                                               ),
                                               child: Text(
                                                 isClosed ? 'Closed' : 'Soon',
                                                 style: TextStyle(
                                                   color: isClosed
-                                                      ? scheme.error
-                                                      : scheme.secondary,
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w700,
+                                                      ? Colors.white
+                                                      : const Color(0xFFB8860B),
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
                                                 ),
                                               ),
                                             ),
@@ -1434,8 +1428,9 @@ class _CompanyHomeState extends State<CompanyHome> {
                                                 borderRadius:
                                                     BorderRadius.circular(12),
                                                 onTap: () {
-                                                  final safeCtx = _scaffoldKey
-                                                      .currentContext;
+                                                  final safeCtx =
+                                                      _scaffoldKey
+                                                          .currentContext;
                                                   if (safeCtx == null) return;
 
                                                   showDialog(
@@ -1473,7 +1468,8 @@ class _CompanyHomeState extends State<CompanyHome> {
                                                               );
                                                             },
                                                             child: Padding(
-                                                              padding: const EdgeInsets.symmetric(
+                                                              padding: const EdgeInsets
+                                                                  .symmetric(
                                                                   vertical: 14),
                                                               child: Row(
                                                                 mainAxisAlignment:
@@ -1491,30 +1487,28 @@ class _CompanyHomeState extends State<CompanyHome> {
                                                                     size: 26,
                                                                   ),
                                                                   const SizedBox(
-                                                                      width: 10),
+                                                                      width:
+                                                                          10),
                                                                   Text(
                                                                     isClosed
                                                                         ? 'Reopen Job'
                                                                         : 'Close Job',
-                                                                    style:
-                                                                        const TextStyle(
-                                                                      color: Colors
-                                                                          .white,
-                                                                      fontWeight:
-                                                                          FontWeight
-                                                                              .w600,
-                                                                      fontSize: 16,
-                                                                    ),
+                                                                    style: const TextStyle(
+                                                                        color: Colors
+                                                                            .white,
+                                                                        fontWeight:
+                                                                            FontWeight.w600,
+                                                                        fontSize:
+                                                                            16),
                                                                   ),
                                                                 ],
                                                               ),
                                                             ),
                                                           ),
                                                           const Divider(
-                                                            color:
-                                                                Colors.white24,
-                                                            height: 1,
-                                                          ),
+                                                              color: Colors
+                                                                  .white24,
+                                                              height: 1),
                                                           InkWell(
                                                             onTap: () {
                                                               Navigator.pop(
@@ -1526,7 +1520,8 @@ class _CompanyHomeState extends State<CompanyHome> {
                                                               );
                                                             },
                                                             child: Padding(
-                                                              padding: const EdgeInsets.symmetric(
+                                                              padding: const EdgeInsets
+                                                                  .symmetric(
                                                                   vertical: 14),
                                                               child: Row(
                                                                 mainAxisAlignment:
@@ -1534,25 +1529,23 @@ class _CompanyHomeState extends State<CompanyHome> {
                                                                         .center,
                                                                 children: const [
                                                                   Icon(
-                                                                    Icons
-                                                                        .delete_outline,
-                                                                    color: Color(
-                                                                        0xFFFF7B7B),
-                                                                    size: 26,
-                                                                  ),
-                                                                  SizedBox(
-                                                                      width: 10),
-                                                                  Text(
-                                                                    'Delete Job',
-                                                                    style:
-                                                                        TextStyle(
+                                                                      Icons
+                                                                          .delete_outline,
                                                                       color: Color(
                                                                           0xFFFF7B7B),
-                                                                      fontWeight:
-                                                                          FontWeight
-                                                                              .w600,
-                                                                      fontSize: 16,
-                                                                    ),
+                                                                      size: 26),
+                                                                  SizedBox(
+                                                                      width:
+                                                                          10),
+                                                                  Text(
+                                                                    'Delete Job',
+                                                                    style: TextStyle(
+                                                                        color: Color(
+                                                                            0xFFFF7B7B),
+                                                                        fontWeight:
+                                                                            FontWeight.w600,
+                                                                        fontSize:
+                                                                            16),
                                                                   ),
                                                                 ],
                                                               ),

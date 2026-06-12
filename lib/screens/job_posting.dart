@@ -947,7 +947,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
     // Helper to compute status based on dates
     String computeStatus(DateTime start, DateTime end) {
       final now = DateTime.now();
-      if (end.isBefore(now)) return 'Closed';
+      final endOfDay = DateTime(end.year, end.month, end.day, 23, 59, 59);
+      if (endOfDay.isBefore(now)) return 'Closed';
       if (start.isAfter(now)) return 'Soon';
       return 'Open';
     }
@@ -967,9 +968,13 @@ class _JobPostingPageState extends State<JobPostingPage> {
 
         final bool isManuallyClosed = currentStatus == 'Closed';
 
+        final endOfDay = _endDate != null
+            ? DateTime(_endDate!.year, _endDate!.month, _endDate!.day, 23, 59, 59)
+            : null;
+
         final updates = <String, dynamic>{
           'StartDate': _startDate,
-          'EndDate': _endDate,
+          'EndDate': endOfDay,
         };
 
         // If it's not manually closed, let dates determine the status
@@ -1000,7 +1005,9 @@ class _JobPostingPageState extends State<JobPostingPage> {
         'Specialty': _getSpecialtyValue(),
         'Requirements': List<String>.from(_requirements),
         'StartDate': _startDate,
-        'EndDate': _endDate,
+        'EndDate': _endDate != null
+            ? DateTime(_endDate!.year, _endDate!.month, _endDate!.day, 23, 59, 59)
+            : null,
         'JobKeywords': keywords,
         'UserID': userId,
         'PostedAt': FieldValue.serverTimestamp(),

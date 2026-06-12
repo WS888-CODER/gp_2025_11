@@ -16,16 +16,34 @@ class AdminDashboard extends StatefulWidget {
 class _AdminDashboardState extends State<AdminDashboard> {
   String selectedStatus = 'All';
   bool isLoading = false;
-  List<QueryDocumentSnapshot>? companies;
+  List<QueryDocumentSnapshot>? allCompanies; // كل الشركات دائماً
 
   GlobalKey<AdminDashboardAppBarState> adminAppBarKey =
       GlobalKey<AdminDashboardAppBarState>();
+
+  List<QueryDocumentSnapshot> get filteredCompanies {
+    if (allCompanies == null) return [];
+    if (selectedStatus == 'All') return allCompanies!;
+    return allCompanies!
+        .where((d) =>
+            (d.data() as Map<String, dynamic>)['AccountStatus'] ==
+            selectedStatus)
+        .toList();
+  }
+
+  int countByStatus(String status) {
+    if (allCompanies == null) return 0;
+    return allCompanies!
+        .where((d) =>
+            (d.data() as Map<String, dynamic>)['AccountStatus'] == status)
+        .length;
+  }
 
   @override
   void initState() {
     super.initState();
     loadCompanies();
-    deleteExpiredCompanies(); // ← هنا
+    deleteExpiredCompanies();
   }
 
   Future<void> deleteExpiredCompanies() async {
@@ -34,31 +52,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final snapshot = await FirebaseFirestore.instance
         .collection('Users')
         .where('UserType', isEqualTo: 'Company')
-        .where('AccountStatus', whereIn: ['Rejected', 'Pending']).get();
+        .where('AccountStatus', isEqualTo: 'Rejected')
+        .get();
 
     for (final doc in snapshot.docs) {
       final data = doc.data();
 
-      if (!data.containsKey('UpdatedAt')) continue;
+      final expiryRaw = data['ExpiryDate'];
+      if (expiryRaw == null) continue;
 
-      final updatedAt = DateTime.tryParse(data['UpdatedAt']);
-      if (updatedAt == null) continue;
-
-      final diff = now.difference(updatedAt);
-
-      final status = data['AccountStatus'];
-
-      bool shouldDelete = false;
-
-      if (status == 'Rejected' && diff.inHours >= 24) {
-        shouldDelete = true;
+      DateTime? expiryDate;
+      if (expiryRaw is Timestamp) {
+        expiryDate = expiryRaw.toDate();
+      } else if (expiryRaw is String) {
+        expiryDate = DateTime.tryParse(expiryRaw);
       }
 
-      if (status == 'Pending' && diff.inDays >= 7) {
-        shouldDelete = true;
-      }
+      if (expiryDate == null) continue;
 
-      if (shouldDelete) {
+      if (now.isAfter(expiryDate)) {
         await FirebaseFirestore.instance
             .collection('Users')
             .doc(doc.id)
@@ -67,66 +79,33 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
   }
 
-  // == Firestore logic ==
-  Future<QuerySnapshot> getCompanies() async {
-    final baseQuery = FirebaseFirestore.instance
-        .collection('Users')
-        .where('UserType', isEqualTo: 'Company');
-
-    if (selectedStatus == 'All') {
-      return await baseQuery.get();
-    } else {
-      return await baseQuery
-          .where('AccountStatus', isEqualTo: selectedStatus)
-          .get();
-    }
-  }
-
   Future<void> updateCompanyStatus(String id, String newStatus) async {
-    await FirebaseFirestore.instance.collection('Users').doc(id).update({
+    final Map<String, dynamic> updates = {
       'AccountStatus': newStatus,
       'UpdatedAt': DateTime.now().toIso8601String(),
-    });
+    };
+
+    if (newStatus == 'Rejected') {
+      final expiryDate = DateTime.now().add(const Duration(days: 7));
+      updates['ExpiryDate'] = Timestamp.fromDate(expiryDate);
+    } else {
+      updates['ExpiryDate'] = FieldValue.delete();
+    }
+
+    await FirebaseFirestore.instance.collection('Users').doc(id).update(updates);
   }
 
   Future<void> loadCompanies() async {
     setState(() => isLoading = true);
     try {
-      final snapshot = await getCompanies();
-      companies = snapshot.docs;
+      final snapshot = await FirebaseFirestore.instance
+          .collection('Users')
+          .where('UserType', isEqualTo: 'Company')
+          .get();
+      allCompanies = snapshot.docs;
     } finally {
       setState(() => isLoading = false);
     }
-  }
-
-  ChoiceChip _buildStatusChip(String value) {
-    final bool isSelected = selectedStatus == value;
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    final Color selectedBg = theme.colorScheme.secondary;
-    final Color borderColor =
-        isSelected ? selectedBg : theme.colorScheme.primary;
-    final Color unselectedText =
-        isDark ? Colors.white70 : theme.colorScheme.primary;
-
-    return ChoiceChip(
-      label: Text(
-        value,
-        style: TextStyle(
-          color: isSelected ? Colors.white : unselectedText,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      selected: isSelected,
-      selectedColor: selectedBg,
-      side: BorderSide(color: borderColor, width: 2),
-      showCheckmark: false,
-      onSelected: (sel) async {
-        selectedStatus = value;
-        await loadCompanies();
-      },
-    );
   }
 
   @override
@@ -139,32 +118,49 @@ class _AdminDashboardState extends State<AdminDashboard> {
         appBar: AdminDashboardAppBar(key: adminAppBarKey),
         body: Column(
           children: [
-            const SizedBox(height: 20),
-            // ======== Filter chips row (All / Pending / ...) ========
-            Container(
-              width: double.infinity,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const ClampingScrollPhysics(),
-                child: Wrap(
-                  spacing: 8,
-                  children: [
-                    _buildStatusChip('All'),
-                    _buildStatusChip('Pending'),
-                    _buildStatusChip('Verified'),
-                    _buildStatusChip('Rejected'),
-                  ],
-                ),
+            const SizedBox(height: 16),
+            // ======== Filter summary boxes ========
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  _SummaryFilterBox(
+                    label: 'All',
+                    value: allCompanies?.length ?? 0,
+                    isSelected: selectedStatus == 'All',
+                    onTap: () => setState(() => selectedStatus = 'All'),
+                  ),
+                  const SizedBox(width: 8),
+                  _SummaryFilterBox(
+                    label: 'Pending',
+                    value: countByStatus('Pending'),
+                    isSelected: selectedStatus == 'Pending',
+                    onTap: () => setState(() => selectedStatus = 'Pending'),
+                  ),
+                  const SizedBox(width: 8),
+                  _SummaryFilterBox(
+                    label: 'Verified',
+                    value: countByStatus('Verified'),
+                    isSelected: selectedStatus == 'Verified',
+                    onTap: () => setState(() => selectedStatus = 'Verified'),
+                  ),
+                  const SizedBox(width: 8),
+                  _SummaryFilterBox(
+                    label: 'Rejected',
+                    value: countByStatus('Rejected'),
+                    isSelected: selectedStatus == 'Rejected',
+                    onTap: () => setState(() => selectedStatus = 'Rejected'),
+                  ),
+                ],
               ),
             ),
+            const SizedBox(height: 8),
 
             // ======== Companies list ========
             Expanded(
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())
-                  : (companies == null || companies!.isEmpty)
+                  : filteredCompanies.isEmpty
                       ? const EmptyState(
                           icon: Iconsax.briefcase,
                           title: 'No companies found',
@@ -174,9 +170,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       : RefreshIndicator(
                           onRefresh: loadCompanies,
                           child: ListView.builder(
-                            itemCount: companies!.length,
+                            itemCount: filteredCompanies.length,
                             itemBuilder: (context, index) {
-                              final doc = companies![index];
+                              final doc = filteredCompanies[index];
                               final data = doc.data() as Map<String, dynamic>;
 
                               return _CompanyCard(
@@ -478,123 +474,270 @@ class _CompanyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
     final companyName = data['CompanyName'] ?? 'Unnamed';
     final email = data['Email'] ?? 'No email';
     final accountStatus = data['AccountStatus'] ?? 'Pending';
     final createdAt = (data['Date'] as Timestamp?)?.toDate();
+    final expiryAt = (data['ExpiryDate'] as Timestamp?)?.toDate();
 
-    final bgColor = theme.colorScheme.surface;
-    final borderColor = isDark
-        ? Colors.white.withOpacity(0.06)
-        : theme.colorScheme.primary.withOpacity(0.15);
+    final statusColor = _statusColor(accountStatus);
 
-    final primaryColor = theme.colorScheme.primary;
-    final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black87;
+    String? expiryText;
+    Color? expiryColor;
+    if (accountStatus == 'Rejected' && expiryAt != null) {
+      final daysLeft = expiryAt.difference(DateTime.now()).inDays;
+      if (daysLeft <= 0) {
+        expiryText = 'Expires today';
+        expiryColor = Colors.red;
+      } else if (daysLeft <= 3) {
+        expiryText = '$daysLeft days left';
+        expiryColor = Colors.red;
+      } else if (daysLeft <= 5) {
+        expiryText = '$daysLeft days left';
+        expiryColor = Colors.orange;
+      } else {
+        expiryText = '$daysLeft days left';
+        expiryColor = Colors.green;
+      }
+    }
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.5 : 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-        child: Column(
-          children: [
-            // name + status
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    companyName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: primaryColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      child: Material(
+        color: isDark ? scheme.surface : Colors.white,
+        elevation: isDark ? 0 : 1,
+        shadowColor: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Leading icon
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: const Color(0xFFFD6C67),
+                child: const Icon(Icons.business, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 16),
+
+              // Content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      companyName,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                        color: isDark ? scheme.onSurface : Colors.black87,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _statusColor(accountStatus).withAlpha(30),
-                    borderRadius: BorderRadius.circular(5),
-                  ),
-                  child: Text(
-                    accountStatus.toUpperCase(),
-                    style: TextStyle(
-                      color: _statusColor(accountStatus),
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
+                    const SizedBox(height: 3),
+                    Text(
+                      email,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark
+                            ? scheme.onSurface.withOpacity(0.7)
+                            : Colors.grey.shade600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 8),
-
-            // email row
-            _InfoRow(
-              icon: Iconsax.sms_copy,
-              label: email,
-              labelColor: textColor,
-            ),
-
-            const SizedBox(height: 5),
-
-            // created date row
-            _InfoRow(
-              icon: Iconsax.calendar_1_copy,
-              label: (createdAt == null)
-                  ? '---'
-                  : 'Registered: ${createdAt.toLocal().toString().split(' ')[0]}',
-              labelColor: textColor,
-            ),
-
-            const SizedBox(height: 8),
-
-            // status action menu
-            PopupMenuButton<String>(
-              padding: EdgeInsets.zero,
-              icon: TextButton.icon(
-                onPressed: null,
-                icon: Icon(Iconsax.edit, color: primaryColor, size: 18),
-                label: Text(
-                  'Change Status',
-                  style: TextStyle(color: primaryColor, fontSize: 14),
+                    if (createdAt != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'Registered: ${createdAt.toLocal().toString().split(' ')[0]}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark
+                              ? scheme.onSurface.withOpacity(0.5)
+                              : Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
+                    if (expiryText != null && expiryColor != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        expiryText,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: expiryColor,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 6),
+                    // Status badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      child: Text(
+                        accountStatus,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: statusColor,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              onSelected: onSelected,
-              itemBuilder: (context) => const [
-                PopupMenuItem(value: 'Pending', child: Text('Set as Pending')),
-                PopupMenuItem(
-                  value: 'Verified',
-                  child: Text('Set as Verified'),
+
+              // Action button
+              IconButton(
+                icon: Icon(Icons.more_vert,
+                    color: scheme.onSurface.withOpacity(0.5)),
+                onPressed: () {
+                  showDialog<void>(
+                    context: context,
+                    builder: (dialogContext) => AlertDialog(
+                      backgroundColor:
+                          const Color(0xFF4A5FBC).withOpacity(0.7),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      contentPadding:
+                          const EdgeInsets.symmetric(vertical: 10),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          InkWell(
+                            onTap: () {
+                              Navigator.pop(dialogContext);
+                              onSelected('Verified');
+                            },
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 14),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.check_circle_outline,
+                                      color: Colors.white, size: 24),
+                                  SizedBox(width: 10),
+                                  Text(
+                                    'Approve',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const Divider(color: Colors.white24, height: 1),
+                          InkWell(
+                            onTap: () {
+                              Navigator.pop(dialogContext);
+                              onSelected('Rejected');
+                            },
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 14),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.cancel_outlined,
+                                      color: Colors.white, size: 24),
+                                  SizedBox(width: 10),
+                                  Text(
+                                    'Reject',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ================== SUMMARY FILTER BOX ==================
+class _SummaryFilterBox extends StatelessWidget {
+  const _SummaryFilterBox({
+    required this.label,
+    required this.value,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final String label;
+  final int value;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? scheme.primary : scheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: isSelected
+                ? Border.all(color: scheme.primary, width: 2)
+                : Border.all(color: Colors.transparent, width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isSelected ? 0.12 : 0.06),
+                blurRadius: 14,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Text(
+                '$value',
+                style: TextStyle(
+                  color: isSelected ? Colors.white : scheme.primary,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 18,
                 ),
-                PopupMenuItem(
-                  value: 'Rejected',
-                  child: Text('Set as Rejected'),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: isSelected ? Colors.white70 : null,
                 ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );

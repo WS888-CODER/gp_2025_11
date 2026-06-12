@@ -832,7 +832,6 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
           .doc(widget.applicationId)
           .set({
         'ApplicationStatus': 'Pending',
-        'SubmittedAt': FieldValue.serverTimestamp(),
         'ReportURL': '',
       }, SetOptions(merge: true));
 

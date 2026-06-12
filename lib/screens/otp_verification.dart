@@ -129,13 +129,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
         'companyName': companyName,
       });
 
-      final adminNotifyCallable =
-          _functions.httpsCallable('notifyAdminNewCompany');
-      await adminNotifyCallable.call({
-        'email': email,
-        'companyName': companyName,
-        'name': name,
-      });
     } catch (e) {}
   }
 
