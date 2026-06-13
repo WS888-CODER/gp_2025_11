@@ -3455,6 +3455,90 @@ export const deleteMockInterview = functions.https.onCall(
     }
   }
 );
+// ============================================
+// 🗑️ deleteOldAnswerRecordings: delete audio files 2 days after report is generated
+// ============================================
+export const deleteOldAnswerRecordings = onSchedule(
+  {
+    schedule: "0 3 * * *", // daily at 3am UTC
+    timeZone: "UTC",
+    region: "us-central1",
+  },
+  async () => {
+    const twoDaysAgo = new Date();
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+
+    const bucket = getStorage().bucket();
+    let deletedFiles = 0;
+
+    // ── Job Applications ──────────────────────────────────────────
+    const appsSnap = await db
+      .collection("Applications")
+      .where("ReportGeneratedAt", "<=", twoDaysAgo)
+      .get();
+
+    for (const docSnap of appsSnap.docs) {
+      const data = docSnap.data();
+      const uid = data.UserID || "";
+      const appId = docSnap.id;
+      const audioUrls = data.AnswersRecordsURL || [];
+
+      if (!uid || !appId || audioUrls.length === 0) continue;
+
+      try {
+        const [files] = await bucket.getFiles({
+          prefix: `applications/${uid}/${appId}/`,
+        });
+
+        const audioFiles = files.filter((f) => f.name.endsWith(".m4a"));
+        if (audioFiles.length > 0) {
+          await Promise.all(audioFiles.map((f) => f.delete().catch(() => {})));
+          deletedFiles += audioFiles.length;
+          console.log(`[app] Deleted ${audioFiles.length} audio file(s) for ${appId}`);
+        }
+
+        await docSnap.ref.update({ AnswersRecordsURL: [] });
+      } catch (err) {
+        console.warn(`[app] Failed to delete audio for ${appId}:`, err.message);
+      }
+    }
+
+    // ── Mock Interviews ───────────────────────────────────────────
+    const mockSnap = await db
+      .collection("MockInterviews")
+      .where("ReportGeneratedAt", "<=", twoDaysAgo)
+      .get();
+
+    for (const docSnap of mockSnap.docs) {
+      const data = docSnap.data();
+      const uid = data.UserID || data.userID || "";
+      const mockId = data.MockInterviewsID || docSnap.id;
+      const audioUrls = data.AnswersRecordsURL || [];
+
+      if (!uid || !mockId || audioUrls.length === 0) continue;
+
+      try {
+        const [files] = await bucket.getFiles({
+          prefix: `mock_interviews/${uid}/${mockId}/`,
+        });
+
+        const audioFiles = files.filter((f) => f.name.endsWith(".m4a"));
+        if (audioFiles.length > 0) {
+          await Promise.all(audioFiles.map((f) => f.delete().catch(() => {})));
+          deletedFiles += audioFiles.length;
+          console.log(`[mock] Deleted ${audioFiles.length} audio file(s) for ${mockId}`);
+        }
+
+        await docSnap.ref.update({ AnswersRecordsURL: [] });
+      } catch (err) {
+        console.warn(`[mock] Failed to delete audio for ${mockId}:`, err.message);
+      }
+    }
+
+    console.log(`deleteOldAnswerRecordings: total deleted ${deletedFiles} audio file(s)`);
+  }
+);
+
 export const deleteOldApplications = onSchedule(
   {
     schedule: "0 0 * * *",

@@ -138,9 +138,9 @@ class JobInterviewService {
     if (!context.mounted) return;
     if (!profileOk) return;
 
-    final cvResult = await _pickApplicationCv(context, uid: user.uid);
+    final cvFile = await _pickApplicationCv(context);
     if (!context.mounted) return;
-    if (cvResult == null) return;
+    if (cvFile == null) return;
 
     final permOk = await _confirmPermissionsDialog(context);
     if (!context.mounted) return;
@@ -153,11 +153,10 @@ class JobInterviewService {
     await _createAndStart(
       context: context,
       uid: user.uid,
+      cvFile: cvFile,
       jobDocId: jobDocId,
       jobId: jobId,
       specialty: specialty,
-      cvUrl: cvResult.url,
-      cvPath: cvResult.path,
       questionsCount: questions.length,
       questions: questions,
       jobTitle: jobTitle,
@@ -231,15 +230,12 @@ class JobInterviewService {
     return true;
   }
 
-  static Future<({String url, String path})?> _pickApplicationCv(
-    BuildContext context, {
-    required String uid,
-  }) {
-    return showDialog<({String url, String path})?>(
+  static Future<File?> _pickApplicationCv(BuildContext context) {
+    return showDialog<File?>(
       context: context,
       useRootNavigator: true,
       barrierDismissible: false,
-      builder: (_) => _ApplicationCvPicker(uid: uid, parentContext: context),
+      builder: (_) => _ApplicationCvPicker(parentContext: context),
     );
   }
 
@@ -274,26 +270,34 @@ class JobInterviewService {
   static Future<void> _createAndStart({
     required BuildContext context,
     required String uid,
+    required File cvFile,
     required String jobDocId,
     required String jobId,
     required String specialty,
-    required String cvUrl,
-    required String cvPath,
     required int questionsCount,
     required List<String> questions,
     String jobTitle = '',
     String companyName = '',
   }) async {
     try {
+      // Generate application ID here (after all confirmations passed)
       final appRef =
           FirebaseFirestore.instance.collection('Applications').doc();
+
+      // Upload CV now — only after user confirmed and permissions granted
+      final ext = cvFile.path.split('.').last.toLowerCase();
+      final cvStoragePath =
+          'applications/$uid/${appRef.id}/${DateTime.now().millisecondsSinceEpoch}_cv.$ext';
+      final cvRef = FirebaseStorage.instance.ref(cvStoragePath);
+      await cvRef.putFile(cvFile);
+      final cvUrl = await cvRef.getDownloadURL();
 
       await appRef.set({
         'ApplicationsID': appRef.id,
         'UserID': uid,
         'JobID': jobId,
         'ApplicationCVURL': cvUrl,
-        'ApplicationCVPath': cvPath,
+        'ApplicationCVPath': cvStoragePath,
         'ApplicationStatus': 'InInterview',
         'Answers': List<String>.filled(questionsCount, ''),
         'AnswersRecordsURL': List<String>.filled(questionsCount, ''),
@@ -611,7 +615,7 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
 
       if (!mounted) return;
 
-      bool hasValidFace = false;
+      bool hasValidFace = true;
 
       if (faces.isNotEmpty) {
         final face = faces.first;
@@ -1064,10 +1068,10 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
                               ),
                             ),
                           ),
-                          
+
                           // ── FIXED: Moved the badge layout stack index below the top padding buffer boundary ──
                           Positioned(
-                            top: 128, 
+                            top: 128,
                             left: 16,
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 200),
@@ -1106,7 +1110,7 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
                               ),
                             ),
                           ),
-                          
+
                           Positioned(
                             left: 12,
                             right: 12,
@@ -1170,8 +1174,10 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
                                             boxShadow: [
                                               BoxShadow(
                                                 color: (_isRecording
-                                                        ? const Color(0xFFFD6C67)
-                                                        : const Color(0xFF4A5FBC))
+                                                        ? const Color(
+                                                            0xFFFD6C67)
+                                                        : const Color(
+                                                            0xFF4A5FBC))
                                                     .withOpacity(0.4),
                                                 blurRadius: 12,
                                                 offset: const Offset(0, 4),
@@ -1230,8 +1236,7 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
                                             color: _isSpeaking
                                                 ? const Color(0xFFFD6C67)
                                                     .withOpacity(0.3)
-                                                : Colors.white
-                                                    .withOpacity(0.1),
+                                                : Colors.white.withOpacity(0.1),
                                             borderRadius:
                                                 BorderRadius.circular(14),
                                           ),
@@ -1285,9 +1290,8 @@ class _JobInterviewSessionScreenState extends State<JobInterviewSessionScreen> {
 }
 
 class _ApplicationCvPicker extends StatefulWidget {
-  final String uid;
   final BuildContext parentContext;
-  const _ApplicationCvPicker({required this.uid, required this.parentContext});
+  const _ApplicationCvPicker({required this.parentContext});
 
   @override
   State<_ApplicationCvPicker> createState() => _ApplicationCvPickerState();
@@ -1299,8 +1303,6 @@ class _ApplicationCvPickerState extends State<_ApplicationCvPicker> {
 
   File? _file;
   String _fileName = '';
-  bool _uploading = false;
-  double? _progress;
 
   Future<void> _pick() async {
     final res = await FilePicker.platform.pickFiles(
@@ -1308,54 +1310,19 @@ class _ApplicationCvPickerState extends State<_ApplicationCvPicker> {
       allowedExtensions: ['pdf', 'docx'],
     );
     if (res == null || res.files.single.path == null) return;
+    final path = res.files.single.path!;
     final name = res.files.single.name;
-    setState(() {
-      _file = File(res.files.single.path!);
-      _fileName = name;
-    });
-    if (!mounted) return;
-  }
-
-  Future<void> _upload() async {
-    final file = _file;
-    if (file == null) return;
-
+    final file = File(path);
     if (file.lengthSync() > 10 * 1024 * 1024) {
-      SnackHelper.error(widget.parentContext, 'File too large (max 10 MB)');
+      if (mounted) {
+        SnackHelper.error(widget.parentContext, 'File too large (max 10 MB)');
+      }
       return;
     }
-
     setState(() {
-      _uploading = true;
-      _progress = 0;
+      _file = file;
+      _fileName = name;
     });
-
-    try {
-      final ext = _fileName.split('.').last.toLowerCase();
-      final storagePath =
-          'applications/${widget.uid}/${DateTime.now().millisecondsSinceEpoch}_cv.$ext';
-      final ref = FirebaseStorage.instance.ref(storagePath);
-      final task = ref.putFile(file);
-
-      task.snapshotEvents.listen((s) {
-        if (!mounted) return;
-        final total = s.totalBytes;
-        if (total > 0) setState(() => _progress = s.bytesTransferred / total);
-      });
-
-      final snap = await task;
-      final url = await snap.ref.getDownloadURL();
-
-      if (!mounted) return;
-      Navigator.of(context).pop((url: url, path: storagePath));
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _uploading = false;
-        _progress = null;
-      });
-      SnackHelper.error(widget.parentContext, 'Upload failed: $e');
-    }
   }
 
   @override
@@ -1395,7 +1362,7 @@ class _ApplicationCvPickerState extends State<_ApplicationCvPicker> {
               ),
               const SizedBox(height: 20),
               InkWell(
-                onTap: _uploading ? null : _pick,
+                onTap: _pick,
                 borderRadius: BorderRadius.circular(14),
                 child: Container(
                   width: double.infinity,
@@ -1445,35 +1412,13 @@ class _ApplicationCvPickerState extends State<_ApplicationCvPicker> {
                   ),
                 ),
               ),
-              if (_uploading) ...[
-                const SizedBox(height: 16),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: (_progress ?? 0) == 0 ? null : _progress,
-                    minHeight: 4,
-                    backgroundColor: Colors.white24,
-                    color: _dangerColor,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  (_progress ?? 0) > 0
-                      ? 'Uploading… ${((_progress ?? 0) * 100).toInt()}%'
-                      : 'Preparing…',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.white70,
-                  ),
-                ),
-              ],
             ],
           ),
         ),
       ),
       actions: [
         TextButton(
-          onPressed: _uploading ? null : () => Navigator.of(context).pop(null),
+          onPressed: () => Navigator.of(context).pop(null),
           style: TextButton.styleFrom(
             backgroundColor: Colors.white.withOpacity(0.9),
             foregroundColor: _brandColor,
@@ -1489,29 +1434,19 @@ class _ApplicationCvPickerState extends State<_ApplicationCvPicker> {
         ),
         const SizedBox(width: 8),
         TextButton(
-          onPressed: (hasFile && !_uploading) ? _upload : null,
+          onPressed: hasFile ? () => Navigator.of(context).pop(_file) : null,
           style: TextButton.styleFrom(
-            backgroundColor:
-                (hasFile && !_uploading) ? _dangerColor : Colors.white24,
+            backgroundColor: hasFile ? _dangerColor : Colors.white24,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
           ),
-          child: _uploading
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Text(
-                  'Upload & Continue',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
+          child: const Text(
+            'Continue',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
         ),
       ],
     );
