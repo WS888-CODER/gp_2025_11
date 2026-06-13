@@ -1031,7 +1031,6 @@ class _MockInterviewSessionScreenState
   late final FaceDetector _faceDetector;
   bool _faceDetected = false;
   bool _processingFrame = false;
-  int _lastFrameTime = 0;
 
   @override
   void initState() {
@@ -1226,10 +1225,10 @@ class _MockInterviewSessionScreenState
         _initializing = false;
       });
 
-      // ✅ START FACE DETECTION via stream (no shutter sound)
+      // ✅ START FACE DETECTION
       await Future.delayed(const Duration(milliseconds: 300));
       if (!mounted) return;
-      await controller.startImageStream(_onCameraImage);
+      _processCameraImage();
 
       await _speakCurrentQuestion();
     } catch (e) {
@@ -1241,45 +1240,60 @@ class _MockInterviewSessionScreenState
     }
   }
 
-  // ✅ FACE DETECTION via image stream (silent, no shutter sound)
-  void _onCameraImage(CameraImage cameraImage) {
-    final now = DateTime.now().millisecondsSinceEpoch;
-    if (_processingFrame || now - _lastFrameTime < 500) return;
-    _lastFrameTime = now;
+  // ✅ FACE DETECTION PROCESSING
+  Future<void> _processCameraImage() async {
+    if (_processingFrame || _camera == null || !_camera!.value.isInitialized) {
+      return;
+    }
+
     _processingFrame = true;
-    _detectFaceFromStream(cameraImage);
-  }
 
-  Future<void> _detectFaceFromStream(CameraImage cameraImage) async {
     try {
-      final inputImage = _inputImageFromCameraImage(cameraImage);
-      if (inputImage == null) return;
-
+      final image = await _camera!.takePicture();
+      final inputImage = InputImage.fromFilePath(image.path);
       final faces = await _faceDetector.processImage(inputImage);
+
       if (!mounted) return;
 
+      // ✅ STRICT FACE DETECTION
       bool hasValidFace = false;
 
       if (faces.isNotEmpty) {
         final face = faces.first;
         final boundingBox = face.boundingBox;
+
+        // Face must be reasonably visible (not too tiny)
         final faceWidth = boundingBox.width;
         final faceHeight = boundingBox.height;
+
+        // Minimum size check - relaxed for normal arm's length
         final isLargeEnough = faceWidth > 50 && faceHeight > 60;
 
         if (isLargeEnough) {
+          // Check head angles - must face forward
           final headAngleY = face.headEulerAngleY ?? 0;
           final headAngleZ = face.headEulerAngleZ ?? 0;
+
+          // Allow 30 degrees rotation (more forgiving)
           final isFacingForward =
               headAngleY.abs() < 30 && headAngleZ.abs() < 30;
 
           if (isFacingForward) {
+            // ✅ EYE CHECK - both eyes must be visible and open
+            // Covers: eyes covered, half face covered
             final leftEye = face.leftEyeOpenProbability ?? -1;
             final rightEye = face.rightEyeOpenProbability ?? -1;
             final bothEyesVisible = leftEye > 0.15 && rightEye > 0.15;
+
+            // ✅ ASPECT RATIO - face must have normal proportions
+            // Covers: mouth/nose covered (bounding box gets shorter)
             final aspectRatio = faceHeight / faceWidth;
             final hasNormalProportions = aspectRatio >= 1.0;
-            if (bothEyesVisible && hasNormalProportions) hasValidFace = true;
+
+            // Must pass BOTH checks
+            if (bothEyesVisible && hasNormalProportions) {
+              hasValidFace = true;
+            }
           }
         }
       }
@@ -1287,35 +1301,29 @@ class _MockInterviewSessionScreenState
       setState(() {
         _faceDetected = hasValidFace;
       });
-    } catch (_) {
-      if (mounted) setState(() => _faceDetected = false);
+
+      if (faces.isNotEmpty) {}
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _faceDetected = false;
+        });
+      }
     } finally {
       _processingFrame = false;
+
+      if (mounted) {
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) _processCameraImage();
+        });
+      }
     }
-  }
-
-  InputImage? _inputImageFromCameraImage(CameraImage image) {
-    final format = InputImageFormatValue.fromRawValue(image.format.raw);
-    if (format == null) return null;
-
-    return InputImage.fromBytes(
-      bytes: image.planes.first.bytes,
-      metadata: InputImageMetadata(
-        size: Size(image.width.toDouble(), image.height.toDouble()),
-        rotation: Platform.isIOS
-            ? InputImageRotation.rotation270deg
-            : InputImageRotation.rotation0deg,
-        format: format,
-        bytesPerRow: image.planes.first.bytesPerRow,
-      ),
-    );
   }
 
   @override
   void dispose() {
     _recordTimer?.cancel();
     _recorder.dispose();
-    _camera?.stopImageStream();
     _camera?.dispose();
     _uploadSub?.cancel();
     _ttsPlayer.dispose();
@@ -1808,10 +1816,8 @@ class _MockInterviewSessionScreenState
                                             boxShadow: [
                                               BoxShadow(
                                                 color: (_isRecording
-                                                        ? const Color(
-                                                            0xFFFD6C67)
-                                                        : const Color(
-                                                            0xFF4A5FBC))
+                                                        ? const Color(0xFFFD6C67)
+                                                        : const Color(0xFF4A5FBC))
                                                     .withOpacity(0.4),
                                                 blurRadius: 12,
                                                 offset: const Offset(0, 4),
@@ -1872,7 +1878,8 @@ class _MockInterviewSessionScreenState
                                             color: _isSpeaking
                                                 ? const Color(0xFFFD6C67)
                                                     .withOpacity(0.3)
-                                                : Colors.white.withOpacity(0.1),
+                                                : Colors.white
+                                                    .withOpacity(0.1),
                                             borderRadius:
                                                 BorderRadius.circular(14),
                                           ),
