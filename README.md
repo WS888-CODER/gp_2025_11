@@ -37,19 +37,6 @@ aligned with Saudi Vision 2030. It serves job seekers, companies, and admins.
 
 ## Test Credentials
 
-### Admin Accounts
-| Name  | Email                        | Password              |
-|-------|------------------------------|-----------------------|
-| Walaa | walaasaif47@gmail.com        | jadeeradmin0123456789 |
-| Noor  | nooralgumlas@gmail.com       | jadeeradmin0123456789 |
-| Jana  | jana12288@gmail.com          | jadeeradmin0123456789 |
-| Rawan | rawanalshammriy7@gmail.com   | jadeeradmin0123456789 |
-| Walaa | walaalhajri88@gmail.com      | jadeeradmin0123456789 |
-
-> **Note:** Admin login requires OTP verification sent to the registered email.
-
----
-
 ### Company Accounts *(Verified)*
 | Company | Email                  | Password     |
 |---------|------------------------|--------------|
@@ -85,13 +72,13 @@ aligned with Saudi Vision 2030. It serves job seekers, companies, and admins.
 
 ## Team
 
-| Name                  | ID         |
-|-----------------------|------------|
-| Walaa Saif Aleslam    | 444200088  |
-| Noor Algumlas         | 444200811  |
-| Walaa Abdullah Alhajri| 443201299  |
-| Rawan Munif Alshammari| 444200348  |
-| Jana Khalid Almohsen  | 444204517  |
+| Name                  |
+|-----------------------|
+| Walaa Saif Aleslam    |
+| Noor Algumlas         |
+| Walaa Abdullah Alhajri|
+| Rawan Munif Alshammari|
+| Jana Khalid Almohsen  |
 
 **Supervised by:** Dr. Mashael AlSaleh & Dr. Manal Albahlal
 
