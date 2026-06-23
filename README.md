@@ -5,7 +5,7 @@
 **Jadeer** is an AI-powered dual-sided recruitment platform targeting the Saudi market,
 aligned with Saudi Vision 2030. It serves job seekers, companies, and admins.
 
-- **Platform:** Android (Mobile)
+- **Platform:** Android + IOS (Mobile) 
 - **Frontend:** Flutter (Dart)
 - **Backend:** Firebase (Firestore, Auth, Cloud Functions, Storage)
 - **AI Services:** OpenAI API, Hugging Face (Speech Emotion Recognition)
