@@ -1,0 +1,136 @@
+{
+  "_meta": {
+    "source": "Static extraction of every openai.chat.completions.create / raw fetch to api.openai.com/v1/chat/completions call found in functions/index.js, functions/interview/*.js, functions/mockinterview/*.js. Parameters quoted are exactly as they appear in source at analysis time."
+  },
+  "llm_chat_calls": [
+    {
+      "call_site": "generateJobPost (functions/index.js)",
+      "model": "gpt-4o-mini",
+      "temperature": 0.7,
+      "max_tokens": 2000,
+      "response_format": "none (free text)",
+      "system_prompt_summary": "Expert HR professional who writes compelling job descriptions.",
+      "input_data": ["title", "position", "speciality"],
+      "output_used_for": "Job description text shown to the company during job posting."
+    },
+    {
+      "call_site": "enhanceCV (functions/index.js)",
+      "model": "gpt-4o",
+      "temperature": 0.7,
+      "max_tokens": 4000,
+      "response_format": "json_object",
+      "system_prompt_summary": "Professional CV enhancement assistant; must never invent data.",
+      "input_data": ["CVHistory.OldCVText", "CVHistory.JobTitle", "CVHistory.Description", "optional user-provided additionalSections JSON"],
+      "output_used_for": "CVHistory.NewCVText (structured 24-section JSON) + CVHistory.Suggestions, then rendered to a PDF."
+    },
+    {
+      "call_site": "detectMissingSections - section-detection sub-call (functions/index.js)",
+      "model": "gpt-4o-mini",
+      "temperature": 0.3,
+      "max_tokens": 500,
+      "response_format": "json_object",
+      "system_prompt_summary": "CV analysis assistant that flags missing/empty sections.",
+      "input_data": ["CVHistory.OldCVText"],
+      "output_used_for": "missingSections array shown to the user before enhancement."
+    },
+    {
+      "call_site": "detectMissingSections - skills-suggestion sub-call (functions/index.js)",
+      "model": "gpt-4o-mini",
+      "temperature": 0.5,
+      "max_tokens": 800,
+      "response_format": "json_object",
+      "system_prompt_summary": "Career expert assistant suggesting 15-20 relevant skills.",
+      "input_data": ["CVHistory.JobTitle", "CVHistory.Description"],
+      "output_used_for": "suggestedSkills array; only invoked when a target job is attached to the CV.",
+      "condition": "only runs if hasJob (JobTitle or Description non-empty)"
+    },
+    {
+      "call_site": "generateInterviewQuestions (functions/interview/generateQuestions.js)",
+      "model": "gpt-4o-mini",
+      "temperature": 0.7,
+      "max_tokens": "not set in code (provider default)",
+      "response_format": "none - raw text manually stripped of ``` fences and JSON-parsed by tryParseQuestions()",
+      "system_prompt_summary": "Expert interviewer that outputs strict JSON.",
+      "input_data": ["job title", "position/seniority", "specialty", "must-have requirements", "job description excerpt (first 2000 chars)", "technical/psychometric mix", "difficulty distribution"],
+      "output_used_for": "Jobs.Questions - the 10 real-job interview questions (target: 5 technical + 5 psychometric); short by a locally-generated template question if the model returns fewer than 10."
+    },
+    {
+      "call_site": "generateMockInterviewQuestions (functions/mockinterview/mock_interview_questions.js)",
+      "model": "gpt-4o-mini",
+      "temperature": 0.7,
+      "max_tokens": "not set in code (provider default)",
+      "response_format": "none - raw text manually stripped of ``` fences and JSON-parsed",
+      "system_prompt_summary": "Outputs strict JSON only.",
+      "input_data": ["selected specialty", "normalized specialty bucket", "difficulty distribution (fixed: 3 easy / 5 medium / 2 hard)"],
+      "output_used_for": "MockInterviews.Questions - 10 questions (target: 5 domain + 5 psychometric); topped up with local fallback questions if the model returns fewer than 10."
+    },
+    {
+      "call_site": "generateJobInterviewReport (functions/interview/generateJobInterviewReport.js)",
+      "model": "gpt-4",
+      "temperature": 0.7,
+      "max_tokens": 4000,
+      "response_format": "none - prompt instructs 'VALID JSON, no markdown code blocks'; response is JSON.parse()'d after stripping ``` fences if present",
+      "system_prompt_summary": "Expert recruiter writing a third-person candidate evaluation report for a hiring manager (never 'you').",
+      "input_data": ["job title/specialty/company name/requirements list/description excerpt (first 500 chars) built from the Jobs doc", "extracted CV text from ApplicationCVURL (pdf-parse/mammoth, capped at 6000 chars) - added 2026-09-26", "concatenated interview Q&A transcript (Whisper output)", "requirements checklist instruction if the job has Requirements"],
+      "output_used_for": "cvAnalysisScore, jobRequirementsMatchScore, psychometricScore, technicalScore, overallSummary, strengths, weaknesses, advice, requirementsChecklist, psychometricAnalysis, questionsAndAnswers.",
+      "note_cv_text": "FIXED 2026-09-26: the function now downloads ApplicationCVURL and extracts its text in-memory, includes it in the prompt as a 'Candidate's CV (extracted text)' block. Three fields now use it with deliberately different scopes: cvAnalysisScore is scored from the CV text vs. the job posting ONLY (interview transcript explicitly excluded by instruction); jobRequirementsMatchScore and requirementsChecklist both use the CV text AND the interview transcript together, and are instructed to agree with each other since they evaluate the same requirements list. Falls back to answers-only scoring for cvAnalysisScore (with a logged warning) if CV extraction fails for a given application. Previously (before this fix) the CV text was never fetched at all and cvAnalysisScore was scored from the transcript alone despite its name - see Discrepancies_and_Issues.md item 1 for the prior behavior.",
+      "note_voice_data": "No acoustic/voice-tone data is passed into this prompt; VoiceToneScore is computed entirely separately from the SER pipeline and merged only via the fixed-weight formula after both results exist."
+    },
+    {
+      "call_site": "generateMockInterviewReport (functions/mockinterview/generateReport.js)",
+      "model": "gpt-4",
+      "temperature": 0.7,
+      "max_tokens": 2000,
+      "response_format": "none - prompt instructs 'valid JSON only, no markdown'; response is JSON.parse()'d after stripping ``` fences if present",
+      "system_prompt_summary": "Friendly mock-interview coach speaking directly to the candidate ('you').",
+      "input_data": ["specialty", "concatenated Q&A transcript (Whisper output)", "overallVoiceConfidenceScore (the averaged SER acoustic score, 0-100) is injected as text into the prompt"],
+      "output_used_for": "overallScore (single GPT-decided score, NOT a fixed-weight formula), overallSummary, strengths, weaknesses, advice, mockVoiceComment.",
+      "note_scoring": "Unlike the job-interview pipeline, there is no explicit weighted-sum formula in code for the mock interview's overallScore; GPT-4 is asked to produce it directly, with the acoustic score given to it only as descriptive text."
+    }
+  ],
+  "non_llm_ai_ml_calls": [
+    {
+      "call_site": "Whisper transcription (both generateJobInterviewReport.js and generateReport.js)",
+      "model": "whisper-1",
+      "endpoint": "https://api.openai.com/v1/audio/transcriptions (raw REST, not the chat API)",
+      "input": "each answer's .m4a audio buffer, downloaded from Firebase Storage",
+      "notes": "One call per answer; failures are caught per-answer and recorded as '[Transcription failed]', excluded from the transcript text sent to GPT."
+    },
+    {
+      "call_site": "Speech Emotion Recognition (SER) voice-tone analysis",
+      "provider": "External Hugging Face Space 'wsaifaleslam/jadeer-smart-assessment', called via @gradio/client Client.predict('predict_confidence', [audioBlob])",
+      "advertised_pipeline_per_user_brief": "Silero VAD -> pause detection -> WavLM + eGeMAPS model",
+      "verifiable_from_this_repo": false,
+      "reason": "The Space's own source code (Python/Gradio app implementing the VAD/WavLM/eGeMAPS logic) is not part of this repository. Only the client-side call to the externally hosted Space is visible here. Internal thresholds, pause-length cutoffs, feature extraction, and model weights cannot be confirmed or quoted from this codebase."
+    },
+    {
+      "call_site": "synthesizeSpeech Cloud Function",
+      "provider": "Google Cloud Text-to-Speech REST API",
+      "voice": "en-US-Neural2-D",
+      "ssmlGender": "MALE",
+      "speakingRate": 0.9,
+      "pitch": 0.0,
+      "audioEncoding": "MP3",
+      "notes": "Reads interview questions aloud to the candidate in both the job and mock interview screens."
+    },
+    {
+      "call_site": "On-device face/liveness check (Flutter client, job_interview_service.dart and mock_interview.dart)",
+      "provider": "google_mlkit_face_detection (runs on-device, no network call)",
+      "checks": ["face bounding box width>50px and height>60px", "abs(headEulerAngleY)<30 deg and abs(headEulerAngleZ)<30 deg", "leftEyeOpenProbability>0.15 and rightEyeOpenProbability>0.15", "faceHeight/faceWidth aspect ratio >= 1.0"],
+      "sampling": "one still frame captured via CameraController.takePicture() roughly every 500ms while the interview screen is open (not a continuous video stream)",
+      "notes": "Purely a client-side UX gate (blocks Record/Next when no valid face is detected). No frames or detection results are ever uploaded or stored."
+    },
+    {
+      "call_site": "extractCVKeywords (functions/jadeer-cv/src/index.ts)",
+      "provider": "Local deterministic algorithm, no ML/LLM",
+      "method": "Lowercase + tokenize (regex \\b[a-z]{3,}\\b), drop an ~80-word English stopword list, count frequency, plus a fixed allowlist of ~50 tech terms (e.g. 'react', 'flutter', 'aws'), take top 20 by frequency",
+      "output": "Users.CVKeywords array, later used by the client-side 'For You' job matching score."
+    },
+    {
+      "call_site": "'For You' job matching (Flutter client, jobseeker_home.dart, function _cvMatchScore)",
+      "provider": "Local deterministic algorithm, no ML/LLM/embeddings",
+      "method": "For each keyword in Users.CVKeywords, +2 points if the keyword literally appears in the job's tokenized {specialty, title, position, keywords} bag; +1 additional point if that keyword also appears in the job's specialty string. Jobs scoring >= 2 are shown first (sorted by score, then by postedAt), the rest are shown after sorted by postedAt only.",
+      "notes": "This is a keyword-overlap ranking, not a semantic/embedding-based recommender; it runs entirely on the client at render time, not in any Cloud Function."
+    }
+  ]
+}

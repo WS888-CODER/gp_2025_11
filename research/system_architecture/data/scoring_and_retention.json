@@ -1,0 +1,62 @@
+{
+  "_meta": "All values below are quoted directly from source; none are estimated.",
+  "job_interview_final_score": {
+    "file": "functions/interview/generateJobInterviewReport.js",
+    "formula": "finalScore = round(cvScore*0.30 + jobMatchScore*0.20 + psychoScore*0.20 + voiceScore*0.10 + techScore*0.20)",
+    "component_source": {
+      "cvAnalysisScore (30%)": "GPT-4, scored from the extracted CV text against Jobs.Requirements/Description ONLY - the interview transcript is explicitly excluded from this score by instruction (fixed 2026-09-26; originally this was scored from the interview transcript alone with no CV text - see discrepancies item 1).",
+      "jobRequirementsMatchScore (20%)": "GPT-4, scored from the extracted CV text AND the interview transcript together against Jobs.Requirements; the prompt explicitly instructs this to agree with requirementsChecklist, since both evaluate the same requirements list against the same evidence (updated 2026-09-26; originally this used the interview transcript only).",
+      "psychometricScore (20%)": "GPT-4, scored from interview transcript (psychometric-tagged Q&A).",
+      "voiceToneScore (10%)": "Average of per-answer SER 'Assessment Score' percentages returned by the external Hugging Face Space; entries with no parsable score are excluded from the average, not counted as 0. If ALL answers fail SER analysis, voiceToneScore = 0.",
+      "technicalScore (20%)": "GPT-4, scored from interview transcript (technical-tagged Q&A)."
+    },
+    "weights_match_claimed_30_20_20_10_20": true,
+    "code_comment_reference": "// Weights from Story 36: CV Analysis 30%, Job Requirements 20%, Psychometric 20%, Voice Tone 10%, Technical 20%"
+  },
+  "mock_interview_final_score": {
+    "file": "functions/mockinterview/generateReport.js",
+    "formula": "overallScore is produced directly by GPT-4 as a single JSON field; there is no explicit weighted-sum formula in code for the mock interview report.",
+    "acoustic_input": "The averaged SER 'overallVoiceConfidenceScore' (0-100) IS injected as descriptive text into the GPT-4 prompt for the mock interview (unlike the job-interview prompt, which never sees it), but there is no code-level guarantee of how much it influences GPT's overallScore - that weighting, if any, is implicit in the model's free-form judgment, not a formula."
+  },
+  "ser_failure_handling": {
+    "aggregate_score_behavior": "In BOTH generateJobInterviewReport.js and generateReport.js, per-answer SER results that fail to parse (regex `/Assessment Score:\\s*([\\d.]+)%/` does not match, e.g. because the result string is literally 'Analysis unavailable') are filtered OUT of the array before averaging. They are excluded, not scored 0, for purposes of VoiceToneScore / overallVoiceConfidenceScore.",
+    "pdf_display_behavior_job_interview_only": "In generateJobInterviewReport.js's generatePDF() helper, the PER-QUESTION voice-tone display in the PDF report computes `const score = scoreMatch ? parseFloat(scoreMatch[1]).toFixed(1) : \"0.0\";` - i.e. a failed SER analysis for a specific question IS rendered as 0.0/100 with a red/near-empty progress bar in the PDF, even though that same failed entry was excluded from the VoiceToneScore average used in the weighted final score.",
+    "conclusion": "The numeric score used in the 10%-weighted final score EXCLUDES failed analyses from the average (intentional, confirmed correct by the team); the PDF's per-question breakdown DISPLAYS 0 for a failed analysis with no distinguishing label (reviewed by the team on 2026-09-26 and intentionally left unchanged - low priority, not considered a real problem at this stage). If every answer fails SER analysis, the aggregate VoiceToneScore also becomes 0 (fallback `validCount>0 ? avg : 0`). Mock interview reports have no PDF at all, so this specific display gap does not apply to them - see Discrepancies list item 2."
+  },
+  "pause_hesitation_threshold": {
+    "claimed_values_in_brief": ["0.6s", "1.0s"],
+    "verifiable_from_this_repo": false,
+    "reason": "Silero VAD / pause-detection / WavLM+eGeMAPS logic lives inside the external Hugging Face Space 'wsaifaleslam/jadeer-smart-assessment', whose source is not part of this repository. This codebase only contains the client call (Client.predict('predict_confidence', [audioBlob])) and receives back an opaque 'Assessment Score: NN.N% ... Insight: ...' text string. No threshold constant, VAD parameter, or hesitation-penalty formula appears anywhere in functions/, lib/, or any other file in this repository."
+  },
+  "audio_deletion": {
+    "is_audio_deleted": true,
+    "when": "By the scheduled function deleteOldAnswerRecordings (functions/index.js), which runs daily at 03:00 UTC and deletes .m4a files for any Applications/MockInterviews doc whose ReportGeneratedAt is more than 2 days in the past. It also clears the AnswersRecordsURL array field on those docs, but keeps the document (and its Report) itself.",
+    "not_immediate": "Deletion does NOT happen immediately after the report is generated - there is a 2-day retention window by design (twoDaysAgo cutoff), enforced only by the next daily cron tick.",
+    "other_deletion_paths": [
+      "Client-side immediate cleanup if the candidate cancels/exits an in-progress interview (job_interview_service.dart _cancelInterviewAndCleanup, mock_interview.dart _cancelInterviewAndCleanup) - deletes the whole per-application/per-interview Storage folder right away.",
+      "onJobDeleted Cloud Function - deletes audio for all Applications tied to a Job when the company deletes that job.",
+      "deleteUserAccount Cloud Function - deletes all Storage folders for a user, including audio, on account deletion."
+    ],
+    "unused_field": "Applications docs are created with a RecordExpiresAt = now + 120 days field (job_interview_service.dart), but no Cloud Function or query in this repository reads or acts on RecordExpiresAt. The actual retention rule enforced in code is the 2-day-after-report-generation rule above, not 120 days."
+  },
+  "credits_and_limits": {
+    "cv_enhancement_credits_per_day": 2,
+    "mock_interview_credits_per_day": 2,
+    "reset_rule": "Users.AiUsage.LastReset is compared to the start of the current local calendar day on the client (fetchAndResetAiUsageIfNeeded in mock_interview.dart); if stale, both counters are reset to 2. This reset check runs client-side, not via a Cloud Function/cron.",
+    "mock_interview_recording_attempts_per_question": 3,
+    "application_cv_max_size_mb": 10,
+    "cv_enhancement_upload_max_size_mb": 10
+  },
+  "login_lockout": {
+    "threshold": "5 failed password attempts on the same calendar day",
+    "effect": "Users.accountLocked=true and Users.mustResetPassword=true; the user must reset their password to regain access (or contact an admin, for Admin accounts).",
+    "counter_reset": "failedLoginAttempts resets to 1 (not 0) on the first failed attempt of a new calendar day; resets to 0 on a successful login.",
+    "enforcement_location": "Entirely in lib/screens/login.dart on the Flutter client, which reads/writes Users.failedLoginAttempts, .lastFailedLoginDate, .accountLocked, .mustResetPassword directly via the Firestore SDK. No Cloud Function or Firestore security rule enforcing this logic was found in this repository - see Discrepancies list.",
+    "otp_validity_minutes": 2
+  },
+  "company_verification": {
+    "states": ["Pending", "Verified", "Rejected"],
+    "set_by": "Admin manually clicks Verified/Rejected in admin_dashboard.dart, which writes Users.AccountStatus directly from the Flutter client, then separately calls the notifyCompanyStatusChange Cloud Function to email the company.",
+    "rejected_account_expiry": "On Rejected, Users.ExpiryDate is set to now + 7 days. A cleanup routine that deletes Users docs whose ExpiryDate has passed runs inside admin_dashboard.dart's own load path - i.e. only when an admin actually opens the admin dashboard, not on a server-side schedule."
+  }
+}

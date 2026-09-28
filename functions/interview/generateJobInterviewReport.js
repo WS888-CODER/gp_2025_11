@@ -5,6 +5,7 @@ import { getStorage } from "firebase-admin/storage";
 import FormData from "form-data";
 import fetch from "node-fetch";
 import PDFDocument from "pdfkit";
+import mammoth from "mammoth";
 
 /**
  * generateJobInterviewReport
@@ -119,6 +120,53 @@ export const generateJobInterviewReport = onCall(
       }
 
       console.log(`[jobReport] Job: ${jobTitle}, Specialty: ${specialty}, ${questions.length} questions`);
+
+      // ── 2b. Extract text from the candidate's uploaded CV ────
+      let cvText = "";
+      if (cvUrl) {
+        try {
+          console.log("[jobReport] Downloading CV for text extraction...");
+          const cvResponse = await fetch(cvUrl);
+          if (!cvResponse.ok) {
+            throw new Error(`Failed to download CV: ${cvResponse.statusText}`);
+          }
+
+          const cvBuffer = await cvResponse.buffer();
+          const cvContentType = cvResponse.headers.get("content-type") || "";
+          const lowerCvUrl = cvUrl.toLowerCase();
+
+          if (cvContentType.includes("pdf") || lowerCvUrl.includes(".pdf")) {
+            const { PDFParse } = await import("pdf-parse");
+            const parser = new PDFParse({ data: cvBuffer });
+            const result = await parser.getText();
+            cvText = (result.text || "").trim();
+            await parser.destroy();
+          } else if (
+            cvContentType.includes("word") ||
+            cvContentType.includes("officedocument.wordprocessingml") ||
+            lowerCvUrl.includes(".docx") ||
+            lowerCvUrl.includes(".doc")
+          ) {
+            const result = await mammoth.extractRawText({ buffer: cvBuffer });
+            cvText = (result.value || "").trim();
+          } else {
+            console.warn("[jobReport] Unrecognized CV file type, skipping text extraction");
+          }
+
+          if (cvText.length > 6000) {
+            cvText = cvText.slice(0, 6000);
+          }
+
+          console.log(`[jobReport] Extracted ${cvText.length} characters from CV`);
+        } catch (cvError) {
+          console.error("[jobReport] ❌ CV text extraction failed:", cvError.message || cvError);
+          cvText = "";
+        }
+      }
+
+      if (!cvText) {
+        console.warn("[jobReport] No CV text available — cvAnalysisScore will fall back to interview-answer inference only");
+      }
 
       // ── 3. Transcribe audio with Whisper ─────────────────────
       const transcripts = [];
@@ -326,14 +374,18 @@ export const generateJobInterviewReport = onCall(
 
       // ── 7. Analyse with GPT-4 (updated prompt for 4 scores + checklist) ──
       const requirementsJson = requirements.length > 0
-        ? `\n\nFor each of the following job requirements, evaluate whether the candidate demonstrated meeting it based on their interview answers. Return a "requirementsChecklist" array:\n${requirements.map((r) => `- "${r}"`).join("\n")}`
+        ? `\n\nFor each of the following job requirements, evaluate whether the candidate demonstrated meeting it based on their CV and interview answers. Return a "requirementsChecklist" array:\n${requirements.map((r) => `- "${r}"`).join("\n")}`
         : "";
+
+      const cvBlock = cvText
+        ? `\nCandidate's CV (extracted text):\n${cvText}\n`
+        : `\nNote: The candidate's CV text could not be extracted for this application — base cvAnalysisScore on the interview answers only.\n`;
 
       const gptPrompt = `You are an expert recruiter writing a candidate evaluation report for a hiring manager. Always refer to the candidate in third person ("the candidate", "they"). NEVER use second person ("you"). This report is viewed by the company, not the candidate.
 
 ${jobContext}
-
-${transcriptionNote}Based on the following interview transcripts, provide a comprehensive evaluation in VALID JSON format with NO markdown code blocks.
+${cvBlock}
+${transcriptionNote}Based on the candidate's CV above and the following interview transcripts, provide a comprehensive evaluation in VALID JSON format with NO markdown code blocks.
 
 Note: Questions marked [technical] assess domain knowledge. Questions marked [psychometric] assess personality traits and work style.
 
@@ -343,8 +395,8 @@ ${requirementsJson}
 
 Respond with a JSON object containing:
 {
-  "cvAnalysisScore": <number 0-100, score how well the candidate's demonstrated experience and qualifications align with the job requirements based on what they revealed in their answers>,
-  "jobRequirementsMatchScore": <number 0-100, score how many job requirements the candidate clearly meets based on their answers>,
+  "cvAnalysisScore": <number 0-100, score ONLY how well the candidate's CV content (education, skills, work experience, certifications, as extracted above) aligns with the job's requirements and description. This is a CV-to-job-posting match — do NOT use the interview answers for this score. If the CV text is unavailable, base this on the interview answers only as a fallback>,
+  "jobRequirementsMatchScore": <number 0-100, score how many job requirements the candidate clearly meets, based on their CV and their interview answers together — this must agree with the requirementsChecklist below, since both are evaluating the same requirements against the same evidence (CV + interview answers)>,
   "psychometricScore": <number 0-100, score based on the candidate's responses to psychometric questions — evaluate confidence, communication skills, personality traits, teamwork, and work style>,
   "technicalScore": <number 0-100, score based on the candidate's responses to technical questions — evaluate domain-specific knowledge, problem solving, and technical depth>,
   "overallSummary": "<2-3 sentences in third person summarizing the candidate's overall performance and suitability for this specific role>",
@@ -389,7 +441,7 @@ SCORING GUIDELINES (0-100 scale):
 - 40-59: Average — partial knowledge, needs development in key areas
 - 0-39: Below expectations — unclear answers, significant gaps
 
-CRITICAL: Write ALL feedback in third person ("the candidate demonstrated", "they showed", "the candidate should"). NEVER use second person ("you"). This report is for the hiring company. Evaluate specifically against the job requirements listed above. Be specific and reference actual content from the interview.`;
+CRITICAL: Write ALL feedback in third person ("the candidate demonstrated", "they showed", "the candidate should"). NEVER use second person ("you"). This report is for the hiring company. Evaluate specifically against the job requirements listed above. Be specific and reference actual content from the CV and the interview.`;
 
       console.log("[jobReport] Sending to GPT-4 for analysis...");
 

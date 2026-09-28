@@ -1,0 +1,46 @@
+{
+  "_meta": "Field lists are reconstructed from every Firestore read/write site found across functions/*.js and lib/screens/*.dart. This is not a schema export from Firebase console (no admin access was used); fields that exist in the live database but are never referenced in code would not appear here, and this repository contains no firestore.rules or storage.rules file, so access-control cannot be documented from code.",
+  "collections": [
+    {
+      "name": "Users",
+      "key_fields": ["UserID (=doc id)", "Email", "UserType (JobSeeker|Company|Admin)", "AccountStatus (Pending|Verified|Rejected, Company only)", "ExpiryDate (Rejected companies only)", "IsEmailVerified", "PhotoURL", "PhotoPath", "CVURL", "CVPath", "CVKeywords[]", "Nationality", "Phone", "ContactEmail", "DoB", "IsProfileComplete", "favorite[] (job ids)", "fcmTokens[]", "notificationsEnabled", "failedLoginAttempts", "lastFailedLoginDate", "accountLocked", "mustResetPassword", "AiUsage.CvEnhancement", "AiUsage.MockInterview", "AiUsage.LastReset", "CompanyName (Company)", "Description (Company)", "Location", "Website"],
+      "referenced_by": ["Users doc id == Firebase Auth uid"]
+    },
+    {
+      "name": "Jobs",
+      "key_fields": ["JobID (=doc id)", "UserID (owning company)", "JobTitle", "Position", "Specialty", "Description", "Requirements[]", "Questions[] ({Text/text, type, category, difficulty, trait})", "JobKeywords[]", "JobStatus (Open|Soon|Closed)", "StartDate", "EndDate", "CompanyNotified"],
+      "referenced_by": ["Applications.JobID", "MockInterviews (no JobID - mock interviews are specialty-based, not job-based)"]
+    },
+    {
+      "name": "Applications",
+      "key_fields": ["ApplicationsID (=doc id)", "UserID (applicant)", "JobID", "JobTitle", "CompanyName", "ApplicationCVURL", "ApplicationCVPath", "ApplicationStatus (InInterview|Pending|InterviewCancelled|...)", "Answers[]", "AnswersRecordsURL[] (.m4a URLs, cleared after 2-day retention)", "Date", "RecordExpiresAt (written, never read elsewhere)", "Report {..}", "CVAnalysisScore", "JobRequirementsMatchScore", "PsychometricScore", "VoiceToneScore", "TechnicalEvaluationScore", "Score (final weighted score)", "ScoreBreakdown {..}", "VoiceToneAnalysis[]", "RequirementsChecklist[]", "PsychometricAnalysis {..}", "ReportURL (PDF)", "ReportGeneratedAt"],
+      "referenced_by": ["Jobs.JobID", "Users.UserID"]
+    },
+    {
+      "name": "MockInterviews",
+      "key_fields": ["MockInterviewsID (=doc id)", "UserID", "Specialty", "Questions[]", "AnswersRecordsURL[] (cleared after 2-day retention)", "Finished", "FinishedAt", "AnsweredCount", "TotalQuestions", "Report {overallScore, overallSummary, strengths, weaknesses, advice}", "VoiceToneAnalysis[] (single friendly comment)", "VoiceToneRawResults[] (raw SER strings)", "VoiceConfidenceScore", "ReportGeneratedAt"],
+      "referenced_by": ["Users.UserID"],
+      "notes": "No PDF/ReportURL field - mock interview reports are rendered directly from this document in-app."
+    },
+    {
+      "name": "CVHistory",
+      "key_fields": ["CVHistoryID (=doc id)", "UserID", "Date", "JobTitle", "Description (target job description, optional)", "OldCVText (extracted by extractCVTextEnhancement)", "NewCVText[] (24-section structured array from enhanceCV)", "Suggestions[]", "NewCVURL (PDF)", "PDFGeneratedAt"],
+      "referenced_by": ["Users.UserID"]
+    },
+    {
+      "name": "Notification",
+      "key_fields": ["UserID (recipient)", "JobID", "JobTitle", "Status", "Type (e.g. CompanyJobExpired)", "Message", "Date", "Read"],
+      "referenced_by": ["Users.UserID", "Jobs.JobID"]
+    },
+    {
+      "name": "AdminOTPs",
+      "key_fields": ["doc id = Email", "OTP", "Email", "UserType (signup OTP only)", "CreatedAt", "ExpiresAt (now+2min)", "Used"],
+      "notes": "Written directly by the Flutter client (login.dart) after the sendAdminOtp/sendSignupOtp/sendPasswordResetOtp Cloud Function confirms the email was sent."
+    },
+    {
+      "name": "Other collections referenced only in deleteUserAccount's cascade (schema not otherwise visible in this repo)",
+      "key_fields": ["CVEnhancement", "Interview(s)", "ReportGenerator", "Reports", "WebSchedule(s)", "Favorites", "Favourite/Favorite", "AIServiceRequests"],
+      "notes": "These collection names appear only as delete-by-query targets in functions/index.js deleteUserAccount / onJobDeleted; no code in this repository was found that writes to them, so their live schema (or whether they are still in active use) cannot be confirmed from this codebase alone."
+    }
+  ]
+}
